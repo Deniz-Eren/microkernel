@@ -1,0 +1,32 @@
+# allowed_phrases.txt — multi-word technical terms for the Microkernel project
+# documents (README.md, TASKS.md).
+# Format: one phrase on each line. Everything after '#' is a comment.
+
+page tables
+user space
+kernel space
+container image
+source file
+object file
+header file
+test harness
+boot loader
+file system
+device driver
+system call
+context switch
+page fault
+exit code
+signal frame
+user program
+user process
+memory allocator
+priority level
+priority levels
+run queue
+ready queues
+serial line
+operating system
+address spaces
+physical memory
+qemu-system-x86_64

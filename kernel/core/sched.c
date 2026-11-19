@@ -1,0 +1,434 @@
+#include <kernel/sched.h>
+#include <kernel/ipc.h>
+#include <kernel/trapframe.h>
+#include <kernel/uaccess.h>
+#include <sys/errno.h>
+#include <sys/thread.h>
+#include <kernel/panic.h>
+#include <kernel/printk.h>
+#include <kernel/pmm.h>
+#include <kernel/vmm.h>
+#include <kernel/kheap.h>
+#include <kernel/string.h>
+#include "../arch/x86_64/gdt.h"
+
+/* Maintained by the scheduler for syscall_entry (switch.S). */
+extern unsigned long g_syscall_kstack;
+
+/* 256-level priority bitmap scheduler. Each level is a FIFO ready queue;
+ * the scheduler picks the highest non-empty level (round-robin within it).
+ * Invariant: the RUNNING thread is never in a ready queue. schedule()
+ * re-enqueues a preempted RUNNING thread and pops the next one. */
+static uint64_t g_ready_bitmap[4]; /* 256 bits, bit set = level non-empty */
+static tcb_t *g_ready_head[256];
+static tcb_t *g_ready_tail[256];
+static tcb_t *g_current;
+static int g_sched_active;
+static uint64_t g_next_tid = 1;
+static uint64_t g_fpu_template[64] __attribute__((aligned(16)));
+
+#define SLICE_TICKS 5
+
+static tcb_t *pick_next(void);
+
+void switch_to(tcb_t *prev, tcb_t *next);
+extern void thread_bootstrap(void);
+
+static inline void bitmap_set(unsigned prio) {
+    g_ready_bitmap[prio / 64] |= (1ULL << (prio % 64));
+}
+
+static inline void bitmap_clear(unsigned prio) {
+    g_ready_bitmap[prio / 64] &= ~(1ULL << (prio % 64));
+}
+
+static int ready_empty(void) {
+    for (int i = 0; i < 4; i++) {
+        if (g_ready_bitmap[i]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static tcb_t *pick_next(void) {
+    for (int word = 3; word >= 0; word--) {
+        if (!g_ready_bitmap[word]) {
+            continue;
+        }
+        unsigned bit = 63 - __builtin_clzll(g_ready_bitmap[word]);
+        unsigned prio = (unsigned)word * 64 + bit;
+        return g_ready_head[prio];
+    }
+    return NULL;
+}
+
+void sched_ready(tcb_t *t) {
+    unsigned p = t->effective_priority;
+    t->state = THREAD_READY;
+    t->queue_next = NULL;
+    if (g_ready_tail[p]) {
+        g_ready_tail[p]->queue_next = t;
+    } else {
+        g_ready_head[p] = t;
+    }
+    g_ready_tail[p] = t;
+    bitmap_set(p);
+}
+
+void sched_unready(tcb_t *t) {
+    unsigned p = t->effective_priority;
+    tcb_t **pp = &g_ready_head[p];
+    tcb_t *prev = NULL;
+    while (*pp) {
+        if (*pp == t) {
+            *pp = t->queue_next;
+            if (g_ready_tail[p] == t) {
+                g_ready_tail[p] = prev;
+            }
+            if (!g_ready_head[p]) {
+                bitmap_clear(p);
+            }
+            t->queue_next = NULL;
+            return;
+        }
+        prev = *pp;
+        pp = &(*pp)->queue_next;
+    }
+}
+
+tcb_t *sched_current(void) {
+    return g_current;
+}
+
+void sched_activate(void) {
+    g_sched_active = 1;
+}
+
+void sched_block_current(thread_state_t state) {
+    tcb_t *t = g_current;
+    if (!t) {
+        panic("sched: block without current thread");
+    }
+    t->state = state; /* not RUNNING: schedule() will not re-enqueue us */
+    schedule();
+    /* Returns when sched_unblock() made this thread runnable again and the
+     * scheduler picked it; the caller resumes on its own kernel stack. */
+}
+
+void sched_unblock(tcb_t *t) {
+    if (t->state == THREAD_RUNNING || t->state == THREAD_READY) {
+        return; /* already runnable; callers must not pre-mark READY */
+    }
+    sched_ready(t); /* sets t->state = THREAD_READY and enqueues */
+    tcb_t *cur = g_current;
+    if (cur && cur->state == THREAD_RUNNING &&
+        t->effective_priority > cur->effective_priority) {
+        schedule(); /* preempt: the woken thread outranks us */
+    }
+}
+
+/* switch.S accesses the TCB at fixed offsets; fail the build if they drift. */
+_Static_assert(offsetof(tcb_t, kernel_rsp) == 32, "switch.S TCB_KRSP mismatch");
+_Static_assert(offsetof(tcb_t, fpu_area) == 40, "switch.S TCB_FPU mismatch");
+
+void sched_init(void) {
+    __asm__ volatile("fxsave %0" : : "m"(g_fpu_template) : "memory");
+    uint64_t cr4;
+    __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= (1ULL << 9) | (1ULL << 10); /* OSFXSR | OSXMMEXCPT */
+    __asm__ volatile("mov %0, %%cr4" : : "r"(cr4) : "memory");
+    printk("[sched] 256-level bitmap scheduler ready\n");
+}
+
+static void apply_switch(tcb_t *next) {
+    if (g_current && next->proc &&
+        g_current->proc->pml4_phys != next->proc->pml4_phys) {
+        vmm_set_cr3(next->proc->pml4_phys);
+    } else if (!g_current && next->proc) {
+        vmm_set_cr3(next->proc->pml4_phys);
+    }
+    tss_set_rsp0(next->kstack_top);
+    g_syscall_kstack = next->kstack_top;
+    next->state = THREAD_RUNNING;
+    next->slice_ticks = 0;
+    g_current = next;
+}
+
+void schedule(void) {
+    tcb_t *next = pick_next();
+    if (!next) {
+        if (g_current && g_current->state == THREAD_RUNNING) {
+            return; /* nothing else ready: keep running */
+        }
+        /* Nothing runnable and the current thread cannot continue (blocked
+         * or reaped): park the CPU until something external wakes work. */
+        for (;;) {
+            __asm__ volatile("hlt");
+        }
+    }
+    if (next == g_current) {
+        g_current->slice_ticks = 0;
+        return;
+    }
+
+    /* Pop `next` from its level queue. */
+    unsigned p = next->effective_priority;
+    g_ready_head[p] = next->queue_next;
+    if (!g_ready_head[p]) {
+        g_ready_tail[p] = NULL;
+        bitmap_clear(p);
+    }
+    next->queue_next = NULL;
+
+    /* Re-enqueue the preempted current (READY while it waits). */
+    if (g_current && g_current->state == THREAD_RUNNING) {
+        sched_ready(g_current);
+    }
+
+    tcb_t *prev = g_current;
+    apply_switch(next);
+
+    if (prev) {
+        switch_to(prev, next);
+    } else {
+        /* First ever dispatch: emulate switch_to's restore path directly. */
+        __asm__ volatile(
+            "mov %0, %%rsp\n"
+            "popq %%r15\n"
+            "popq %%r14\n"
+            "popq %%r13\n"
+            "popq %%r12\n"
+            "popq %%rbp\n"
+            "popq %%rbx\n"
+            "ret\n" ::"r"(next->kernel_rsp)
+            : "memory");
+        __builtin_unreachable();
+    }
+}
+
+void sched_tick(void) {
+    if (!g_sched_active) {
+        return;
+    }
+    tcb_t *cur = g_current;
+    if (!cur) {
+        return;
+    }
+    cur->slice_ticks++;
+    if (cur->slice_ticks >= SLICE_TICKS && !ready_empty()) {
+        schedule();
+    }
+}
+
+/* ---- processes ---- */
+
+static pcb_t *g_proc_list;
+static uint32_t g_next_pid = 1;
+
+uint32_t proc_alloc_pid(void) {
+    return g_next_pid++;
+}
+
+pcb_t *proc_find(uint32_t pid) {
+    for (pcb_t *p = g_proc_list; p; p = p->next) {
+        if (p->pid == pid && p->state != PROC_DEAD) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
+pcb_t *proc_current(void) {
+    return g_current ? g_current->proc : NULL;
+}
+
+#define CONN_TABLE_SIZE 32
+
+pcb_t *proc_create(pcb_t *parent) {
+    pcb_t *p = kzalloc(sizeof(pcb_t));
+    if (!p) {
+        return NULL;
+    }
+    p->pid = proc_alloc_pid();
+    p->parent_pid = parent ? parent->pid : 0;
+    p->state = PROC_ALIVE;
+    p->pml4_phys = vmm_create_user_pml4();
+    if (!p->pml4_phys) {
+        kfree(p);
+        return NULL;
+    }
+    p->conn_table = kzalloc(CONN_TABLE_SIZE * sizeof(*p->conn_table));
+    if (!p->conn_table) {
+        kfree(p);
+        return NULL;
+    }
+    p->conn_count = CONN_TABLE_SIZE;
+    p->next = g_proc_list;
+    g_proc_list = p;
+    return p;
+}
+
+tcb_t *thread_create_embryo(pcb_t *p, uint8_t priority) {
+    tcb_t *t = kzalloc(sizeof(tcb_t));
+    uint8_t *kstack = kmalloc(KERNEL_STACK_SIZE);
+    uint8_t *fpu = kmalloc(512 + 16);
+    if (!t || !kstack || !fpu) {
+        panic("thread_create: out of kernel memory");
+    }
+    fpu = (uint8_t *)(((uintptr_t)fpu + 15) & ~(uintptr_t)15);
+    memcpy(fpu, g_fpu_template, 512);
+
+    t->tid = (uint32_t)g_next_tid++;
+    t->pid = p->pid;
+    t->state = THREAD_EMBRYO;
+    t->base_priority = priority;
+    t->effective_priority = priority;
+    t->proc = p;
+    t->kstack_top = (uint64_t)kstack + KERNEL_STACK_SIZE;
+    t->fpu_area = fpu;
+
+    t->proc_next = p->threads;
+    p->threads = t;
+    p->nthreads++;
+    return t;
+}
+
+/* Synthesize the initial Ring 3 frame at the top of the kernel stack:
+ * [switch_to frame: 6 callee slots + bootstrap address][trapframe]. */
+void thread_arm(tcb_t *t, uint64_t entry_rip, uint64_t arg, uint64_t user_rsp) {
+    uint64_t *sp = (uint64_t *)(t->kstack_top - 56 - sizeof(trapframe_t));
+    t->kernel_rsp = (uint64_t)sp;
+
+    sp[6] = (uint64_t)thread_bootstrap;
+
+    trapframe_t *tf = (trapframe_t *)(sp + 7);
+    memset(tf, 0, sizeof(*tf));
+    tf->rip = entry_rip;
+    tf->rdi = arg;
+    tf->cs = GDT_UCODE | 3;
+    tf->rflags = 0x202; /* IF=1 */
+    tf->rsp = user_rsp;
+    tf->ss = GDT_UDATA | 3;
+
+    t->start_rip = entry_rip;
+    t->start_arg = arg;
+    t->start_rsp = user_rsp;
+    sched_ready(t);
+}
+
+tcb_t *thread_create(pcb_t *p, uint64_t entry_rip, uint64_t user_rsp,
+                     uint8_t priority) {
+    tcb_t *t = thread_create_embryo(p, priority);
+    thread_arm(t, entry_rip, 0, user_rsp);
+    return t;
+}
+
+tcb_t *thread_find(pcb_t *p, uint32_t tid) {
+    for (tcb_t *t = p->threads; t; t = t->proc_next) {
+        if (t->tid == tid && t->state != THREAD_ZOMBIE) {
+            return t;
+        }
+    }
+    return NULL;
+}
+
+static void reap_thread(tcb_t *t) {
+    sched_unready(t);
+    ipc_detach_thread(t); /* drop any channel queues / in-flight messages */
+    t->state = THREAD_ZOMBIE;
+    /* Kernel stack and FPU area are reclaimed when the process is reaped. */
+}
+
+void thread_exit_current(int status) {
+    tcb_t *t = g_current;
+    pcb_t *p = t->proc;
+    reap_thread(t);
+    p->nthreads--;
+    if (p->nthreads == 0) {
+        p->state = PROC_ZOMBIE;
+        p->exit_code = status;
+        printk("[proc] pid %u became zombie (exit %d)\n", p->pid, status);
+    }
+    schedule();
+    panic("thread_exit_current: returned to zombie");
+}
+
+void proc_exit_current(int status) {
+    tcb_t *t = g_current;
+    pcb_t *p = t->proc;
+    for (tcb_t *x = p->threads; x; x = x->proc_next) {
+        if (x != t && x->state != THREAD_ZOMBIE) {
+            reap_thread(x);
+        }
+    }
+    p->nthreads = 1; /* only the current thread remains to reap below */
+    thread_exit_current(status);
+}
+
+/* ---- Milestone 4 thread syscalls (caller is current) ---- */
+
+long sys_thread_create(uint64_t prio) {
+    pcb_t *p = proc_current();
+    if (!p) {
+        return -EPERM;
+    }
+    if (prio > 255) {
+        return -EINVAL;
+    }
+    tcb_t *t = thread_create_embryo(p, (uint8_t)prio);
+    return t ? (long)t->tid : -ENOMEM;
+}
+
+long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
+                      uint64_t stack_top) {
+    pcb_t *p = proc_current();
+    if (!p) {
+        return -EPERM;
+    }
+    tcb_t *t = thread_find(p, (uint32_t)tid);
+    if (!t) {
+        return -ESRCH;
+    }
+    if (t->state != THREAD_EMBRYO) {
+        return -EINVAL; /* only unarmed threads can be (re)armed */
+    }
+    if (!stack_top) {
+        stack_top = proc_user_stack_alloc(p);
+        if (!stack_top) {
+            return -ENOMEM;
+        }
+    }
+    /* Entry point and stack must live in the user region. */
+    if (entry < 0x400000ULL || entry >= 0x80000000ULL ||
+        stack_top < 0x400000ULL || stack_top > 0x80000000ULL) {
+        return -EINVAL;
+    }
+    thread_arm(t, entry, arg, stack_top);
+    return 0;
+}
+
+long sys_thread_get_ctx(uint64_t tid, uint64_t ubuf) {
+    pcb_t *p = proc_current();
+    tcb_t *t;
+    if (!p) {
+        return -EPERM;
+    }
+    if (tid == 0) {
+        t = sched_current();
+    } else {
+        t = thread_find(p, (uint32_t)tid);
+    }
+    if (!t || t->proc != p) {
+        return -ESRCH;
+    }
+    thread_info_t ti = {
+        .tid = t->tid,
+        .state = (uint32_t)t->state,
+        .prio = t->effective_priority,
+        .entry = t->start_rip,
+        .arg = t->start_arg,
+        .stack_top = t->start_rsp,
+    };
+    return copy_to_user(ubuf, &ti, sizeof(ti)) < 0 ? -EFAULT : 0;
+}

@@ -1,0 +1,5 @@
+build/
+sysroot/
+*.iso
+*.img
+*.tar.gz

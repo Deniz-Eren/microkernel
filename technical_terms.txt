@@ -1,0 +1,174 @@
+# technical_terms.txt — technical nouns (TN) and technical verbs (TV) for
+# the Microkernel project documents (README.md, TASKS.md).
+# Format: one term on each line. Everything after '#' is a comment.
+
+# --- operating system concepts (TN category 19 — computer science) --------
+kernel
+microkernel
+scheduler
+scheduling
+thread
+process
+signal
+page
+frame
+stack
+heap
+syscall
+channel
+message
+pulse
+queue
+buffer
+loader
+linker
+server
+client
+console
+milestone
+commit
+repository
+script
+header
+binary
+archive
+memory
+emulator
+timer
+interrupt
+register
+namespace
+trampoline
+handler
+connection
+payload
+exit code
+address space
+page table
+context switch
+page fault
+ready queue
+signal handler
+exit status
+source tree
+build system
+test runner
+serial output
+serial port
+virtual address
+physical address
+memory map
+boot module
+boot process
+user stack
+kernel stack
+thread state
+priority level
+run level
+user
+library
+registry
+harness
+pattern
+command
+timeout
+panic
+shell
+directory
+compiler
+defect
+inheritance
+receiver
+worker
+parent
+child
+lookup
+protocol
+serial
+ring
+bitmap
+path
+manager
+wrapper
+slice
+environment
+configuration
+definition
+creation
+
+# --- proper names and product names ---------------------------------------
+Microkernel
+QEMU
+Podman
+GRUB
+CMake
+Clang
+LLVM
+Debian
+Linux
+POSIX
+ELF
+GDT
+IDT
+TSS
+MSR
+LAPIC
+APIC
+ACPI
+RSDP
+SMEP
+SMAP
+PML4
+HHDM
+sysproc
+ipcserv
+ipccli
+sigtest
+libc
+crt0
+auxv
+ustar
+multiboot
+
+# --- software engineering nouns (TN category 19 and related) --------------
+build
+program
+application
+call
+service
+stage
+priority
+port
+option
+state
+event
+failure
+host
+driver
+architecture
+runtime
+subsystem
+toolchain
+helper
+policy
+design
+W^X
+Multiboot2
+Containerfile
+
+# --- technical verbs (TV category 2c — system operations) -----------------
+boot
+run
+map
+allocate
+spawn
+wake
+block
+yield
+deliver
+schedule
+preempt
+dispatch
+load
+match
+enter
