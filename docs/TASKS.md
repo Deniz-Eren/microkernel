@@ -78,10 +78,23 @@ with its status and date.
 
 ## Milestone 6 — interrupts and drivers (next)
 
-- interrupt events as messages to user processes (`AttachIntrEvent`)
-- access to port input and output for permitted processes (`IOPLSet`)
-- a driver for a QEMU device, with a message path that uses interrupts
-- `ReadMsgV` and `WriteMsgV` for messages with more than one buffer
+- [ ] feat(ipc,drivers): TSK_0004 — add `AttachIntrEvent`, `IntrUnmask`,
+  `IOPLSet`, and `ReadMsgV`/`WriteMsgV`. Run a Ring 3 QEMU device driver test.
+
+## Near-term POSIX.1-2024 tasks (planned)
+
+- [ ] feat(proc,time): TSK_0005 — add kernel monotonic/realtime clocks and
+  POSIX.1-2024 `<time.h>` (`clock_gettime`, `clock_settime`, `clock_nanosleep`,
+  `timer_create`, `timer_settime`) for `CLOCK_MONOTONIC` and `CLOCK_REALTIME`
+- [ ] feat(proc,pthread): TSK_0006 — add per-thread `FS.base` TLS, `<pthread.h>`
+  (`pthread_create`, `pthread_join`, mutexes, `pthread_cond_*`,
+  `pthread_cond_clockwait`), and `<semaphore.h>` (`sem_*`)
+- [ ] feat(proc,ipc): TSK_0007 — add `fork` (on full `VMCloneCow`), `execve`
+  (from `boot.tar`), per-process file descriptors, and `pipe2`/`dup3`/`ppoll`
+
+For the full traceability backlog and longer-term roadmap, see
+[docs/records/TASKS.md](records/TASKS.md) and
+[docs/records/ROADMAP.md](records/ROADMAP.md).
 
 ## Work rules
 
@@ -127,3 +140,6 @@ with its status and date.
 - [x] COMPLETE 2026-11-21 feat(proc,mem): complete TSK_0002 / Milestone 5
   (ProcCreate, ProcWait/waitpid, VMMap/VMUnmap/VMProtect/mmap, VMCloneCow with
   PMM refcounts and #PF COW resolution, proctest/procchild QEMU & CTest gates)
+- [x] COMPLETE 2026-11-21 docs(tasks): add near-term forward task backlog
+  (TSK_0004-TSK_0007) in docs/TASKS.md and docs/records/TASKS.md and archive
+  RDM_0001

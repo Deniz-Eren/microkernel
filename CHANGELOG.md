@@ -72,6 +72,10 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Updated `docs/TASKS.md` and `docs/records/TASKS.md` with near-term open tasks
+  (`TSK_0004`–`TSK_0007`) covering Milestone 6 and the next POSIX.1-2024 Base
+  building blocks, and archived completed `RDM_0001` into
+  `docs/records/HISTORY.md`.
 - Updated `README.md` with a user-space functionality support table, current
   application use-cases, and an overview of the bidirectional Sphinx-Needs
   traceability setup, and added a rule in `AGENTS.md` requiring agents to keep

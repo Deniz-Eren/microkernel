@@ -21,18 +21,6 @@ Order roadmap items by priority and link them to affected specifications through
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### RDM_0001 — Milestone 5: Processes and memory system calls
-
-```{roadmap} Milestone 5: Processes and memory system calls
-:id: RDM_0001
-:status: open
-:traces: SYS_PROC_0001, SYS_MEM_0001, SWR_MEM_0004, SWR_PROC_0004
-
-Add user-space process spawning (`ProcCreate`), virtual memory mapping (`VMMap`,
-`VMUnmap`), copy-on-write cloning (`VMCloneCow`), and parent exit-code
-collection ({need}`SYS_PROC_0001`, {need}`SYS_MEM_0001`).
-```
-
 ### RDM_0002 — Milestone 6: Interrupts and user-space drivers
 
 ```{roadmap} Milestone 6: Interrupts and user-space drivers
