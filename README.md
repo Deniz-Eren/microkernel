@@ -1,8 +1,10 @@
 # Microkernel
 
-Microkernel is a small operating system for x86-64 computers. The kernel is
-small and supplies its services to user processes. Servers and applications run
-as user processes in Ring 3. The processes send messages to each other.
+Microkernel is a small operating system for x86-64 computers that targets
+**POSIX.1-2024 (IEEE Std 1003.1-2024, Issue 8) Base** compliance in user space.
+The Ring 0 kernel stays small and supplies its services to user processes.
+Servers and applications run as isolated user processes in Ring 3 and send
+messages to each other.
 
 ## Commands
 
@@ -11,7 +13,9 @@ as user processes in Ring 3. The processes send messages to each other.
 ./scripts/env.sh test --timeout 120 \
     --expect '\[OK\] PMM/VMM/APIC initialized' \
     --expect 'name resolved /dev/echo' \
+    --expect 'errno thread-local and preserved across success' \
     --expect 'signal handler entered'
+./scripts/env.sh ctest --test-dir build --output-on-failure
 ```
 
 For the full procedures, see the [cmake skill](docs/skills/cmake/SKILL.md). For
@@ -45,6 +49,27 @@ together.
 The process `sysproc` is the first user process. It contains the name registry
 of the system. Servers register a name with `sysproc`. Clients find the servers
 with this name.
+
+## POSIX.1-2024 compliance
+
+Microkernel targets **POSIX.1-2024 (Issue 8) Base** (`_POSIX_VERSION = 202405L`,
+`_POSIX2_VERSION = 202405L`) in user space. The Ring 0 kernel stays small while
+`libc` and Ring 3 system servers supply standard POSIX interfaces through kernel
+channels and syscalls:
+
+- standalone C17 headers with clean namespaces (`-D_POSIX_C_SOURCE=202405L` and
+  `-D_XOPEN_SOURCE=800`) and thread-local `errno`
+- mandatory Issue 8 Base groups: `pthread_*`, `sem_*`, monotonic clocks and
+  timers, `mmap`/`mprotect`/`msync`/`munmap`, `pipe2`/`dup3`/`ppoll`, and
+  `aio_*`
+- optional POSIX groups (`SHM`, `SPN`, `ML`, `MLR`, `MSG`) behind their
+  `_POSIX_*` feature macros
+
+End-to-end Sphinx-Needs traceability links POSIX.1-2024 requirements to headers,
+source files, and automated tests (`posix.headers`, `docs.audit`, and QEMU
+runs). See [BDR_0003](docs/10-product/bdr/BDR_0003.md),
+[ADR_0003](docs/30-architecture/adr/ADR_0003.md), and the [POSIX.1-2024
+compliance matrix](docs/60-verification/traceability.md).
 
 ## Source tree
 
@@ -90,11 +115,12 @@ signal handler runs.
 
 The kernel and the library use the C17 standard, with warnings as errors. The
 kernel code runs without a C runtime. The kernel maps its code read-only. Data
-pages are not code pages. The same policy applies to user programs. The kernel
-does not write through user pointers directly. It moves the data through the
-physical memory map. It examines the page permissions before each copy. The file
-naming, the document formatting, and the copyright header rules are in
-[docs/CONVENTIONS.md](docs/CONVENTIONS.md).
+pages are not code pages. The same policy applies to user programs.
+
+The kernel does not write through user pointers directly. It moves the data
+through the physical memory map. It examines the page permissions before each
+copy. The file naming, the document formatting, and the copyright header rules
+are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 
 ## Status
 
@@ -111,6 +137,8 @@ calls.
 - [docs/CONVENTIONS.md](docs/CONVENTIONS.md): file names, document formatting,
   and copyright rules
 - [docs/DECISIONS.md](docs/DECISIONS.md): the decision records (ADRs)
+- [docs/index.md](docs/index.md): the Sphinx-Needs requirements, architecture,
+  and POSIX.1-2024 traceability model
 - Skills:
   - [cmake](docs/skills/cmake/SKILL.md) — build, test, and user programs
   - [clang-format](docs/skills/clang-format/SKILL.md) — code formatting

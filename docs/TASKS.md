@@ -111,3 +111,5 @@ with its status and date.
 - [x] COMPLETE 2026-11-21 style: bring full repository to zero check_text.py
   findings (80-column .clang-format, Doxygen headers, greedy prose packing,
   immutable .editorconfig exemptions, ADR-13)
+- [x] COMPLETE 2026-11-21 docs(readme): document POSIX.1-2024 (Issue 8) Base
+  compliance target and traceability links in README.md

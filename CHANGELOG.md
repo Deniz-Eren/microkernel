@@ -52,6 +52,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Updated `README.md` to highlight the POSIX.1-2024 (Issue 8) Base compliance
+  target, CTest commands, and links to `BDR_0003`, `ADR_0003`, and the
+  traceability matrix.
 - Aligned `.clang-format` (`ColumnLimit: 80`) with `.editorconfig`, added
   `.editorconfig` exemptions for verbatim `LICENSE.md` and immutable
   `docs/skills/*/references/*`, upgraded all existing C/H, CMake, shell, and
