@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     trapframe.h
+ * @brief    x86-64 saved CPU trapframe register layout
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 /* Register frame pushed by the IDT stubs (and synthesized for syscalls).

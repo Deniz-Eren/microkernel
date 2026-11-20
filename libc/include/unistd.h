@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     unistd.h
+ * @brief    POSIX.1-2024 Base unistd declarations and version macros
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #ifndef _UNISTD_H
 #define _UNISTD_H

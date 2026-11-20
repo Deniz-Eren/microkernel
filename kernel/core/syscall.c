@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     syscall.c
+ * @brief    x86-64 syscall dispatcher and SMAP-safe HHDM user copies
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/trapframe.h>
 #include <kernel/printk.h>
@@ -16,9 +23,9 @@
 
 /* need:: COMP_PROC_0002 COMP_MEM_0002 */
 
-/* Copy between an ARBITRARY user address space and the kernel through the
- * HHDM. Each page is translated in the target pml4 and permission-checked;
- * user VAs are never dereferenced directly (SMAP-safe, fault-safe). */
+/* Copy between an ARBITRARY user address space and the kernel through the HHDM.
+ * Each page is translated in the target pml4 and permission-checked; user VAs
+ * are never dereferenced directly (SMAP-safe, fault-safe). */
 static long copy_user_pml4(uint64_t pml4_phys, void *kbuf, uint64_t uaddr,
                            size_t n, int to_user) {
     size_t done = 0;

@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     panic.c
+ * @brief    Kernel fatal panic handler halting the CPU
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <stdarg.h>
 #include <kernel/printk.h>

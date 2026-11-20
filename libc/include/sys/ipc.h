@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     ipc.h
+ * @brief    Ring 3 synchronous IPC and sysproc name-service API
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 
@@ -12,8 +19,8 @@
 
 /* Name service (sysproc, chanid 1): servers ATTACH a path, clients QUERY it. */
 #define NAME_MSG_ATTACH 1
-#define NAME_MSG_QUERY  2
-#define NAME_MAX_PATH   60
+#define NAME_MSG_QUERY 2
+#define NAME_MAX_PATH 60
 
 typedef struct {
     uint32_t type;
@@ -22,9 +29,9 @@ typedef struct {
 } name_msg_t;
 
 typedef struct {
-    int32_t pid;  /* 0 if unresolved */
+    int32_t pid; /* 0 if unresolved */
     int32_t chanid;
-    int32_t err;  /* 0 = ok */
+    int32_t err; /* 0 = ok */
     int32_t reserved;
 } name_reply_t;
 

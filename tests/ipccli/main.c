@@ -1,9 +1,16 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     main.c
+ * @brief    Ring 3 IPC name-lookup, round-trip, and pulse test client
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
-/* ipccli — demo IPC client for the IPC milestone.
- * Resolves "/dev/echo" through the sysproc name service, attaches a
- * connection to the server, and runs three synchronous round trips. */
+/* ipccli — demo IPC client for the IPC milestone. Resolves "/dev/echo" through
+ * the sysproc name service, attaches a connection to the server, and runs three
+ * synchronous round trips. */
 #include <stdio.h>
 #include <string.h>
 #include <sys/microkernel.h>
@@ -20,16 +27,15 @@ int main(void) {
     memset(&q, 0, sizeof(q));
     q.type = NAME_MSG_QUERY;
     memcpy(q.path, "/dev/echo", sizeof("/dev/echo"));
-    name_reply_t r;
+    name_reply_t r = {0};
     long s = SendMsg(nconnid, &q, sizeof(q), &r, sizeof(r));
-    /* The kernel fills r via SendMsg; the analyzer cannot see the syscall
-     * wrapper body and flags the read as uninitialized. */
-    if (s < 0 || r.err != 0 || r.pid == 0) { // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
-        printf("[FAIL] ipccli name query -> send=%ld err=%d pid=%d\n", s, // NOLINT(clang-analyzer-core.CallAndMessage)
-               r.err, r.pid);
+    if (s < 0 || r.err != 0 || r.pid == 0) {
+        printf("[FAIL] ipccli name query -> send=%ld err=%d pid=%d\n", s, r.err,
+               r.pid);
         return 1;
     }
-    printf("[OK] name resolved /dev/echo -> pid=%d chanid=%d\n", r.pid, r.chanid);
+    printf("[OK] name resolved /dev/echo -> pid=%d chanid=%d\n", r.pid,
+           r.chanid);
 
     int connid = (int)OpenConnection((uint32_t)r.pid, (uint32_t)r.chanid);
     if (connid < 0) {

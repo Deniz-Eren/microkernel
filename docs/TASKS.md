@@ -108,3 +108,6 @@ with its status and date.
 - [x] COMPLETE 2026-11-21 docs(governance): mandate .editorconfig and
   docs-traceability-setup check_text.py checks in AGENTS.md, WDR_0002, and
   CNV_0002
+- [x] COMPLETE 2026-11-21 style: bring full repository to zero check_text.py
+  findings (80-column .clang-format, Doxygen headers, greedy prose packing,
+  immutable .editorconfig exemptions, ADR-13)

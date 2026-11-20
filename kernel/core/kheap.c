@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     kheap.c
+ * @brief    Kernel virtual heap first-fit dynamic memory allocator
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/kheap.h>
 #include <kernel/pmm.h>
@@ -41,7 +48,8 @@ static void heap_grow(size_t need) {
         vmm_map_page(va, frame, VMM_PRESENT | VMM_WRITE | VMM_NX);
         g_heap_mapped += 4096;
     }
-    if ((g_heap_cursor + need) > (uint8_t *)(KERNEL_HEAP_BASE + HEAP_MAX_SIZE)) {
+    if ((g_heap_cursor + need) >
+        (uint8_t *)(KERNEL_HEAP_BASE + HEAP_MAX_SIZE)) {
         panic("kheap: heap exhausted");
     }
 }

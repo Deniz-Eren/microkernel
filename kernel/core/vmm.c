@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     vmm.c
+ * @brief    x86-64 four-level PML4 virtual memory manager
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/vmm.h>
 #include <kernel/pmm.h>
@@ -32,9 +39,9 @@ void vmm_invlpg(uint64_t vaddr) {
     __asm__ volatile("invlpg (%0)" : : "r"(vaddr) : "memory");
 }
 
-/* Split a huge leaf entry into a child table of 512 smaller pages.
- * level: 1 = 1 GiB leaf in the PDPT (children are 2 MiB PD entries),
- *        2 = 2 MiB leaf in the PD (children are 4 KiB PT entries). */
+/* Split a huge leaf entry into a child table of 512 smaller pages. Level 1 is a
+ * 1 GiB leaf in PDPT (children are 2 MiB PD entries); level 2 is a 2 MiB leaf
+ * in PD (children are 4 KiB PT entries). */
 static uint64_t split_leaf(uint64_t *table, uint64_t index, int level) {
     uint64_t leaf = table[index];
     if (!(leaf & VMM_PRESENT) || !(leaf & VMM_HUGE)) {
@@ -211,7 +218,8 @@ void vmm_init(void) {
     remap_range("rodata", (uint64_t)(uintptr_t)__rodata_start,
                 (uint64_t)(uintptr_t)__rodata_end, VMM_PRESENT | VMM_NX);
     remap_range("data", (uint64_t)(uintptr_t)__data_start,
-                (uint64_t)(uintptr_t)__data_end, VMM_PRESENT | VMM_WRITE | VMM_NX);
+                (uint64_t)(uintptr_t)__data_end,
+                VMM_PRESENT | VMM_WRITE | VMM_NX);
     remap_range("bss", (uint64_t)(uintptr_t)__bss_start,
                 (uint64_t)(uintptr_t)__kboot_stack_top,
                 VMM_PRESENT | VMM_WRITE | VMM_NX);

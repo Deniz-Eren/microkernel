@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     unistd.c
+ * @brief    POSIX.1-2024 errno-preserving unistd syscall wrappers
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <errno.h>
 #include <unistd.h>
@@ -7,8 +14,8 @@
 
 /* need:: COMP_LIBC_0001 */
 
-/* Until a console server owns fd 0/1/2, output goes to the kernel early
- * debug log (SYS_DEBUG_LOG). Raw syscalls return negative errno; wrappers set
+/* Until a console server owns fd 0/1/2, output goes to the kernel early debug
+ * log (SYS_DEBUG_LOG). Raw syscalls return negative errno; wrappers set
  * thread-local errno only on failure and never clear it on success. */
 ssize_t write(int fd, const void *buf, size_t n) {
     if (fd >= STDIN_FILENO && fd <= STDERR_FILENO) {

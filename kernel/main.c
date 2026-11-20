@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     main.c
+ * @brief    Higher-half kernel entry point and subsystem bring-up
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <stdint.h>
 #include <kernel/printk.h>
@@ -22,7 +29,8 @@ extern void syscall_entry(void);
 static void syscall_init(void) {
     uint64_t efer = rdmsr(0xC0000080);
     wrmsr(0xC0000080, efer | 1); /* IA32_EFER.SCE */
-    /* STAR: kernel CS/SS = 0x08/0x10; user base 0x10 -> sysret CS=0x20 SS=0x18 */
+    /* STAR: kernel CS/SS = 0x08/0x10; user base 0x10 -> sysret CS=0x20 SS=0x18
+     */
     wrmsr(0xC0000081, ((uint64_t)0x10 << 48) | ((uint64_t)0x08 << 32));
     wrmsr(0xC0000082, (uint64_t)(uintptr_t)syscall_entry); /* LSTAR */
     wrmsr(0xC0000084, 0x45700); /* SFMASK: IF|TF|DF|NT|AC */
@@ -31,7 +39,8 @@ static void syscall_init(void) {
 
 void kmain64(uint64_t mbi_phys) {
     serial_init();
-    printk("\n[microkernel] Microkernel microkernel (x86_64, higher-half) booting\n");
+    printk("\n[microkernel] Microkernel microkernel (x86_64, higher-half) "
+           "booting\n");
     printk("[microkernel] Multiboot2 MBI at phys %p\n", (void *)mbi_phys);
 
     gdt_init();

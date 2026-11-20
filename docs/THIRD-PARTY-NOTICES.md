@@ -1,10 +1,12 @@
 ## Purpose
 
-Record the third-party open-source software, files, snippets, and libraries that microkernel uses. Give the license attribution and the compliance notices.
+Record the third-party open-source software, files, snippets, and libraries that
+microkernel uses. Give the license attribution and the compliance notices.
 
 ## Structure
 
-One section for each third-party component. Each section gives the source, the license, and the task of the component in the project.
+One section for each third-party component. Each section gives the source, the
+license, and the task of the component in the project.
 
 ## Formatting Rules
 
@@ -13,15 +15,20 @@ One section for each third-party component. Each section gives the source, the l
 
 ---
 
-This document gives the third-party open-source software, files, snippets, and libraries that this project uses. We give thanks to the open-source community for its contributions.
+This document gives the third-party open-source software, files, snippets, and
+libraries that this project uses. We give thanks to the open-source community
+for its contributions.
 
-The notices, the terms, and the copyright lines below give the attribution for their open-source licenses. **Note:** these licenses apply only to the third-party files and dependencies in the list. They do not change the primary license of this project. The primary license is in [LICENSE.md](../LICENSE.md).
+The notices, the terms, and the copyright lines below give the attribution for
+their open-source licenses. **Note:** these licenses apply only to the
+third-party files and dependencies in the list. They do not change the primary
+license of this project. The primary license is in [LICENSE.md](../LICENSE.md).
 
 ## 1. Copied files and snippets
 
 ### conventionalcommits.org
-* **Component(s) Used:** [skills/git/references/COMMITS.md](skills/git/references/COMMITS.md)
-* **Source:** [conventionalcommits.org (v1.0.0)](https://github.com/conventional-commits/conventionalcommits.org/blob/master/content/v1.0.0/index.md)
+* **Component(s) Used:** [COMMITS.md](skills/git/references/COMMITS.md)
+* **Source:** [conventionalcommits.org (v1.0.0)][cc-src]
 * **Source License:** MIT License
 
 #### License Notice
@@ -51,43 +58,63 @@ SOFTWARE.
 ```
 
 ### agentskills
-* **Component(s) Used:** [skills/create-skill/references/SKILLS.mdx](skills/create-skill/references/SKILLS.mdx)
-* **Source:** [github.com/agentskills/agentskills](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx)
-* **Source License:** Apache License 2.0. The full license text is in the agentskills repository at the source link above.
+* **Component(s) Used:** [SKILLS.mdx](skills/create-skill/references/SKILLS.mdx)
+* **Source:** [github.com/agentskills/agentskills][agentskills-src]
+* **Source License:** Apache License 2.0. The full license text is in the
+  agentskills repository at the source link above.
 
 ### Semantic Versioning 2.0.0
-* **Component(s) Used:** [skills/git/references/semver.md](skills/git/references/semver.md)
-* **Source:** [github.com/semver/semver.md](https://github.com/semver/semver/blob/master/semver.md)
-* **Source License:** Creative Commons Attribution 3.0 Unported (CC BY 3.0). The full license text is at [creativecommons.org/licenses/by/3.0/legalcode](https://creativecommons.org/licenses/by/3.0/legalcode).
+* **Component(s) Used:** [semver.md](skills/git/references/semver.md)
+* **Source:** [github.com/semver/semver.md][semver-src]
+* **Source License:** Creative Commons Attribution 3.0 Unported (CC BY 3.0). The
+  full license text is at [creativecommons.org/licenses/by/3.0][cc-by-3].
 
 ### keepachangelog.com
-* **Component(s) Used:** [skills/keepachangelog/SKILL.md](skills/keepachangelog/SKILL.md)
+* **Component(s) Used:**
+  [skills/keepachangelog/SKILL.md](skills/keepachangelog/SKILL.md)
 * **Source:** [keepachangelog.com](https://keepachangelog.com)
-* **Note:** The skill describes the Keep a Changelog format with its own words. No text is copied from the source.
+* **Note:** The skill describes the Keep a Changelog format with its own words.
+  No text is copied from the source.
 
 ## 2. Dependencies and build tools
 
 ### LLVM and Clang
-* **Role:** the C/ASM cross-compiler, linker (`ld.lld`), and binary tools. The build copies the Clang freestanding headers from the compiler resource directory into `sysroot/usr/include` at build time.
+* **Role:** the C/ASM cross-compiler, linker (`ld.lld`), and binary tools. The
+  build copies the Clang freestanding headers from the compiler resource
+  directory into `sysroot/usr/include` at build time.
 * **Source:** [llvm.org](https://llvm.org)
-* **License:** Apache License 2.0 with LLVM exceptions. See the license texts in the LLVM repository: [LICENSE.TXT](https://github.com/llvm/llvm-project/blob/main/LICENSE.TXT).
+* **License:** Apache License 2.0 with LLVM exceptions. See the license texts in
+  the LLVM repository:
+  [LICENSE.TXT](https://github.com/llvm/llvm-project/blob/main/LICENSE.TXT).
 
 ### GNU GRUB
-* **Role:** boot loader. `grub-mkrescue` makes the bootable ISO in build stage 4.
+* **Role:** boot loader. `grub-mkrescue` makes the bootable ISO in build stage
+  4.
 * **Source:** [gnu.org/software/grub](https://www.gnu.org/software/grub)
-* **License:** GPL-3.0-or-later. Used as a build tool; GRUB code is not part of the kernel or the user programs.
+* **License:** GPL-3.0-or-later. Used as a build tool; GRUB code is not part of
+  the kernel or the user programs.
 
 ### QEMU
-* **Role:** machine emulator. The test harness boots the built ISO headless under QEMU and checks the serial output.
+* **Role:** machine emulator. The test harness boots the built ISO headless
+  under QEMU and checks the serial output.
 * **Source:** [qemu.org](https://www.qemu.org)
 * **License:** GPL-2.0-or-later. Used as a test tool at development time.
 
 ### Debian bookworm-slim
 * **Role:** the base image of the build container (`Containerfile`).
 * **Source:** [debian.org](https://www.debian.org)
-* **License:** the Debian system and its packages carry their own licenses (mostly GPL-family and permissive licenses). See `/usr/share/doc/*/copyright` in the image.
+* **License:** the Debian system and its packages carry their own licenses
+  (mostly GPL-family and permissive licenses). See `/usr/share/doc/*/copyright`
+  in the image.
 
 ### Podman
-* **Role:** the container runtime that runs the development environment on the host.
+* **Role:** the container runtime that runs the development environment on the
+  host.
 * **Source:** [podman.io](https://podman.io)
 * **License:** Apache-2.0. Used as a host tool at development time.
+
+[cc-src]: https://www.conventionalcommits.org/en/v1.0.0/
+[agentskills-src]:
+  https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx
+[semver-src]: https://github.com/semver/semver.md/blob/master/semver.md
+[cc-by-3]: https://creativecommons.org/licenses/by/3.0/legalcode

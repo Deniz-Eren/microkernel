@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
+##
+# @file     build-agent.sh
+# @brief    Run build, QEMU tests, and clang-tidy static analysis
+#
+# @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
 #
-# Build agent: build, test and static analysis for microkernel.
-# The exit code is 0 for PASS, and not 0 for FAIL.
+
+# Build agent: build, test and static analysis for microkernel. The exit code is
+# 0 for PASS, and not 0 for FAIL.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -33,8 +39,9 @@ echo "tests: $TESTS [OK] expectations matched"
 
 echo "==> lint"
 LINT_LOG="$(mktemp)"
-"$ENV" bash -c "run-clang-tidy -p build -quiet \$(find kernel libc servers tests \( -name '*.c' -o -name '*.h' \))" \
-    > "$LINT_LOG" 2>&1
+TIDY_CMD="run-clang-tidy -p build -quiet \$(find kernel libc servers tests"
+TIDY_CMD="$TIDY_CMD \( -name '*.c' -o -name '*.h' \))"
+"$ENV" bash -c "$TIDY_CMD" > "$LINT_LOG" 2>&1
 if grep -qE 'warning:|error:' "$LINT_LOG"; then
     echo "BUILD: FAIL (lint findings; log: $LINT_LOG)"
     grep -E 'warning:|error:' "$LINT_LOG" | head -20

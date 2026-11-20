@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     signal.h
+ * @brief    Ring 3 signal numbers, sigaction, and kill wrappers
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 
@@ -9,8 +16,8 @@
  * __sigreturn_trampoline. */
 #include <sys/microkernel.h>
 
-#define NSIG    32
-#define SIGINT  2
+#define NSIG 32
+#define SIGINT 2
 #define SIGKILL 9
 #define SIGUSR1 10
 #define SIGSEGV 11

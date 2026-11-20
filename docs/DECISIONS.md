@@ -22,6 +22,39 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-13 (2026-11-21): Align .clang-format to 80 cols and exempt immutable docs
+
+### Context
+
+Full-repository `docs-traceability-setup` `check_text.py` validation revealed a
+conflict between `.clang-format` (`ColumnLimit: 100`) and `.editorconfig`
+(`max_line_length = 80`), legacy 2-line copyright headers on pre-existing C/H,
+CMake, and shell files, and false findings on verbatim `LICENSE.md` and
+immutable vendor specifications under `docs/skills/*/references/`.
+
+### Decision
+
+Set `ColumnLimit: 80` in `.clang-format` to match `.editorconfig`, add
+`max_line_length = off` exemptions in `.editorconfig` only for verbatim
+`LICENSE.md` and immutable `docs/skills/*/references/*`, upgrade all existing
+C/H, CMake, shell, and Python files to Doxygen `@file`/`@brief`/`@copyright`
+headers, and zero-initialize syscall output structs in `servers/` and `tests/`
+so 80-column formatting stays clean under `clang-tidy` without fragile trailing
+`NOLINT` comments.
+
+### Alternatives
+
+- Raise `.editorconfig` `max_line_length` to 100 for C/H files (diverges from
+  the uniform 80-column repository convention)
+- Leave pre-existing files out of `check_text.py` checks permanently
+
+### Consequences
+
+- Running `check_text.py --root .` across the entire repository exits with code
+  0 and zero findings.
+- `clang-format` and `.editorconfig` agree on 80 columns across all source
+  files, while immutable vendor specs remain untouched.
+
 ## ADR-12 (2026-11-21): Enforce ASD-STE100 and modal_verb=must for requirements
 
 ### Context

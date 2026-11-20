@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     sched.h
+ * @brief    Process, thread, and preemptive scheduler interface
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 #include <stddef.h>
@@ -26,24 +33,24 @@ typedef struct tcb {
     uint8_t effective_priority; /* active priority (inheritance-boosted) */
 
     pcb_t *proc;
-    uint64_t kstack_top;        /* top of this thread's 16 KiB kernel stack */
-    uint64_t kernel_rsp;        /* saved Ring 0 stack pointer (switch.S offset) */
-    uint8_t *fpu_area;          /* 512-byte fxsave image, 16-byte aligned */
+    uint64_t kstack_top; /* top of this thread's 16 KiB kernel stack */
+    uint64_t kernel_rsp; /* saved Ring 0 stack pointer (switch.S offset) */
+    uint8_t *fpu_area;   /* 512-byte fxsave image, 16-byte aligned */
 
-    struct tcb *queue_next;     /* ready-queue link */
-    struct tcb *proc_next;      /* per-process thread list */
+    struct tcb *queue_next; /* ready-queue link */
+    struct tcb *proc_next;  /* per-process thread list */
 
-    uint64_t slice_ticks;       /* consumed quantum */
+    uint64_t slice_ticks; /* consumed quantum */
     uint32_t pending_signals;
     uint32_t blocked_signals;
 
     /* IPC state (Milestone 3) */
-    void *blocked_on_chan;      /* channel_t* this thread is blocked on */
-    struct tcb *ipc_next;       /* channel receive-queue link */
-    long ipc_result;            /* value handed back when a block resolves */
-    uint64_t ipc_buf;           /* user receive buffer (ReceiveMsg arg) */
-    uint64_t ipc_buflen;        /* user receive buffer length */
-    uint64_t ipc_info;          /* user ipc_recv_info_t* (ReceiveMsg arg) */
+    void *blocked_on_chan; /* channel_t* this thread is blocked on */
+    struct tcb *ipc_next;  /* channel receive-queue link */
+    long ipc_result;       /* value handed back when a block resolves */
+    uint64_t ipc_buf;      /* user receive buffer (ReceiveMsg arg) */
+    uint64_t ipc_buflen;   /* user receive buffer length */
+    uint64_t ipc_info;     /* user ipc_recv_info_t* (ReceiveMsg arg) */
 
     /* Start context (Milestone 4; armed via SYS_THREAD_RESET). */
     uint64_t start_rip;
@@ -53,7 +60,7 @@ typedef struct tcb {
 
 /* switch.S reads these fields at fixed offsets. */
 #define TCB_KRSP_OFFSET offsetof(tcb_t, kernel_rsp)
-#define TCB_FPU_OFFSET  offsetof(tcb_t, fpu_area)
+#define TCB_FPU_OFFSET offsetof(tcb_t, fpu_area)
 
 typedef enum { PROC_ALIVE, PROC_ZOMBIE, PROC_DEAD } proc_state_t;
 
@@ -64,25 +71,25 @@ struct pcb {
     int exit_code;
 
     uint64_t pml4_phys;
-    uint64_t brk;               /* program break (user VA) */
+    uint64_t brk; /* program break (user VA) */
 
-    tcb_t *threads;             /* singly-linked list of live threads */
+    tcb_t *threads; /* singly-linked list of live threads */
     uint32_t nthreads;
 
     /* Connection (connid) table — Milestone 3. */
     struct conn {
-        uint32_t pid;           /* 0 = free slot */
+        uint32_t pid; /* 0 = free slot */
         uint32_t chanid;
         uint32_t flags;
-    } *conn_table;
+    } * conn_table;
     uint32_t conn_count;
 
     /* Signals (Milestone 4): Ring 3 handler per signal, 1..31. */
     uint64_t sig_handlers[32];
-    uint64_t sig_restorer;      /* __sigreturn_trampoline address */
-    uint64_t next_stack_va;     /* bump cursor for per-thread user stacks */
+    uint64_t sig_restorer;  /* __sigreturn_trampoline address */
+    uint64_t next_stack_va; /* bump cursor for per-thread user stacks */
 
-    pcb_t *next;                /* global process list */
+    pcb_t *next; /* global process list */
 };
 
 #define KERNEL_STACK_SIZE 16384UL
@@ -95,9 +102,9 @@ void sched_unready(tcb_t *t);
 void sched_activate(void);
 tcb_t *sched_current(void);
 
-/* Block the current thread on an IPC/other wait queue: marks it non-RUNNING
- * and dispatches the next runnable thread. Returns only when the thread is
- * later made runnable again and picked. */
+/* Block the current thread on an IPC/other wait queue: marks it non-RUNNING and
+ * dispatches the next runnable thread. Returns only when the thread is later
+ * made runnable again and picked. */
 void sched_block_current(thread_state_t state);
 
 /* Make a blocked thread runnable again; preempts the current thread when the

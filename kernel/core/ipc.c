@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     ipc.c
+ * @brief    Synchronous message passing, priority inheritance, and pulses
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/ipc.h>
 #include <kernel/uaccess.h>
@@ -120,8 +127,8 @@ static long complete_receive(tcb_t *srv, chan_msg_t *m) {
         n = srv->ipc_buflen;
     }
     if (n) {
-        long r = copy_to_user_pml4(srv->proc->pml4_phys, srv->ipc_buf,
-                                   m->data, n);
+        long r =
+            copy_to_user_pml4(srv->proc->pml4_phys, srv->ipc_buf, m->data, n);
         if (r < 0) {
             n = 0; /* undeliverable payload: receiver sees an empty message */
         }
@@ -134,8 +141,7 @@ static long complete_receive(tcb_t *srv, chan_msg_t *m) {
             .len = (uint32_t)n,
             .reserved = 0,
         };
-        copy_to_user_pml4(srv->proc->pml4_phys, srv->ipc_info, &ii,
-                          sizeof(ii));
+        copy_to_user_pml4(srv->proc->pml4_phys, srv->ipc_info, &ii, sizeof(ii));
     }
 
     if (client) {

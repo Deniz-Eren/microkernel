@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     uaccess.h
+ * @brief    SMAP-safe cross-address-space user memory copy interface
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 
@@ -8,8 +15,8 @@
 #include <stdint.h>
 
 /* User-pointer access helpers. None of these ever dereference a user VA
- * directly: every page is translated first and the data moves through the
- * HHDM, so SMAP stays enforced and faulting pages yield -EFAULT instead of a
+ * directly: every page is translated first and the data moves through the HHDM,
+ * so SMAP stays enforced and faulting pages yield -EFAULT instead of a
  * kernel-mode page fault.
  *
  * The _pml4 variants operate on an ARBITRARY address space (needed by IPC,

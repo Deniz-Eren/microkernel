@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
+##
+# @file     env.sh
+# @brief    Podman development container wrapper for build, test, and shell runs
+#
+# @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
+#
+
 # Microkernel Podman environment wrapper.
-# Usage:
-#   ./scripts/env.sh configure [cmake args...]   # configure build/ inside container
-#   ./scripts/env.sh build    [ninja args...]    # incremental build inside container
-#   ./scripts/env.sh test     [test_runner args] # run headless QEMU assertion harness (tests/test_runner.py)
-#   ./scripts/env.sh shell                       # interactive shell in container
-#   ./scripts/env.sh <cmd...>                    # run arbitrary command in container
+#
+# Usage: ./scripts/env.sh <configure|build|test|clean|shell|cmd...>
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,7 +31,8 @@ case "${1:-shell}" in
     configure)
         shift
         ensure_image
-        crun cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/clang-x86_64.cmake \
+        crun cmake -S . -B build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/clang-x86_64.cmake \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON "$@"
         ;;
     build)

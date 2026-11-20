@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     sched.c
+ * @brief    Preemptive 256-priority thread scheduler and thread syscalls
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/sched.h>
 #include <kernel/ipc.h>
@@ -20,8 +27,8 @@
 /* Maintained by the scheduler for syscall_entry (switch.S). */
 extern unsigned long g_syscall_kstack;
 
-/* 256-level priority bitmap scheduler. Each level is a FIFO ready queue;
- * the scheduler picks the highest non-empty level (round-robin within it).
+/* 256-level priority bitmap scheduler. Each level is a FIFO ready queue; the
+ * scheduler picks the highest non-empty level (round-robin within it).
  * Invariant: the RUNNING thread is never in a ready queue. schedule()
  * re-enqueues a preempted RUNNING thread and pops the next one. */
 static uint64_t g_ready_bitmap[4]; /* 256 bits, bit set = level non-empty */
@@ -198,16 +205,15 @@ void schedule(void) {
         switch_to(prev, next);
     } else {
         /* First ever dispatch: emulate switch_to's restore path directly. */
-        __asm__ volatile(
-            "mov %0, %%rsp\n"
-            "popq %%r15\n"
-            "popq %%r14\n"
-            "popq %%r13\n"
-            "popq %%r12\n"
-            "popq %%rbp\n"
-            "popq %%rbx\n"
-            "ret\n" ::"r"(next->kernel_rsp)
-            : "memory");
+        __asm__ volatile("mov %0, %%rsp\n"
+                         "popq %%r15\n"
+                         "popq %%r14\n"
+                         "popq %%r13\n"
+                         "popq %%r12\n"
+                         "popq %%rbp\n"
+                         "popq %%rbx\n"
+                         "ret\n" ::"r"(next->kernel_rsp)
+                         : "memory");
         __builtin_unreachable();
     }
 }
@@ -409,7 +415,8 @@ long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
         stack_top < 0x400000ULL || stack_top > 0x80000000ULL) {
         return -EINVAL;
     }
-    /* SysV AMD64 C function entry expects RSP % 16 == 8 (synthetic return slot). */
+    /* SysV AMD64 C function entry expects RSP % 16 == 8 (synthetic return
+     * slot). */
     uint64_t entry_rsp = (stack_top & ~15ULL) - 8;
     thread_arm(t, entry, arg, entry_rsp);
     return 0;

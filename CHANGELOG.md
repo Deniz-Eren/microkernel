@@ -52,6 +52,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Aligned `.clang-format` (`ColumnLimit: 80`) with `.editorconfig`, added
+  `.editorconfig` exemptions for verbatim `LICENSE.md` and immutable
+  `docs/skills/*/references/*`, upgraded all existing C/H, CMake, shell, and
+  Python files to Doxygen headers, and wrapped pre-existing docs so full-repo
+  `check_text.py --root .` passes with zero findings.
 - Mandated `.editorconfig` and `docs-traceability-setup` `check_text.py` checks
   (line width, greedy prose packing, and Doxygen file headers) in `AGENTS.md`,
   `WDR_0002`, and `CNV_0002`, and wrapped `AGENTS.md` to 80 columns.

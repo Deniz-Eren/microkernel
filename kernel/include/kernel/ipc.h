@@ -1,21 +1,26 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     ipc.h
+ * @brief    Kernel synchronous IPC and pulse subsystem interface
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 /* Synchronous message-passing IPC (Milestone 3).
  *
- * Model:
- *   - A channel is a receive endpoint owned by one process (chanid).
- *   - A client opens a connection (connid) to (pid, chanid) and sends over it.
- *   - SendMsg blocks the client until a receiver accepts the message, then
- *     until the receiver replies (SEND_BLOCKED -> REPLY_BLOCKED).
- *   - ReceiveMsg blocks the server until a message or pulse arrives.
- *   - ReplyMsg completes the round trip and hands the reply length back to
- *     the client as its SendMsg return value.
+ * Model: a channel is a receive endpoint owned by one process (chanid). A
+ * client opens a connection (connid) to (pid, chanid) and sends over it.
+ * SendMsg blocks the client until a receiver accepts the message, then until
+ * the receiver replies (SEND_BLOCKED -> REPLY_BLOCKED). ReceiveMsg blocks the
+ * server until a message or pulse arrives. ReplyMsg completes the round trip
+ * and hands the reply length back to the client as its SendMsg return value.
  *
  * Message payloads are staged through kernel-owned nodes and copied with
- * explicit per-address-space accessors, so no user pointer is ever
- * dereferenced directly and SMAP is never bypassed.
+ * explicit per-address-space accessors, so no user pointer is ever dereferenced
+ * directly and SMAP is never bypassed.
  */
 #include <stdint.h>
 #include <kernel/sched.h>
@@ -25,13 +30,13 @@
 /* Kernel-side message node: one per in-flight send or pulse. */
 typedef struct chan_msg {
     struct chan_msg *next;
-    tcb_t *sender;            /* blocked client (NULL for pulses) */
-    tcb_t *receiver;          /* server tcb that accepted it */
-    uint64_t sender_pml4;     /* client address space for the reply copy */
-    uint64_t reply_dst;       /* client reply buffer (user VA) */
-    uint64_t reply_max;       /* client reply buffer capacity */
-    uint32_t msgid;           /* 0 for pulses */
-    uint32_t len;             /* staged payload length */
+    tcb_t *sender;        /* blocked client (NULL for pulses) */
+    tcb_t *receiver;      /* server tcb that accepted it */
+    uint64_t sender_pml4; /* client address space for the reply copy */
+    uint64_t reply_dst;   /* client reply buffer (user VA) */
+    uint64_t reply_max;   /* client reply buffer capacity */
+    uint32_t msgid;       /* 0 for pulses */
+    uint32_t len;         /* staged payload length */
     uint8_t data[IPC_MSG_MAX];
 } chan_msg_t;
 

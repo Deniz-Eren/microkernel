@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     elf.c
+ * @brief    ELF64 user executable loader with W^X page mapping
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/elf.h>
 #include <kernel/pmm.h>
@@ -34,13 +41,16 @@ int elf_load_user(uint64_t pml4_phys, const void *image, size_t size,
         return -1;
     }
     const elf64_ehdr_t *eh = (const elf64_ehdr_t *)image;
-    if (eh->e_ident[0] != 0x7F || eh->e_ident[1] != 'E' || eh->e_ident[2] != 'L' ||
-        eh->e_ident[3] != 'F' || eh->e_ident[4] != 2 /* ELFCLASS64 */ ||
-        eh->e_ident[5] != 1 /* little endian */ || eh->e_machine != 62 /* x86-64 */) {
+    if (eh->e_ident[0] != 0x7F || eh->e_ident[1] != 'E' ||
+        eh->e_ident[2] != 'L' || eh->e_ident[3] != 'F' ||
+        eh->e_ident[4] != 2 /* ELFCLASS64 */ ||
+        eh->e_ident[5] != 1 /* little endian */ ||
+        eh->e_machine != 62 /* x86-64 */) {
         return -1;
     }
     if (eh->e_phentsize < sizeof(elf64_phdr_t) ||
-        (uint64_t)eh->e_phoff + (uint64_t)eh->e_phnum * sizeof(elf64_phdr_t) > size) {
+        (uint64_t)eh->e_phoff + (uint64_t)eh->e_phnum * sizeof(elf64_phdr_t) >
+            size) {
         return -1;
     }
 
@@ -55,7 +65,8 @@ int elf_load_user(uint64_t pml4_phys, const void *image, size_t size,
         if ((uint64_t)ph[i].p_offset + ph[i].p_filesz > size) {
             return -1;
         }
-        if (ph[i].p_vaddr < 0x400000ULL || ph[i].p_vaddr + ph[i].p_memsz > 0x80000000ULL) {
+        if (ph[i].p_vaddr < 0x400000ULL ||
+            ph[i].p_vaddr + ph[i].p_memsz > 0x80000000ULL) {
             return -1; /* keep user images inside the private user region */
         }
 
@@ -93,9 +104,9 @@ int elf_load_user(uint64_t pml4_phys, const void *image, size_t size,
                 memset(phys_to_virt(frame), 0, 4096);
             }
 
-            /* File-backed bytes for this page: VA range
-             * [max(va, p_vaddr), min(va+4096, p_vaddr+p_filesz)), copied to
-             * the same intra-page offset. */
+            /* File-backed bytes for this page: VA range [max(va, p_vaddr),
+             * min(va+4096, p_vaddr+p_filesz)), copied to the same intra-page
+             * offset. */
             uint64_t lo = va > ph[i].p_vaddr ? va : ph[i].p_vaddr;
             uint64_t hi = va + 4096;
             uint64_t fend = ph[i].p_vaddr + ph[i].p_filesz;
@@ -105,7 +116,8 @@ int elf_load_user(uint64_t pml4_phys, const void *image, size_t size,
             if (lo < hi) {
                 uint8_t *kv = (uint8_t *)phys_to_virt(frame);
                 memcpy(kv + (lo & 0xFFF),
-                       (const uint8_t *)image + ph[i].p_offset + (lo - ph[i].p_vaddr),
+                       (const uint8_t *)image + ph[i].p_offset +
+                           (lo - ph[i].p_vaddr),
                        hi - lo);
             }
             if (vmm_map_page_to(pml4_phys, va, frame, flags) != 0) {

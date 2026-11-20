@@ -1,10 +1,17 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     main.c
+ * @brief    Ring 3 multithreaded /dev/echo IPC demonstration server
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
-/* ipcserv — demo echo server for the IPC milestone.
- * Creates a channel, registers "/dev/echo" with the sysproc name service,
- * then serves echo requests from TWO threads (main + worker) to exercise
- * concurrent receivers on one channel. */
+/* ipcserv — demo echo server for the IPC milestone. Creates a channel,
+ * registers "/dev/echo" with the sysproc name service, then serves echo
+ * requests from TWO threads (main + worker) to exercise concurrent receivers on
+ * one channel. */
 #include <stdio.h>
 #include <string.h>
 #include <sys/microkernel.h>
@@ -16,18 +23,16 @@
 static int g_chanid;
 
 static void echo_loop(void) {
-    echo_msg_t req;
+    echo_msg_t req = {0};
     char rep[96];
-    ipc_recv_info_t info;
+    ipc_recv_info_t info = {0};
     for (;;) {
         long msgid = ReceiveMsg(g_chanid, &req, sizeof(req), &info);
         if (msgid <= 0) {
             continue; /* pulse or error: nothing to reply to */
         }
         req.text[sizeof(req.text) - 1] = '\0';
-        /* The kernel fills req via ReceiveMsg; the analyzer cannot see the
-         * syscall wrapper body and flags the read as uninitialized. */
-        int n = snprintf(rep, sizeof(rep), "ECHO:%u:%s", req.seq, req.text); // NOLINT(clang-analyzer-core.CallAndMessage)
+        int n = snprintf(rep, sizeof(rep), "ECHO:%u:%s", req.seq, req.text);
         if (n < 0) {
             n = 0;
         }
@@ -63,10 +68,10 @@ int main(void) {
     nm.type = NAME_MSG_ATTACH;
     nm.chanid = (uint32_t)g_chanid;
     memcpy(nm.path, "/dev/echo", sizeof("/dev/echo"));
-    name_reply_t nr;
+    name_reply_t nr = {0};
     long s = SendMsg(nconnid, &nm, sizeof(nm), &nr, sizeof(nr));
-    if (s < 0 || nr.err != 0) { // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
-        printf("[FAIL] ipcserv register -> send=%ld err=%d\n", s, nr.err); // NOLINT(clang-analyzer-core.CallAndMessage)
+    if (s < 0 || nr.err != 0) {
+        printf("[FAIL] ipcserv register -> send=%ld err=%d\n", s, nr.err);
         return 1;
     }
     printf("[OK] ipcserv registered /dev/echo (chanid=%d)\n", g_chanid);

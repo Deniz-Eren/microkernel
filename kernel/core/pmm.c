@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     pmm.c
+ * @brief    Bitmap physical 4 KiB frame memory allocator
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/pmm.h>
 #include <kernel/multiboot.h>
@@ -102,7 +109,8 @@ void pmm_init(void) {
     /* Kernel-owned regions. */
     extern char __kernel_phys_start[], __kernel_phys_end[];
     pmm_reserve((uint64_t)(uintptr_t)__kernel_phys_start,
-                (uint64_t)(uintptr_t)__kernel_phys_end - (uint64_t)(uintptr_t)__kernel_phys_start);
+                (uint64_t)(uintptr_t)__kernel_phys_end -
+                    (uint64_t)(uintptr_t)__kernel_phys_start);
     pmm_reserve(0, 0x100000); /* low memory: BIOS, real-mode IVT, EBDA */
 
     /* The Multiboot2 info structure itself (64 KiB window). */
@@ -121,7 +129,8 @@ uint64_t pmm_alloc_frame(void) {
         if (!word) {
             continue;
         }
-        uint64_t idx = ((g_rover + w) % BITMAP_WORDS) * 64 + __builtin_ctzll(word);
+        uint64_t idx =
+            ((g_rover + w) % BITMAP_WORDS) * 64 + __builtin_ctzll(word);
         if (idx >= g_total_frames) {
             continue;
         }

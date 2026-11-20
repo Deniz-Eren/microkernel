@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     apic.c
+ * @brief    Local APIC initialization and PIT-calibrated timer interrupts
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include "apic.h"
 #include "io.h"
@@ -14,11 +21,11 @@
 #define LAPIC_VA (MMIO_WINDOW_VA + 0x0000)
 
 /* Local APIC MMIO register offsets. */
-#define LAPIC_ID      0x020
-#define LAPIC_EOI     0x0B0
-#define LAPIC_SPUR    0x0F0
-#define LAPIC_ESR     0x280
-#define LAPIC_ICR_LO  0x300
+#define LAPIC_ID 0x020
+#define LAPIC_EOI 0x0B0
+#define LAPIC_SPUR 0x0F0
+#define LAPIC_ESR 0x280
+#define LAPIC_ICR_LO 0x300
 #define LAPIC_LVT_TMR 0x320
 #define LAPIC_LVT_LINT0 0x350
 #define LAPIC_LVT_LINT1 0x360

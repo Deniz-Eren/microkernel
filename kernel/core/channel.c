@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     channel.c
+ * @brief    IPC channel creation, destruction, and priority queues
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include "channel.h"
 #include <sys/errno.h>
@@ -69,7 +76,8 @@ channel_t *channel_get(int chanid) {
     } while (0)
 
 void channel_msg_enqueue(channel_t *ch, chan_msg_t *m) {
-    PRIO_INSERT(ch->msg_head, ch->msg_tail, m, sender->effective_priority, next);
+    PRIO_INSERT(ch->msg_head, ch->msg_tail, m, sender->effective_priority,
+                next);
 }
 
 chan_msg_t *channel_msg_dequeue(channel_t *ch) {

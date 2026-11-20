@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     idt.c
+ * @brief    x86-64 IDT setup and exception/interrupt dispatcher
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include "idt.h"
 #include <stddef.h>
@@ -29,7 +36,8 @@ static idt_reg_t g_idtr;
 
 extern const void *const isr_stub_table[256];
 
-static void idt_set(unsigned vec, uint64_t handler, uint16_t sel, uint8_t flags) {
+static void idt_set(unsigned vec, uint64_t handler, uint16_t sel,
+                    uint8_t flags) {
     idt_entry_t *e = &g_idt[vec];
     e->offset_lo = (uint16_t)(handler & 0xFFFF);
     e->selector = sel;
@@ -51,13 +59,38 @@ void idt_init(void) {
 
 static const char *exc_name(unsigned v) {
     static const char *names[32] = {
-        "DE divide error", "DB debug", "NMI", "BP breakpoint", "OF overflow",
-        "BR bound range", "UD invalid opcode", "NM device n/a", "DF double fault",
-        "CPOP", "TS invalid TSS", "NP segment absent", "SS stack fault",
-        "GP general protection", "PF page fault", "x87", "AC alignment",
-        "MC machine check", "XM simd fp", "VE virtualization", "CP control prot",
-        "res 21", "res 22", "res 23", "res 24", "res 25", "res 26", "res 27",
-        "HV hypervisor", "VC vmm comm", "SX security", "res 31",
+        "DE divide error",
+        "DB debug",
+        "NMI",
+        "BP breakpoint",
+        "OF overflow",
+        "BR bound range",
+        "UD invalid opcode",
+        "NM device n/a",
+        "DF double fault",
+        "CPOP",
+        "TS invalid TSS",
+        "NP segment absent",
+        "SS stack fault",
+        "GP general protection",
+        "PF page fault",
+        "x87",
+        "AC alignment",
+        "MC machine check",
+        "XM simd fp",
+        "VE virtualization",
+        "CP control prot",
+        "res 21",
+        "res 22",
+        "res 23",
+        "res 24",
+        "res 25",
+        "res 26",
+        "res 27",
+        "HV hypervisor",
+        "VC vmm comm",
+        "SX security",
+        "res 31",
     };
     return names[v];
 }
@@ -99,8 +132,8 @@ void interrupt_handler(trapframe_t *tf) {
     }
     apic_irq_dispatch(vec);
     /* Return-to-user boundary for interrupt frames. If the tick's schedule()
-     * switched away, this frame stays parked on the kernel stack and this
-     * check runs when the thread finally resumes — g_current is correct in
-     * both cases. */
+     * switched away, this frame stays parked on the kernel stack and this check
+     * runs when the thread finally resumes — g_current is correct in both
+     * cases. */
     signal_deliver_check(tf);
 }

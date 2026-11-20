@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     stdio.c
+ * @brief    Freestanding Ring 3 printf, snprintf, puts, and putchar
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -31,7 +38,8 @@ static void emit_str(struct sbuf *b, const char *s) {
     }
 }
 
-static void emit_unsigned(struct sbuf *b, uint64_t v, unsigned base, int upper) {
+static void emit_unsigned(struct sbuf *b, uint64_t v, unsigned base,
+                          int upper) {
     char tmp[24];
     int i = 0;
     if (!v) {
@@ -39,7 +47,8 @@ static void emit_unsigned(struct sbuf *b, uint64_t v, unsigned base, int upper) 
     }
     while (v) {
         unsigned d = v % base;
-        tmp[i++] = upper ? (char)(d < 10 ? '0' + d : 'A' + d - 10) : g_digits[d];
+        tmp[i++] =
+            upper ? (char)(d < 10 ? '0' + d : 'A' + d - 10) : g_digits[d];
         v /= base;
     }
     while (i--) {
@@ -73,8 +82,12 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
             f++;
         }
         switch (*f) {
-        case '%': emit(b, '%'); break;
-        case 'c': emit(b, (char)va_arg(ap, int)); break;
+        case '%':
+            emit(b, '%');
+            break;
+        case 'c':
+            emit(b, (char)va_arg(ap, int));
+            break;
         case 's': {
             const char *s = va_arg(ap, const char *);
             emit_str(b, s ? s : "(null)");
@@ -87,13 +100,15 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
             break;
         }
         case 'u': {
-            uint64_t v = (longs || is_z) ? va_arg(ap, unsigned long) : va_arg(ap, unsigned int);
+            uint64_t v = (longs || is_z) ? va_arg(ap, unsigned long)
+                                         : va_arg(ap, unsigned int);
             emit_unsigned(b, v, 10, 0);
             break;
         }
         case 'x':
         case 'X': {
-            uint64_t v = (longs || is_z) ? va_arg(ap, unsigned long) : va_arg(ap, unsigned int);
+            uint64_t v = (longs || is_z) ? va_arg(ap, unsigned long)
+                                         : va_arg(ap, unsigned int);
             emit_unsigned(b, v, 16, *f == 'X');
             break;
         }

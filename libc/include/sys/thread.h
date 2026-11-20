@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     thread.h
+ * @brief    Ring 3 two-phase thread management wrappers
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 
@@ -13,11 +20,11 @@
 
 typedef struct {
     uint32_t tid;
-    uint32_t state;   /* thread state (kernel numbering) */
-    uint32_t prio;    /* effective priority */
+    uint32_t state; /* thread state (kernel numbering) */
+    uint32_t prio;  /* effective priority */
     uint32_t reserved;
-    uint64_t entry;   /* start RIP */
-    uint64_t arg;     /* start argument (RDI) */
+    uint64_t entry; /* start RIP */
+    uint64_t arg;   /* start argument (RDI) */
     uint64_t stack_top;
 } thread_info_t;
 
@@ -47,7 +54,8 @@ static inline long ThreadGetTid(void) {
 }
 
 /* Convenience: create + arm with a kernel-allocated stack. */
-static inline long ThreadSpawn(void (*entry)(void *), void *arg, unsigned prio) {
+static inline long ThreadSpawn(void (*entry)(void *), void *arg,
+                               unsigned prio) {
     long tid = NewThread(prio);
     if (tid < 0) {
         return tid;

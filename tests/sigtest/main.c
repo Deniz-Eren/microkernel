@@ -1,11 +1,19 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     main.c
+ * @brief    Ring 3 multithreaded errno, thread, and signal test app
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
-/* sigtest — Milestone 4 verification: threads and signals.
- * 1. spawns a worker thread (THREAD_CREATE + THREAD_RESET),
- * 2. reads its context back (THREAD_GET_CTX),
- * 3. catches SIGUSR1 (handler runs, SIGRETURN restores execution),
- * 4. dies from an unhandled SIGUSR2 (default action -> zombie). */
+/*
+ * sigtest — Milestone 4 verification: spawns a worker thread (THREAD_CREATE +
+ * THREAD_RESET), verifies thread-local errno, reads thread context
+ * (THREAD_GET_CTX), catches SIGUSR1 (handler runs and SIGRETURN restores
+ * execution), and dies from unhandled SIGUSR2 (default action -> zombie).
+ */
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,14 +38,15 @@ static void worker(void *arg) {
     int init_err = errno;
     ssize_t bad = write(99, "x", 1);
     int after_fail = errno;
-    printf("[OK] worker thread running (tid=%u prio=%u entry=%llx)\n", ti.tid, ti.prio,
-           (unsigned long long)ti.entry);
+    printf("[OK] worker thread running (tid=%u prio=%u entry=%llx)\n", ti.tid,
+           ti.prio, (unsigned long long)ti.entry);
     int after_ok = errno;
-    if (init_err == 0 && bad == -1 && after_fail == EBADF && after_ok == EBADF) {
+    if (init_err == 0 && bad == -1 && after_fail == EBADF &&
+        after_ok == EBADF) {
         g_worker_errno_ok = 1;
     } else {
-        printf("[FAIL] worker errno init=%d bad=%ld fail=%d ok=%d\n", init_err, (long)bad,
-               after_fail, after_ok);
+        printf("[FAIL] worker errno init=%d bad=%ld fail=%d ok=%d\n", init_err,
+               (long)bad, after_fail, after_ok);
     }
     for (;;) {
         __asm__ volatile("pause");
@@ -61,8 +70,8 @@ int main(void) {
         printf("[FAIL] ThreadGetCtx\n");
         return 1;
     }
-    printf("[OK] thread ctx: tid=%u state=%u prio=%u stack=%llx\n", ti.tid, ti.state, ti.prio,
-           (unsigned long long)ti.stack_top);
+    printf("[OK] thread ctx: tid=%u state=%u prio=%u stack=%llx\n", ti.tid,
+           ti.state, ti.prio, (unsigned long long)ti.stack_top);
 
     if (sigaction(SIGUSR1, handler) < 0) {
         printf("[FAIL] sigaction\n");
@@ -89,7 +98,8 @@ int main(void) {
     if (errno == EINVAL && g_worker_errno_ok) {
         printf("[OK] errno thread-local and preserved across success\n");
     } else {
-        printf("[FAIL] errno isolation main=%d worker_ok=%d\n", errno, g_worker_errno_ok);
+        printf("[FAIL] errno isolation main=%d worker_ok=%d\n", errno,
+               g_worker_errno_ok);
         return 1;
     }
 

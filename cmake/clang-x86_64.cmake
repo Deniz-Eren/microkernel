@@ -1,9 +1,14 @@
+##
+# @file     clang-x86_64.cmake
+# @brief    LLVM cross-toolchain configuration for x86-64 microkernel targets
+#
+# @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
+#
 
-# LLVM cross-toolchain configuration for Microkernel.
-# Kernel target:  x86_64-unknown-none-elf (Ring 0)
-# Userland target uses the same triple with a sysroot.
+# LLVM cross-toolchain configuration for Microkernel. Kernel target:
+# x86_64-unknown-none-elf (Ring 0). Userland uses the same triple with sysroot.
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
 

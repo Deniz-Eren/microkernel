@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     proc.c
+ * @brief    User process creation, stack setup, and bootfs spawning
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/sched.h>
 #include <kernel/elf.h>
@@ -28,8 +35,8 @@ static uint64_t find_rsdp(void) {
     return 0;
 }
 
-static int find_boot_module(const mb_module_t *mods, size_t nmods, uint64_t *phys,
-                            uint64_t *size) {
+static int find_boot_module(const mb_module_t *mods, size_t nmods,
+                            uint64_t *phys, uint64_t *size) {
     for (size_t i = 0; i < nmods; i++) {
         if (mods[i].cmdline && kstrstr(mods[i].cmdline, "bootfs")) {
             *phys = mods[i].start;
@@ -71,8 +78,8 @@ static uint64_t build_user_stack(pcb_t *p, const char *progname,
      * stack_top, then copy it into the top stack page(s) through the HHDM.
      * Runtime layout (ascending addresses, SysV ABI): argc, argv[], NULL,
      * envp[], NULL, auxv[], AT_NULL, then the argv[0] string at the very top.
-     * Everything the ABI parses sits at or above the initial RSP; the string
-     * is topmost so user frames growing down from RSP can never clobber it.
+     * Everything the ABI parses sits at or above the initial RSP; the string is
+     * topmost so user frames growing down from RSP can never clobber it.
      */
     uint8_t block[256];
     uint64_t off = sizeof(block);
@@ -93,10 +100,10 @@ static uint64_t build_user_stack(pcb_t *p, const char *progname,
 
     off -= 32; /* argc, argv[0], argv[1]=NULL, envp[0]=NULL */
     uint64_t sp = stack_top - (sizeof(block) - off); /* initial user RSP */
-    *(uint64_t *)(block + off + 0) = 1;             /* argc */
-    *(uint64_t *)(block + off + 8) = argv0_va;      /* argv[0] */
-    *(uint64_t *)(block + off + 16) = 0;            /* argv[1] = NULL */
-    *(uint64_t *)(block + off + 24) = 0;            /* envp[0] = NULL */
+    *(uint64_t *)(block + off + 0) = 1;              /* argc */
+    *(uint64_t *)(block + off + 8) = argv0_va;       /* argv[0] */
+    *(uint64_t *)(block + off + 16) = 0;             /* argv[1] = NULL */
+    *(uint64_t *)(block + off + 24) = 0;             /* envp[0] = NULL */
 
     uint64_t block_size = sizeof(block) - off;
     uint64_t block_va = stack_top - block_size; /* 16-byte aligned */
@@ -232,9 +239,10 @@ void proc_spawn_init(void) {
     g_bootinfo.rsdp_phys = find_rsdp();
     g_bootinfo.mem_total_bytes = pmm_total_bytes();
     const char *cmd = mb_cmdline();
-    memcpy(g_bootinfo.cmdline, cmd, strlen(cmd) < sizeof(g_bootinfo.cmdline) - 1
-                                        ? strlen(cmd) + 1
-                                        : sizeof(g_bootinfo.cmdline) - 1);
+    memcpy(g_bootinfo.cmdline, cmd,
+           strlen(cmd) < sizeof(g_bootinfo.cmdline) - 1
+               ? strlen(cmd) + 1
+               : sizeof(g_bootinfo.cmdline) - 1);
 
     /* PID 1: system process manager / pathname manager. Its syscall-created
      * channel (chanid 1) is the name registry endpoint. */

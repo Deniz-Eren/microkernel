@@ -17,6 +17,13 @@ indent_size = 4
 [*.{yaml,yml,json}]
 max_line_length = off
 
+# Verbatim license text and immutable third-party specification references.
+[LICENSE.md]
+max_line_length = off
+
+[docs/skills/*/references/*]
+max_line_length = off
+
 [file-header]
 01 = Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 02 = SPDX-License-Identifier: MIT

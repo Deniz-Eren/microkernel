@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     main.c
+ * @brief    PID 1 Ring 3 system name registry and bootinfo reporter
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 /* sysproc — PID 1: process manager, pathname manager, ELF loader, signals.
  * Milestone 3: the system name registry. Servers ATTACH paths on chanid 1;
@@ -64,9 +71,9 @@ int main(int argc, char **argv, char **envp) {
 
     /* Name service: receive loop over our channel. */
     printf("[OK] sysproc name server listening (chanid=%d)\n", chanid);
-    name_msg_t msg;
-    name_reply_t rep;
-    ipc_recv_info_t info;
+    name_msg_t msg = {0};
+    name_reply_t rep = {0};
+    ipc_recv_info_t info = {0};
     int pulses = 0;
     for (;;) {
         long msgid = ReceiveMsg(chanid, &msg, sizeof(msg), &info);
@@ -88,7 +95,7 @@ int main(int argc, char **argv, char **envp) {
         rep.reserved = 0;
         msg.path[NAME_MAX_PATH - 1] = '\0';
 
-        if (msg.type == NAME_MSG_ATTACH) { // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
+        if (msg.type == NAME_MSG_ATTACH) {
             if (g_name_count >= NAME_TABLE_MAX) {
                 rep.err = 1; /* table full */
             } else {

@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
+##
+# @file     enter-dev.sh
+# @brief    Open an interactive shell inside the development container
+#
+# @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
 #
+
 # Opens an interactive shell in the development container. Builds the image
 # first if needed. Delegates to scripts/env.sh (see docs/DECISIONS.md ADR-4).
 set -euo pipefail

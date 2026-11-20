@@ -1,14 +1,17 @@
 ## Purpose
 
-Write the architecture of microkernel in this document. Write the files, their structure, and the task of each component.
+Write the architecture of microkernel in this document. Write the files, their
+structure, and the task of each component.
 
 ## Structure
 
-The document has a system overview, the directory structure, component descriptions, and the integration points.
+The document has a system overview, the directory structure, component
+descriptions, and the integration points.
 
 ## Formatting Rules
 
-- Write about the current condition only. Put decisions in [DECISIONS.md](DECISIONS.md).
+- Write about the current condition only. Put decisions in
+  [DECISIONS.md](DECISIONS.md).
 - Use code blocks for directory trees.
 - Link to skill files for procedures. Do not write the procedures here.
 
@@ -16,9 +19,19 @@ The document has a system overview, the directory structure, component descripti
 
 ## System Overview
 
-Microkernel is a small operating system for x86-64 computers. The kernel runs in Ring 0 at the high virtual address `0xFFFFFFFF80000000`. It gives five services: preemptive thread scheduling with 256 priority levels, synchronous messages between processes, threads and signals, memory management with page tables and the W^X policy, and fast system calls with the `syscall`/`sysret` instructions.
+Microkernel is a small operating system for x86-64 computers. The kernel runs in
+Ring 0 at the high virtual address `0xFFFFFFFF80000000`. It gives five services:
+preemptive thread scheduling with 256 priority levels, synchronous messages
+between processes, threads and signals, memory management with page tables and
+the W^X policy, and fast system calls with the `syscall`/`sysret` instructions.
 
-GRUB boots the kernel with the Multiboot2 protocol. The kernel starts in 32-bit mode, makes the 64-bit page tables, and jumps to the high half. The first user process `sysproc` comes from a `ustar` archive (`boot.tar`) on the boot ISO. The kernel loads each program from this archive into a new process with the ELF loader. `sysproc` contains the name registry: servers register a name, and clients find the servers with this name. All other services, for example the echo server `ipcserv`, run as user processes in Ring 3.
+GRUB boots the kernel with the Multiboot2 protocol. The kernel starts in 32-bit
+mode, makes the 64-bit page tables, and jumps to the high half. The first user
+process `sysproc` comes from a `ustar` archive (`boot.tar`) on the boot ISO. The
+kernel loads each program from this archive into a new process with the ELF
+loader. `sysproc` contains the name registry: servers register a name, and
+clients find the servers with this name. All other services, for example the
+echo server `ipcserv`, run as user processes in Ring 3.
 
 ## Directory Structure
 
@@ -56,29 +69,51 @@ GRUB boots the kernel with the Multiboot2 protocol. The kernel starts in 32-bit 
 
 ## Component Descriptions
 
-| Component | Purpose |
-|---|---|
-| `kernel/arch/x86_64/` | CPU and machine start: boot code (`boot.S`), GDT, IDT, interrupt stubs, APIC timer, serial port, context switch |
-| `kernel/core/` | The core subsystems: physical and virtual memory (`pmm`, `vmm`), scheduler (`sched`), processes (`proc`), messages and channels (`ipc`, `channel`), signals (`signal`), system call entry (`syscall`), ELF loader (`elf`), boot archive reader (`ustar`), Multiboot2 (`multiboot`), kernel heap (`kheap`) |
-| `kernel/include/`, `kernel/lib/` | Kernel-internal headers and small helpers |
-| `libc/` | The C library for Ring 3: `printf`, memory allocation, string functions, syscall wrappers (`include/sys/`), and `crt0` process start (`crt/`) |
-| `servers/sysproc/` | The first user process. It starts the servers and holds the name registry. |
-| `servers/ipcserv/` | The echo server. It registers `/dev/echo` and replies to messages. |
-| `tests/` | `test_runner.py` (headless QEMU serial assertion harness), `ipccli` (name lookup and message client), `sigtest` (threads and signals) |
-| `scripts/` | `env.sh` (container workflow), `enter-dev.sh` (container shell), `mk_boot_tar.py` (ustar packer), `build-agent.sh` (build, test, lint), `formatter-agent.sh` (format check and fix) |
-| `cmake/clang-x86_64.cmake` | The Clang cross-toolchain: target `x86_64-unknown-none-elf`, LLD linker, LLVM bin tools |
-| `Containerfile` | Debian bookworm-slim with Clang, LLD, CMake, Ninja, GRUB tools, xorriso, mtools, QEMU, Python 3, clang-format, clang-tidy |
+- `kernel/arch/x86_64/`: CPU and machine start: boot code (`boot.S`), GDT, IDT,
+  interrupt stubs, APIC timer, serial port, context switch.
+- `kernel/core/`: Core subsystems: physical and virtual memory (`pmm`, `vmm`),
+  scheduler (`sched`), processes (`proc`), messages and channels (`ipc`,
+  `channel`), signals (`signal`), system call entry (`syscall`), ELF loader
+  (`elf`), boot archive reader (`ustar`), Multiboot2 (`multiboot`), and kernel
+  heap (`kheap`).
+- `kernel/include/`, `kernel/lib/`: Kernel-internal headers and small helpers.
+- `libc/`: The C library for Ring 3: `printf`, memory allocation, string
+  functions, thread-local `errno`, syscall wrappers (`include/sys/`), and `crt0`
+  process start (`crt/`).
+- `servers/sysproc/`: The first user process. It starts the servers and holds
+  the name registry.
+- `servers/ipcserv/`: The echo server. It registers `/dev/echo` and replies to
+  messages.
+- `tests/`: `test_runner.py` (headless QEMU serial assertion harness), `ipccli`
+  (name lookup and message client), `sigtest` (threads, `errno`, and signals),
+  `posix/` (POSIX.1-2024 header gate), and `traceability/` (audit unit tests).
+- `scripts/`: `env.sh` (container workflow), `enter-dev.sh` (container shell),
+  `mk_boot_tar.py` (ustar packer), `build-agent.sh` (build, test, lint), and
+  `formatter-agent.sh` (format check and fix).
+- `cmake/clang-x86_64.cmake`: The Clang cross-toolchain: target
+  `x86_64-unknown-none-elf`, LLD linker, LLVM bin tools.
+- `Containerfile`: Debian bookworm-slim with Clang, LLD, CMake, Ninja, GRUB
+  tools, xorriso, mtools, QEMU, Python 3, clang-format, and clang-tidy.
 
 ## Integration Points
 
-| Component | References | Used By |
-|---|---|---|
-| `AGENTS.md` | `docs/skills/git`, `docs/skills/state-management` | All agent platforms |
-| `.agents/skills` | `docs/skills` (symlink) | Agent platforms (skill discovery) |
-| `scripts/env.sh` | `Containerfile` (image `microkernel-dev`), `cmake/clang-x86_64.cmake`, `tests/test_runner.py` | All build, test, and lint work |
-| `CMakeLists.txt` | `libc/`, `servers/`, `tests/`, `kernel/`, `scripts/mk_boot_tar.py`, `iso/boot/grub/grub.cfg` | The four-stage build |
-| `boot.tar` (build output) | programs from `servers/` and `tests/` | The kernel ELF loader at boot |
-| `build/compile_commands.json` | the configure step | `clang-tidy` (see the [clang-tidy skill](skills/clang-tidy/SKILL.md)) |
-| `scripts/build-agent.sh` | `env.sh`, `run-clang-tidy` | The [build agent](agents/build.md) |
-| `scripts/formatter-agent.sh` | `.clang-format`, `env.sh` | The [format validator](agents/format-validator.md) |
-| `technical_terms.txt`, `allowed_phrases.txt` | the STE term lists | Documentation checks (see [CONVENTIONS.md](CONVENTIONS.md)) |
+- `AGENTS.md`: References `docs/skills/git` and `docs/skills/state-management`;
+  used by all agent platforms.
+- `.agents/skills`: Symlink to `docs/skills`; used by agent platforms for skill
+  discovery.
+- `scripts/env.sh`: References `Containerfile` (image `microkernel-dev`),
+  `cmake/clang-x86_64.cmake`, and `tests/test_runner.py`; used for all build,
+  test, and lint work.
+- `CMakeLists.txt`: References `libc/`, `servers/`, `tests/`, `kernel/`,
+  `docs/`, `scripts/mk_boot_tar.py`, and `iso/boot/grub/grub.cfg`; drives the
+  four-stage build and CTest.
+- `boot.tar` (build output): Packages programs from `servers/` and `tests/`;
+  used by the kernel ELF loader at boot.
+- `build/compile_commands.json`: Produced by configure; used by `clang-tidy`
+  (see the [clang-tidy skill](skills/clang-tidy/SKILL.md)).
+- `scripts/build-agent.sh`: Uses `env.sh` and `run-clang-tidy`; used by the
+  [build agent](agents/build.md).
+- `scripts/formatter-agent.sh`: Uses `.clang-format` and `env.sh`; used by the
+  [format validator](agents/format-validator.md).
+- `technical_terms.txt`, `allowed_phrases.txt`: STE term lists; used by
+  documentation checks (see [CONVENTIONS.md](CONVENTIONS.md)).

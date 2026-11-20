@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     vmm.h
+ * @brief    x86-64 virtual memory manager and HHDM interface
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 
@@ -12,13 +19,13 @@
 
 /* PTE flag bits (raw x86 page-table bits). */
 #define VMM_PRESENT (1ULL << 0)
-#define VMM_WRITE   (1ULL << 1)
-#define VMM_USER    (1ULL << 2)
-#define VMM_PWT     (1ULL << 3)
-#define VMM_PCD     (1ULL << 4)
-#define VMM_HUGE    (1ULL << 7)
-#define VMM_GLOBAL  (1ULL << 8)
-#define VMM_NX      (1ULL << 63)
+#define VMM_WRITE (1ULL << 1)
+#define VMM_USER (1ULL << 2)
+#define VMM_PWT (1ULL << 3)
+#define VMM_PCD (1ULL << 4)
+#define VMM_HUGE (1ULL << 7)
+#define VMM_GLOBAL (1ULL << 8)
+#define VMM_NX (1ULL << 63)
 
 static inline void *phys_to_virt(uint64_t p) {
     return (void *)(uintptr_t)(p + HHDM_OFFSET);

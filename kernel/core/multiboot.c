@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     multiboot.c
+ * @brief    Multiboot2 information block parser for RAM and modules
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/multiboot.h>
 #include <stddef.h>
@@ -37,7 +44,8 @@ uint64_t multiboot_mbi_phys(void) {
 void multiboot_parse(uint64_t mbi_phys) {
     g_mbi_phys = mbi_phys;
     const mb_tag_t *tag = (const mb_tag_t *)phys_to_virt(mbi_phys + 8);
-    for (; tag->type != 0; tag = (const mb_tag_t *)((uint8_t *)tag + ((tag->size + 7) & ~7U))) {
+    for (; tag->type != 0;
+         tag = (const mb_tag_t *)((uint8_t *)tag + ((tag->size + 7) & ~7U))) {
         switch (tag->type) {
         case 1: /* boot cmdline */
             g_cmdline = (const char *)(tag + 1);

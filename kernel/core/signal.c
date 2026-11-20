@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     signal.c
+ * @brief    Ring 3 signal registration, injection, and frame delivery
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <kernel/signal.h>
 #include <kernel/printk.h>
@@ -20,8 +27,7 @@ long sys_sigaction(uint64_t sig, uint64_t handler, uint64_t restorer) {
     if (sig < 1 || sig >= NSIG) {
         return -EINVAL;
     }
-    if (handler &&
-        (handler < 0x400000ULL || handler >= 0x80000000ULL)) {
+    if (handler && (handler < 0x400000ULL || handler >= 0x80000000ULL)) {
         return -EFAULT; /* handler must be user code (0 = default action) */
     }
     p->sig_handlers[sig] = handler;
@@ -59,8 +65,7 @@ long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig) {
         if (t->state == THREAD_ZOMBIE) {
             continue;
         }
-        if (tid ? t->tid == (uint32_t)tid
-                : (!target || t->tid < target->tid)) {
+        if (tid ? t->tid == (uint32_t)tid : (!target || t->tid < target->tid)) {
             target = t;
             if (tid) {
                 break;
@@ -116,8 +121,7 @@ void signal_deliver_check(trapframe_t *tf) {
 
     if (copy_to_user(frame_va, &f, sizeof(f)) < 0 ||
         copy_to_user(ret_va, &p->sig_restorer, 8) < 0) {
-        printk("[sig] pid %u: cannot push signal frame; terminating\n",
-               p->pid);
+        printk("[sig] pid %u: cannot push signal frame; terminating\n", p->pid);
         proc_exit_current(128 + (int)sig); /* noreturn */
     }
 

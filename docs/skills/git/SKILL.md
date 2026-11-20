@@ -1,22 +1,31 @@
 ---
 name: git
-description: Git conventions for this project. They include the commit identity, Conventional Commits messages, the Assisted-by footer, the commit modes, and the branch strategy. Use this skill when you make commits or write commit messages. Use it also when you tag releases or manage branches.
+description: >-
+  Git conventions for this project. They include the commit identity,
+  Conventional Commits messages, the Assisted-by footer, the commit modes, and
+  the branch strategy. Use this skill when you make commits or write commit
+  messages. Use it also when you tag releases or manage branches.
 ---
 
 # Git
 
 ## Commit mode
 
-The mode is `operations.commit_mode` in `.agent-scaffolding.yml` at the project root.
+The mode is `operations.commit_mode` in `.agent-scaffolding.yml` at the project
+root.
 
-| Mode | Signature | Behavior | Typical work |
-|---|---|---|---|
-| AUTONOMOUS | `--no-gpg-sign` | The agent commits and does not stop | Usual maintenance and document changes |
-| HITL | the default signature | Print `WAITING FOR GPG SIGNATURE`, and wait for the human | Important changes, security work, and releases |
+- **AUTONOMOUS (`--no-gpg-sign`):** The agent commits without stopping. Used for
+  routine maintenance and document changes.
+- **HITL (default signature):** Print `WAITING FOR GPG SIGNATURE` and wait for
+  the human. Used for important changes, security work, and releases.
 
 ## Identity
 
-Read the identity from `.agent-scaffolding.yml` (`identity.git_author_name`, `identity.git_author_email`). The value `current_user` means the identity of the current user. Take the name and the email from the git configuration of the environment (`git config user.name`, `git config user.email`). Give it inline. Do not run `git config` to change the identity:
+Read the identity from `.agent-scaffolding.yml` (`identity.git_author_name`,
+`identity.git_author_email`). The value `current_user` means the identity of the
+current user. Take the name and the email from the git configuration of the
+environment (`git config user.name`, `git config user.email`). Give it inline.
+Do not run `git config` to change the identity:
 
 ```bash
 git -c user.name="<name>" -c user.email="<email>" commit -F <message-file>
@@ -36,9 +45,12 @@ Obey [Conventional Commits](references/COMMITS.md):
 Assisted-by: <AgentName>:<Model> [+ <Tool> ...]
 ```
 
-- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`, `scaffold`.
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`,
+  `ci`, `chore`, `revert`, `scaffold`.
 - Breaking changes: put `!` after the type, or add a `BREAKING CHANGE:` footer.
-- `Assisted-by:` is necessary for commits with help from AI. It gives the names of the agent and the model **of the current session**. Do not copy the footer from earlier commits.
+- `Assisted-by:` is necessary for commits with help from AI. It gives the names
+  of the agent and the model **of the current session**. Do not copy the footer
+  from earlier commits.
 
 Example:
 
@@ -52,16 +64,24 @@ Assisted-by: agent-name:model-name
 
 1. Run `git status`, and stage only the files for this change.
 2. Look at the staged diff with `git diff --staged`.
-3. Complete the pre-commit checklist in [AGENTS.md](../../../AGENTS.md). For the state documents, see the [state-management skill](../state-management/SKILL.md).
+3. Complete the pre-commit checklist in [AGENTS.md](../../../AGENTS.md). For the
+   state documents, see the [state-management
+   skill](../state-management/SKILL.md).
 4. Commit with the identity command above.
 5. Do not push without clear approval from the human.
 
 ## Versions and releases
 
-- Obey [Semantic Versioning](references/semver.md). If the project has a build configuration, the version is only there. If it has no build configuration, the version is in one file (for example `CHANGELOG.md` or a `VERSION` file).
-- Tag releases as `vX.Y.Z`. Move the content of `## [Unreleased]` in [CHANGELOG.md](../../../CHANGELOG.md) into the new version section (see the [keepachangelog skill](../keepachangelog/SKILL.md)).
+- Obey [Semantic Versioning](references/semver.md). If the project has a build
+  configuration, the version is only there. If it has no build configuration,
+  the version is in one file (for example `CHANGELOG.md` or a `VERSION` file).
+- Tag releases as `vX.Y.Z`. Move the content of `## [Unreleased]` in
+  [CHANGELOG.md](../../../CHANGELOG.md) into the new version section (see the
+  [keepachangelog skill](../keepachangelog/SKILL.md)).
 
 ## Branches
 
-- Branch protection is on for the default branch (usually `main`). Make your changes on feature branches that start from it.
-- Squash-merge into the default branch. The squashed message obeys Conventional Commits.
+- Branch protection is on for the default branch (usually `main`). Make your
+  changes on feature branches that start from it.
+- Squash-merge into the default branch. The squashed message obeys Conventional
+  Commits.

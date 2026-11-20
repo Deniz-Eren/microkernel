@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     msr.h
+ * @brief    x86-64 model-specific register inline assembly helpers
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #pragma once
 #include <stdint.h>
@@ -11,6 +18,9 @@ static inline uint64_t rdmsr(uint32_t msr) {
 }
 
 static inline void wrmsr(uint32_t msr, uint64_t value) {
-    __asm__ volatile("wrmsr" : : "c"(msr), "a"((uint32_t)value),
-                     "d"((uint32_t)(value >> 32)) : "memory");
+    __asm__ volatile("wrmsr"
+                     :
+                     : "c"(msr), "a"((uint32_t)value),
+                       "d"((uint32_t)(value >> 32))
+                     : "memory");
 }

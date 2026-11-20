@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     gdt.c
+ * @brief    x86-64 GDT and TSS initialization for Ring 0 and Ring 3
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include "gdt.h"
 #include <stddef.h>
@@ -9,13 +16,9 @@
 /* need:: COMP_BOOT_0001 */
 
 /*
- * 64-bit GDT. Layout:
- *   0x00 null
- *   0x08 kernel code (L=1)
- *   0x10 kernel data
- *   0x18 user data   (DPL=3)  <- precedes user code for SYSRET
- *   0x20 user code   (L=1, DPL=3)
- *   0x28 TSS (16 bytes, installed later)
+ * 64-bit GDT layout: 0x00 null, 0x08 kernel code (L=1), 0x10 kernel data, 0x18
+ * user data (DPL=3, precedes user code for SYSRET), 0x20 user code (L=1,
+ * DPL=3), 0x28 TSS (16 bytes, installed later).
  */
 static uint64_t g_gdt[8] __attribute__((aligned(16)));
 static tss_t g_tss __attribute__((aligned(16)));
@@ -43,26 +46,24 @@ void gdt_init(void) {
     __asm__ volatile("lgdt %0" : : "m"(g_gdtr) : "memory");
 
     /* Reload CS with a far return; reload data segments. */
-    __asm__ volatile(
-        "pushq $0x08\n"
-        "leaq 1f(%%rip), %%rax\n"
-        "pushq %%rax\n"
-        "lretq\n"
-        "1:\n"
-        :
-        :
-        : "rax", "memory");
+    __asm__ volatile("pushq $0x08\n"
+                     "leaq 1f(%%rip), %%rax\n"
+                     "pushq %%rax\n"
+                     "lretq\n"
+                     "1:\n"
+                     :
+                     :
+                     : "rax", "memory");
 
-    __asm__ volatile(
-        "mov $0x10, %%ax\n"
-        "mov %%ax, %%ds\n"
-        "mov %%ax, %%es\n"
-        "mov %%ax, %%ss\n"
-        "mov %%ax, %%fs\n"
-        "mov %%ax, %%gs\n"
-        :
-        :
-        : "ax", "memory");
+    __asm__ volatile("mov $0x10, %%ax\n"
+                     "mov %%ax, %%ds\n"
+                     "mov %%ax, %%es\n"
+                     "mov %%ax, %%ss\n"
+                     "mov %%ax, %%fs\n"
+                     "mov %%ax, %%gs\n"
+                     :
+                     :
+                     : "ax", "memory");
 }
 
 void tss_init(void) {
@@ -78,7 +79,8 @@ void tss_set_rsp0(uint64_t rsp0) {
 void gdt_install_tss(uint64_t tss_vaddr, uint32_t tss_limit) {
     /* Two-slot system descriptor: 16 bytes spanning g_gdt[5..6]. */
     uint64_t base = tss_vaddr;
-    /* Access byte (P=1, DPL=0, type 0x9 = 64-bit available TSS) at bits 40-47. */
+    /* Access byte (P=1, DPL=0, type 0x9 = 64-bit available TSS) at bits 40-47.
+     */
     uint64_t lo = 0x0000890000000000ULL;
     lo |= (tss_limit & 0xFFFFULL);
     lo |= ((base & 0xFFFFFFULL) << 16);

@@ -1,5 +1,12 @@
-// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
-// SPDX-License-Identifier: MIT
+/**
+ * @file     printk.c
+ * @brief    Kernel formatted serial console logger
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -23,8 +30,8 @@ static void emit(char **p, const char *end, char c) {
     }
 }
 
-static void format_unsigned(char **p, const char *end, uint64_t v, unsigned base,
-                            int upper) {
+static void format_unsigned(char **p, const char *end, uint64_t v,
+                            unsigned base, int upper) {
     char tmp[24];
     const char *digits = upper ? g_digits_uc : g_digits_lc;
     int i = 0;
@@ -49,7 +56,8 @@ static void format_signed(char **p, const char *end, int64_t v, unsigned base) {
     }
 }
 
-/* Minimal freestanding vsnprintf: %s %c %d %i %u %x %X %p %%, lengths l/ll/z. */
+/* Minimal freestanding vsnprintf: %s %c %d %i %u %x %X %p %%, lengths l/ll/z.
+ */
 static int kvsnprintf(char *buf, size_t n, const char *fmt, va_list ap) {
     char *p = buf;
     const char *end = buf + n - 1;

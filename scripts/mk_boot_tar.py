@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
+##
+# @file     mk_boot_tar.py
+# @brief    Pack Ring 3 ELF servers and test apps into a POSIX ustar bootfs
+#
+# @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
+#
+
 """Pack Ring 3 ELF servers and applications into a POSIX ustar boot archive.
 
 Usage:
@@ -60,7 +67,10 @@ def main() -> int:
     out += bytes(1024)  # end-of-archive marker
     with open(args.output, "wb") as f:
         f.write(out)
-    print(f"mk_boot_tar: wrote {args.output} ({len(out)} bytes, {len(args.entries)} entries)")
+    print(
+        f"mk_boot_tar: wrote {args.output} "
+        f"({len(out)} bytes, {len(args.entries)} entries)"
+    )
     return 0
 
 
