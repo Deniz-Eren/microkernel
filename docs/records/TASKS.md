@@ -21,16 +21,17 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0001 — Align requirements and libc to POSIX.1-2024 (Issue 8)
+### TSK_0001 — Align libc headers and thread-local errno to POSIX.1-2024
 
-```{task} Align requirements and libc to POSIX.1-2024 (Issue 8)
+```{task} Align libc headers and thread-local errno to POSIX.1-2024
 :id: TSK_0001
 :status: open
-:traces: BDR_0003, SYS_LIBC_0001, SWR_LIBC_0002
+:traces: BDR_0003, ADR_0003, SWR_LIBC_0002, SWR_LIBC_0003, SWR_DOCS_0003
 
-Review `microkernel` requirements, public headers, error numbers, signals, and
-threads against IEEE Std 1003.1-2024 using the `posix-issue8-os-dev` skill
-({need}`BDR_0003`, {need}`SYS_LIBC_0001`, {need}`SWR_LIBC_0002`).
+Remove `<sys/microkernel.h>` leakage from `<unistd.h>`, define `_POSIX_VERSION`
+and `_POSIX2_VERSION` as `202405L`, add `<errno.h>` with thread-local `errno`,
+and add the standalone header compilation gate ({need}`SWR_LIBC_0002`,
+{need}`SWR_LIBC_0003`, {need}`SWR_DOCS_0003`).
 ```
 
 ### TSK_0002 — Implement Milestone 5 process and memory syscalls
@@ -38,9 +39,22 @@ threads against IEEE Std 1003.1-2024 using the `posix-issue8-os-dev` skill
 ```{task} Implement Milestone 5 process and memory syscalls
 :id: TSK_0002
 :status: open
-:traces: SYS_PROC_0001, SYS_MEM_0001
+:traces: SYS_PROC_0001, SYS_MEM_0001, SWR_MEM_0004, SWR_PROC_0004
 
 Implement `ProcCreate`, `VMMap`, `VMUnmap`, `VMCloneCow`, child exit-code
-reporting, and automated QEMU verification tests ({need}`SYS_PROC_0001`,
-{need}`SYS_MEM_0001`).
+reporting, and automated QEMU verification tests to lay the foundation for POSIX
+`mmap` and `waitpid` ({need}`SWR_MEM_0004`, {need}`SWR_PROC_0004`).
+```
+
+### TSK_0003 — Align signal ABI, masks, and SIGKILL/SIGSTOP rules
+
+```{task} Align signal ABI, masks, and SIGKILL/SIGSTOP rules
+:id: TSK_0003
+:status: open
+:traces: ADR_0003, SWR_SIG_0003, SWR_SIG_0004
+
+Add `<signal.h>` with standard `sigaction` and `kill` signatures, reject
+`SIGKILL`/`SIGSTOP` overrides with `-EINVAL` in `sys_sigaction`, save/restore
+`blocked_signals` in `sig_frame_t`, and audit async-signal-safety
+({need}`SWR_SIG_0003`, {need}`SWR_SIG_0004`).
 ```

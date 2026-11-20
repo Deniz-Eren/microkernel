@@ -22,6 +22,44 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-9 (2026-11-21): Align microkernel requirements to POSIX.1-2024 Base
+
+### Context
+
+The initial `microkernel` traceability domains describe the current milestones
+1–4 implementation, but an audit against IEEE Std 1003.1-2024 (Issue 8) using
+the `posix-issue8-os-dev` skill identified concrete gaps:
+`libc/include/unistd.h` leaks `<sys/microkernel.h>`, `<errno.h>` and
+thread-local `errno` are absent, `<sys/signal.h>` exposes non-POSIX
+`sigaction`/`kill` signatures, `sys_sigaction` allows catching
+`SIGKILL`/`SIGSTOP`, and mandatory Issue 8 Base groups (`pthread_*`, `sem_*`,
+clocks/timers, `mmap`, `aio_*`) had no normative specs.
+
+### Decision
+
+Refine the requirements across `LIBC`, `SIG`, `MEM`, `PROC`, `IPC`, and `DOCS`
+with atomic `draft` POSIX.1-2024 Base and option-group software requirements
+(`SWR_LIBC_0002`–`0005`, `SWR_SIG_0003`–`0004`, `SWR_MEM_0004`–`0005`,
+`SWR_PROC_0004`–`0006`, `SWR_IPC_0004`–`0005`, `SWR_DOCS_0003`), each citing
+canonical Open Group publication `9799919799` URLs. Record the layered
+microkernel strategy in `docs/30-architecture/adr/ADR_0003.md` and standing
+header/citation rules in `CNV_0004`.
+
+### Alternatives
+
+- Keep POSIX alignment only as prose notes in `ROADMAP.md` without item-level
+  traceability
+- Mark unimplemented POSIX requirements as `active` before tests exist (breaks
+  the Sphinx-Needs verification gate)
+
+### Consequences
+
+- Every POSIX.1-2024 Base requirement is tracked in the Sphinx-Needs model as
+  `draft` and transitions to `active` as its implementation and automated
+  verification gate land.
+- Optional POSIX groups (`SHM`, `SPN`, `ML`, `MLR`, `MSG`, `PS`) stay separated
+  from mandatory Base requirements.
+
 ## ADR-8 (2026-11-21): Replace POWER placeholder with real microkernel domains
 
 ### Context

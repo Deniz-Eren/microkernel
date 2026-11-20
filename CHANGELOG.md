@@ -21,6 +21,9 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- POSIX.1-2024 (Issue 8) Base and option-group software requirements across
+  `LIBC`, `SIG`, `MEM`, `PROC`, `IPC`, and `DOCS` with canonical `9799919799`
+  specification URLs, plus `ADR_0003`, `CNV_0004`, and `TSK_0003`.
 - Real traceability domains (`BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and
   `DOCS`) across all Sphinx-Needs layers, plus `BDR_0002`, `BDR_0003`
   (POSIX.1-2024 Base conformance target), `ADR_0002`, and `microkernel` tasks

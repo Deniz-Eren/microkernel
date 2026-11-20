@@ -1,7 +1,7 @@
 # System and Software Requirements — DOCS
 
-Domain `DOCS`: Docs-as-code traceability build, Sphinx-Needs model auditing, and
-in-code traceability tag validation.
+Domain `DOCS`: Docs-as-code traceability build, Sphinx-Needs model auditing,
+in-code traceability tag validation, and POSIX.1-2024 conformance gates.
 
 ```{sys} Enforce automated end-to-end engineering traceability
 :id: SYS_DOCS_0001
@@ -29,4 +29,16 @@ against exported `needs.json` ({need}`SYS_DOCS_0001`).
 The tag scanner and Sphinx extension shall extract comment-anchored `need::`
 tags across tracked source and test files, enforce prefix placement rules, and
 require at least one `VER_` tag per test file ({need}`SYS_DOCS_0001`).
+```
+
+```{swr} Automate POSIX.1-2024 header, symbol, safety, and runtime gates
+:id: SWR_DOCS_0003
+:status: draft
+:derives: SYS_DOCS_0001
+:traces: BDR_0003, ADR_0003
+
+The verification harness shall execute four POSIX.1-2024 conformance gates:
+standalone header compilation under `-D_POSIX_C_SOURCE=202405L`, manifest
+symbol/namespace diffing, async-signal-safety and cancellation-point call-graph
+checks, and runtime POSIX test suites ({need}`SYS_DOCS_0001`).
 ```

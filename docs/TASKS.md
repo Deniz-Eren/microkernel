@@ -96,3 +96,5 @@ with its status and date.
 - [x] COMPLETE 2026-11-21 docs: replace POWER placeholder domain with real
   microkernel domains (BOOT, MEM, PROC, IPC, SIG, LIBC, DOCS) prepared for
   POSIX.1-2024 alignment
+- [x] COMPLETE 2026-11-21 docs: refine traceability requirements against
+  POSIX.1-2024 (Issue 8) Base using posix-issue8-os-dev
