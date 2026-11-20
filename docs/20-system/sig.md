@@ -1,62 +1,62 @@
 # System and Software Requirements — SIG
 
-Domain `SIG`: Signal registration, injection, Ring 3 handler delivery, context
-restoration, default termination, and POSIX.1-2024 signal semantics.
+Domain `SIG`: signal handlers, signal delivery, Ring 3 signal frames, context
+continuation, process stop, and POSIX.1-2024 signal rules.
 
 ```{sys} Deliver asynchronous signals to Ring 3 threads
 :id: SYS_SIG_0001
 :status: active
 
-The system shall deliver registered Ring 3 signal handlers with transparent
-context restoration and terminate processes on unhandled signals.
+The system must run registered Ring 3 signal handlers and continue the
+interrupted context cleanly. It must stop a process when a signal has no
+handler.
 ```
 
-```{swr} Register handlers and inject signals with EINTR wakeup
+```{swr} Register signal handlers and wake IPC threads with EINTR
 :id: SWR_SIG_0001
 :status: active
 :derives: SYS_SIG_0001
 
-The kernel shall register per-signal Ring 3 handlers via `sigaction`, inject
-signals via `kill`, and wake threads blocked in IPC with `-EINTR`
+The kernel must register Ring 3 signal handlers with `sigaction` and send
+signals with `kill`. It must wake IPC-blocked threads with `-EINTR`
 ({need}`SYS_SIG_0001`).
 ```
 
-```{swr} Deliver Ring 3 signal frames and restore via SYS_SIGRETURN
+```{swr} Push Ring 3 signal frames and continue with SYS_SIGRETURN
 :id: SWR_SIG_0002
 :status: active
 :derives: SYS_SIG_0001
 
-The kernel shall push a `sig_frame_t` onto the user stack to enter a registered
-handler, restore the saved trapframe on `SYS_SIGRETURN`, and terminate the
-process when no handler is registered ({need}`SYS_SIG_0001`).
+The kernel must push a `sig_frame_t` onto the user stack to enter a handler and
+reload the saved trapframe on `SYS_SIGRETURN`. It must stop the process for
+unhandled signals ({need}`SYS_SIG_0001`).
 ```
 
-```{swr} Conform signal interfaces, masks, and SIGKILL/SIGSTOP rules to Issue 8
+```{swr} Align signal API, masks, and SIGKILL/SIGSTOP rules to Issue 8
 :id: SWR_SIG_0003
 :status: draft
 :posix: XBD/signal.h (CX), XSH/sigaction (CX), XSH/kill (CX)
 :derives: SYS_SIG_0001
 :traces: BDR_0003, ADR_0003
 
-`<signal.h>` ([signal.h][hdr-sig]) shall expose POSIX.1-2024 `sigaction`
-([sigaction][fn-sigact]), process-directed `kill` ([kill][fn-kill]),
-thread-directed `pthread_kill`, and `pthread_sigmask`/`sigprocmask`.
-`sys_sigaction` shall fail with `-EINVAL` when catching or ignoring `SIGKILL` or
-`SIGSTOP`, and `sig_frame_t` shall save and restore per-thread signal masks
-across `SYS_SIGRETURN` ({need}`SYS_SIG_0001`).
+`<signal.h>` ([signal.h][hdr-sig]) must declare POSIX.1-2024 `sigaction`
+([sigaction][fn-sigact]), `kill` ([kill][fn-kill]), `pthread_kill`, and
+`pthread_sigmask`/`sigprocmask`. `sys_sigaction` must give `-EINVAL` for
+`SIGKILL` or `SIGSTOP`, and `sig_frame_t` must keep signal masks across
+`SYS_SIGRETURN` ({need}`SYS_SIG_0001`).
 ```
 
-```{swr} Enforce async-signal-safety across libc and signal handlers
+```{swr} Keep async-signal-safe functions free of non-reentrant calls
 :id: SWR_SIG_0004
 :status: draft
 :posix: XSH/2.4.3 (BASE)
 :derives: SYS_SIG_0001
 :traces: BDR_0003, ADR_0003
 
-Every POSIX.1-2024 async-signal-safe function ([XSH 2.4][xsh-02]) shall execute
-without calling `malloc`, `free`, `FILE` stream locks, or unsynchronized mutable
-static state. Multithreaded signal handlers and `fork` children before `execve`
-or `_Exit` shall invoke only async-signal-safe functions ({need}`SYS_SIG_0001`).
+All POSIX.1-2024 async-signal-safe functions ([XSH 2.4][xsh-02]) must run
+without `malloc`, `free`, `FILE` locks, or shared static state. Signal handlers
+and multithreaded `fork` child processes must call only async-signal-safe
+functions before `execve` or `_Exit` ({need}`SYS_SIG_0001`).
 ```
 
 [hdr-sig]:

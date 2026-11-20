@@ -87,6 +87,7 @@ Before each commit, verify:
 - [ ] The commit message obeys Conventional Commits, and it has the `Assisted-by:` footer
 - [ ] The build and the tests are correct (if applicable), including CTest (`docs.html`, `docs.audit`, `posix.headers`)
 - [ ] The formatter reports no findings (if applicable)
+- [ ] All new or changed requirements and docs in `README.md` and `docs/` obey ASD-STE100 (checked with the `asd-ste100` skill, using `must` as the modal verb)
 - [ ] All new or changed interfaces, components, and test files carry valid `need::` tags (`ICD_`, `COMP_`, `VER_`)
 - [ ] You updated `docs/TASKS.md` (`[x] COMPLETE YYYY-MM-DD`)
 - [ ] `CHANGELOG.md` has an entry in `## [Unreleased]` for the change
@@ -103,7 +104,7 @@ For the update procedures, see the [state-management skill](docs/skills/state-ma
 
 Rules that apply only to this project. Each rule links to the skill or the document with more information.
 
-- Documentation in `README.md` and `docs/` follows ASD-STE100 Simplified Technical English. The term lists are `technical_terms.txt` and `allowed_phrases.txt` at the repository root. See [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
+- All documentation and requirements in `README.md` and `docs/` (including Sphinx-Needs `{sys}`, `{swr}`, and specification directives) must follow ASD-STE100 Simplified Technical English (Issue 9). Always use the `asd-ste100` skill to write and check requirements, use `must` (not `shall`) as the requirement modal verb (`authoring.modal_verb: must` in `.docs-traceability-setup.yml`), and keep project terms in `technical_terms.txt` and `allowed_phrases.txt`. See [docs/CONVENTIONS.md](docs/CONVENTIONS.md) and [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0002`).
 - The project moves forward in milestones. Make one milestone at a time, and commit after each complete milestone. A milestone is complete only when its test gives exit code 0. See [docs/TASKS.md](docs/TASKS.md).
 - The kernel and the C library are freestanding C17 with warnings as errors. The kernel runs with no C runtime. See [docs/skills/cmake/SKILL.md](docs/skills/cmake/SKILL.md).
 - Follow the two-tier bidirectional code and POSIX.1-2024 traceability methodology: keep Sphinx-Needs items at the contract/header/subsystem level with `:posix:` references, tag headers with `ICD_`, implementations with `COMP_`, and tests (`test_*`) with `VER_`, and never create per-function Markdown boilerplate. See [docs/00-overview/wdr/WDR_0002.md](docs/00-overview/wdr/WDR_0002.md), [docs/30-architecture/adr/ADR_0003.md](docs/30-architecture/adr/ADR_0003.md), and [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0001`, `CNV_0004`).

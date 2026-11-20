@@ -1,7 +1,7 @@
 # System and Software Requirements
 
-This layer defines black-box system (`sys`) and software (`swr`) requirements,
-grouped by domain with one document per domain.
+This layer gives black-box system (`sys`) and software (`swr`) requirements.
+Each domain has one document.
 
 ```{toctree}
 :maxdepth: 1

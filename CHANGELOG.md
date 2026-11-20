@@ -52,6 +52,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Switched `authoring.modal_verb` in `.docs-traceability-setup.yml` from `shall`
+  to `must` for ASD-STE100 Issue 9 compliance, revised all requirements in
+  `docs/20-system/` to follow STE rules, expanded `technical_terms.txt` and
+  `allowed_phrases.txt`, and made ASD-STE100 requirements compliance explicit in
+  `AGENTS.md`, `WDR_0002`, and `CNV_0002`.
 - Retargeted in-code `VER_` tags in `tests/test_runner.py`,
   `tools/traceability/check_needs_audit.py`, and `tests/traceability/` from
   `VER_POWER_*` to the real `BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and

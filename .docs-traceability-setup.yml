@@ -20,7 +20,7 @@ id:
 
 authoring:
   primary_markup: myst
-  modal_verb: shall
+  modal_verb: must
 
 model:
   decision_types:

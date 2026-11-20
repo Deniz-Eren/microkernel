@@ -29,4 +29,37 @@ serial line
 operating system
 address spaces
 physical memory
+virtual memory
+page tables
+page table
+higher half
+boot archive
+boot info
+name registry
+message passing
+priority inheritance
+signal mask
+signal masks
+signal delivery
+error code
+error codes
+error number
+error numbers
+cancellation point
+cancellation points
+feature macro
+feature macros
+option group
+option groups
+memory mapping
+memory locking
+shared memory
+message queue
+message queues
+call graph
+test suite
+test suites
+conformance gate
+conformance gates
+black-box
 qemu-system-x86_64

@@ -22,6 +22,39 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-12 (2026-11-21): Enforce ASD-STE100 and modal_verb=must for requirements
+
+### Context
+
+ADR-5 established ASD-STE100 Simplified Technical English (Issue 9) for project
+documentation, while `.docs-traceability-setup.yml` initially kept the skill's
+default `authoring.modal_verb: shall`. In ASD-STE100, `shall` is not an approved
+modal verb (only `can`, `cannot`, `must`, and `will` are approved), and an audit
+with `ste_check.py` over extracted MyST `{sys}`/`{swr}` bodies found 59 errors
+(`MODAL: shall` and sentences over the 25-word Rule 6.3 limit).
+
+### Decision
+
+Set `authoring.modal_verb: must` in `.docs-traceability-setup.yml`, revise all
+requirements documents in `docs/20-system/` to comply with ASD-STE100 Issue 9
+(using `must`, active voice, and sentences of at most 25 words), update the
+project glossaries (`technical_terms.txt`, `allowed_phrases.txt`), and make
+ASD-STE100 compliance for all requirements explicit in `AGENTS.md`, `WDR_0002`,
+and `CNV_0002`.
+
+### Alternatives
+
+- Keep `shall` in requirements and exclude `docs/20-system/` from ASD-STE100
+- Rewrite prose without updating `technical_terms.txt` for domain OS terms
+
+### Consequences
+
+- Requirements and governance docs use one consistent controlled language
+  (ASD-STE100 Issue 9) with zero `ste_check.py` errors across extracted
+  `{sys}`/`{swr}` bodies.
+- Future agents see the ASD-STE100 requirement directly in `AGENTS.md` and the
+  pre-commit checklist.
+
 ## ADR-11 (2026-11-21): Enforce two-tier bidirectional POSIX/code traceability
 
 ### Context

@@ -103,3 +103,5 @@ with its status and date.
 - [x] COMPLETE 2026-11-21 docs(traceability): establish two-tier bidirectional
   code and POSIX.1-2024 traceability (WDR_0002, :posix: matrix, need_tag_check
   coverage gate, full codebase ICD_/COMP_ tags, and AGENTS.md rules)
+- [x] COMPLETE 2026-11-21 docs(ste): align all requirements documents to
+  ASD-STE100 Issue 9 (modal_verb=must, glossaries, AGENTS.md, CNV_0002, ADR-12)

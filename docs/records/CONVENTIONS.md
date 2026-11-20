@@ -35,16 +35,20 @@ headers with `ICD_`, implementation modules with `COMP_`, and test files with
 in-code `need::` tag, and new POSIX C test files must follow `test_*.c` naming.
 ```
 
-### CNV_0002 — Source Text Conventions
+### CNV_0002 — Source Text and ASD-STE100 Conventions
 
-```{con} Source text conventions
+```{con} Source text and ASD-STE100 conventions
 :id: CNV_0002
 :status: active
-:traces: ADR_0001
+:traces: ADR_0001, WDR_0002
 
-Wrap source and documentation files to the column limit configured in
-`.editorconfig` and pack prose paragraphs greedily as validated by the
-`docs-traceability-setup` skill.
+Wrap source and documentation files to the column limit in `.editorconfig` and
+pack prose paragraphs greedily with the `docs-traceability-setup` skill. Write
+all requirements (`sys`, `swr`) and docs in ASD-STE100 Simplified Technical
+English (Issue 9) with the `asd-ste100` skill: use `must` (not `shall`) as the
+modal verb (`authoring.modal_verb: must`), keep requirement sentences to 25
+words or fewer, use active voice, and maintain project terms in
+`technical_terms.txt` and `allowed_phrases.txt`.
 ```
 
 ### CNV_0003 — File Header Blocks

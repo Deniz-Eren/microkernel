@@ -1,15 +1,14 @@
 # System and Software Requirements — IPC
 
-Domain `IPC`: Synchronous message-passing channels, client connections, priority
-inheritance, pulses, user-space name resolution, and POSIX.1-2024 descriptor IPC
-and asynchronous I/O.
+Domain `IPC`: synchronous message passing channels, connections, priority
+inheritance, pulses, name registry, and POSIX.1-2024 descriptor IPC and AIO.
 
-```{sys} Provide synchronous IPC and service discovery
+```{sys} Supply synchronous IPC and service lookup
 :id: SYS_IPC_0001
 :status: active
 
-The system shall provide synchronous channel-based message passing, asynchronous
-pulses, and user-space service name discovery between Ring 3 processes.
+The system must supply synchronous channel message passing, asynchronous pulses,
+and user-space service lookup between Ring 3 processes.
 ```
 
 ```{swr} Manage IPC channels and client connections
@@ -17,20 +16,18 @@ pulses, and user-space service name discovery between Ring 3 processes.
 :status: active
 :derives: SYS_IPC_0001
 
-The kernel shall create and destroy per-process receive channels and attach or
-detach client connections targeting a `(pid, chanid)` endpoint
-({need}`SYS_IPC_0001`).
+The kernel must make and remove process receive channels. It must attach and
+detach client connections to a `(pid, chanid)` endpoint ({need}`SYS_IPC_0001`).
 ```
 
-```{swr} Transfer synchronous messages with priority inheritance and pulses
+```{swr} Move synchronous messages with priority inheritance and pulses
 :id: SWR_IPC_0002
 :status: active
 :derives: SYS_IPC_0001
 
-The IPC subsystem shall block callers of `SendMsg` until `ReceiveMsg` and
-`ReplyMsg` complete, boost receiver effective priority while servicing a
-message, and deliver non-blocking 8-byte pulses via `SendPulse`
-({need}`SYS_IPC_0001`).
+The IPC subsystem must block `SendMsg` callers until `ReceiveMsg` and `ReplyMsg`
+complete. It must boost receiver priority during service and deliver 8-byte
+pulses with `SendPulse` ({need}`SYS_IPC_0001`).
 ```
 
 ```{swr} Resolve named service endpoints in sysproc
@@ -38,36 +35,36 @@ message, and deliver non-blocking 8-byte pulses via `SendPulse`
 :status: active
 :derives: SYS_IPC_0001
 
-The `sysproc` name registry shall accept `NAME_MSG_ATTACH` registrations from
-servers and resolve `NAME_MSG_QUERY` lookups to `(pid, chanid)` pairs
+The `sysproc` name registry must accept `NAME_MSG_ATTACH` messages from servers.
+It must resolve `NAME_MSG_QUERY` lookups to `(pid, chanid)` pairs
 ({need}`SYS_IPC_0001`).
 ```
 
-```{swr} Provide POSIX.1-2024 Base descriptor IPC and ppoll over Ring 3 servers
+```{swr} Supply POSIX.1-2024 Base descriptor IPC and ppoll
 :id: SWR_IPC_0004
 :status: draft
 :posix: XSH/pipe2 (BASE), XSH/dup3 (BASE), XSH/ppoll (BASE)
 :derives: SYS_IPC_0001
 :traces: BDR_0003, ADR_0003
 
-Ring 3 system servers communicating over kernel channels shall back mandatory
-Issue 8 Base interfaces `pipe2` ([pipe2][fn-pipe2]), `dup3`, and `ppoll`
-([ppoll][fn-ppoll], [poll.h][hdr-poll]), enforcing atomic `O_CLOEXEC` creation
-and signal-mask restoration ({need}`SYS_IPC_0001`).
+Ring 3 system servers through kernel channels must supply mandatory Issue 8 Base
+functions `pipe2` ([pipe2][fn-pipe2]), `dup3`, and `ppoll` ([ppoll][fn-ppoll],
+[poll.h][hdr-poll]). They must obey atomic `O_CLOEXEC` and signal mask rules
+({need}`SYS_IPC_0001`).
 ```
 
-```{swr} Provide POSIX.1-2024 Base AIO and gate optional message queues
+```{swr} Supply POSIX.1-2024 Base AIO and option-gated message queues
 :id: SWR_IPC_0005
 :status: draft
 :posix: XBD/aio.h (BASE), XBD/mqueue.h (MSG)
 :derives: SYS_IPC_0001
 :traces: BDR_0003, ADR_0003
 
-`<aio.h>` ([aio.h][hdr-aio]) shall expose mandatory Issue 8 Base asynchronous
-I/O (`aio_read`, `aio_write`, `aio_error`, `aio_return`, `aio_cancel`,
-`aio_fsync`, `aio_suspend`, `lio_listio`) backed by Ring 3 IPC servers, while
-`<mqueue.h>` ([mqueue.h][hdr-mq], `MSG`) stays gated behind
-`_POSIX_MESSAGE_PASSING` ({need}`SYS_IPC_0001`).
+`<aio.h>` ([aio.h][hdr-aio]) must declare mandatory Issue 8 Base AIO functions
+(`aio_read`, `aio_write`, `aio_error`, `aio_return`, `aio_cancel`, `aio_fsync`,
+`aio_suspend`, `lio_listio`) through Ring 3 servers. `<mqueue.h>`
+([mqueue.h][hdr-mq], `MSG`) must stay behind `_POSIX_MESSAGE_PASSING`
+({need}`SYS_IPC_0001`).
 ```
 
 [fn-pipe2]:

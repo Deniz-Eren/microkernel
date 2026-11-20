@@ -1,58 +1,57 @@
 # System and Software Requirements — LIBC
 
-Domain `LIBC`: Freestanding Ring 3 C17 runtime, public system headers, syscall
-wrappers, and POSIX.1-2024 (Issue 8) Base alignment.
+Domain `LIBC`: freestanding Ring 3 C17 runtime, public headers, syscall
+wrappers, and POSIX.1-2024 Issue 8 Base rules.
 
-```{sys} Provide a freestanding C17 library aligned toward POSIX.1-2024
+```{sys} Supply a freestanding C17 library aligned to POSIX.1-2024
 :id: SYS_LIBC_0001
 :status: active
 
-The system shall provide a freestanding Ring 3 C17 library and public header set
-that supports user servers and conforms to POSIX.1-2024 (Issue 8) Base rules.
+The system must supply a freestanding Ring 3 C17 library and public header set.
+These interfaces must operate for user programs and obey POSIX.1-2024 Issue 8
+Base rules.
 ```
 
-```{swr} Provide freestanding crt0, core C helpers, and syscall wrappers
+```{swr} Supply freestanding crt0, C helpers, and syscall wrappers
 :id: SWR_LIBC_0001
 :status: active
 :derives: SYS_LIBC_0001
 
-The C library shall provide `crt0` process startup, signal return trampoline,
-formatted console output, string and heap helpers, and Ring 3 system call
-wrappers compiled with `-ffreestanding -Wall -Wextra -Werror`
-({need}`SYS_LIBC_0001`).
+The C library must supply `crt0`, the signal trampoline, console output, string
+and heap helpers, and syscall wrappers. All C library code must compile with
+`-ffreestanding -Wall -Wextra -Werror` ({need}`SYS_LIBC_0001`).
 ```
 
-```{swr} Enforce Issue 8 standalone headers, feature macros, and namespaces
+```{swr} Keep Issue 8 headers standalone with clean namespaces
 :id: SWR_LIBC_0002
 :status: active
 :posix: XBD/unistd.h (BASE), XBD/13-14, XSH/2.2
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
-Each provided POSIX.1-2024 header shall compile standalone under `-std=c17
--D_POSIX_C_SOURCE=202405L -Wall -Wextra -Werror -pedantic` and
-`-D_XOPEN_SOURCE=800` ([XBD 13][xbd-13], [XBD 14][xbd-14], [XSH 2.2][xsh-02]).
-`<unistd.h>` ([unistd.h][hdr-unistd]) shall define `_POSIX_VERSION` and
-`_POSIX2_VERSION` as `202405L`, omit non-standard `<sys/microkernel.h>` symbols,
-reserve internal names under `__` or `_[A-Z]`, and gate option groups behind
-their `_POSIX_*` macros ({need}`SYS_LIBC_0001`).
+Each POSIX.1-2024 header must compile alone with `-std=c17 -Wall -Wextra -Werror
+-pedantic`, `-D_POSIX_C_SOURCE=202405L`, and `-D_XOPEN_SOURCE=800` ([XBD
+13][xbd-13], [XBD 14][xbd-14], [XSH 2.2][xsh-02]). `<unistd.h>`
+([unistd.h][hdr-unistd]) must set `_POSIX_VERSION` and `_POSIX2_VERSION` to
+`202405L` and not include `<sys/microkernel.h>`. It must keep internal names in
+`__` or `_[A-Z]` and put option groups behind `_POSIX_*` macros
+({need}`SYS_LIBC_0001`).
 ```
 
-```{swr} Provide thread-local errno isolated from raw syscalls
+```{swr} Supply thread-local errno isolated from raw syscalls
 :id: SWR_LIBC_0003
 :status: active
 :posix: XBD/errno.h (CX), XSH/2.3
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
-`<errno.h>` ([errno.h][hdr-errno]) shall define thread-local `errno` per [XSH
-2.3][xsh-02]. Libc wrappers shall isolate raw syscall negative error codes from
-`errno`, assign `errno` only on failure paths, never set `errno` to `0` or clear
-it on success, and honor mandatory ("shall fail") error precedence
-({need}`SYS_LIBC_0001`).
+`<errno.h>` ([errno.h][hdr-errno]) must declare thread-local `errno` to obey
+[XSH 2.3][xsh-02]. Libc wrappers must isolate raw syscall error codes from
+`errno` and set `errno` only on failure. Wrappers must not clear `errno` on
+success and must obey the mandatory error sequence ({need}`SYS_LIBC_0001`).
 ```
 
-```{swr} Implement mandatory POSIX.1-2024 thread cancellation points
+```{swr} Supply mandatory POSIX.1-2024 thread cancellation points
 :id: SWR_LIBC_0004
 :status: draft
 :posix: XSH/2.9.5 (BASE)
@@ -61,21 +60,21 @@ it on success, and honor mandatory ("shall fail") error precedence
 
 Libc wrappers for mandatory cancellation points (`read`, `write`, `open`,
 `close`, `nanosleep`, `clock_nanosleep`, `ppoll`, `pthread_cond_wait`,
-`pthread_cond_clockwait`, `sem_wait`, `waitpid`, and the remaining Issue 8 list
-in [XSH 2.9][xsh-02]) shall check deferred cancellation at safe points without
-holding locks or leaking resources ({need}`SYS_LIBC_0001`).
+`pthread_cond_clockwait`, `sem_wait`, `waitpid`, and the full [XSH 2.9][xsh-02]
+set) must examine deferred cancellation at safe points with no locks held
+({need}`SYS_LIBC_0001`).
 ```
 
-```{swr} Provide new POSIX.1-2024 Base functions and C17/C11 headers
+```{swr} Supply new POSIX.1-2024 Base functions and C17/C11 headers
 :id: SWR_LIBC_0005
 :status: draft
 :posix: XSH/getentropy (BASE), XSH/strlcpy (CX), XBD/stdatomic.h (CX)
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
-Under `_POSIX_C_SOURCE=202405L`, `libc` shall expose Issue 8 Base additions
+With `-D_POSIX_C_SOURCE=202405L`, `libc` must declare new Issue 8 Base functions
 `strlcpy`, `strlcat`, `reallocarray`, `getentropy` ([getentropy][fn-getent]),
-and `secure_getenv`, together with `<stdatomic.h>`, `<stdalign.h>`, and
+and `secure_getenv`. It must also supply `<stdatomic.h>`, `<stdalign.h>`, and
 `<uchar.h>` ({need}`SYS_LIBC_0001`).
 ```
 

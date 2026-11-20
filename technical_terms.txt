@@ -155,6 +155,83 @@ design
 W^X
 Multiboot2
 Containerfile
+TN: requirement  # category 19 — software specification item
+TN: domain       # category 19 — traceability subsystem scope
+TN: software     # category 19 — computer science
+TN: hardware     # category 19 — computer science
+TN: document     # category 19 — engineering artifact
+TN: file         # category 19 — OS and software file
+TN: module       # category 19 — boot or software module
+TN: executable   # category 19 — ELF program binary
+TN: interface    # category 19 — API or ABI contract
+TN: specification # category 19 — engineering specification
+TN: platform     # category 19 — target CPU and machine
+TN: table        # category 19 — CPU or page table
+TN: permission   # category 19 — memory page permission
+TN: allocator    # category 19 — memory allocator
+TN: metadata     # category 19 — structured boot/file data
+TN: context      # category 19 — CPU execution state
+TN: trapframe    # category 19 — saved interrupt/syscall frame
+TN: mask         # category 19 — signal bitmask
+TN: descriptor   # category 19 — file descriptor
+TN: pipe         # category 19 — POSIX pipe
+TN: macro        # category 19 — C preprocessor macro
+TN: symbol       # category 19 — linker/header symbol
+TN: lock         # category 19 — synchronization primitive
+TN: mutex        # category 19 — POSIX mutual exclusion lock
+TN: semaphore    # category 19 — POSIX semaphore
+TN: barrier      # category 19 — POSIX thread barrier
+TN: spinlock     # category 19 — busy-wait lock
+TN: rwlock       # category 19 — reader-writer lock
+TN: clock        # category 19 — POSIX clock source
+TN: cancellation # category 19 — POSIX thread cancellation
+TN: stream       # category 19 — C standard I/O stream
+TN: manifest     # category 19 — POSIX Issue 8 symbol manifest
+TN: traceability # category 19 — requirements traceability
+TN: coverage     # category 19 — verification coverage
+TN: audit        # category 19 — automated model check
+TN: gate         # category 19 — CI verification gate
+TN: tag          # category 19 — in-code traceability marker
+TN: link         # category 19 — Sphinx-Needs relation
+TN: warning      # category 19 — compiler or Sphinx warning
+TN: extension    # category 19 — Sphinx extension
+TN: scanner      # category 19 — source tag scanner
+TN: auditor      # category 19 — needs.json checker
+TN: model        # category 19 — traceability model
+TN: prefix       # category 19 — need ID prefix
+TN: suite        # category 19 — test or API suite
+TN: trampoline   # category 19 — signal return stub
+TN: console      # category 19 — serial console
+TN: endpoint     # category 19 — IPC target endpoint
+TN: guard        # category 19 — header macro guard
+TN: freestanding # category 19 — C freestanding environment
+TN: synchronous  # category 19 — blocking IPC mode
+TN: asynchronous # category 19 — non-blocking signal/IO mode
+TN: preemptive   # category 19 — timer-driven scheduling
+TN: virtual      # category 19 — virtual memory
+TN: physical     # category 19 — physical RAM
+TN: thread-local # category 19 — per-thread storage
+TN: async-signal-safe # category 19 — POSIX XSH 2.4.3 property
+TN: read-only    # category 19 — non-writable page permission
+TN: higher-half  # category 19 — x86-64 kernel VA layout
+TN: user-space   # category 19 — Ring 3 execution space
+TN: Ring         # category 19 — x86 privilege level
+TN: Sphinx       # proper name
+TN: Sphinx-Needs # proper name
+TN: MyST         # proper name
+TN: PIT          # proper name (Programmable Interval Timer)
+TN: ABI          # proper name
+TN: API          # proper name
+TN: RAM          # proper name
+TN: AIO          # proper name (POSIX Asynchronous I/O)
+TN: XBD          # proper name (POSIX Base Definitions)
+TN: XSH          # proper name (POSIX System Interfaces)
+TN: XCU          # proper name (POSIX Shell and Utilities)
+TN: Base         # proper name (POSIX.1-2024 Base profile)
+TN: Issue        # proper name (POSIX Issue 8)
+TN: x86-64       # proper name
+TN: C17          # proper name
+TN: C11          # proper name
 
 # --- technical verbs (TV category 2c — system operations) -----------------
 boot
@@ -172,3 +249,18 @@ dispatch
 load
 match
 enter
+TV: compile      # category 2c — compiler operation
+TV: parse        # category 2c — syntax/data parsing
+TV: initialize   # category 2c — system startup
+TV: register     # category 2c — record handler or service
+TV: resolve      # category 2c — look up name or symbol
+TV: validate     # category 2c — verify contract rules
+TV: scan         # category 2c — inspect source files
+TV: unmap        # category 2c — remove page mapping
+TV: boost        # category 2c — elevate thread priority
+TV: interrupt    # category 2c — preempt or break wait
+TV: push         # category 2c — write frame onto stack
+TV: reap         # category 2c — collect exited child status
+TV: attach       # category 2c — connect IPC endpoint
+TV: detach       # category 2c — disconnect IPC endpoint
+TV: export       # category 2c — write needs.json output
