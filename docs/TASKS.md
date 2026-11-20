@@ -143,3 +143,6 @@ For the full traceability backlog and longer-term roadmap, see
 - [x] COMPLETE 2026-11-21 docs(tasks): add near-term forward task backlog
   (TSK_0004-TSK_0007) in docs/TASKS.md and docs/records/TASKS.md and archive
   RDM_0001
+- [x] COMPLETE 2026-11-21 docs(glossary): explain Ring 0, Ring 3, x86-64 memory
+  protection, COW, IPC, and microkernel build terms in
+  docs/00-overview/glossary.md

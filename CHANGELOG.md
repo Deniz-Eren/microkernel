@@ -72,6 +72,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Expanded `docs/00-overview/glossary.md` to explain Ring 0, Ring 3, syscalls,
+  PCB/TCB, IPC, PMM/VMM, PML4, SMEP/SMAP, COW, bootfs, sysroot, and
+  async-signal-safety.
 - Updated `docs/TASKS.md` and `docs/records/TASKS.md` with near-term open tasks
   (`TSK_0004`–`TSK_0007`) covering Milestone 6 and the next POSIX.1-2024 Base
   building blocks, and archived completed `RDM_0001` into
