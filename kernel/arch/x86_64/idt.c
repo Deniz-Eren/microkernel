@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <kernel/printk.h>
 #include <kernel/signal.h>
+#include <kernel/vmm.h>
 #include "apic.h"
 
 /* need:: COMP_BOOT_0001 */
@@ -127,6 +128,14 @@ static void dump_trap(trapframe_t *tf) {
 
 void interrupt_handler(trapframe_t *tf) {
     uint64_t vec = tf->vec;
+    if (vec == 14) {
+        uint64_t cr2;
+        __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
+        if (vmm_handle_page_fault(cr2, tf->err) == 0) {
+            signal_deliver_check(tf);
+            return;
+        }
+    }
     if (vec < 32) {
         dump_trap(tf);
     }

@@ -81,8 +81,23 @@ load, `waitpid` ([sys/wait.h][hdr-wait]), and `_Exit` on `ProcCreate` and
 `CLOCK_REALTIME` with no option guard ({need}`SYS_PROC_0001`).
 ```
 
+```{swr} Spawn bootfs child processes and report exit status with waitpid
+:id: SWR_PROC_0007
+:status: active
+:posix: XBD/sys/wait.h (BASE), XSH/waitpid (BASE)
+:derives: SYS_PROC_0001
+:traces: BDR_0003, ADR_0003
+
+The kernel must spawn bootfs child processes with `ProcCreate` and report child
+exit status with `ProcWait`. `<sys/wait.h>` ([sys/wait.h][hdr-wait]) must
+declare async-signal-safe `wait` and `waitpid` ([waitpid][fn-waitpid])
+({need}`SYS_PROC_0001`).
+```
+
 [hdr-wait]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_wait.h.html
+[fn-waitpid]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/functions/waitpid.html
 [hdr-spawn]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/spawn.h.html
 [hdr-pth]:

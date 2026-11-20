@@ -25,6 +25,7 @@
 #define VMM_PCD (1ULL << 4)
 #define VMM_HUGE (1ULL << 7)
 #define VMM_GLOBAL (1ULL << 8)
+#define VMM_COW (1ULL << 9) /* software-defined copy-on-write PTE marker */
 #define VMM_NX (1ULL << 63)
 
 static inline void *phys_to_virt(uint64_t p) {
@@ -48,10 +49,18 @@ int vmm_map_page(uint64_t vaddr, uint64_t paddr, uint64_t flags);
 int vmm_map_page_to(uint64_t pml4_phys, uint64_t vaddr, uint64_t paddr,
                     uint64_t flags);
 int vmm_unmap_page(uint64_t vaddr);
+uint64_t vmm_unmap_page_to(uint64_t pml4_phys, uint64_t vaddr);
 uint64_t vmm_get_phys(uint64_t vaddr); /* 0 if not mapped */
 uint64_t vmm_get_phys_to(uint64_t pml4_phys, uint64_t vaddr);
 uint64_t vmm_get_pte_to(uint64_t pml4_phys, uint64_t vaddr); /* raw PTE or 0 */
 uint64_t vmm_create_user_pml4(void);
+void vmm_destroy_user_pml4(uint64_t pml4_phys);
+int vmm_resolve_cow_to(uint64_t pml4_phys, uint64_t vaddr);
+int vmm_handle_page_fault(uint64_t fault_va, uint64_t err);
+long sys_vm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags);
+long sys_vm_unmap(uint64_t va, uint64_t len);
+long sys_vm_protect(uint64_t va, uint64_t len, uint64_t prot);
+long sys_vm_clone_cow(uint64_t dst_pid, uint64_t va, uint64_t len);
 void vmm_set_cr3(uint64_t pml4_phys);
 uint64_t vmm_get_cr3(void);
 void vmm_invlpg(uint64_t vaddr);

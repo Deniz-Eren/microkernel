@@ -254,6 +254,10 @@ pcb_t *proc_current(void) {
     return g_current ? g_current->proc : NULL;
 }
 
+pcb_t *proc_list_head(void) {
+    return g_proc_list;
+}
+
 #define CONN_TABLE_SIZE 32
 
 pcb_t *proc_create(pcb_t *parent) {
@@ -360,6 +364,14 @@ void thread_exit_current(int status) {
         p->state = PROC_ZOMBIE;
         p->exit_code = status;
         printk("[proc] pid %u became zombie (exit %d)\n", p->pid, status);
+        pcb_t *parent = p->parent_pid ? proc_find(p->parent_pid) : NULL;
+        if (parent) {
+            for (tcb_t *wt = parent->threads; wt; wt = wt->proc_next) {
+                if (wt->state == THREAD_WAIT_BLOCKED) {
+                    sched_ready(wt);
+                }
+            }
+        }
     }
     schedule();
     panic("thread_exit_current: returned to zombie");
@@ -375,6 +387,12 @@ void proc_exit_current(int status) {
     }
     p->nthreads = 1; /* only the current thread remains to reap below */
     thread_exit_current(status);
+}
+
+void proc_exit_signal(int sig) {
+    tcb_t *t = g_current;
+    t->proc->exit_signal = sig;
+    proc_exit_current(128 + sig);
 }
 
 /* ---- Milestone 4 thread syscalls (caller is current) ---- */

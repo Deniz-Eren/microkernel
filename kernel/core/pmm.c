@@ -10,6 +10,7 @@
 
 #include <kernel/pmm.h>
 #include <kernel/multiboot.h>
+#include <kernel/vmm.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <kernel/printk.h>
@@ -23,6 +24,7 @@
 #define BITMAP_WORDS (PMM_MAX_BYTES / FRAME_SIZE / 64)
 
 static uint64_t g_bitmap[BITMAP_WORDS];
+static uint16_t *g_refcount;
 static uint64_t g_total_frames;
 static uint64_t g_free_frames;
 static uint64_t g_rover; /* scan hint */
@@ -118,6 +120,26 @@ void pmm_init(void) {
     if (mbi) {
         pmm_reserve(mbi & ~0xFFFULL, 0x10000);
     }
+
+    /* Reserve all Multiboot2 boot modules (e.g. bootfs ustar archive). */
+    size_t nmods = 0;
+    const mb_module_t *mods = mb_modules(&nmods);
+    for (size_t i = 0; i < nmods; i++) {
+        if (mods[i].end > mods[i].start) {
+            pmm_reserve(mods[i].start, mods[i].end - mods[i].start);
+        }
+    }
+
+    /* Allocate per-frame COW reference count table from usable RAM. */
+    size_t ref_bytes = g_total_frames * sizeof(uint16_t);
+    size_t ref_pages = (ref_bytes + FRAME_SIZE - 1) / FRAME_SIZE;
+    uint64_t ref_phys = 0;
+    if (ref_pages > 0 && pmm_alloc_contiguous(ref_pages, &ref_phys) == 0) {
+        g_refcount = (uint16_t *)phys_to_virt(ref_phys);
+        for (uint64_t i = 0; i < g_total_frames; i++) {
+            g_refcount[i] = 0;
+        }
+    }
 }
 
 uint64_t pmm_alloc_frame(void) {
@@ -135,6 +157,9 @@ uint64_t pmm_alloc_frame(void) {
             continue;
         }
         bit_clear(idx);
+        if (g_refcount) {
+            g_refcount[idx] = 1;
+        }
         g_free_frames--;
         g_rover = (idx / 64 + 1) % BITMAP_WORDS;
         return idx * FRAME_SIZE;
@@ -154,6 +179,9 @@ int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
                 uint64_t base = i + 1 - count;
                 for (uint64_t j = 0; j < count; j++) {
                     bit_clear(base + j);
+                    if (g_refcount) {
+                        g_refcount[base + j] = 1;
+                    }
                 }
                 g_free_frames -= count;
                 *out_base = base * FRAME_SIZE;
@@ -166,10 +194,35 @@ int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
     return -1;
 }
 
+void pmm_frame_inc(uint64_t phys) {
+    uint64_t idx = phys / FRAME_SIZE;
+    if (!g_refcount || (phys % FRAME_SIZE) || idx >= g_total_frames) {
+        return;
+    }
+    if (g_refcount[idx] < UINT16_MAX) {
+        g_refcount[idx]++;
+    }
+}
+
+uint16_t pmm_frame_refcount(uint64_t phys) {
+    uint64_t idx = phys / FRAME_SIZE;
+    if (!g_refcount || (phys % FRAME_SIZE) || idx >= g_total_frames) {
+        return 0;
+    }
+    return g_refcount[idx];
+}
+
 void pmm_free_frame(uint64_t phys) {
     uint64_t idx = phys / FRAME_SIZE;
     if (phys % FRAME_SIZE || idx >= g_total_frames || bit_test(idx)) {
         return;
+    }
+    if (g_refcount && g_refcount[idx] > 1) {
+        g_refcount[idx]--;
+        return;
+    }
+    if (g_refcount) {
+        g_refcount[idx] = 0;
     }
     bit_set(idx);
     g_free_frames++;

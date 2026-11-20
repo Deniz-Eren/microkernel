@@ -105,7 +105,7 @@ void sys_sigreturn(trapframe_t *tf) {
     if (copy_from_user(&f, tf->rdi, sizeof(f)) < 0) {
         printk("[sig] pid %u: bad signal frame %llx\n", proc_current()->pid,
                (unsigned long long)tf->rdi);
-        proc_exit_current(128 + SIGSEGV); /* noreturn */
+        proc_exit_signal(SIGSEGV); /* noreturn */
     }
     tcb_t *t = sched_current();
     if (t) {
@@ -149,11 +149,13 @@ long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig) {
 
     target->pending_signals |= (1u << sig);
 
-    /* A thread blocked in IPC wakes with -EINTR (kill semantics);
+    /* A thread blocked in IPC or waitpid wakes with -EINTR (kill semantics);
      * the signal itself is delivered at its next return to user mode. */
     if (target->state >= THREAD_SEND_BLOCKED &&
         target->state <= THREAD_RECEIVE_BLOCKED) {
         ipc_unblock_thread(target, -EINTR);
+    } else if (target->state == THREAD_WAIT_BLOCKED) {
+        sched_unblock(target);
     }
     return 0;
 }
@@ -185,7 +187,7 @@ void signal_deliver_check(trapframe_t *tf) {
             /* Default action: terminate the process. */
             printk("[sig] pid %u tid %u terminated by signal %u\n", p->pid,
                    t->tid, sig);
-            proc_exit_current(128 + (int)sig); /* noreturn */
+            proc_exit_signal((int)sig); /* noreturn */
         }
 
         sig_frame_t f;
@@ -200,7 +202,7 @@ void signal_deliver_check(trapframe_t *tf) {
             copy_to_user(ret_va, &p->sig_restorer, 8) < 0) {
             printk("[sig] pid %u: cannot push signal frame; terminating\n",
                    p->pid);
-            proc_exit_current(128 + (int)sig); /* noreturn */
+            proc_exit_signal((int)sig); /* noreturn */
         }
 
         uint32_t add_mask = p->sig_masks[sig];

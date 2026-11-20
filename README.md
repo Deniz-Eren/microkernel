@@ -64,6 +64,12 @@ The headers below show all user-space functions available at this time:
   `sigprocmask`, `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`,
   `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`, `sigismember`,
   `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across `SYS_SIGRETURN`
+- **POSIX memory mapping (`<sys/mman.h>`):** W^X-enforced anonymous `mmap`,
+  `mprotect`, `msync`, and `munmap` (`PROT_*`, `MAP_PRIVATE`, `MAP_ANONYMOUS`,
+  `MAP_FIXED`, `MS_*`)
+- **POSIX process wait (`<sys/wait.h>`):** async-signal-safe `wait`, `waitpid`
+  (`WNOHANG`), and exit/signal status macros (`WIFEXITED`, `WEXITSTATUS`,
+  `WIFSIGNALED`, `WTERMSIG`)
 - **Formatted I/O (`<stdio.h>`):** `printf`, `snprintf`, `puts`, `putchar`
 - **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `exit`, `abort`,
   `strtol`, `atoi`
@@ -74,6 +80,9 @@ The headers below show all user-space functions available at this time:
 - **Synchronous IPC (`<sys/ipc.h>`):** `CreateChannel`, `DestroyChannel`,
   `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
   `SendPulse`, and `sysproc` name registry (`NAME_MSG_ATTACH`, `NAME_MSG_QUERY`)
+- **Native processes and VM (`<sys/proc.h>`, `<sys/vm.h>`):** `ProcCreate` (from
+  `boot.tar`), `ProcWait`, `VMMap`, `VMUnmap`, `VMProtect`, and `VMCloneCow`
+  (copy-on-write page sharing between parent and child)
 - **Native threads (`<sys/thread.h>`):** `NewThread`, `ThreadReset`,
   `ThreadSpawn`, `ThreadGetCtx`, `ThreadGetTid` (256 priority levels with IPC
   priority inheritance)
@@ -82,14 +91,16 @@ What you can build today:
 
 - isolated Ring 3 client and server processes that find each other by name
   through `sysproc` and send synchronous messages or pulses
-- multithreaded Ring 3 applications with separate `errno` for each thread,
+- parent and child Ring 3 processes spawned with `ProcCreate` that share
+  copy-on-write memory (`VMCloneCow`), manage private pages (`mmap`/`munmap`),
+  and report exit codes via `waitpid`
+- multithreaded Ring 3 applications with isolated `errno` for each thread,
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next milestones): dynamic process spawn
-(`ProcCreate`, `fork`/`exec`/`waitpid`), user memory mapping (`VMMap`/`mmap`),
-`pthread_*` locks and `sem_*`, clocks and timers, file systems, sockets, and
-user-space device drivers. See [docs/TASKS.md](docs/TASKS.md) and
+Not available at this time (next milestones): POSIX `fork`/`execve`, `pthread_*`
+locks and `sem_*`, clocks and timers, file systems, sockets, and user-space
+device drivers. See [docs/TASKS.md](docs/TASKS.md) and
 [docs/records/TASKS.md](docs/records/TASKS.md).
 
 ## POSIX.1-2024 compliance and bidirectional traceability
@@ -182,8 +193,8 @@ are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 ## Status
 
 See [docs/TASKS.md](docs/TASKS.md) for the milestone plan. The build completed
-milestones 1 to 4. The next milestone adds process creation and memory system
-calls.
+milestones 1 to 5. The next milestone adds interrupt events, port I/O, and
+user-space drivers.
 
 ## Documentation
 

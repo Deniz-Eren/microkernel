@@ -19,6 +19,7 @@ typedef enum {
     THREAD_SEND_BLOCKED,
     THREAD_REPLY_BLOCKED,
     THREAD_RECEIVE_BLOCKED,
+    THREAD_WAIT_BLOCKED,
     THREAD_ZOMBIE,
 } thread_state_t;
 
@@ -69,9 +70,11 @@ struct pcb {
     uint32_t parent_pid;
     proc_state_t state;
     int exit_code;
+    int exit_signal;
 
     uint64_t pml4_phys;
-    uint64_t brk; /* program break (user VA) */
+    uint64_t brk;          /* program break (user VA) */
+    uint64_t next_mmap_va; /* bump cursor for dynamic VMMap regions */
 
     tcb_t *threads; /* singly-linked list of live threads */
     uint32_t nthreads;
@@ -115,6 +118,7 @@ void sched_unblock(tcb_t *t);
 
 pcb_t *proc_current(void);
 pcb_t *proc_find(uint32_t pid);
+pcb_t *proc_list_head(void);
 pcb_t *proc_create(pcb_t *parent);
 uint32_t proc_alloc_pid(void);
 tcb_t *thread_create(pcb_t *p, uint64_t entry_rip, uint64_t user_rsp,
@@ -130,13 +134,16 @@ tcb_t *thread_find(pcb_t *p, uint32_t tid);
  * VA (stacks grow down), or 0. */
 uint64_t proc_user_stack_alloc(pcb_t *p);
 
-/* Milestone 4 thread syscalls (caller is current). */
+/* Milestone 4/5 thread and process syscalls (caller is current). */
 long sys_thread_create(uint64_t prio);
 long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
                       uint64_t stack_top);
 long sys_thread_get_ctx(uint64_t tid, uint64_t ubuf);
+long sys_proc_create(uint64_t name_va, uint64_t prio, uint64_t flags);
+long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options);
 void thread_exit_current(int status) __attribute__((noreturn));
 void proc_exit_current(int status) __attribute__((noreturn));
+void proc_exit_signal(int sig) __attribute__((noreturn));
 
 /* Built by proc_spawn_init(): kernel hands control to sysproc. */
 void proc_spawn_init(void);

@@ -62,16 +62,21 @@ with its status and date.
 - `sigtest`: a worker thread, a caught signal, and a signal with no handler
 - verified: a thread starts, a signal handler runs, and the process stops
 
-## Milestone 5 — processes and memory system calls (next)
+## Milestone 5 — processes and memory system calls (completed)
 
 - `ProcCreate`: a process makes a new process from a program in the boot archive
-- `VMMap` and `VMUnmap`: user processes change their own memory map
-- `VMCloneCow`: copy-on-write pages between related processes
-- the parent process can read the exit code of a child process
-- the scheduler runs the processes of all milestones together
-- new tests for process creation and for the memory system calls
+- `VMMap`, `VMUnmap`, and `VMProtect`: user processes change their own memory
+  map with W^X enforcement (`<sys/mman.h>` `mmap`, `mprotect`, `msync`,
+  `munmap`)
+- `VMCloneCow`: copy-on-write pages between related processes with per-frame PMM
+  refcounting and Ring 3 `#PF` COW fault resolution
+- `ProcWait` / `<sys/wait.h>` `waitpid`: the parent process reads child exit
+  codes and signal status (`WNOHANG`, blocking wait, PML4 reclaim on reap)
+- the scheduler runs the processes of all milestones (1 to 5) together
+- verified: `proctest` and `procchild` pass in headless QEMU alongside CTest
+  `posix.headers` and `posix.async_signal_safe`
 
-## Milestone 6 — interrupts and drivers (planned)
+## Milestone 6 — interrupts and drivers (next)
 
 - interrupt events as messages to user processes (`AttachIntrEvent`)
 - access to port input and output for permitted processes (`IOPLSet`)
@@ -119,3 +124,6 @@ with its status and date.
 - [x] COMPLETE 2026-11-21 docs(readme): add user-space support breakdown and
   bidirectional traceability overview to README.md and mandate README sync in
   AGENTS.md
+- [x] COMPLETE 2026-11-21 feat(proc,mem): complete TSK_0002 / Milestone 5
+  (ProcCreate, ProcWait/waitpid, VMMap/VMUnmap/VMProtect/mmap, VMCloneCow with
+  PMM refcounts and #PF COW resolution, proctest/procchild QEMU & CTest gates)

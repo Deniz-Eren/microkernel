@@ -15,3 +15,15 @@ dispatch, preemptive scheduling, and `NewThread`/`ThreadReset`/`ThreadGetCtx`
 ({need}`SYS_PROC_0001`, {need}`SWR_PROC_0001`, {need}`SWR_PROC_0002`,
 {need}`SWR_PROC_0003`).
 ```
+
+```{ver} Verify ProcCreate, child exit-code waitpid, and <sys/wait.h>
+:id: VER_PROC_0002
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0007
+
+The headless QEMU harness `tests/test_runner.py` runs `proctest` and
+`procchild`. It checks `ProcCreate`, `WNOHANG`, and blocking `waitpid` exit code
+42. CTest `posix.headers` and `posix.async_signal_safe` check `<sys/wait.h>` and
+`waitpid` safety ({need}`SWR_PROC_0007`).
+```

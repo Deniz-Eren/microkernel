@@ -35,11 +35,14 @@ static long copy_user_pml4(uint64_t pml4_phys, void *kbuf, uint64_t uaddr,
             return -EFAULT;
         }
         uint64_t pte = vmm_get_pte_to(pml4_phys, page);
-        if (!(pte & VMM_PRESENT)) {
+        if (!(pte & VMM_PRESENT) || !(pte & VMM_USER)) {
             return -EFAULT;
         }
         if (to_user && !(pte & VMM_WRITE)) {
-            return -EFAULT; /* read-only target page */
+            if (!(pte & VMM_COW) || vmm_resolve_cow_to(pml4_phys, page) != 0) {
+                return -EFAULT; /* read-only target page */
+            }
+            pte = vmm_get_pte_to(pml4_phys, page);
         }
         uint64_t phys = pte & 0x000FFFFFFFFFF000ULL;
         size_t off = (uaddr + done) & 0xFFF;
@@ -137,9 +140,27 @@ void syscall_handler(trapframe_t *tf) {
         ret = ipc_msg_send_pulse((int)tf->rdi, (uint32_t)tf->rsi,
                                  (uint32_t)tf->rdx);
         break;
+    case SYS_PROC_CREATE:
+        ret = sys_proc_create(tf->rdi, tf->rsi, tf->rdx);
+        break;
     case SYS_PROC_EXIT:
         proc_exit_current((int)tf->rdi);
         break; /* noreturn */
+    case SYS_PROC_WAIT:
+        ret = sys_proc_wait((int64_t)tf->rdi, tf->rsi, tf->rdx);
+        break;
+    case SYS_VM_MAP:
+        ret = sys_vm_map(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
+    case SYS_VM_UNMAP:
+        ret = sys_vm_unmap(tf->rdi, tf->rsi);
+        break;
+    case SYS_VM_CLONE_COW:
+        ret = sys_vm_clone_cow(tf->rdi, tf->rsi, tf->rdx);
+        break;
+    case SYS_VM_PROTECT:
+        ret = sys_vm_protect(tf->rdi, tf->rsi, tf->rdx);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (tf->rdi > 255) {

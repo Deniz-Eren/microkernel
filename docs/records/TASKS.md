@@ -21,14 +21,5 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0002 — Implement Milestone 5 process and memory syscalls
-
-```{task} Implement Milestone 5 process and memory syscalls
-:id: TSK_0002
-:status: open
-:traces: SYS_PROC_0001, SYS_MEM_0001, SWR_MEM_0004, SWR_PROC_0004
-
-Implement `ProcCreate`, `VMMap`, `VMUnmap`, `VMCloneCow`, child exit-code
-reporting, and automated QEMU verification tests to lay the foundation for POSIX
-`mmap` and `waitpid` ({need}`SWR_MEM_0004`, {need}`SWR_PROC_0004`).
-```
+No open tasks are queued at this time. See [ROADMAP.md](ROADMAP.md) for upcoming
+POSIX.1-2024 and Milestone 6 items.

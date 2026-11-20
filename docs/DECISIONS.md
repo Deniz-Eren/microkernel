@@ -22,6 +22,48 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-15 (2026-11-21): Dynamic PMM refcounts, VMM_COW, and Milestone 5 ABI
+
+### Context
+
+Milestone 5 (`TSK_0002`) requires `ProcCreate`, `VMMap`, `VMUnmap`,
+`VMCloneCow`, and child exit-code reporting, while laying the foundation for
+POSIX.1-2024 `<sys/mman.h>` (`SWR_MEM_0004`) and `<sys/wait.h>`
+(`SWR_PROC_0007`). Sharing physical frames copy-on-write across parent and child
+address spaces requires safe frame lifetime tracking and Ring 3 `#PF` fault
+resolution without bloating kernel `.bss` or violating W^X.
+
+### Decision
+
+- Allocate a per-frame `uint16_t` reference-count table dynamically at the end
+  of `pmm_init()` via `pmm_alloc_contiguous()` (~128 KiB on 256 MiB RAM), and
+  make `pmm_free_frame()` refcount-aware with `pmm_frame_inc()` and
+  `pmm_frame_refcount()`.
+- Reserve x86-64 software PTE bit 9 as `VMM_COW`, resolve COW write faults in
+  `vmm_resolve_cow_to()` from both `idt.c` (`#PF`, vector 14) and SMAP-safe
+  `copy_user_pml4()`, promote sole-owner (`refcount <= 1`) pages in-place, and
+  reclaim user PML4 trees on child reap via `vmm_destroy_user_pml4()`.
+- Add `SYS_PROC_WAIT = 28` and `SYS_VM_PROTECT = 29` alongside reserved
+  `SYS_PROC_CREATE = 13`, `SYS_VM_MAP = 15`, `SYS_VM_UNMAP = 16`, and
+  `SYS_VM_CLONE_COW = 17`, expose native `<sys/proc.h>` / `<sys/vm.h>` and clean
+  POSIX.1-2024 `<sys/mman.h>` / `<sys/wait.h>`, and enforce W^X by rejecting
+  `PROT_WRITE | PROT_EXEC` with `-EACCES`.
+
+### Alternatives
+
+- Static 2 MiB `uint16_t` refcount array in kernel `.bss` (inflates kernel
+  footprint regardless of actual RAM size)
+- Eagerly copy pages in `VMCloneCow` instead of real `#PF` copy-on-write (loses
+  memory sharing and skips COW fault verification)
+
+### Consequences
+
+- `proctest` and `procchild` verify `ProcCreate`, `waitpid` (`WNOHANG` and exit
+  status 42), `mmap`/`mprotect`/`msync`/`munmap`, W^X rejection, and real Ring 3
+  COW page faults in headless QEMU alongside Milestones 1–4.
+- `SWR_MEM_0004` and `SWR_PROC_0007` are active and verified by both QEMU and
+  CTest (`posix.headers`, `posix.async_signal_safe`).
+
 ## ADR-14 (2026-11-21): Add SYS_SIGPROCMASK ABI and libc.a safety gate
 
 ### Context

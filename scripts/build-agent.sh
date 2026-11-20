@@ -32,6 +32,11 @@ if ! "$ENV" test --timeout 120 \
     --expect 'errno thread-local and preserved across success' \
     --expect 'signal handler entered' \
     --expect 'signal mask saved and restored across sigreturn' \
+    --expect 'VMMap/mmap W\^X, mprotect, msync, and munmap verified' \
+    --expect 'ProcCreate spawned procchild' \
+    --expect 'procchild COW read and private write succeeded' \
+    --expect 'waitpid reaped procchild .* exit=42' \
+    --expect 'VMCloneCow isolated parent and child writes cleanly' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

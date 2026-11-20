@@ -44,7 +44,7 @@ the HHDM. It must examine page mappings and write permissions with SMAP active
 
 ```{swr} Supply POSIX.1-2024 Base memory mapping interfaces
 :id: SWR_MEM_0004
-:status: draft
+:status: active
 :posix: XBD/sys/mman.h (BASE), XSH/mmap (BASE)
 :derives: SYS_MEM_0001
 :traces: BDR_0003, ADR_0003

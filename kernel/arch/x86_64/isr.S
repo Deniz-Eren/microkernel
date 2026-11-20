@@ -55,11 +55,7 @@ isr_stub_\vec:
     movq %rsp, %rdi
     callq interrupt_handler
     POPALL
-    .if \errflag == 0
-        addq $16, %rsp
-    .else
-        addq $8, %rsp
-    .endif
+    addq $16, %rsp
     iretq
 .endm
 

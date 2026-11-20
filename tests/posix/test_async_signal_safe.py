@@ -39,6 +39,8 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "sigaddset",
     "sigdelset",
     "sigismember",
+    "wait",
+    "waitpid",
     "__errno_location",
 )
 

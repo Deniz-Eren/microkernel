@@ -21,6 +21,17 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Milestone 5 (`TSK_0002`) process and memory syscalls: `SYS_PROC_CREATE`,
+  `SYS_PROC_WAIT` (`28`), `SYS_VM_MAP`, `SYS_VM_UNMAP`, `SYS_VM_CLONE_COW`, and
+  `SYS_VM_PROTECT` (`29`), backed by per-frame PMM reference counts, Ring 3
+  `#PF` COW fault handling, and user PML4 reclamation on child reap.
+- Public POSIX.1-2024 `<sys/mman.h>` (`mmap`, `munmap`, `mprotect`, `msync`) and
+  `<sys/wait.h>` (async-signal-safe `wait`, `waitpid`, `W*` macros) plus native
+  `<sys/proc.h>` and `<sys/vm.h>` headers and `libc` wrappers.
+- Automated Milestone 5 verification (`tests/proctest/main.c` and `child.c`)
+  running concurrently with Milestones 1–4 in QEMU, plus `<sys/mman.h>` /
+  `<sys/wait.h>` coverage in `posix.headers` and `wait`/`waitpid` in
+  `posix.async_signal_safe`.
 - Standard POSIX.1-2024 `<signal.h>` (`libc/include/signal.h`) and
   async-signal-safe `libc/src/signal.c` implementing `sigaction`, `sigprocmask`,
   `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`, and `sigset_t`
@@ -99,6 +110,11 @@ Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- Reserved Multiboot2 boot modules (`bootfs`) in `pmm_init()` so dynamic frame
+  allocations never overwrite the boot archive needed by `ProcCreate`.
+- Fixed `ISR_STUB` in `kernel/arch/x86_64/isr.S` to pop all 16 bytes (`vec` and
+  `err`) before `iretq` on error-code exceptions such as recoverable `#PF` COW
+  page faults.
 - Aligned secondary Ring 3 thread entry stacks in `sys_thread_reset` to satisfy
   the System V AMD64 `RSP % 16 == 8` C function entry invariant, preventing
   `#GP` faults on SSE `movaps` instructions in spawned worker threads.

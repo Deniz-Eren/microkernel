@@ -9,7 +9,7 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002 VER_SIG_0003
+# need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002 VER_PROC_0002
 
 from __future__ import annotations
 
@@ -30,7 +30,9 @@ POSIX_HEADERS: tuple[str, ...] = (
     "stdlib.h",
     "string.h",
     "unistd.h",
+    "sys/mman.h",
     "sys/types.h",
+    "sys/wait.h",
 )
 
 FEATURE_PROFILES: tuple[tuple[str, str], ...] = (
@@ -188,6 +190,38 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"signal.h check failed:\n{err}")
+
+    def test_mman_and_wait_headers_and_namespace_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <sys/mman.h>",
+                "#include <sys/wait.h>",
+                "#ifdef SYS_VM_MAP",
+                '#error "sys/mman.h leaked SYS_VM_MAP"',
+                "#endif",
+                "#ifdef SYS_PROC_WAIT",
+                '#error "sys/wait.h leaked SYS_PROC_WAIT"',
+                "#endif",
+                "static int __check_mman_wait_api(void) {",
+                "    void *p = mmap((void *)0, 4096, PROT_READ | PROT_WRITE,",
+                "                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);",
+                "    if (p == MAP_FAILED) { return -1; }",
+                "    (void)mprotect(p, 4096, PROT_READ);",
+                "    (void)msync(p, 4096, MS_SYNC);",
+                "    (void)munmap(p, 4096);",
+                "    int st = 0;",
+                "    (void)wait(&st);",
+                "    (void)waitpid((pid_t)-1, &st, WNOHANG);",
+                "    return WIFEXITED(st) ? WEXITSTATUS(st) : WTERMSIG(st);",
+                "}",
+                "int (*__mw_fn_ref)(void) = __check_mman_wait_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"mman/wait check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

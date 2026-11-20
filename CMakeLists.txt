@@ -134,6 +134,7 @@ add_subdirectory(servers/sysproc)
 add_subdirectory(servers/ipcserv)
 add_subdirectory(tests/ipccli)
 add_subdirectory(tests/sigtest)
+add_subdirectory(tests/proctest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

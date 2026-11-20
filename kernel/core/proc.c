@@ -19,6 +19,9 @@
 #include <kernel/ustar.h>
 #include <kernel/string.h>
 #include <kernel/pmm.h>
+#include <kernel/uaccess.h>
+#include <sys/errno.h>
+#include <sys/proc.h>
 #include "channel.h"
 
 /* need:: COMP_BOOT_0002 COMP_PROC_0002 */
@@ -155,8 +158,10 @@ static uint64_t build_user_stack(pcb_t *p, const char *progname,
 static boot_info_t g_bootinfo;
 
 /* Load one ustar bootfs image into a fresh process and make it runnable. */
-static pcb_t *spawn_image(uint64_t tar_phys, uint64_t tar_size,
-                          const char *name, uint8_t prio, int precreate_chan) {
+static pcb_t *proc_spawn_from_bootfs(pcb_t *parent, uint64_t tar_phys,
+                                     uint64_t tar_size, const char *name,
+                                     uint8_t prio, int precreate_chan,
+                                     int *err_out) {
     ustar_iter_t it;
     ustar_open(&it, tar_phys, tar_size);
     const void *image = NULL;
@@ -170,16 +175,27 @@ static pcb_t *spawn_image(uint64_t tar_phys, uint64_t tar_size,
     }
     if (!image) {
         printk("[proc] '%s' not found in bootfs (skipped)\n", name);
+        if (err_out) {
+            *err_out = -ENOENT;
+        }
         return NULL;
     }
 
-    pcb_t *p = proc_create(NULL);
+    pcb_t *p = proc_create(parent);
     if (!p) {
+        if (err_out) {
+            *err_out = -ENOMEM;
+        }
         return NULL;
     }
     uint64_t entry = 0, brk = 0;
     if (elf_load_user(p->pml4_phys, image, image_size, &entry, &brk) != 0) {
         printk("[proc] failed to load '%s' ELF\n", name);
+        p->state = PROC_DEAD;
+        vmm_destroy_user_pml4(p->pml4_phys);
+        if (err_out) {
+            *err_out = -ENOEXEC;
+        }
         return NULL;
     }
     p->brk = brk;
@@ -189,10 +205,104 @@ static pcb_t *spawn_image(uint64_t tar_phys, uint64_t tar_size,
         channel_create(p->pid);
     }
     thread_create(p, entry, user_rsp, prio);
-    printk("[proc] spawned '%s' pid=%u entry=%llx rsp=%llx prio=%u\n", name,
-           p->pid, (unsigned long long)entry, (unsigned long long)user_rsp,
-           prio);
+    printk("[proc] spawned '%s' pid=%u ppid=%u entry=%llx rsp=%llx prio=%u\n",
+           name, p->pid, p->parent_pid, (unsigned long long)entry,
+           (unsigned long long)user_rsp, prio);
     return p;
+}
+
+static pcb_t *spawn_image(uint64_t tar_phys, uint64_t tar_size,
+                          const char *name, uint8_t prio, int precreate_chan) {
+    return proc_spawn_from_bootfs(NULL, tar_phys, tar_size, name, prio,
+                                  precreate_chan, NULL);
+}
+
+long sys_proc_create(uint64_t name_va, uint64_t prio, uint64_t flags) {
+    pcb_t *parent = proc_current();
+    tcb_t *cur = sched_current();
+    if (!parent || !cur) {
+        return -EPERM;
+    }
+    if (flags != 0 || prio > 255) {
+        return -EINVAL;
+    }
+    char name[64];
+    size_t len = 0;
+    for (; len < sizeof(name); len++) {
+        char ch = 0;
+        if (copy_from_user(&ch, name_va + len, 1) < 0) {
+            return -EFAULT;
+        }
+        name[len] = ch;
+        if (ch == '\0') {
+            break;
+        }
+    }
+    if (len == 0 || len == sizeof(name)) {
+        return -EINVAL;
+    }
+    uint8_t child_prio = prio ? (uint8_t)prio : cur->base_priority;
+    int err = -ENOMEM;
+    pcb_t *child = proc_spawn_from_bootfs(parent, g_bootinfo.boot_tar_phys,
+                                          g_bootinfo.boot_tar_size, name,
+                                          child_prio, 0, &err);
+    return child ? (long)child->pid : (long)err;
+}
+
+long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
+    pcb_t *parent = proc_current();
+    tcb_t *cur = sched_current();
+    if (!parent || !cur) {
+        return -EPERM;
+    }
+    if (options & ~(uint64_t)PROC_WAIT_NOHANG) {
+        return -EINVAL;
+    }
+    if (pid == 0 || pid < -1) {
+        return -ENOSYS;
+    }
+
+    for (;;) {
+        int has_matching = 0;
+        pcb_t *zombie = NULL;
+        for (pcb_t *c = proc_list_head(); c; c = c->next) {
+            if (c->parent_pid != parent->pid || c->state == PROC_DEAD) {
+                continue;
+            }
+            if (pid > 0 && c->pid != (uint32_t)pid) {
+                continue;
+            }
+            has_matching = 1;
+            if (c->state == PROC_ZOMBIE) {
+                zombie = c;
+                break;
+            }
+        }
+        if (!has_matching) {
+            return -ECHILD;
+        }
+        if (zombie) {
+            int wstatus = zombie->exit_signal
+                              ? (zombie->exit_signal & 0x7F)
+                              : ((zombie->exit_code & 0xFF) << 8);
+            if (status_va != 0 &&
+                copy_to_user(status_va, &wstatus, sizeof(wstatus)) < 0) {
+                return -EFAULT;
+            }
+            uint32_t reaped_pid = zombie->pid;
+            zombie->state = PROC_DEAD;
+            vmm_destroy_user_pml4(zombie->pml4_phys);
+            zombie->pml4_phys = 0;
+            return (long)reaped_pid;
+        }
+        if (options & PROC_WAIT_NOHANG) {
+            return 0;
+        }
+        sched_block_current(THREAD_WAIT_BLOCKED);
+        if (cur->pending_signals & ~cur->blocked_signals) {
+            return -EINTR;
+        }
+    }
 }
 
 #define USER_STACK_BYTES 0x10000ULL /* 64 KiB per spawned thread */
@@ -257,6 +367,8 @@ void proc_spawn_init(void) {
     /* Milestone 4 demo: threads + signal delivery (worker thread, caught
      * SIGUSR1, then terminates itself with an unhandled SIGUSR2). */
     spawn_image(tar_phys, tar_size, "sigtest", 100, 0);
+    /* Milestone 5 demo: ProcCreate, VMMap/VMUnmap, VMCloneCow, and waitpid. */
+    spawn_image(tar_phys, tar_size, "proctest", 100, 0);
 
     sched_activate();
 }

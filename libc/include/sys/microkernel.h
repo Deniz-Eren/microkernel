@@ -43,6 +43,8 @@
 #define SYS_IOPL_SET 25    /* extension: grant Ring 3 port I/O (CAP_SYS_INTR) */
 #define SYS_SIGACTION 26   /* extension: register Ring 3 signal handlers */
 #define SYS_SIGPROCMASK 27 /* extension: read or update thread signal mask */
+#define SYS_PROC_WAIT 28   /* extension: wait for child process exit status */
+#define SYS_VM_PROTECT 29  /* extension: update user page permissions */
 
 #ifndef __ASSEMBLER__
 

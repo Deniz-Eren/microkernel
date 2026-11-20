@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0002 — Implement Milestone 5 process and memory syscalls
+
+```{task} Implement Milestone 5 process and memory syscalls
+:id: TSK_0002
+:status: done
+:traces: SYS_PROC_0001, SYS_MEM_0001, SWR_MEM_0004, SWR_PROC_0004
+
+Implement `ProcCreate`, `VMMap`, `VMUnmap`, `VMCloneCow`, child exit-code
+reporting, and automated QEMU verification tests to lay the foundation for POSIX
+`mmap` and `waitpid` ({need}`SWR_MEM_0004`, {need}`SWR_PROC_0004`).
+```
+
 ### TSK_0003 — Align signal ABI, masks, and SIGKILL/SIGSTOP rules
 
 ```{task} Align signal ABI, masks, and SIGKILL/SIGSTOP rules
