@@ -46,6 +46,4 @@ Add an ADR when you make an important decision, when you change a decision, or w
 2. Add a CHANGELOG.md entry in `## [Unreleased]` for an important change (see the [keepachangelog skill](../keepachangelog/SKILL.md)).
 3. Add an ADR if you made a decision.
 4. Add a notice if you added a third-party component.
-<!-- module:copyright -->
 5. Make sure that all new and changed source files have the copyright header (see [CONVENTIONS.md](../../CONVENTIONS.md)).
-<!-- /module:copyright -->

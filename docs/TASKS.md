@@ -2,6 +2,20 @@
 
 The project moves forward in milestones. Each milestone adds one group of functions. A milestone is finished only when its automated test gives exit code 0. The test harness compares the serial output of the system with text patterns.
 
+## Purpose
+
+Record all the tasks of microkernel. Give the status and the date for each task.
+
+## Structure
+
+The tasks are in groups by milestone and by category. Each task is a checkbox with its status and date.
+
+## Formatting Rules
+
+- Use `- [ ] <type>: <description>` for open tasks.
+- Use `- [x] COMPLETE YYYY-MM-DD <type>: <description>` for complete tasks.
+- Do not remove completed tasks.
+
 ## Milestone 1 — boot and memory (completed)
 
 - build environment in a Podman container, with Clang and CMake
@@ -66,3 +80,7 @@ The project moves forward in milestones. Each milestone adds one group of functi
 - Do not start a milestone before the test of the last milestone gives exit code 0.
 - Make a commit after each completed milestone.
 - When you repair a defect, record the repair in the commit message.
+
+## Scaffolding
+
+- [x] COMPLETE 2026-11-20 scaffold: apply agent-scaffolding 0.2.0 (governance, state documents, skills, tests/ restructure, license, tool configs, build agents, copyright headers)

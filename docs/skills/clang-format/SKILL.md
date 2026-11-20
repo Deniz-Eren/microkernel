@@ -30,5 +30,5 @@ One file by hand:
 ## Rules
 
 - The formatter examines only `kernel/`, `libc/`, `servers/`, and `tests/` (`*.c`, `*.h`). It does not examine `build/`, `sysroot/`, or `docs/`.
-- Run the check before each commit that touches C code (see the [format-validator agent](../agents/format-validator.md)).
+- Run the check before each commit that touches C code (see the [format-validator agent](../../agents/format-validator.md)).
 - Do not change `.clang-format` parameters without an ADR in [docs/DECISIONS.md](../../DECISIONS.md).
