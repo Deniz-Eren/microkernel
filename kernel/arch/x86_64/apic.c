@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #include "apic.h"
 #include "io.h"
 #include <stddef.h>

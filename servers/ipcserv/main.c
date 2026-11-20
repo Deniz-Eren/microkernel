@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 /* ipcserv — demo echo server for the IPC milestone.
  * Creates a channel, registers "/dev/echo" with the sysproc name service,
  * then serves echo requests from TWO threads (main + worker) to exercise

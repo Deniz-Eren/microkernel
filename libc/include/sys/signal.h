@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #pragma once
 /* Microkernel signals (Milestone 4). Handler registration is an ABI extension
  * (SYS_SIGACTION); delivery uses the kernel-built signal frame and libc's

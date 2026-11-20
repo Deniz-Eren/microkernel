@@ -1,3 +1,6 @@
+/* Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com> */
+/* SPDX-License-Identifier: MIT */
+
 /* Context switch, syscall entry, and thread bootstrap.
  * Offsets into struct tcb must match kernel/include/kernel/sched.h:
  *   TCB_KRSP (32) : kernel_rsp   (asserted in sched.c via _Static_assert)

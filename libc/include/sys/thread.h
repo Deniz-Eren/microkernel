@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #pragma once
 /* Microkernel thread management (Milestone 4): two-phase creation — NewThread
  * makes an unarmed embryo thread, ThreadReset arms it with a start context

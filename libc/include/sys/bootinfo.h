@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #pragma once
 /* Boot information handed to PID 1 (sysproc) by the kernel. The structure is
  * copied read-only into the process address space at BOOTINFO_VA and passed

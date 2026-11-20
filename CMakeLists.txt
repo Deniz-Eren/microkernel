@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
+
 cmake_minimum_required(VERSION 3.20)
 project(microkernel C ASM)
 

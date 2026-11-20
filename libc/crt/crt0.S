@@ -1,3 +1,6 @@
+/* Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com> */
+/* SPDX-License-Identifier: MIT */
+
 /* Microkernel user-space C runtime entry.
  * The kernel builds the initial stack: [argc][argv...][NULL][envp...][NULL]
  * [auxv pairs...][AT_NULL]. RSP points at argc on entry. */

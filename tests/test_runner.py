@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
 """Headless QEMU serial-output assertion harness for Microkernel.
 
 Boots build/microkernel.iso with TCG software emulation (no KVM required), pipes the

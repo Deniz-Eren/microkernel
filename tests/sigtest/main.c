@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 /* sigtest — Milestone 4 verification: threads and signals.
  * 1. spawns a worker thread (THREAD_CREATE + THREAD_RESET),
  * 2. reads its context back (THREAD_GET_CTX),

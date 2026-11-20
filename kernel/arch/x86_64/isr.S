@@ -1,3 +1,6 @@
+/* Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com> */
+/* SPDX-License-Identifier: MIT */
+
 /* IDT trap stubs. Frame layout must match kernel/include/kernel/trapframe.h:
  *   ... r15 r14 ... rax | vec err | rip cs rflags rsp ss   (low -> high)
  * Vectors without an error code get a dummy 0 pushed in its slot. */

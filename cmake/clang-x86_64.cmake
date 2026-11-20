@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
+
 # LLVM cross-toolchain configuration for Microkernel.
 # Kernel target:  x86_64-unknown-none-elf (Ring 0)
 # Userland target uses the same triple with a sysroot.

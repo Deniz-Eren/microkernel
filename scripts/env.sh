@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
 # Microkernel Podman environment wrapper.
 # Usage:
 #   ./scripts/env.sh configure [cmake args...]   # configure build/ inside container

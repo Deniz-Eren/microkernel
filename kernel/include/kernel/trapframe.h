@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #pragma once
 /* Register frame pushed by the IDT stubs (and synthesized for syscalls).
  * Memory layout, low -> high addresses, matches push order in isr.S. */

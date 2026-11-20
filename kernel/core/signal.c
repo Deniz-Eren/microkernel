@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #include <kernel/signal.h>
 #include <kernel/printk.h>
 #include <kernel/sched.h>

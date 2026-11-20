@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #include <kernel/trapframe.h>
 #include <kernel/printk.h>
 #include "../arch/x86_64/serial.h"

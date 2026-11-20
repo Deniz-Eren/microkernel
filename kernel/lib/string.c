@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 /* Freestanding string/memory helpers (compiler may emit calls to these). */
 #include <stddef.h>
 #include <stdint.h>

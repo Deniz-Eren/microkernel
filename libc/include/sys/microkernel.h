@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #pragma once
 /* Microkernel system call ABI — shared between the kernel and libc.
  * Register convention: System V AMD64. RAX = number in / result out

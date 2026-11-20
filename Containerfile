@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
+
 # Microkernel — deterministic Podman build & headless QEMU test environment
 FROM debian:bookworm-slim
 

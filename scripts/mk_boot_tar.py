@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
 """Pack Ring 3 ELF servers and applications into a POSIX ustar boot archive.
 
 Usage:

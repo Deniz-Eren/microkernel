@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 #include <kernel/elf.h>
 #include <kernel/pmm.h>
 #include <kernel/printk.h>

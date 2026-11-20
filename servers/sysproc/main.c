@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 /* sysproc — PID 1: process manager, pathname manager, ELF loader, signals.
  * Milestone 3: the system name registry. Servers ATTACH paths on chanid 1;
  * clients QUERY them. */

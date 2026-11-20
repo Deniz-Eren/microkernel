@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+// SPDX-License-Identifier: MIT
+
 /* ipccli — demo IPC client for the IPC milestone.
  * Resolves "/dev/echo" through the sysproc name service, attaches a
  * connection to the server, and runs three synchronous round trips. */
