@@ -113,3 +113,6 @@ with its status and date.
   immutable .editorconfig exemptions, ADR-13)
 - [x] COMPLETE 2026-11-21 docs(readme): document POSIX.1-2024 (Issue 8) Base
   compliance target and traceability links in README.md
+- [x] COMPLETE 2026-11-21 feat(sig): complete TSK_0003 (POSIX.1-2024 <signal.h>,
+  SYS_SIGPROCMASK, SIGKILL/SIGSTOP EINVAL, sig_frame_t mask restore, and libc.a
+  async-signal-safety CTest gate)

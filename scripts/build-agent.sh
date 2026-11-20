@@ -28,8 +28,11 @@ TEST_LOG="$(mktemp)"
 if ! "$ENV" test --timeout 120 \
     --expect '\[OK\] PMM/VMM/APIC initialized' \
     --expect 'name resolved /dev/echo' \
+    --expect 'sigaction rejects SIGKILL and SIGSTOP with EINVAL' \
     --expect 'errno thread-local and preserved across success' \
-    --expect 'signal handler entered' > "$TEST_LOG" 2>&1; then
+    --expect 'signal handler entered' \
+    --expect 'signal mask saved and restored across sigreturn' \
+    > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"
     exit 1

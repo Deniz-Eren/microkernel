@@ -84,8 +84,10 @@ struct pcb {
     } * conn_table;
     uint32_t conn_count;
 
-    /* Signals (Milestone 4): Ring 3 handler per signal, 1..31. */
+    /* Signals (Milestone 4 / POSIX.1-2024): per-signal state, 1..31. */
     uint64_t sig_handlers[32];
+    uint32_t sig_masks[32];
+    uint32_t sig_flags[32];
     uint64_t sig_restorer;  /* __sigreturn_trampoline address */
     uint64_t next_stack_va; /* bump cursor for per-thread user stacks */
 

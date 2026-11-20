@@ -34,7 +34,7 @@ unhandled signals ({need}`SYS_SIG_0001`).
 
 ```{swr} Align signal API, masks, and SIGKILL/SIGSTOP rules to Issue 8
 :id: SWR_SIG_0003
-:status: draft
+:status: active
 :posix: XBD/signal.h (CX), XSH/sigaction (CX), XSH/kill (CX)
 :derives: SYS_SIG_0001
 :traces: BDR_0003, ADR_0003
@@ -48,7 +48,7 @@ unhandled signals ({need}`SYS_SIG_0001`).
 
 ```{swr} Keep async-signal-safe functions free of non-reentrant calls
 :id: SWR_SIG_0004
-:status: draft
+:status: active
 :posix: XSH/2.4.3 (BASE)
 :derives: SYS_SIG_0001
 :traces: BDR_0003, ADR_0003

@@ -1,6 +1,6 @@
 /**
  * @file     signal.h
- * @brief    Ring 3 signal numbers, sigaction, and kill wrappers
+ * @brief    Kernel and libc shared signal numbers and action flags
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -8,32 +8,56 @@
  *
  */
 
-#pragma once
+#ifndef _SYS_SIGNAL_H
+#define _SYS_SIGNAL_H
 
 /* need:: ICD_SIG_0001 */
-/* Microkernel signals (Milestone 4). Handler registration is an ABI extension
- * (SYS_SIGACTION); delivery uses the kernel-built signal frame and libc's
- * __sigreturn_trampoline. */
-#include <sys/microkernel.h>
+
+#include <stdint.h>
 
 #define NSIG 32
+
+#define SIGHUP 1
 #define SIGINT 2
+#define SIGQUIT 3
+#define SIGILL 4
+#define SIGTRAP 5
+#define SIGABRT 6
+#define SIGBUS 7
+#define SIGFPE 8
 #define SIGKILL 9
 #define SIGUSR1 10
 #define SIGSEGV 11
 #define SIGUSR2 12
+#define SIGPIPE 13
+#define SIGALRM 14
+#define SIGTERM 15
+#define SIGCHLD 17
+#define SIGCONT 18
+#define SIGSTOP 19
+#define SIGTSTP 20
+#define SIGTTIN 21
+#define SIGTTOU 22
+#define SIGURG 23
+#define SIGXCPU 24
+#define SIGXFSZ 25
+#define SIGVTALRM 26
+#define SIGPROF 27
+#define SIGSYS 31
 
-extern void __sigreturn_trampoline(void);
+#define SIG_BLOCK 0
+#define SIG_UNBLOCK 1
+#define SIG_SETMASK 2
 
-/* Register a Ring 3 handler for sig (0 = restore default/terminate action).
- * The kernel uses __sigreturn_trampoline as the handler's return address. */
-static inline long sigaction(unsigned sig, void (*handler)(int)) {
-    return __sys3(SYS_SIGACTION, (long)sig, (long)handler,
-                  (long)__sigreturn_trampoline);
-}
+#define SA_NOCLDSTOP 0x01
+#define SA_RESETHAND 0x02
+#define SA_NODEFER 0x04
 
-/* kill (POSIX): send sig to thread tid of process pid (0 = self/current
- * thread). A thread blocked in IPC wakes with -EINTR. */
-static inline long kill(unsigned pid, unsigned tid, unsigned sig) {
-    return __sys3(SYS_THREAD_INJECT_SIG, (long)pid, (long)tid, (long)sig);
-}
+/* Kernel/libc ABI structure for SYS_SIGACTION (not exposed by <signal.h>). */
+struct __k_sigaction {
+    uint64_t handler; /* 0 = SIG_DFL, 1 = SIG_IGN, else Ring 3 function */
+    uint32_t mask;    /* additional signals blocked during handler */
+    uint32_t flags;   /* SA_* flags */
+};
+
+#endif /* _SYS_SIGNAL_H */

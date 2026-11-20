@@ -164,7 +164,10 @@ void syscall_handler(trapframe_t *tf) {
         ret = sys_inject_sig(tf->rdi, tf->rsi, tf->rdx);
         break;
     case SYS_SIGACTION:
-        ret = sys_sigaction(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_sigaction(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
+    case SYS_SIGPROCMASK:
+        ret = sys_sigprocmask(tf->rdi, tf->rsi, tf->rdx);
         break;
     default:
         ret = -ENOSYS;

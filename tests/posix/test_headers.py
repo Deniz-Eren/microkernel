@@ -9,7 +9,7 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002
+# need:: VER_LIBC_0002 VER_SIG_0003
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 
 POSIX_HEADERS: tuple[str, ...] = (
     "errno.h",
+    "signal.h",
     "stdio.h",
     "stdlib.h",
     "string.h",
@@ -147,6 +148,46 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"errno check failed:\n{err}")
+
+    def test_signal_header_api_and_namespace_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <signal.h>",
+                "#ifdef SYS_SIGACTION",
+                '#error "signal.h leaked SYS_SIGACTION"',
+                "#endif",
+                "#ifdef SYS_DEBUG_LOG",
+                '#error "signal.h leaked SYS_DEBUG_LOG"',
+                "#endif",
+                "static int __check_signal_api(void) {",
+                "    sig_atomic_t flag = 0;",
+                "    sigset_t s;",
+                "    struct sigaction sa;",
+                "    sa.sa_handler = SIG_DFL;",
+                "    sa.sa_mask = 0;",
+                "    sa.sa_flags = SA_NODEFER | SA_RESETHAND;",
+                "    (void)sigemptyset(&s);",
+                "    (void)sigfillset(&s);",
+                "    (void)sigaddset(&s, SIGUSR1);",
+                "    (void)sigdelset(&s, SIGUSR2);",
+                "    (void)sigismember(&s, SIGKILL);",
+                "    (void)sigaction(SIGUSR1, &sa, (struct sigaction *)0);",
+                "    (void)sigprocmask(SIG_BLOCK, &s, &s);",
+                "    (void)pthread_sigmask(SIG_SETMASK, &s, &s);",
+                "    (void)kill((pid_t)0, 0);",
+                "    (void)pthread_kill((pthread_t)0, 0);",
+                "    (void)raise(0);",
+                "    (void)signal(SIGSTOP, SIG_IGN);",
+                "    return (int)flag;",
+                "}",
+                "int (*__sig_fn_ref)(void) = __check_signal_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"signal.h check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

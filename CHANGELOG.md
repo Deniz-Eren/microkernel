@@ -21,6 +21,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Standard POSIX.1-2024 `<signal.h>` (`libc/include/signal.h`) and
+  async-signal-safe `libc/src/signal.c` implementing `sigaction`, `sigprocmask`,
+  `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`, and `sigset_t`
+  helpers, plus kernel `SYS_SIGPROCMASK` (`27`) and `sig_frame_t.saved_mask`
+  save/restore across `SYS_SIGRETURN`.
+- Gate 3 CTest `posix.async_signal_safe`
+  (`tests/posix/test_async_signal_safe.py`) auditing `sysroot/usr/lib/libc.a`
+  with `llvm-objdump -dr`, plus `<signal.h>` standalone coverage in
+  `posix.headers` and QEMU runtime checks in `tests/sigtest/main.c`.
 - Two-tier bidirectional code and POSIX.1-2024 traceability: `:posix:` field and
   calculated compliance matrix in `docs/60-verification/traceability.md`,
   bidirectional `ICD_`/`COMP_`/`VER_` coverage check in

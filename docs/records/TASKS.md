@@ -32,16 +32,3 @@ Implement `ProcCreate`, `VMMap`, `VMUnmap`, `VMCloneCow`, child exit-code
 reporting, and automated QEMU verification tests to lay the foundation for POSIX
 `mmap` and `waitpid` ({need}`SWR_MEM_0004`, {need}`SWR_PROC_0004`).
 ```
-
-### TSK_0003 — Align signal ABI, masks, and SIGKILL/SIGSTOP rules
-
-```{task} Align signal ABI, masks, and SIGKILL/SIGSTOP rules
-:id: TSK_0003
-:status: open
-:traces: ADR_0003, SWR_SIG_0003, SWR_SIG_0004
-
-Add `<signal.h>` with standard `sigaction` and `kill` signatures, reject
-`SIGKILL`/`SIGSTOP` overrides with `-EINVAL` in `sys_sigaction`, save/restore
-`blocked_signals` in `sig_frame_t`, and audit async-signal-safety
-({need}`SWR_SIG_0003`, {need}`SWR_SIG_0004`).
-```

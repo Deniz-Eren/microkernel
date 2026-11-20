@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0003 — Align signal ABI, masks, and SIGKILL/SIGSTOP rules
+
+```{task} Align signal ABI, masks, and SIGKILL/SIGSTOP rules
+:id: TSK_0003
+:status: done
+:traces: ADR_0003, SWR_SIG_0003, SWR_SIG_0004
+
+Add `<signal.h>` with standard `sigaction` and `kill` signatures, reject
+`SIGKILL`/`SIGSTOP` overrides with `-EINVAL` in `sys_sigaction`, save/restore
+`blocked_signals` in `sig_frame_t`, and audit async-signal-safety
+({need}`SWR_SIG_0003`, {need}`SWR_SIG_0004`).
+```
+
 ### TSK_0001 — Align libc headers and thread-local errno to POSIX.1-2024
 
 ```{task} Align libc headers and thread-local errno to POSIX.1-2024

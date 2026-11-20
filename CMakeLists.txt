@@ -237,3 +237,17 @@ set_tests_properties(
     posix.headers
     PROPERTIES LABELS "posix;libc"
 )
+
+add_test(
+    NAME posix.async_signal_safe
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/posix/test_async_signal_safe.py"
+        --objdump "${CMAKE_OBJDUMP}"
+        --libc "${SYSROOT_DIR}/usr/lib/libc.a"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_tests_properties(
+    posix.async_signal_safe
+    PROPERTIES LABELS "posix;sig"
+)

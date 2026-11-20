@@ -22,6 +22,48 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-14 (2026-11-21): Add SYS_SIGPROCMASK ABI and libc.a safety gate
+
+### Context
+
+`SWR_SIG_0003` and `SWR_SIG_0004` require standard POSIX.1-2024 `<signal.h>`
+APIs (`sigaction`, `sigprocmask`, `pthread_sigmask`, `kill`, `pthread_kill`,
+`raise`, `signal`, and `sigset_t` helpers), `-EINVAL` rejection of `SIGKILL` and
+`SIGSTOP` overrides, signal mask save and restore across `SYS_SIGRETURN`, and
+verified async-signal-safety. The Milestone 4 `<sys/signal.h>` exposed non-POSIX
+inline syscall wrappers, leaked `<sys/microkernel.h>`, had no `SYS_SIGPROCMASK`
+syscall, and left `sig_frame_t.pad` unused.
+
+### Decision
+
+- Separate the low-level kernel ABI (`libc/include/sys/signal.h`, `struct
+  __k_sigaction`, `SYS_SIGPROCMASK = 27`) from the public POSIX.1-2024 header
+  (`libc/include/signal.h`) and its out-of-line wrappers in `libc/src/signal.c`.
+- Repurpose the 8-byte `pad` slot in `sig_frame_t` as `saved_mask` (keeping the
+  16-byte aligned 24-uint64 frame size intact) so `signal_deliver_check` saves
+  and `sys_sigreturn` restores `blocked_signals`, and store per-signal `sa_mask`
+  and `sa_flags` arrays in `pcb_t`.
+- Add CTest `posix.async_signal_safe` (`tests/posix/test_async_signal_safe.py`)
+  running `llvm-objdump -dr` on `sysroot/usr/lib/libc.a` to parse direct calls
+  and `R_X86_64_*` relocations and fail if any async-signal-safe function
+  transitively reaches heap, stdio, or `exit` routines.
+
+### Alternatives
+
+- Pass `struct sigaction` directly as the kernel ABI struct (couples kernel
+  layout to future `siginfo_t` / `sa_sigaction` extensions)
+- Audit async-signal-safety only by manual source review instead of an automated
+  binary call-graph test
+
+### Consequences
+
+- `<signal.h>` compiles standalone under strict C17 with both
+  `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800` without leaking `SYS_*`.
+- `sigtest` verifies `SIGKILL`/`SIGSTOP` `EINVAL`, `sigprocmask` deferral, and
+  `sig_frame_t` mask restoration in headless QEMU.
+- Every future change to `libc.a` is automatically checked for
+  async-signal-safety regressions by CTest.
+
 ## ADR-13 (2026-11-21): Align .clang-format to 80 cols and exempt immutable docs
 
 ### Context

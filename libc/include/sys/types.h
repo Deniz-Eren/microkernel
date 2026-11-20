@@ -21,5 +21,6 @@ typedef long time_t;
 typedef unsigned int uid_t;
 typedef unsigned int gid_t;
 typedef int pid_t;
+typedef unsigned int pthread_t;
 
 #endif /* _SYS_TYPES_H */

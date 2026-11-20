@@ -40,8 +40,9 @@
 #define SYS_THREAD_INJECT_SIG 22
 #define SYS_SIGRETURN 23
 #define SYS_SCHED_SET_PRIO 24
-#define SYS_IOPL_SET 25  /* extension: grant Ring 3 port I/O (CAP_SYS_INTR) */
-#define SYS_SIGACTION 26 /* extension: register Ring 3 signal handlers */
+#define SYS_IOPL_SET 25    /* extension: grant Ring 3 port I/O (CAP_SYS_INTR) */
+#define SYS_SIGACTION 26   /* extension: register Ring 3 signal handlers */
+#define SYS_SIGPROCMASK 27 /* extension: read or update thread signal mask */
 
 #ifndef __ASSEMBLER__
 
