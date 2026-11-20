@@ -42,8 +42,9 @@ in-code `need::` tag, and new POSIX C test files must follow `test_*.c` naming.
 :status: active
 :traces: ADR_0001, WDR_0002
 
-Wrap source and documentation files to the column limit in `.editorconfig` and
-pack prose paragraphs greedily with the `docs-traceability-setup` skill. Write
+Wrap all new and changed source and documentation files to the `.editorconfig`
+column limit, pack prose paragraphs greedily, and verify zero findings with the
+`docs-traceability-setup` skill's `scripts/check_text.py` at all times. Write
 all requirements (`sys`, `swr`) and docs in ASD-STE100 Simplified Technical
 English (Issue 9) with the `asd-ste100` skill: use `must` (not `shall`) as the
 modal verb (`authoring.modal_verb: must`), keep requirement sentences to 25

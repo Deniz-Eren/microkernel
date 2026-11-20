@@ -52,6 +52,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Mandated `.editorconfig` and `docs-traceability-setup` `check_text.py` checks
+  (line width, greedy prose packing, and Doxygen file headers) in `AGENTS.md`,
+  `WDR_0002`, and `CNV_0002`, and wrapped `AGENTS.md` to 80 columns.
 - Switched `authoring.modal_verb` in `.docs-traceability-setup.yml` from `shall`
   to `must` for ASD-STE100 Issue 9 compliance, revised all requirements in
   `docs/20-system/` to follow STE rules, expanded `technical_terms.txt` and

@@ -105,3 +105,6 @@ with its status and date.
   coverage gate, full codebase ICD_/COMP_ tags, and AGENTS.md rules)
 - [x] COMPLETE 2026-11-21 docs(ste): align all requirements documents to
   ASD-STE100 Issue 9 (modal_verb=must, glossaries, AGENTS.md, CNV_0002, ADR-12)
+- [x] COMPLETE 2026-11-21 docs(governance): mandate .editorconfig and
+  docs-traceability-setup check_text.py checks in AGENTS.md, WDR_0002, and
+  CNV_0002
