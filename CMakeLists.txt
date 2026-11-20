@@ -91,7 +91,7 @@ add_custom_target(crt0 DEPENDS ${SYSROOT_DIR}/usr/lib/crt0.o)
 add_dependencies(c crt0)
 
 #------------------------------------------------------------------------------
-# Stage 3: Ring 3 servers and applications
+# Stage 3: Ring 3 servers and test applications
 #------------------------------------------------------------------------------
 set(CMAKE_C_LINK_EXECUTABLE
     "${CMAKE_LINKER} <LINK_FLAGS> <OBJECTS> <LINK_LIBRARIES> -o <TARGET>")
@@ -121,8 +121,8 @@ endfunction()
 
 add_subdirectory(servers/sysproc)
 add_subdirectory(servers/ipcserv)
-add_subdirectory(apps/ipccli)
-add_subdirectory(apps/sigtest)
+add_subdirectory(tests/ipccli)
+add_subdirectory(tests/sigtest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

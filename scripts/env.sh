@@ -3,7 +3,7 @@
 # Usage:
 #   ./scripts/env.sh configure [cmake args...]   # configure build/ inside container
 #   ./scripts/env.sh build    [ninja args...]    # incremental build inside container
-#   ./scripts/env.sh test     [test_runner args] # run headless QEMU assertion harness
+#   ./scripts/env.sh test     [test_runner args] # run headless QEMU assertion harness (tests/test_runner.py)
 #   ./scripts/env.sh shell                       # interactive shell in container
 #   ./scripts/env.sh <cmd...>                    # run arbitrary command in container
 set -euo pipefail
@@ -36,7 +36,7 @@ case "${1:-shell}" in
     test)
         shift
         ensure_image
-        crun python3 scripts/test_runner.py "$@"
+        crun python3 tests/test_runner.py "$@"
         ;;
     clean)
         rm -rf "$ROOT/build" "$ROOT/sysroot"
