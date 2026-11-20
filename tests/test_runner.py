@@ -1,16 +1,23 @@
-#!/usr/bin/env python3
+##
+# @file     test_runner.py
+# @brief    Headless QEMU serial-output assertion harness for the boot ISO
+#
+# @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
+#
+
+# need:: VER_POWER_0005
 """Headless QEMU serial-output assertion harness for Microkernel.
 
-Boots build/microkernel.iso with TCG software emulation (no KVM required), pipes the
-serial console to stdout, and asserts that an ordered list of regex patterns
+Boots build/microkernel.iso with TCG software emulation (no KVM required), pipes
+the serial console to stdout, and asserts that an ordered list of regex patterns
 appears on the serial line. Exits 0 on success.
 
 Usage:
     test_runner.py [--iso build/microkernel.iso] [--timeout 120]
-                   --expect 'regex' [--expect 'regex' ...]
-                   [--extra-qemu-arg '-drive file=build/disk.img,if=none,id=nvm' ...]
+                   --expect 'regex' [--expect 'regex' ...] [--extra-qemu-arg
+                   '-drive file=build/disk.img,if=none,id=nvm' ...]
 """
 import argparse
 import re

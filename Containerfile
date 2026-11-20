@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         mtools \
         qemu-system-x86 \
         python3 \
+        python3-venv \
+        python3-pip \
         e2fsprogs \
         git \
     && rm -rf /var/lib/apt/lists/*

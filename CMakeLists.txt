@@ -1,5 +1,11 @@
+##
+# @file     CMakeLists.txt
+# @brief    Build the kernel, the C library, user programs, and the boot ISO
+#
+# @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
+#
 
 cmake_minimum_required(VERSION 3.20)
 project(microkernel C ASM)
@@ -14,8 +20,8 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 set(SYSROOT_DIR ${CMAKE_SOURCE_DIR}/sysroot)
 
-# Clang provides freestanding headers (stdint.h, stddef.h, stdarg.h, ...) in
-# its resource dir; we pass -nostdinc and re-add exactly that directory.
+# Clang provides freestanding headers (stdint.h, stddef.h, stdarg.h, ...) in its
+# resource dir; we pass -nostdinc and re-add exactly that directory.
 execute_process(
     COMMAND ${CMAKE_C_COMPILER} -print-resource-dir
     OUTPUT_VARIABLE CLANG_RESOURCE_DIR
@@ -34,8 +40,8 @@ set(CMAKE_C_LINK_EXECUTABLE
 #------------------------------------------------------------------------------
 file(GLOB_RECURSE PUBLIC_HEADERS CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/libc/include/*.h)
-# Freestanding compiler headers (stdint.h, stddef.h, stdarg.h, ...) are
-# vendored into the sysroot so every component compiles against it uniformly.
+# Freestanding compiler headers (stdint.h, stddef.h, stdarg.h, ...) are vendored
+# into the sysroot so every component compiles against it uniformly.
 add_custom_target(install_headers
     COMMAND ${CMAKE_COMMAND} -E make_directory ${SYSROOT_DIR}/usr/include
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -85,7 +91,8 @@ add_custom_command(
     COMMAND ${CMAKE_C_COMPILER} ${USER_CFLAGS}
             -target x86_64-unknown-none-elf
             -isystem ${SYSROOT_DIR}/usr/include
-            -c ${CMAKE_SOURCE_DIR}/libc/crt/crt0.S -o ${SYSROOT_DIR}/usr/lib/crt0.o
+            -c ${CMAKE_SOURCE_DIR}/libc/crt/crt0.S
+            -o ${SYSROOT_DIR}/usr/lib/crt0.o
     DEPENDS ${CMAKE_SOURCE_DIR}/libc/crt/crt0.S install_headers
     COMMENT "Stage 2: compiling crt0.o"
     VERBATIM
@@ -118,7 +125,8 @@ function(microkernel_add_user_executable name)
         ${CMAKE_SOURCE_DIR}/libc/user.ld)
     target_link_libraries(${name} PRIVATE c)
     add_dependencies(${name} c)
-    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES "${name}=$<TARGET_FILE:${name}>")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+        "${name}=$<TARGET_FILE:${name}>")
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})
 endfunction()
 
@@ -202,8 +210,15 @@ add_custom_target(iso ALL
             ${CMAKE_BINARY_DIR}/iso/boot/kernel.elf
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/boot.tar
             ${CMAKE_BINARY_DIR}/iso/boot/boot.tar
-    COMMAND grub-mkrescue -o ${CMAKE_BINARY_DIR}/microkernel.iso ${CMAKE_BINARY_DIR}/iso
+    COMMAND grub-mkrescue -o ${CMAKE_BINARY_DIR}/microkernel.iso
+            ${CMAKE_BINARY_DIR}/iso
     DEPENDS kernel.elf boot_tar
     COMMENT "Stage 4: building bootable ISO"
     VERBATIM
 )
+
+#------------------------------------------------------------------------------
+# Documentation and traceability (Sphinx, MyST-Parser, Sphinx-Needs, CTest)
+#------------------------------------------------------------------------------
+add_subdirectory(docs)
+enable_testing()

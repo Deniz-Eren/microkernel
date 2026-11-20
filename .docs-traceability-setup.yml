@@ -1,0 +1,52 @@
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
+
+project:
+  name: "microkernel"
+  repo_url: ""
+  domains:
+    - POWER
+
+id:
+  style: number
+  digits: 4
+
+authoring:
+  primary_markup: myst
+  modal_verb: shall
+
+model:
+  decision_types:
+    - adr
+    - bdr
+    - wdr
+  ver_method_tags:
+    - unit
+    - integration
+    - network
+    - analysis
+  test_file_patterns:
+    - "test_*"
+    - "*_test.*"
+    - "check_*"
+  code_tag_exclude:
+    # Pre-existing governance documents and agent skills. They are not part of
+    # the traceability model; the Sphinx build and the tag scan skip them.
+    - ARCHITECTURE.md
+    - CONVENTIONS.md
+    - DECISIONS.md
+    - TASKS.md
+    - VISION.md
+    - THIRD-PARTY-NOTICES.md
+    - agents
+    - skills
+
+build:
+  cmake_mode: subdirectory
+  python_manifest: requirements.txt
+  docs_auto_install: false
+  graphviz: auto
+
+checks:
+  file_headers: true
+  prose_packing: true

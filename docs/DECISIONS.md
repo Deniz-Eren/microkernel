@@ -1,36 +1,101 @@
 ## Purpose
 
-Record the decisions about the architecture and the strategy of microkernel. Give the context, the alternatives, and the consequences.
+Record the decisions about the architecture and the strategy of microkernel.
+Give the context, the alternatives, and the consequences.
 
 ## Structure
 
-Each decision is a block with the sections `Context`, `Decision`, `Alternatives`, and `Consequences`. You can read the block alone. The blocks are in groups by category. The ADRs are newest first (git log order).
+Each decision is a block with the sections `Context`, `Decision`,
+`Alternatives`, and `Consequences`. You can read the block alone. The blocks are
+in groups by category. The ADRs are newest first (git log order).
 
 ## Formatting Rules
 
-- Heading: `## ADR-N (YYYY-MM-DD): Title`, where N is the next sequential number.
-- Subsections: `### Context`, `### Decision`, `### Alternatives`, `### Consequences`.
-- The ADRs are newest first (git log order). Put a new ADR at the top of the file, below the `<!-- [CAT] Category -->` comment of its category.
-- To replace a decision, add a new ADR that supersedes it. Do not change the old ADR.
+- Heading: `## ADR-N (YYYY-MM-DD): Title`, where N is the next sequential
+  number.
+- Subsections: `### Context`, `### Decision`, `### Alternatives`, `###
+  Consequences`.
+- The ADRs are newest first (git log order). Put a new ADR at the top of the
+  file, below the `<!-- [CAT] Category -->` comment of its category.
+- To replace a decision, add a new ADR that supersedes it. Do not change the old
+  ADR.
 
 <!-- [CAT] Tooling -->
+
+## ADR-7 (2026-11-20): Adopt the Sphinx traceability documentation model
+
+### Context
+
+The project records requirements, architecture, and verification only in prose
+documents. There is no calculated traceability between requirements, design,
+code, and tests. The milestone plan demands a test with exit code 0 for each
+milestone, but no model connects the tests to normative items.
+
+### Decision
+
+Apply the docs-traceability-setup agent skill 0.1.0. The configuration is in
+`.docs-traceability-setup.yml`: item IDs use the `number` style with 4 digits,
+the primary markup is MyST, the initial domain is the schema default `POWER`
+with the template example items, and the build connects through
+`add_subdirectory(docs)` with CTest. The default build runs Sphinx with warnings
+as errors and CTest runs the unit tests, the HTML build, the needs export, and
+the model audit.
+
+Two configuration decisions belong to this adoption:
+
+- The pre-existing governance documents (`ARCHITECTURE.md`, `CONVENTIONS.md`,
+  `DECISIONS.md`, `TASKS.md`, `VISION.md`, `THIRD-PARTY-NOTICES.md`, `agents/`,
+  `skills/`) stay out of the Sphinx build and the tag scan through
+  `model.code_tag_exclude`. They keep their own format and are read in the
+  repository.
+- The build container gets the `python3-venv` and `python3-pip` packages,
+  because the docs venv needs `ensurepip`. The container workflow configures
+  with `-DDOCS_AUTO_INSTALL=ON`, so the docs venv is created inside
+  `build/docs/venv`. A fresh clone without this flag needs a local `.venv` (see
+  `docs/README.md`).
+
+### Alternatives
+
+- Manual traceability matrices in Markdown tables or spreadsheets
+- An external requirements management tool outside Git
+
+### Consequences
+
+- Each item is written one time with a permanent ID. All indexes and coverage
+  views are calculated.
+- Broken links, missing verification items, and invalid code tags stop the
+  build.
+- New human-authored Python, CMake, shell, and C/C++ files need a Doxygen header
+  block with `@file`, `@brief`, and `@copyright` (see the conventions in
+  `docs/records/CONVENTIONS.md`).
+- The example `POWER` domain items are placeholders. Writers replace them with
+  real kernel requirements and retire the samples.
 
 ## ADR-6 (2026-11-20): Tune the clang tool configurations to the codebase
 
 ### Context
 
-The new `.clang-tidy` and `.clang-format` must work with the existing code. The verification in the container found three problems: clang-tidy flags the linker symbols (`__bss_start`, `__text_start`, and similar) as reserved identifiers; the analyzer flags the reads of syscall out-params as uninitialized; and clang-tidy needs a compilation database that the configure step did not make.
+The new `.clang-tidy` and `.clang-format` must work with the existing code. The
+verification in the container found three problems: clang-tidy flags the linker
+symbols (`__bss_start`, `__text_start`, and similar) as reserved identifiers;
+the analyzer flags the reads of syscall out-params as uninitialized; and
+clang-tidy needs a compilation database that the configure step did not make.
 
 ### Decision
 
-- Remove `bugprone-reserved-identifier` from `.clang-tidy`. The linker symbol names are intentional (see `kernel/linker.ld`).
-- Keep the analyzer checks. Suppress the syscall out-param false positives at the call site with named `NOLINT` comments (see the [clang-tidy skill](skills/clang-tidy/SKILL.md)).
-- Add `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` to the configure step in `scripts/env.sh`.
+- Remove `bugprone-reserved-identifier` from `.clang-tidy`. The linker symbol
+  names are intentional (see `kernel/linker.ld`).
+- Keep the analyzer checks. Suppress the syscall out-param false positives at
+  the call site with named `NOLINT` comments (see the [clang-tidy
+  skill](skills/clang-tidy/SKILL.md)).
+- Add `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` to the configure step in
+  `scripts/env.sh`.
 
 ### Alternatives
 
 - Disable the analyzer checks project-wide (loses real findings)
-- Annotate the syscall wrappers for the analyzer (clang 14 does not use the annotations)
+- Annotate the syscall wrappers for the analyzer (clang 14 does not use the
+  annotations)
 
 ### Consequences
 
@@ -39,15 +104,19 @@ The new `.clang-tidy` and `.clang-format` must work with the existing code. The 
 
 <!-- [CAT] Documentation -->
 
-## ADR-5 (2026-11-20): Write documentation in ASD-STE100 Simplified Technical English
+## ADR-5 (2026-11-20): Write documentation in ASD-STE100 English
 
 ### Context
 
-The project documents (README, task plan) already use short sentences with approved words. The project has term lists: `technical_terms.txt` (technical nouns and verbs) and `allowed_phrases.txt` (multi-word technical terms).
+The project documents (README, task plan) already use short sentences with
+approved words. The project has term lists: `technical_terms.txt` (technical
+nouns and verbs) and `allowed_phrases.txt` (multi-word technical terms).
 
 ### Decision
 
-All technical documents (README.md and `docs/`) follow ASD-STE100 Issue 9. Writers use the term lists in the repository. Agents use the asd-ste100 skill when they write or check documentation.
+All technical documents (README.md and `docs/`) follow ASD-STE100 Issue 9.
+Writers use the term lists in the repository. Agents use the asd-ste100 skill
+when they write or check documentation.
 
 ### Alternatives
 
@@ -57,7 +126,8 @@ All technical documents (README.md and `docs/`) follow ASD-STE100 Issue 9. Write
 ### Consequences
 
 - Documents use short sentences, active voice, and approved words.
-- The term lists are the project-specific dictionary. Writers add new technical terms there.
+- The term lists are the project-specific dictionary. Writers add new technical
+  terms there.
 - `docs/CONVENTIONS.md` records this rule for all writers.
 
 <!-- [CAT] Process -->
@@ -66,15 +136,21 @@ All technical documents (README.md and `docs/`) follow ASD-STE100 Issue 9. Write
 
 ### Context
 
-The agent-scaffolding dev-environment module usually makes a Podman Compose setup with a `docker-compose.yml`. This project already has a working container workflow: the `Containerfile` makes the image `microkernel-dev`, and `scripts/env.sh` drives it with `podman run`.
+The agent-scaffolding dev-environment module usually makes a Podman Compose
+setup with a `docker-compose.yml`. This project already has a working container
+workflow: the `Containerfile` makes the image `microkernel-dev`, and
+`scripts/env.sh` drives it with `podman run`.
 
 ### Decision
 
-Keep the existing `Containerfile` and `scripts/env.sh`. The module gives only `scripts/enter-dev.sh`, which delegates to `env.sh shell`. The dev-environment skill documents this workflow.
+Keep the existing `Containerfile` and `scripts/env.sh`. The module gives only
+`scripts/enter-dev.sh`, which delegates to `env.sh shell`. The dev-environment
+skill documents this workflow.
 
 ### Alternatives
 
-- Migrate to Podman Compose with a `dev` service (a second entry point for the same image)
+- Migrate to Podman Compose with a `dev` service (a second entry point for the
+  same image)
 
 ### Consequences
 
@@ -87,11 +163,15 @@ Keep the existing `Containerfile` and `scripts/env.sh`. The module gives only `s
 
 ### Context
 
-The test harness lived in `scripts/`, and the test applications `ipccli` and `sigtest` lived in `apps/`. The test files had no single root folder.
+The test harness lived in `scripts/`, and the test applications `ipccli` and
+`sigtest` lived in `apps/`. The test files had no single root folder.
 
 ### Decision
 
-Collect all test files under `tests/` at the repository root: `tests/test_runner.py`, `tests/ipccli/`, and `tests/sigtest/`. The `apps/` directory is gone. Test applications are Ring 3 programs. The build packs them into `boot.tar` as before.
+Collect all test files under `tests/` at the repository root:
+`tests/test_runner.py`, `tests/ipccli/`, and `tests/sigtest/`. The `apps/`
+directory is gone. Test applications are Ring 3 programs. The build packs them
+into `boot.tar` as before.
 
 ### Alternatives
 
@@ -110,11 +190,14 @@ Collect all test files under `tests/` at the repository root: `tests/test_runner
 
 ### Context
 
-The project had no license file. Contributors and distributors need clear license terms.
+The project had no license file. Contributors and distributors need clear
+license terms.
 
 ### Decision
 
-Add `LICENSE.md` with the MIT License. The copyright line is `Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>`. Each source file gets this line as a header comment, with an `SPDX-License-Identifier: MIT` line below it.
+Add `LICENSE.md` with the MIT License. The copyright line is `Copyright (c) 2026
+Deniz Eren <deniz.eren@outlook.com>`. Each source file gets this line as a
+header comment, with an `SPDX-License-Identifier: MIT` line below it.
 
 ### Alternatives
 
@@ -125,7 +208,8 @@ Add `LICENSE.md` with the MIT License. The copyright line is `Copyright (c) 2026
 ### Consequences
 
 - Distributors must keep the copyright notice and the license text.
-- Each new source file starts with the copyright header (see [CONVENTIONS.md](CONVENTIONS.md)).
+- Each new source file starts with the copyright header (see
+  [CONVENTIONS.md](CONVENTIONS.md)).
 - `docs/THIRD-PARTY-NOTICES.md` keeps the third-party attributions separate.
 
 <!-- [CAT] Governance -->
@@ -134,19 +218,23 @@ Add `LICENSE.md` with the MIT License. The copyright line is `Copyright (c) 2026
 
 ### Context
 
-The project must have governance, documentation, and agent instructions that work with all AI agents.
+The project must have governance, documentation, and agent instructions that
+work with all AI agents.
 
 ### Decision
 
-Apply the agent-scaffolding agent skill 0.2.0 with the configuration in `.agent-scaffolding.yml`. The commit mode is AUTONOMOUS.
+Apply the agent-scaffolding agent skill 0.2.0 with the configuration in
+`.agent-scaffolding.yml`. The commit mode is AUTONOMOUS.
 
 ### Alternatives
 
 - Documents and agent instructions that you write for each project
-- Instructions for one platform only (for example only `CLAUDE.md` or only `.github/copilot-instructions.md`)
+- Instructions for one platform only (for example only `CLAUDE.md` or only
+  `.github/copilot-instructions.md`)
 
 ### Consequences
 
 - `AGENTS.md` is the supreme authority for agent behavior.
 - Procedures are only in `docs/skills/`.
-- The state documents (`docs/TASKS.md`, `CHANGELOG.md`, and `docs/DECISIONS.md`) are up to date before each commit.
+- The state documents (`docs/TASKS.md`, `CHANGELOG.md`, and `docs/DECISIONS.md`)
+  are up to date before each commit.

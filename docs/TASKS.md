@@ -1,6 +1,8 @@
 # Microkernel task plan
 
-The project moves forward in milestones. Each milestone adds one group of functions. A milestone is finished only when its automated test gives exit code 0. The test harness compares the serial output of the system with text patterns.
+The project moves forward in milestones. Each milestone adds one group of
+functions. A milestone is finished only when its automated test gives exit code
+0. The test harness compares the serial output of the system with text patterns.
 
 ## Purpose
 
@@ -8,7 +10,8 @@ Record all the tasks of microkernel. Give the status and the date for each task.
 
 ## Structure
 
-The tasks are in groups by milestone and by category. Each task is a checkbox with its status and date.
+The tasks are in groups by milestone and by category. Each task is a checkbox
+with its status and date.
 
 ## Formatting Rules
 
@@ -39,7 +42,8 @@ The tasks are in groups by milestone and by category. Each task is a checkbox wi
 ## Milestone 3 — messages between processes (completed)
 
 - channels with priority-ordered queues for messages, receivers, and pulses
-- `SendMsg`, `ReceiveMsg`, and `ReplyMsg`. A sender waits until the server receives the message, and then until the reply comes.
+- `SendMsg`, `ReceiveMsg`, and `ReplyMsg`. A sender waits until the server
+  receives the message, and then until the reply comes.
 - priority inheritance for the server while it processes a message
 - connections between processes, with `OpenConnection` and `CloseConnection`
 - data moves between address spaces with page permission checks
@@ -77,10 +81,15 @@ The tasks are in groups by milestone and by category. Each task is a checkbox wi
 ## Work rules
 
 - Make one milestone at a time.
-- Do not start a milestone before the test of the last milestone gives exit code 0.
+- Do not start a milestone before the test of the last milestone gives exit code
+  0.
 - Make a commit after each completed milestone.
 - When you repair a defect, record the repair in the commit message.
 
 ## Scaffolding
 
-- [x] COMPLETE 2026-11-20 scaffold: apply agent-scaffolding 0.2.0 (governance, state documents, skills, tests/ restructure, license, tool configs, build agents, copyright headers)
+- [x] COMPLETE 2026-11-20 scaffold: apply agent-scaffolding 0.2.0 (governance,
+  state documents, skills, tests/ restructure, license, tool configs, build
+  agents, copyright headers)
+- [x] COMPLETE 2026-11-20 scaffold: apply docs-traceability-setup 0.1.0 (Sphinx,
+  MyST-Parser, Sphinx-Needs, CMake/CTest traceability model)
