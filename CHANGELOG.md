@@ -61,6 +61,10 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Updated `README.md` with a user-space functionality support table, current
+  application use-cases, and an overview of the bidirectional Sphinx-Needs
+  traceability setup, and added a rule in `AGENTS.md` requiring agents to keep
+  the `README.md` support breakdown up to date.
 - Updated `README.md` to highlight the POSIX.1-2024 (Issue 8) Base compliance
   target, CTest commands, and links to `BDR_0003`, `ADR_0003`, and the
   traceability matrix.

@@ -50,7 +50,49 @@ The process `sysproc` is the first user process. It contains the name registry
 of the system. Servers register a name with `sysproc`. Clients find the servers
 with this name.
 
-## POSIX.1-2024 compliance
+## User-space functionality (current support)
+
+Developers can build Ring 3 C17 servers and applications packed into `boot.tar`.
+The headers below show all user-space functions available at this time:
+
+- **POSIX core (`<unistd.h>`):** `_POSIX_VERSION` and `_POSIX2_VERSION`
+  (`202405L`), `write` and `read` (serial console), `_exit`, `sleep`, `environ`,
+  `STDIN_FILENO`, `STDOUT_FILENO`, `STDERR_FILENO`
+- **Thread-local errors (`<errno.h>`):** thread-local `errno`
+  (`__errno_location`) and the POSIX.1-2024 `E*` error constants
+- **POSIX signals (`<signal.h>`):** async-signal-safe `sigaction`,
+  `sigprocmask`, `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`,
+  `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`, `sigismember`,
+  `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across `SYS_SIGRETURN`
+- **Formatted I/O (`<stdio.h>`):** `printf`, `snprintf`, `puts`, `putchar`
+- **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `exit`, `abort`,
+  `strtol`, `atoi`
+- **Memory and strings (`<string.h>`):** `memset`, `memcpy`, `memmove`,
+  `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy`, `strchr`
+- **Freestanding C17 (compiler headers):** `<stdint.h>`, `<stddef.h>`,
+  `<stdbool.h>`, `<stdarg.h>`, `<limits.h>`
+- **Synchronous IPC (`<sys/ipc.h>`):** `CreateChannel`, `DestroyChannel`,
+  `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
+  `SendPulse`, and `sysproc` name registry (`NAME_MSG_ATTACH`, `NAME_MSG_QUERY`)
+- **Native threads (`<sys/thread.h>`):** `NewThread`, `ThreadReset`,
+  `ThreadSpawn`, `ThreadGetCtx`, `ThreadGetTid` (256 priority levels with IPC
+  priority inheritance)
+
+What you can build today:
+
+- isolated Ring 3 client and server processes that find each other by name
+  through `sysproc` and send synchronous messages or pulses
+- multithreaded Ring 3 applications with separate `errno` for each thread,
+  priority scheduling, and POSIX signal handlers and masks
+- freestanding C17 console tools and protocol services packed into `boot.tar`
+
+Not available at this time (next milestones): dynamic process spawn
+(`ProcCreate`, `fork`/`exec`/`waitpid`), user memory mapping (`VMMap`/`mmap`),
+`pthread_*` locks and `sem_*`, clocks and timers, file systems, sockets, and
+user-space device drivers. See [docs/TASKS.md](docs/TASKS.md) and
+[docs/records/TASKS.md](docs/records/TASKS.md).
+
+## POSIX.1-2024 compliance and bidirectional traceability
 
 Microkernel targets **POSIX.1-2024 (Issue 8) Base** (`_POSIX_VERSION = 202405L`,
 `_POSIX2_VERSION = 202405L`) in user space. The Ring 0 kernel stays small while
@@ -58,18 +100,33 @@ Microkernel targets **POSIX.1-2024 (Issue 8) Base** (`_POSIX_VERSION = 202405L`,
 channels and syscalls:
 
 - standalone C17 headers with clean namespaces (`-D_POSIX_C_SOURCE=202405L` and
-  `-D_XOPEN_SOURCE=800`) and thread-local `errno`
-- mandatory Issue 8 Base groups: `pthread_*`, `sem_*`, monotonic clocks and
-  timers, `mmap`/`mprotect`/`msync`/`munmap`, `pipe2`/`dup3`/`ppoll`, and
+  `-D_XOPEN_SOURCE=800`), thread-local `errno`, and async-signal-safe
+  `<signal.h>`
+- planned mandatory Issue 8 Base groups: `pthread_*`, `sem_*`, monotonic clocks
+  and timers, `mmap`/`mprotect`/`msync`/`munmap`, `pipe2`/`dup3`/`ppoll`, and
   `aio_*`
 - optional POSIX groups (`SHM`, `SPN`, `ML`, `MLR`, `MSG`) behind their
   `_POSIX_*` feature macros
 
-End-to-end Sphinx-Needs traceability links POSIX.1-2024 requirements to headers,
-source files, and automated tests (`posix.headers`, `docs.audit`, and QEMU
-runs). See [BDR_0003](docs/10-product/bdr/BDR_0003.md),
-[ADR_0003](docs/30-architecture/adr/ADR_0003.md), and the [POSIX.1-2024
-compliance matrix](docs/60-verification/traceability.md).
+The project keeps **bidirectional requirements traceability** with Sphinx,
+MyST-Parser, and Sphinx-Needs (`docs/`). All active requirements link in both
+directions across three layers:
+
+1. **Standards and requirements (`SYS_`, `SWR_`):** written in ASD-STE100 Issue
+   9 with `:posix:` links to IEEE Std 1003.1-2024.
+2. **Design and source code (`ARC_`, `ICD_`, `COMP_`):** all public headers have
+   an `ICD_` `need::` tag and all source modules have a `COMP_` `need::` tag.
+3. **Automated verification (`VER_`):** all test files have a `VER_` tag and run
+   in CI (`posix.headers`, `posix.async_signal_safe`, `docs.html`, `docs.audit`,
+   and headless QEMU runs).
+
+The Sphinx build (`-W`) stops with an error if a code tag points to an unknown
+item. It also stops if an active `ICD_`, `COMP_`, or automated `VER_` item has
+no code tag, or if a test file has no `VER_` tag. See
+[WDR_0002](docs/00-overview/wdr/WDR_0002.md),
+[BDR_0003](docs/10-product/bdr/BDR_0003.md),
+[ADR_0003](docs/30-architecture/adr/ADR_0003.md), and the [traceability and
+POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
 
 ## Source tree
 

@@ -116,3 +116,6 @@ with its status and date.
 - [x] COMPLETE 2026-11-21 feat(sig): complete TSK_0003 (POSIX.1-2024 <signal.h>,
   SYS_SIGPROCMASK, SIGKILL/SIGSTOP EINVAL, sig_frame_t mask restore, and libc.a
   async-signal-safety CTest gate)
+- [x] COMPLETE 2026-11-21 docs(readme): add user-space support breakdown and
+  bidirectional traceability overview to README.md and mandate README sync in
+  AGENTS.md

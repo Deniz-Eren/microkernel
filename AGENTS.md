@@ -100,7 +100,7 @@ Before each commit, verify:
 
 - [ ] Commit message obeys Conventional Commits with `Assisted-by:` footer
 - [ ] Build and tests pass, including QEMU and CTest (`docs.html`, `docs.audit`,
-  `posix.headers`)
+  `posix.headers`, `posix.async_signal_safe`)
 - [ ] Code formatters and linters pass (`clang-format`, `clang-tidy`)
 - [ ] `.editorconfig` and `docs-traceability-setup` source-text checks pass on
   all new or changed files (`check_text.py --root .`: max line width, greedy
@@ -109,6 +109,8 @@ Before each commit, verify:
   ASD-STE100 Issue 9 (checked with the `asd-ste100` skill, modal verb `must`)
 - [ ] All new or changed interfaces, components, and test files carry valid
   `need::` tags (`ICD_`, `COMP_`, `VER_`)
+- [ ] `README.md` user-space support breakdown is updated whenever user-space
+  headers, functions, syscalls, or Ring 3 services change
 - [ ] `docs/TASKS.md` updated (`[x] COMPLETE YYYY-MM-DD`)
 - [ ] `CHANGELOG.md` has an entry in `## [Unreleased]`
 - [ ] `docs/DECISIONS.md` has an ADR for each new decision
@@ -151,6 +153,11 @@ Rules that apply only to this project. Each rule links to its skill or document.
   [ADR_0003](docs/30-architecture/adr/ADR_0003.md), and
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0001`,
   `CNV_0004`).
+- **Keep `README.md` user-space support current:** Whenever you add, change, or
+  remove public headers, `libc` functions, syscalls, or Ring 3 system services,
+  you must update the user-space functionality breakdown and use-case summary in
+  [README.md](README.md) in the same commit so application developers always see
+  accurate current capabilities.
 - **Milestone discipline:** Make one milestone at a time and commit after each
   complete milestone. A milestone is complete only when its test gives exit code
   0. See [docs/TASKS.md](docs/TASKS.md).
