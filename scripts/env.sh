@@ -26,7 +26,8 @@ case "${1:-shell}" in
     configure)
         shift
         ensure_image
-        crun cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/clang-x86_64.cmake "$@"
+        crun cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/clang-x86_64.cmake \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON "$@"
         ;;
     build)
         shift

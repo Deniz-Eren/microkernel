@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
+#
+# Build agent: build, test and static analysis for microkernel.
+# The exit code is 0 for PASS, and not 0 for FAIL.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+ENV=./scripts/env.sh
+
+echo "==> build"
+BUILD_LOG="$(mktemp)"
+if ! "$ENV" build > "$BUILD_LOG" 2>&1; then
+    echo "BUILD: FAIL (build step; log: $BUILD_LOG)"
+    tail -20 "$BUILD_LOG"
+    exit 1
+fi
+
+echo "==> test"
+TEST_LOG="$(mktemp)"
+if ! "$ENV" test --timeout 120 \
+    --expect '\[OK\] PMM/VMM/APIC initialized' \
+    --expect 'name resolved /dev/echo' \
+    --expect 'signal handler entered' > "$TEST_LOG" 2>&1; then
+    echo "BUILD: FAIL (test step; log: $TEST_LOG)"
+    tail -20 "$TEST_LOG"
+    exit 1
+fi
+TESTS="$(grep -c '^\[OK\]' "$TEST_LOG" || true)"
+echo "tests: $TESTS [OK] expectations matched"
+
+echo "==> lint"
+LINT_LOG="$(mktemp)"
+"$ENV" bash -c "run-clang-tidy -p build -quiet \$(find kernel libc servers tests \( -name '*.c' -o -name '*.h' \))" \
+    > "$LINT_LOG" 2>&1
+if grep -qE 'warning:|error:' "$LINT_LOG"; then
+    echo "BUILD: FAIL (lint findings; log: $LINT_LOG)"
+    grep -E 'warning:|error:' "$LINT_LOG" | head -20
+    exit 1
+fi
+
+echo "BUILD: PASS"

@@ -5,6 +5,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         clang \
+        clang-format \
+        clang-tidy \
         lld \
         llvm \
         llvm-dev \
@@ -22,9 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
     && rm -rf /var/lib/apt/lists/*
 
-# Ensure unversioned llvm tool symlinks exist (Debian ships versioned names)
+# Ensure unversioned llvm and clang tool symlinks exist (Debian ships versioned names)
 RUN set -eux; \
-    for t in ar nm objcopy objdump ranlib readelf size strings strip; do \
+    for t in ar nm objcopy objdump ranlib readelf size strings strip clang-format clang-tidy; do \
         if ! command -v "llvm-$t" >/dev/null 2>&1; then \
             for v in 14 15 16 17 18 19 20; do \
                 if [ -e "/usr/bin/llvm-$t-$v" ]; then ln -sf "/usr/bin/llvm-$t-$v" "/usr/bin/llvm-$t"; break; fi; \

@@ -83,7 +83,7 @@ int main(int argc, char **argv, char **envp) {
         rep.reserved = 0;
         msg.path[NAME_MAX_PATH - 1] = '\0';
 
-        if (msg.type == NAME_MSG_ATTACH) {
+        if (msg.type == NAME_MSG_ATTACH) { // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
             if (g_name_count >= NAME_TABLE_MAX) {
                 rep.err = 1; /* table full */
             } else {

@@ -2,6 +2,26 @@
 
 Microkernel is a small operating system for x86-64 computers. The kernel is small and supplies its services to user processes. Servers and applications run as user processes in Ring 3. The processes send messages to each other.
 
+## Commands
+
+```bash
+./scripts/env.sh build
+./scripts/env.sh test --timeout 120 \
+    --expect '\[OK\] PMM/VMM/APIC initialized' \
+    --expect 'name resolved /dev/echo' \
+    --expect 'signal handler entered'
+```
+
+For the full procedures, see the [cmake skill](docs/skills/cmake/SKILL.md). For the build, test, and lint in one step, run `scripts/build-agent.sh`.
+
+## Development Environment
+
+```bash
+./scripts/enter-dev.sh
+```
+
+The build runs in a Podman container. The image `microkernel-dev` contains the Clang compiler, CMake, and QEMU. Your host must have Podman. The first run of an `env.sh` command makes the image. For more information, see the [dev-environment skill](docs/skills/dev-environment/SKILL.md).
+
 ## System services
 
 The kernel supplies these services:
@@ -21,8 +41,9 @@ The process `sysproc` is the first user process. It contains the name registry o
 - `kernel/` — the kernel: boot code, x86-64 code, and the core subsystems
 - `libc/` — a small C library for user processes
 - `servers/` — the system servers (`sysproc`, `ipcserv`)
-- `apps/` — the user applications (`ipccli`, `sigtest`)
-- `scripts/` — helper scripts for the build and the tests
+- `tests/` — the test harness (`test_runner.py`) and the test programs (`ipccli`, `sigtest`)
+- `scripts/` — helper scripts for the environment, the build, and the agents
+- `docs/` — the project documents and the agent skills
 - `iso/` — the boot configuration for the GRUB boot loader
 - `cmake/` — the Clang toolchain for CMake
 - `Containerfile` — the definition of the build container image
@@ -31,12 +52,6 @@ The kernel starts at a high virtual address (`0xFFFFFFFF80000000`). The first us
 
 ## How the build runs
 
-The build runs in a container. The container image `microkernel-dev` contains the Clang compiler, CMake, and QEMU. Your host must have Podman.
-
-1. Install Podman.
-2. Run `./scripts/env.sh configure`. The first run makes the container image. This step also configures the build directory.
-3. Run `./scripts/env.sh build`. This step makes the kernel, the library, the user programs, and the boot ISO.
-
 The build has four stages. Each stage gives its output to the next stage:
 
 1. The public headers go into `sysroot/usr/include`.
@@ -44,34 +59,40 @@ The build has four stages. Each stage gives its output to the next stage:
 3. The linker connects the user programs to this library. A script puts the programs into `boot.tar`.
 4. The linker connects the kernel, and a tool makes the boot ISO.
 
+The stage commands and the test harness usage are in the [cmake skill](docs/skills/cmake/SKILL.md).
+
 ## How the tests work
 
-The test harness starts QEMU without a display. The kernel and the user processes write their status to the serial port. The harness reads the serial output and looks for text patterns. You give the patterns with the `--expect` option. You can give this option many times.
-
-Run the full test with this command:
-
-```
-./scripts/env.sh test --timeout 60 \
-    --expect '\[OK\] PMM/VMM/APIC initialized' \
-    --expect 'name resolved /dev/echo' \
-    --expect 'signal handler entered'
-```
-
-If the serial output contains all patterns before the timeout, the harness stops QEMU and exits with code 0. A missing pattern or a kernel panic causes exit code 1.
-
-The expectations include all milestones:
-
-- the kernel boots, and the memory manager starts
-- the first user process starts in Ring 3, and the first system calls work
-- a client finds a server with the name registry, and they send messages to each other
-- a process makes a new thread, and a signal handler runs, and then the process continues
-
-For interactive work, run `./scripts/env.sh shell`. This command gives you a shell in the build container.
+The test harness starts QEMU without a display. The kernel and the user processes write their status to the serial port. The harness reads the serial output and looks for text patterns. You give the patterns with the `--expect` option. A missing pattern or a kernel panic causes exit code 1. The expectations include all milestones: the kernel boots, the first user process starts in Ring 3, the name registry resolves servers, messages move between processes, and a signal handler runs.
 
 ## Code rules
 
-The kernel and the library use the C17 standard, with warnings as errors. The kernel code runs without a C runtime. The kernel maps its code read-only. Data pages are not code pages. The same policy applies to user programs. The kernel does not write through user pointers directly. It moves the data through the physical memory map. It examines the page permissions before each copy.
+The kernel and the library use the C17 standard, with warnings as errors. The kernel code runs without a C runtime. The kernel maps its code read-only. Data pages are not code pages. The same policy applies to user programs. The kernel does not write through user pointers directly. It moves the data through the physical memory map. It examines the page permissions before each copy. The file naming, the document formatting, and the copyright header rules are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 
 ## Status
 
-See `TASKS.md` for the milestone plan. The build completed milestones 1 to 4. The next milestone adds process creation and memory system calls.
+See [docs/TASKS.md](docs/TASKS.md) for the milestone plan. The build completed milestones 1 to 4. The next milestone adds process creation and memory system calls.
+
+## Documentation
+
+- [AGENTS.md](AGENTS.md): governance for AI agents (commit mode, workflow, pre-commit checklist)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): overview of the system and the directory structure
+- [docs/CONVENTIONS.md](docs/CONVENTIONS.md): file names, document formatting, and copyright rules
+- [docs/DECISIONS.md](docs/DECISIONS.md): the decision records (ADRs)
+- Skills:
+  - [cmake](docs/skills/cmake/SKILL.md) — build, test, and user programs
+  - [clang-format](docs/skills/clang-format/SKILL.md) — code formatting
+  - [clang-tidy](docs/skills/clang-tidy/SKILL.md) — static analysis
+  - [dev-environment](docs/skills/dev-environment/SKILL.md) — the container environment
+  - [git](docs/skills/git/SKILL.md) — commits and branches
+  - [state-management](docs/skills/state-management/SKILL.md) — TASKS, DECISIONS, notices
+  - [keepachangelog](docs/skills/keepachangelog/SKILL.md) — the changelog format
+  - [create-skill](docs/skills/create-skill/SKILL.md) — new agent skills
+
+## License
+
+The MIT License governs this project. See [LICENSE.md](LICENSE.md).
+
+Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+
+For third-party attributions, see [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).

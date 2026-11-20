@@ -1,0 +1,10 @@
+# Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+# SPDX-License-Identifier: MIT
+#
+# Static analysis for freestanding C17 code (kernel, libc, tests).
+# No check needs a hosted C library or C++ features.
+---
+Checks: '-*,bugprone-macro-parentheses,clang-analyzer-core.*,clang-analyzer-unix.*'
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(kernel|libc|servers|tests)/'
+FormatStyle: file

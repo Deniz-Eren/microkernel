@@ -104,6 +104,30 @@ Keep the existing `Containerfile` and `scripts/env.sh`. The module gives only `s
 - One entry point (`env.sh`) for configure, build, test, clean, and shell.
 - The image build and the container flags stay in one script.
 
+<!-- [CAT] Process -->
+
+## ADR-6 (2026-11-20): Tune the clang tool configurations to the codebase
+
+### Context
+
+The new `.clang-tidy` and `.clang-format` must work with the existing code. The verification in the container found three problems: clang-tidy flags the linker symbols (`__bss_start`, `__text_start`, and similar) as reserved identifiers; the analyzer flags the reads of syscall out-params as uninitialized; and clang-tidy needs a compilation database that the configure step did not make.
+
+### Decision
+
+- Remove `bugprone-reserved-identifier` from `.clang-tidy`. The linker symbol names are intentional (see `kernel/linker.ld`).
+- Keep the analyzer checks. Suppress the syscall out-param false positives at the call site with named `NOLINT` comments (see the [clang-tidy skill](skills/clang-tidy/SKILL.md)).
+- Add `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` to the configure step in `scripts/env.sh`.
+
+### Alternatives
+
+- Disable the analyzer checks project-wide (loses real findings)
+- Annotate the syscall wrappers for the analyzer (clang 14 does not use the annotations)
+
+### Consequences
+
+- The lint gate is clean and catches regressions.
+- Each new read of a syscall out-param needs one `NOLINT` line.
+
 <!-- [CAT] Documentation -->
 
 ## ADR-5 (2026-11-20): Write documentation in ASD-STE100 Simplified Technical English

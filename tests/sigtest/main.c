@@ -18,7 +18,9 @@ static void worker(void *arg) {
         printf("[FAIL] worker ThreadGetCtx -> %ld\n", r);
         return;
     }
-    printf("[OK] worker thread running (tid=%u prio=%u entry=%llx)\n", ti.tid,
+    /* The kernel fills ti through the syscall; the analyzer cannot see the
+     * wrapper body and flags the read as possibly uninitialized. */
+    printf("[OK] worker thread running (tid=%u prio=%u entry=%llx)\n", ti.tid, // NOLINT(clang-analyzer-core.CallAndMessage)
            ti.prio, (unsigned long long)ti.entry);
     for (;;) {
         __asm__ volatile("pause");

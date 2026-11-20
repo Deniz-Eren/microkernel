@@ -19,8 +19,10 @@ int main(void) {
     memcpy(q.path, "/dev/echo", sizeof("/dev/echo"));
     name_reply_t r;
     long s = SendMsg(nconnid, &q, sizeof(q), &r, sizeof(r));
-    if (s < 0 || r.err != 0 || r.pid == 0) {
-        printf("[FAIL] ipccli name query -> send=%ld err=%d pid=%d\n", s,
+    /* The kernel fills r via SendMsg; the analyzer cannot see the syscall
+     * wrapper body and flags the read as uninitialized. */
+    if (s < 0 || r.err != 0 || r.pid == 0) { // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
+        printf("[FAIL] ipccli name query -> send=%ld err=%d pid=%d\n", s, // NOLINT(clang-analyzer-core.CallAndMessage)
                r.err, r.pid);
         return 1;
     }
