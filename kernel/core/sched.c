@@ -407,7 +407,9 @@ long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
         stack_top < 0x400000ULL || stack_top > 0x80000000ULL) {
         return -EINVAL;
     }
-    thread_arm(t, entry, arg, stack_top);
+    /* SysV AMD64 C function entry expects RSP % 16 == 8 (synthetic return slot). */
+    uint64_t entry_rsp = (stack_top & ~15ULL) - 8;
+    thread_arm(t, entry, arg, entry_rsp);
     return 0;
 }
 

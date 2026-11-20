@@ -222,3 +222,18 @@ add_custom_target(iso ALL
 #------------------------------------------------------------------------------
 add_subdirectory(docs)
 enable_testing()
+
+add_test(
+    NAME posix.headers
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/posix/test_headers.py"
+        --cc "${CMAKE_C_COMPILER}"
+        --clang-include "${CLANG_RESOURCE_DIR}/include"
+        --sysroot "${SYSROOT_DIR}/usr/include"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_tests_properties(
+    posix.headers
+    PROPERTIES LABELS "posix;libc"
+)

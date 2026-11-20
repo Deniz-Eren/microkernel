@@ -21,6 +21,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- `<errno.h>` and lock-free TID-indexed thread-local `errno`
+  (`libc/src/errno.c`) with the full POSIX.1-2024 `E*` constant set in
+  `libc/include/sys/errno.h`.
+- Standalone POSIX.1-2024 header compilation and namespace hygiene CTest gate
+  (`posix.headers` via `tests/posix/test_headers.py`) and multithreaded `errno`
+  verification in `tests/sigtest/main.c`.
 - POSIX.1-2024 (Issue 8) Base and option-group software requirements across
   `LIBC`, `SIG`, `MEM`, `PROC`, `IPC`, and `DOCS` with canonical `9799919799`
   specification URLs, plus `ADR_0003`, `CNV_0004`, and `TSK_0003`.
@@ -55,6 +61,12 @@ Changelog](https://keepachangelog.com).
 
 - The `POWER` placeholder domain documents (`docs/*/power.md`) from the
   traceability model.
+
+### Fixed
+
+- Aligned secondary Ring 3 thread entry stacks in `sys_thread_reset` to satisfy
+  the System V AMD64 `RSP % 16 == 8` C function entry invariant, preventing
+  `#GP` faults on SSE `movaps` instructions in spawned worker threads.
 
 ### Added
 

@@ -98,3 +98,5 @@ with its status and date.
   POSIX.1-2024 alignment
 - [x] COMPLETE 2026-11-21 docs: refine traceability requirements against
   POSIX.1-2024 (Issue 8) Base using posix-issue8-os-dev
+- [x] COMPLETE 2026-11-21 feat(libc): complete TSK_0001 (POSIX.1-2024 header
+  hygiene, thread-local errno, and posix.headers standalone CTest gate)

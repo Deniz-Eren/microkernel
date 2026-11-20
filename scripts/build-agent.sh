@@ -22,6 +22,7 @@ TEST_LOG="$(mktemp)"
 if ! "$ENV" test --timeout 120 \
     --expect '\[OK\] PMM/VMM/APIC initialized' \
     --expect 'name resolved /dev/echo' \
+    --expect 'errno thread-local and preserved across success' \
     --expect 'signal handler entered' > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

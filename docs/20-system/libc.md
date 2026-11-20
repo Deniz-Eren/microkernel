@@ -24,22 +24,22 @@ wrappers compiled with `-ffreestanding -Wall -Wextra -Werror`
 
 ```{swr} Enforce Issue 8 standalone headers, feature macros, and namespaces
 :id: SWR_LIBC_0002
-:status: draft
+:status: active
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
-Each POSIX.1-2024 header shall compile standalone under `-std=c17
--D_POSIX_C_SOURCE=202405L -Wall -Wextra -Werror -pedantic` ([XBD 13][xbd-13],
-[XBD 14][xbd-14], [XSH 2.2][xsh-02]). `<unistd.h>` ([unistd.h][hdr-unistd])
-shall define `_POSIX_VERSION` and `_POSIX2_VERSION` as `202405L`, omit
-non-standard `<sys/microkernel.h>` symbols, reserve internal names under `__` or
-`_[A-Z]`, and gate option groups behind their `_POSIX_*` macros
-({need}`SYS_LIBC_0001`).
+Each provided POSIX.1-2024 header shall compile standalone under `-std=c17
+-D_POSIX_C_SOURCE=202405L -Wall -Wextra -Werror -pedantic` and
+`-D_XOPEN_SOURCE=800` ([XBD 13][xbd-13], [XBD 14][xbd-14], [XSH 2.2][xsh-02]).
+`<unistd.h>` ([unistd.h][hdr-unistd]) shall define `_POSIX_VERSION` and
+`_POSIX2_VERSION` as `202405L`, omit non-standard `<sys/microkernel.h>` symbols,
+reserve internal names under `__` or `_[A-Z]`, and gate option groups behind
+their `_POSIX_*` macros ({need}`SYS_LIBC_0001`).
 ```
 
 ```{swr} Provide thread-local errno isolated from raw syscalls
 :id: SWR_LIBC_0003
-:status: draft
+:status: active
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 

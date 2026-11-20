@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 // SPDX-License-Identifier: MIT
 
-#pragma once
+#ifndef _STRING_H
+#define _STRING_H
+
 #include <stddef.h>
 
 void *memset(void *dst, int c, size_t n);
@@ -14,3 +16,5 @@ int strncmp(const char *a, const char *b, size_t n);
 char *strcpy(char *dst, const char *src);
 char *strncpy(char *dst, const char *src, size_t n);
 char *strchr(const char *s, int c);
+
+#endif /* _STRING_H */

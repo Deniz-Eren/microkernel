@@ -22,6 +22,39 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-10 (2026-11-21): Implement lock-free TID-indexed thread-local errno
+
+### Context
+
+`SWR_LIBC_0003` requires `<errno.h>` to expose a thread-local `errno` lvalue
+that stays isolated across Ring 3 threads and remains async-signal-safe without
+heap allocation or mutex locks. The kernel does not yet program per-thread
+`FS.base` TLS descriptors.
+
+### Decision
+
+Implement `__errno_location()` in `libc/src/errno.c` using a fixed 64-slot
+atomic table keyed by the calling thread's kernel TID (`ThreadGetCtx(0, &ti)`).
+Each thread claims its own slot via `__atomic_compare_exchange_n`, starts with
+`errno == 0`, and never allocates heap memory or acquires locks. Replace the
+backing storage with `FS`-relative TLS when `pthread` TLS support lands without
+changing the `<errno.h>` ABI.
+
+### Alternatives
+
+- Single global `int errno` (races between concurrent Ring 3 threads such as
+  `ipcserv` workers and `sigtest`)
+- Add kernel `FS.base` MSR management in this task (larger kernel scope outside
+  `TSK_0001`)
+
+### Consequences
+
+- Concurrent Ring 3 threads have isolated `errno` values today and pass QEMU
+  multithreaded verification.
+- `__errno_location()` is async-signal-safe and requires no `malloc` or locks.
+- Processes with more than 64 distinct thread IDs fall back to a shared slot
+  until `FS.base` TLS lands.
+
 ## ADR-9 (2026-11-21): Align microkernel requirements to POSIX.1-2024 Base
 
 ### Context

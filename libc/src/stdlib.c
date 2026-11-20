@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 // SPDX-License-Identifier: MIT
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -24,12 +25,13 @@ static char g_arena[1 << 20];
 static size_t g_arena_pos;
 
 void *malloc(size_t n) {
-    n = (n + 15) & ~(size_t)15;
-    if (g_arena_pos + n > sizeof(g_arena)) {
+    size_t aligned = (n + 15) & ~(size_t)15;
+    if (aligned < n || aligned > sizeof(g_arena) - g_arena_pos) {
+        errno = ENOMEM;
         return 0;
     }
     void *p = &g_arena[g_arena_pos];
-    g_arena_pos += n;
+    g_arena_pos += aligned;
     return p;
 }
 
@@ -38,9 +40,14 @@ void free(void *p) {
 }
 
 void *calloc(size_t a, size_t b) {
-    void *p = malloc(a * b);
+    if (a != 0 && b > ((size_t)-1) / a) {
+        errno = ENOMEM;
+        return 0;
+    }
+    size_t total = a * b;
+    void *p = malloc(total);
     if (p) {
-        memset(p, 0, a * b);
+        memset(p, 0, total);
     }
     return p;
 }
