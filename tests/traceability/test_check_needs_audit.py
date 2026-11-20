@@ -9,7 +9,7 @@
 
 """Unit tests for `tools/traceability/check_needs_audit.py`."""
 
-# need:: VER_POWER_0003
+# need:: VER_DOCS_0002
 
 from __future__ import annotations
 
@@ -25,48 +25,48 @@ from check_needs_audit import audit_needs  # noqa: E402
 
 def _make_valid_model() -> dict[str, dict[str, object]]:
     return {
-        "BDR_MAGIC_LINKS": {
+        "BDR_0002": {
             "type": "bdr",
             "status": "accepted",
-            "docname": "10-product/bdr/BDR_MAGIC_LINKS",
+            "docname": "10-product/bdr/BDR_0002",
             "lineno": 5,
             "tags": [],
-            "drives": ["SYS_POWER_SUPPLY"],
+            "drives": ["SYS_PROC_0001"],
         },
-        "SYS_POWER_SUPPLY": {
+        "SYS_PROC_0001": {
             "type": "sys",
             "status": "active",
-            "docname": "20-system/power",
+            "docname": "20-system/proc",
             "lineno": 5,
             "tags": [],
-            "drives_back": ["BDR_MAGIC_LINKS"],
-            "derives_back": ["SWR_POWER_MONITOR"],
-            "verifies_back": ["VER_POWER_SUPPLY"],
+            "drives_back": ["BDR_0002"],
+            "derives_back": ["SWR_PROC_0001"],
+            "verifies_back": ["VER_PROC_0001"],
         },
-        "SWR_POWER_MONITOR": {
+        "SWR_PROC_0001": {
             "type": "swr",
             "status": "active",
-            "docname": "20-system/power",
+            "docname": "20-system/proc",
             "lineno": 15,
             "tags": [],
-            "derives": ["SYS_POWER_SUPPLY"],
-            "verifies_back": ["VER_POWER_MONITOR"],
+            "derives": ["SYS_PROC_0001"],
+            "verifies_back": ["VER_PROC_0002"],
         },
-        "VER_POWER_SUPPLY": {
+        "VER_PROC_0001": {
             "type": "ver",
             "status": "active",
-            "docname": "60-verification/power",
+            "docname": "60-verification/proc",
             "lineno": 5,
             "tags": ["integration"],
-            "verifies": ["SYS_POWER_SUPPLY"],
+            "verifies": ["SYS_PROC_0001"],
         },
-        "VER_POWER_MONITOR": {
+        "VER_PROC_0002": {
             "type": "ver",
             "status": "active",
-            "docname": "60-verification/power",
+            "docname": "60-verification/proc",
             "lineno": 15,
             "tags": ["unit"],
-            "verifies": ["SWR_POWER_MONITOR"],
+            "verifies": ["SWR_PROC_0001"],
         },
     }
 
@@ -79,8 +79,8 @@ class CheckNeedsAuditTests(unittest.TestCase):
 
     def test_disallowed_satisfies_between_requirements_fails(self) -> None:
         model = _make_valid_model()
-        model["SWR_POWER_MONITOR"]["satisfies"] = ["SYS_POWER_SUPPLY"]
-        model["SYS_POWER_SUPPLY"]["satisfies_back"] = ["SWR_POWER_MONITOR"]
+        model["SWR_PROC_0001"]["satisfies"] = ["SYS_PROC_0001"]
+        model["SYS_PROC_0001"]["satisfies_back"] = ["SWR_PROC_0001"]
         findings = audit_needs(model)
         self.assertTrue(
             any("disallowed satisfies" in m for _, _, m in findings)
@@ -88,26 +88,26 @@ class CheckNeedsAuditTests(unittest.TestCase):
 
     def test_verifies_to_component_fails(self) -> None:
         model = _make_valid_model()
-        model["COMP_POWER_MONITOR"] = {
+        model["COMP_PROC_0001"] = {
             "type": "comp",
             "status": "active",
-            "docname": "50-components/power",
+            "docname": "50-components/proc",
             "lineno": 5,
             "tags": [],
-            "satisfies": ["SWR_POWER_MONITOR"],
-            "verifies_back": ["VER_POWER_MONITOR"],
+            "satisfies": ["SWR_PROC_0001"],
+            "verifies_back": ["VER_PROC_0002"],
         }
-        model["SWR_POWER_MONITOR"]["satisfies_back"] = ["COMP_POWER_MONITOR"]
-        model["VER_POWER_MONITOR"]["verifies"] = [
-            "SWR_POWER_MONITOR",
-            "COMP_POWER_MONITOR",
+        model["SWR_PROC_0001"]["satisfies_back"] = ["COMP_PROC_0001"]
+        model["VER_PROC_0002"]["verifies"] = [
+            "SWR_PROC_0001",
+            "COMP_PROC_0001",
         ]
         findings = audit_needs(model)
         self.assertTrue(any("disallowed verifies" in m for _, _, m in findings))
 
     def test_wrong_domain_filename_fails(self) -> None:
         model = _make_valid_model()
-        model["SYS_POWER_SUPPLY"]["docname"] = "20-system/thermal"
+        model["SYS_PROC_0001"]["docname"] = "20-system/mem"
         findings = audit_needs(model)
         self.assertTrue(
             any("does not match filename" in m for _, _, m in findings)
@@ -115,7 +115,7 @@ class CheckNeedsAuditTests(unittest.TestCase):
 
     def test_wrong_decision_filename_fails(self) -> None:
         model = _make_valid_model()
-        model["BDR_MAGIC_LINKS"]["docname"] = "10-product/bdr/BDR_WRONG"
+        model["BDR_0002"]["docname"] = "10-product/bdr/BDR_9999"
         findings = audit_needs(model)
         self.assertTrue(any("decision filename" in m for _, _, m in findings))
 

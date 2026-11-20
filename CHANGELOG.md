@@ -21,6 +21,10 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Real traceability domains (`BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and
+  `DOCS`) across all Sphinx-Needs layers, plus `BDR_0002`, `BDR_0003`
+  (POSIX.1-2024 Base conformance target), `ADR_0002`, and `microkernel` tasks
+  and roadmap records.
 - The docs-as-code traceability model with the docs-traceability-setup agent
   skill 0.1.0. The configuration is in `.docs-traceability-setup.yml`.
 - The Sphinx documentation in `docs/` with MyST-Parser and Sphinx-Needs, built
@@ -33,12 +37,21 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Retargeted in-code `VER_` tags in `tests/test_runner.py`,
+  `tools/traceability/check_needs_audit.py`, and `tests/traceability/` from
+  `VER_POWER_*` to the real `BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and
+  `DOCS` verification items.
 - The root `CMakeLists.txt` builds the documentation with
   `add_subdirectory(docs)` and enables CTest.
 - The build container adds the `python3-venv` and `python3-pip` packages for the
   documentation venv.
 - The headless QEMU test harness `tests/test_runner.py` carries the
   `VER_POWER_0005` traceability tag.
+
+### Removed
+
+- The `POWER` placeholder domain documents (`docs/*/power.md`) from the
+  traceability model.
 
 ### Added
 

@@ -93,3 +93,6 @@ with its status and date.
   agents, copyright headers)
 - [x] COMPLETE 2026-11-20 scaffold: apply docs-traceability-setup 0.1.0 (Sphinx,
   MyST-Parser, Sphinx-Needs, CMake/CTest traceability model)
+- [x] COMPLETE 2026-11-21 docs: replace POWER placeholder domain with real
+  microkernel domains (BOOT, MEM, PROC, IPC, SIG, LIBC, DOCS) prepared for
+  POSIX.1-2024 alignment

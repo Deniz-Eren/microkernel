@@ -9,7 +9,7 @@
 
 """Standalone auditor for exported Sphinx-Needs `needs.json`."""
 
-# need:: VER_POWER_0001
+# need:: VER_DOCS_0001
 
 from __future__ import annotations
 

@@ -21,13 +21,26 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0001 — Implement power supply voltage monitor
+### TSK_0001 — Align requirements and libc to POSIX.1-2024 (Issue 8)
 
-```{task} Implement power supply voltage monitor
+```{task} Align requirements and libc to POSIX.1-2024 (Issue 8)
 :id: TSK_0001
 :status: open
-:traces: SWR_POWER_0001
+:traces: BDR_0003, SYS_LIBC_0001, SWR_LIBC_0002
 
-Implement and verify voltage threshold monitoring for the supply monitor
-requirement ({need}`SWR_POWER_0001`).
+Review `microkernel` requirements, public headers, error numbers, signals, and
+threads against IEEE Std 1003.1-2024 using the `posix-issue8-os-dev` skill
+({need}`BDR_0003`, {need}`SYS_LIBC_0001`, {need}`SWR_LIBC_0002`).
+```
+
+### TSK_0002 — Implement Milestone 5 process and memory syscalls
+
+```{task} Implement Milestone 5 process and memory syscalls
+:id: TSK_0002
+:status: open
+:traces: SYS_PROC_0001, SYS_MEM_0001
+
+Implement `ProcCreate`, `VMMap`, `VMUnmap`, `VMCloneCow`, child exit-code
+reporting, and automated QEMU verification tests ({need}`SYS_PROC_0001`,
+{need}`SYS_MEM_0001`).
 ```

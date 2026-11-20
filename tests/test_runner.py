@@ -7,7 +7,8 @@
 # SPDX-License-Identifier: MIT
 #
 
-# need:: VER_POWER_0005
+# need:: VER_BOOT_0001 VER_MEM_0001 VER_PROC_0001
+# need:: VER_IPC_0001 VER_SIG_0001 VER_LIBC_0001
 """Headless QEMU serial-output assertion harness for Microkernel.
 
 Boots build/microkernel.iso with TCG software emulation (no KVM required), pipes

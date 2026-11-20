@@ -22,6 +22,40 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-8 (2026-11-21): Replace POWER placeholder with real microkernel domains
+
+### Context
+
+ADR-7 adopted the Sphinx-Needs traceability model with the skill's default
+`POWER` placeholder domain. Those sample power-supply items do not describe
+`microkernel`, and tagging `tests/test_runner.py` against `SYS_POWER_0001`
+produces misleading traceability. The next phase aligns `microkernel`
+requirements and `libc` to POSIX.1-2024 (Issue 8) with the `posix-issue8-os-dev`
+skill.
+
+### Decision
+
+Remove the `POWER` placeholder files and configure seven real domains in
+`.docs-traceability-setup.yml`: `BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and
+`DOCS`. Populate all traceability layers (BDR, WDR, ADR, SYS, SWR, ARC, ICD,
+COMP, VER, tasks, and roadmap) from the implemented kernel, `libc`, servers,
+tests, and traceability tooling, with `BDR_0003` and draft `SWR_LIBC_0002`
+prepared for POSIX.1-2024 Base alignment. Retarget in-code `VER_` tags in
+`tests/test_runner.py`, `tools/traceability/check_needs_audit.py`, and
+`tests/traceability/` to the real domains.
+
+### Alternatives
+
+- Retire the `POWER` items as `obsolete` and keep their files in the repository
+- Use one monolithic `KERNEL` domain for all operating system subsystems
+
+### Consequences
+
+- Every active requirement, design item, and verification tag reflects real
+  `microkernel` subsystems.
+- Domain boundaries (`BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, `DOCS`) map
+  cleanly to upcoming POSIX.1-2024 Base conformance work.
+
 ## ADR-7 (2026-11-20): Adopt the Sphinx traceability documentation model
 
 ### Context

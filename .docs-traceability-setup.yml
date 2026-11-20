@@ -5,7 +5,13 @@ project:
   name: "microkernel"
   repo_url: ""
   domains:
-    - POWER
+    - BOOT
+    - MEM
+    - PROC
+    - IPC
+    - SIG
+    - LIBC
+    - DOCS
 
 id:
   style: number

@@ -9,7 +9,7 @@
 
 """Unit tests for `config/sphinx/tag_scan.py`."""
 
-# need:: VER_POWER_0004
+# need:: VER_DOCS_0003
 
 from __future__ import annotations
 
@@ -29,22 +29,22 @@ class TagScanTests(unittest.TestCase):
 
     def test_extracts_valid_comment_tags(self) -> None:
         self.assertEqual(
-            extract_tags_from_line("# need:: COMP_POWER_MONITOR", ("#",)),
-            ("COMP_POWER_MONITOR",),
+            extract_tags_from_line("# need:: COMP_IPC_0001", ("#",)),
+            ("COMP_IPC_0001",),
         )
         self.assertEqual(
             extract_tags_from_line(
-                "  /* need:: ARC_POWER_MONITOR ICD_POWER_STATUS */",
+                "  /* need:: ARC_IPC_0001 ICD_IPC_0001 */",
                 ("//", "/*"),
             ),
-            ("ARC_POWER_MONITOR", "ICD_POWER_STATUS"),
+            ("ARC_IPC_0001", "ICD_IPC_0001"),
         )
         self.assertEqual(
             extract_tags_from_line(
-                "/** \\req{COMP_POWER_MONITOR} */",
+                "/** \\req{COMP_IPC_0001} */",
                 ("//", "/*"),
             ),
-            ("COMP_POWER_MONITOR",),
+            ("COMP_IPC_0001",),
         )
         self.assertEqual(
             extract_tags_from_line("# need::", ("#",)),
@@ -54,11 +54,11 @@ class TagScanTests(unittest.TestCase):
     def test_ignores_prose_mentions_of_need_syntax(self) -> None:
         self.assertIsNone(
             extract_tags_from_line(
-                "# Use need:: COMP_POWER_MONITOR for links", ("#",)
+                "# Use need:: COMP_IPC_0001 for links", ("#",)
             )
         )
         self.assertIsNone(
-            extract_tags_from_line('text = "need:: COMP_POWER_MONITOR"', ("#",))
+            extract_tags_from_line('text = "need:: COMP_IPC_0001"', ("#",))
         )
 
     def test_scan_repository_detects_test_files_and_tags(self) -> None:
@@ -67,10 +67,10 @@ class TagScanTests(unittest.TestCase):
             (root / "src").mkdir()
             (root / "tests").mkdir()
             (root / "src" / "mod.py").write_text(
-                "# need:: COMP_POWER_MONITOR\nx = 1\n", encoding="utf-8"
+                "# need:: COMP_IPC_0001\nx = 1\n", encoding="utf-8"
             )
             (root / "tests" / "test_mod.py").write_text(
-                "# need:: VER_POWER_MONITOR\n", encoding="utf-8"
+                "# need:: VER_IPC_0001\n", encoding="utf-8"
             )
             result = scan_repository(root)
             self.assertEqual(len(result.tags), 2)
