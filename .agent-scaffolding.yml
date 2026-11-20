@@ -1,0 +1,60 @@
+# agent-scaffolding configuration.
+# Written by the agent-scaffolding agent skill. Commit this file.
+# After you change this file, apply the skill again in "apply" mode.
+
+skill_version: "0.2.0"
+
+project:
+  name: "microkernel"
+  description: "A small x86-64 microkernel operating system: the kernel supplies scheduling, synchronous IPC, threads, signals, and W^X memory management to user-space servers and applications."
+  type: software            # software | documentation | mixed
+  languages: [c, assembly, python, shell]
+  language_standard: "C17"
+  platforms: [x86-64]       # target OS or runtime
+  license: "MIT License"
+  license_file: "LICENSE.md"
+  copyright: "Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>"
+
+# Build: cmake, make, poetry, npm, cargo, gradle, go.
+
+# Test: pytest, gtest, jest, vitest, cargo. Lint: clang-tidy, ruff, pylint, eslint, clippy.
+
+# Format: clang-format, ruff, black, prettier, rustfmt.
+
+operations:
+  commit_mode: autonomous   # autonomous | hitl
+  build_system: cmake
+  test_framework: custom-qemu-serial   # headless QEMU serial-output assertion harness
+  linter: clang-tidy
+  formatter: clang-format
+  build_convention: out-of-source   # build/ directory outside the source tree
+  dev_environment: containerized    # Podman image microkernel-dev, driven by scripts/env.sh
+
+# "current_user" = the name and the email of the current user. The agents read
+# them from the git configuration of the environment (git config user.name,
+# git config user.email). A project can also put a fixed name and email here.
+identity:
+  git_author_name: current_user
+  git_author_email: current_user
+
+modules:                    # defaults: references/INTERVIEW.md §3
+  dev_environment: true
+  build_agents: true
+  tool_configs: true
+  boilerplate: false        # use this only for new software with no source files
+  copyright: true
+  agent_platforms: []       # links for platforms that do not read .agents/skills
+
+specs:                      # specifications that the skill copies into the project
+  commits: true
+  semver: true
+  skills: true
+
+exclude_paths: [sysroot, build]   # paths that verify.sh does not examine (generated)
+
+pre_existing_documents:
+  - label: Task plan
+    source: TASKS.md
+    destination: docs/TASKS.md
+    policy: editable
+    notes: "Milestone plan moved from the repository root into docs/."
