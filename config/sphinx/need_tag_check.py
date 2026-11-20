@@ -9,6 +9,8 @@
 
 """Sphinx extension validating in-code tags and rendering code trace tables."""
 
+# need:: COMP_DOCS_0002
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -20,6 +22,8 @@ from docutils.parsers.rst import Directive
 from needs_model import (
     CODE_ALLOWED_PREFIXES,
     CONFIG,
+    INACTIVE_STATUSES,
+    INFORMATIONAL_TAG,
     REPO_ROOT,
     TEST_ALLOWED_PREFIXES,
 )
@@ -98,6 +102,39 @@ class NeedCodeTraceDirective(Directive):
         return [table]
 
 
+def find_untagged_active_needs(
+    needs_view: Any, tagged_ids: set[str]
+) -> list[tuple[str, str]]:
+    """Return `(need_id, message)` for active ICD/COMP/VER without code tags."""
+    inactive = set(INACTIVE_STATUSES)
+    missing: list[tuple[str, str]] = []
+    for need_id in sorted(needs_view.keys()):
+        need = needs_view[need_id]
+        status = str(need.get("status", ""))
+        if status in inactive:
+            continue
+        ntype = str(need.get("type", ""))
+        tags = list(need.get("tags", []))
+        if ntype in ("icd", "comp"):
+            if INFORMATIONAL_TAG not in tags and need_id not in tagged_ids:
+                missing.append(
+                    (
+                        need_id,
+                        f"active {ntype} '{need_id}' has no in-code need:: tag",
+                    )
+                )
+        elif ntype == "ver":
+            if "analysis" not in tags and need_id not in tagged_ids:
+                missing.append(
+                    (
+                        need_id,
+                        f"active automated ver '{need_id}' has no in-code "
+                        "need:: tag in a test file",
+                    )
+                )
+    return missing
+
+
 def _check_tags_on_build_finished(
     app: Sphinx, exception: Exception | None
 ) -> None:
@@ -114,6 +151,7 @@ def _check_tags_on_build_finished(
 
     result = scan_repository(REPO_ROOT)
     test_files_with_ver: set[str] = set()
+    tagged_ids: set[str] = set()
 
     for occ in result.tags:
         loc = f"{occ.file}:{occ.line}"
@@ -142,6 +180,7 @@ def _check_tags_on_build_finished(
                     )
                 else:
                     test_files_with_ver.add(occ.file)
+                    tagged_ids.add(item_id)
             elif prefix not in CODE_ALLOWED_PREFIXES:
                 LOGGER.warning(
                     "need_tag_check: %s: ID '%s' is not permitted in code "
@@ -149,6 +188,8 @@ def _check_tags_on_build_finished(
                     loc,
                     item_id,
                 )
+            else:
+                tagged_ids.add(item_id)
 
     for test_file in result.test_files:
         if test_file not in test_files_with_ver:
@@ -156,6 +197,9 @@ def _check_tags_on_build_finished(
                 "need_tag_check: %s: test file has no VER_ traceability tag",
                 test_file,
             )
+
+    for _, message in find_untagged_active_needs(needs_view, tagged_ids):
+        LOGGER.warning("need_tag_check: %s", message)
 
 
 def _extract_row_need_id(row: nodes.Node) -> str | None:

@@ -3,6 +3,21 @@
 This page presents calculated traceability views generated directly from the
 Sphinx-Needs model.
 
+## POSIX.1-2024 Compliance Matrix
+
+All requirements tagged with a `:posix:` Issue 8 manifest reference appear below
+with their implementing design items and verification coverage.
+
+```{needtable} POSIX.1-2024 compliance matrix
+---
+types: sys, swr
+filter: posix
+columns: >
+  id; posix as "POSIX.1-2024 Ref"; title; status;
+  satisfies_back as "Design (ICD/COMP)"; verifies_back as "Verified by"
+---
+```
+
 ## Requirement Coverage (SYS, SWR, VER)
 
 ```{needtable} Requirement coverage

@@ -6,6 +6,8 @@
 #include <kernel/printk.h>
 #include <kernel/string.h>
 
+/* need:: COMP_BOOT_0001 */
+
 /*
  * 64-bit GDT. Layout:
  *   0x00 null

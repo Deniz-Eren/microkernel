@@ -44,6 +44,7 @@ thread state via `ThreadGetCtx` ({need}`SYS_PROC_0001`).
 ```{swr} Provide POSIX.1-2024 Base process lifecycle and optional spawn
 :id: SWR_PROC_0004
 :status: draft
+:posix: XBD/sys/wait.h (BASE), XSH/fork (BASE), XBD/spawn.h (SPN)
 :derives: SYS_PROC_0001
 :traces: BDR_0003, ADR_0003
 
@@ -56,6 +57,7 @@ execution, exit-status reaping (`waitpid` in [sys/wait.h][hdr-wait]), and
 ```{swr} Provide POSIX.1-2024 Base pthreads and semaphores with memory ordering
 :id: SWR_PROC_0005
 :status: draft
+:posix: XBD/pthread.h (BASE), XBD/semaphore.h (BASE), XSH/2.9
 :derives: SYS_PROC_0001
 :traces: BDR_0003, ADR_0003
 
@@ -69,6 +71,7 @@ acquire/release memory ordering per [XSH 2.9][xsh-02] ({need}`SYS_PROC_0001`).
 ```{swr} Provide POSIX.1-2024 Base monotonic clocks and interval timers
 :id: SWR_PROC_0006
 :status: draft
+:posix: XBD/time.h (CX), XSH/clock_gettime (CX), XSH/timer_create (CX)
 :derives: SYS_PROC_0001
 :traces: BDR_0003, ADR_0003
 

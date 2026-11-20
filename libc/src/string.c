@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
+/* need:: COMP_LIBC_0001 */
+
 void *memset(void *dst, int c, size_t n) {
     uint8_t *d = dst;
     for (size_t i = 0; i < n; i++) {

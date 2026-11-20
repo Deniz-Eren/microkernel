@@ -7,6 +7,8 @@
 #include <kernel/signal.h>
 #include "apic.h"
 
+/* need:: COMP_BOOT_0001 */
+
 typedef struct {
     uint16_t offset_lo;
     uint16_t selector;

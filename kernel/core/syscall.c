@@ -14,6 +14,8 @@
 #include <sys/microkernel.h>
 #include <sys/errno.h>
 
+/* need:: COMP_PROC_0002 COMP_MEM_0002 */
+
 /* Copy between an ARBITRARY user address space and the kernel through the
  * HHDM. Each page is translated in the target pml4 and permission-checked;
  * user VAs are never dereferenced directly (SMAP-safe, fault-safe). */

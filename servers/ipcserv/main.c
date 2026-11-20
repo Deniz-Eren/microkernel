@@ -11,6 +11,8 @@
 #include <sys/ipc.h>
 #include <sys/thread.h>
 
+/* need:: COMP_IPC_0002 */
+
 static int g_chanid;
 
 static void echo_loop(void) {

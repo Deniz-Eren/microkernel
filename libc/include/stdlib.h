@@ -4,6 +4,8 @@
 #ifndef _STDLIB_H
 #define _STDLIB_H
 
+/* need:: ICD_LIBC_0001 */
+
 #include <stddef.h>
 
 _Noreturn void exit(int status);

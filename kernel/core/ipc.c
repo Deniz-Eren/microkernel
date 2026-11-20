@@ -10,6 +10,8 @@
 #include <sys/errno.h>
 #include "channel.h"
 
+/* need:: COMP_IPC_0001 */
+
 /* In-flight messages: delivered to a server, awaiting ReplyMsg. */
 static chan_msg_t *g_inflight_head;
 static uint32_t g_msgid_next = 1;

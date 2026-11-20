@@ -46,6 +46,7 @@ servers and resolve `NAME_MSG_QUERY` lookups to `(pid, chanid)` pairs
 ```{swr} Provide POSIX.1-2024 Base descriptor IPC and ppoll over Ring 3 servers
 :id: SWR_IPC_0004
 :status: draft
+:posix: XSH/pipe2 (BASE), XSH/dup3 (BASE), XSH/ppoll (BASE)
 :derives: SYS_IPC_0001
 :traces: BDR_0003, ADR_0003
 
@@ -58,6 +59,7 @@ and signal-mask restoration ({need}`SYS_IPC_0001`).
 ```{swr} Provide POSIX.1-2024 Base AIO and gate optional message queues
 :id: SWR_IPC_0005
 :status: draft
+:posix: XBD/aio.h (BASE), XBD/mqueue.h (MSG)
 :derives: SYS_IPC_0001
 :traces: BDR_0003, ADR_0003
 

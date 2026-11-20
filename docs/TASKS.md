@@ -100,3 +100,6 @@ with its status and date.
   POSIX.1-2024 (Issue 8) Base using posix-issue8-os-dev
 - [x] COMPLETE 2026-11-21 feat(libc): complete TSK_0001 (POSIX.1-2024 header
   hygiene, thread-local errno, and posix.headers standalone CTest gate)
+- [x] COMPLETE 2026-11-21 docs(traceability): establish two-tier bidirectional
+  code and POSIX.1-2024 traceability (WDR_0002, :posix: matrix, need_tag_check
+  coverage gate, full codebase ICD_/COMP_ tags, and AGENTS.md rules)

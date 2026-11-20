@@ -34,6 +34,7 @@ process when no handler is registered ({need}`SYS_SIG_0001`).
 ```{swr} Conform signal interfaces, masks, and SIGKILL/SIGSTOP rules to Issue 8
 :id: SWR_SIG_0003
 :status: draft
+:posix: XBD/signal.h (CX), XSH/sigaction (CX), XSH/kill (CX)
 :derives: SYS_SIG_0001
 :traces: BDR_0003, ADR_0003
 
@@ -48,6 +49,7 @@ across `SYS_SIGRETURN` ({need}`SYS_SIG_0001`).
 ```{swr} Enforce async-signal-safety across libc and signal handlers
 :id: SWR_SIG_0004
 :status: draft
+:posix: XSH/2.4.3 (BASE)
 :derives: SYS_SIG_0001
 :traces: BDR_0003, ADR_0003
 

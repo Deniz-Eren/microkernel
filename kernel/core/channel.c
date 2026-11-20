@@ -7,6 +7,8 @@
 #include <kernel/string.h>
 #include <kernel/sched.h>
 
+/* need:: COMP_IPC_0001 */
+
 static channel_t g_channels[MAX_CHANNELS];
 
 int channel_create(uint32_t owner_pid) {

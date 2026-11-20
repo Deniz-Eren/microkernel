@@ -25,6 +25,7 @@ wrappers compiled with `-ffreestanding -Wall -Wextra -Werror`
 ```{swr} Enforce Issue 8 standalone headers, feature macros, and namespaces
 :id: SWR_LIBC_0002
 :status: active
+:posix: XBD/unistd.h (BASE), XBD/13-14, XSH/2.2
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
@@ -40,6 +41,7 @@ their `_POSIX_*` macros ({need}`SYS_LIBC_0001`).
 ```{swr} Provide thread-local errno isolated from raw syscalls
 :id: SWR_LIBC_0003
 :status: active
+:posix: XBD/errno.h (CX), XSH/2.3
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
@@ -53,6 +55,7 @@ it on success, and honor mandatory ("shall fail") error precedence
 ```{swr} Implement mandatory POSIX.1-2024 thread cancellation points
 :id: SWR_LIBC_0004
 :status: draft
+:posix: XSH/2.9.5 (BASE)
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
@@ -66,6 +69,7 @@ holding locks or leaking resources ({need}`SYS_LIBC_0001`).
 ```{swr} Provide new POSIX.1-2024 Base functions and C17/C11 headers
 :id: SWR_LIBC_0005
 :status: draft
+:posix: XSH/getentropy (BASE), XSH/strlcpy (CX), XBD/stdatomic.h (CX)
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 

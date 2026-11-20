@@ -4,6 +4,8 @@
 #ifndef _SYS_ERRNO_H
 #define _SYS_ERRNO_H
 
+/* need:: ICD_LIBC_0003 */
+
 /* Microkernel errno values (Linux x86-64 compatible numbers, POSIX.1-2024 set). */
 
 #define EPERM 1

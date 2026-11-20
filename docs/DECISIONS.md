@@ -22,6 +22,47 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-11 (2026-11-21): Enforce two-tier bidirectional POSIX/code traceability
+
+### Context
+
+End-to-end verification of POSIX.1-2024 requirements demands unbroken links from
+standard clauses down to headers, C implementations, and automated tests. Until
+now, `need_tag_check.py` only checked tags present in code without flagging
+active `ICD_`, `COMP_`, or automated `VER_` items that lacked code tags, most
+existing kernel and `libc` sources carried no `need::` tags, and POSIX
+references existed only as prose links.
+
+### Decision
+
+Enforce the two-tier bidirectional traceability methodology codified in
+`WDR_0002`, `CNV_0001`, `CNV_0004`, and `AGENTS.md`:
+
+- Add an optional `:posix:` field to `config/sphinx/conf.py` and render a
+  calculated POSIX.1-2024 Compliance Matrix in
+  `docs/60-verification/traceability.md`.
+- Extend `config/sphinx/need_tag_check.py` (`find_untagged_active_needs`) to
+  fail the Sphinx `-W` build whenever any active `ICD_`, `COMP_`, or automated
+  (non-`analysis`) `VER_` item has zero in-code `need::` tags.
+- Split `LIBC` interfaces/components by header group (`ICD_LIBC_0001`–`0003`,
+  `COMP_LIBC_0001`–`0002`) and add `ICD_`/`COMP_` tags across all existing
+  `kernel/`, `libc/`, `servers/`, `config/sphinx/`, and `tools/traceability/`
+  implementations.
+- Keep Sphinx-Needs items at the contract/header/subsystem level and rely on the
+  automated `issue8-manifest.tsv` symbol gate for per-symbol POSIX completeness.
+
+### Alternatives
+
+- Create per-function Sphinx-Needs directives for every POSIX C function
+- Leave code-to-spec coverage advisory instead of build-enforced
+
+### Consequences
+
+- Every active `ICD_`, `COMP_`, and automated `VER_` item is guaranteed by CI to
+  trace to tracked source or test code.
+- Adding future POSIX functions follows one documented rule in `AGENTS.md` and
+  `WDR_0002` without Markdown directive bloat.
+
 ## ADR-10 (2026-11-21): Implement lock-free TID-indexed thread-local errno
 
 ### Context

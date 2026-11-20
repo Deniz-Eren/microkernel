@@ -85,8 +85,9 @@ For the full procedure, see the [git skill](docs/skills/git/SKILL.md).
 Before each commit, verify:
 
 - [ ] The commit message obeys Conventional Commits, and it has the `Assisted-by:` footer
-- [ ] The build and the tests are correct (if applicable)
+- [ ] The build and the tests are correct (if applicable), including CTest (`docs.html`, `docs.audit`, `posix.headers`)
 - [ ] The formatter reports no findings (if applicable)
+- [ ] All new or changed interfaces, components, and test files carry valid `need::` tags (`ICD_`, `COMP_`, `VER_`)
 - [ ] You updated `docs/TASKS.md` (`[x] COMPLETE YYYY-MM-DD`)
 - [ ] `CHANGELOG.md` has an entry in `## [Unreleased]` for the change
 - [ ] `docs/DECISIONS.md` has an ADR for each new decision
@@ -105,3 +106,4 @@ Rules that apply only to this project. Each rule links to the skill or the docum
 - Documentation in `README.md` and `docs/` follows ASD-STE100 Simplified Technical English. The term lists are `technical_terms.txt` and `allowed_phrases.txt` at the repository root. See [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 - The project moves forward in milestones. Make one milestone at a time, and commit after each complete milestone. A milestone is complete only when its test gives exit code 0. See [docs/TASKS.md](docs/TASKS.md).
 - The kernel and the C library are freestanding C17 with warnings as errors. The kernel runs with no C runtime. See [docs/skills/cmake/SKILL.md](docs/skills/cmake/SKILL.md).
+- Follow the two-tier bidirectional code and POSIX.1-2024 traceability methodology: keep Sphinx-Needs items at the contract/header/subsystem level with `:posix:` references, tag headers with `ICD_`, implementations with `COMP_`, and tests (`test_*`) with `VER_`, and never create per-function Markdown boilerplate. See [docs/00-overview/wdr/WDR_0002.md](docs/00-overview/wdr/WDR_0002.md), [docs/30-architecture/adr/ADR_0003.md](docs/30-architecture/adr/ADR_0003.md), and [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0001`, `CNV_0004`).

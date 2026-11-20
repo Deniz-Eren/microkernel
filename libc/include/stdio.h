@@ -4,6 +4,8 @@
 #ifndef _STDIO_H
 #define _STDIO_H
 
+/* need:: ICD_LIBC_0001 */
+
 #include <stddef.h>
 
 int printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));

@@ -13,7 +13,7 @@
 
 #include <sys/errno.h>
 
-/* need:: ICD_LIBC_0001 */
+/* need:: ICD_LIBC_0003 */
 
 int *__errno_location(void);
 #define errno (*__errno_location())

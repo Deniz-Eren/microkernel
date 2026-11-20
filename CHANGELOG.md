@@ -21,6 +21,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Two-tier bidirectional code and POSIX.1-2024 traceability: `:posix:` field and
+  calculated compliance matrix in `docs/60-verification/traceability.md`,
+  bidirectional `ICD_`/`COMP_`/`VER_` coverage check in
+  `config/sphinx/need_tag_check.py`, `WDR_0002`, `ICD_`/`COMP_` code tags across
+  all active `kernel/`, `libc/`, `servers/`, and traceability tooling files, and
+  governance rules in `AGENTS.md`.
 - `<errno.h>` and lock-free TID-indexed thread-local `errno`
   (`libc/src/errno.c`) with the full POSIX.1-2024 `E*` constant set in
   `libc/include/sys/errno.h`.

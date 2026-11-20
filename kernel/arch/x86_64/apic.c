@@ -7,6 +7,8 @@
 #include <kernel/printk.h>
 #include <kernel/vmm.h>
 
+/* need:: COMP_BOOT_0001 */
+
 /* Kernel MMIO window (uncached). */
 #define MMIO_WINDOW_VA 0xFFFFFFFF90000000ULL
 #define LAPIC_VA (MMIO_WINDOW_VA + 0x0000)

@@ -11,7 +11,7 @@
 #include <errno.h>
 #include <sys/thread.h>
 
-/* need:: COMP_LIBC_0001 */
+/* need:: COMP_LIBC_0002 */
 
 #define ERRNO_SLOTS_MAX 64
 

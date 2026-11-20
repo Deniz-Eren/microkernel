@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <sys/microkernel.h>
 
+/* need:: COMP_LIBC_0001 */
+
 void exit(int status) {
     extern void __libc_fini_array(void);
     __libc_fini_array();

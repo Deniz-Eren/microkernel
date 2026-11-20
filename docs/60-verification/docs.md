@@ -24,12 +24,14 @@ Verified by `CheckNeedsAuditTests` in
 `tests/traceability/test_check_needs_audit.py` ({need}`SWR_DOCS_0001`).
 ```
 
-```{ver} Verify comment-anchored tag scanner with unit tests
+```{ver} Verify bidirectional tag scanner and coverage rules with unit tests
 :id: VER_DOCS_0003
 :status: active
 :tags: unit
 :verifies: SWR_DOCS_0002
 
-Verified by `TagScanTests` in `tests/traceability/test_tag_scan.py`
-({need}`SWR_DOCS_0002`).
+Verified by `TagScanTests` in `tests/traceability/test_tag_scan.py`, covering
+comment-anchored tag extraction, repository scanning, and bidirectional
+detection of active `ICD_`, `COMP_`, and automated `VER_` items lacking code
+tags ({need}`SWR_DOCS_0002`).
 ```

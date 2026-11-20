@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "config" / "sphinx"))
 
+from need_tag_check import find_untagged_active_needs  # noqa: E402
 from tag_scan import extract_tags_from_line, scan_repository  # noqa: E402
 
 
@@ -75,6 +76,26 @@ class TagScanTests(unittest.TestCase):
             result = scan_repository(root)
             self.assertEqual(len(result.tags), 2)
             self.assertEqual(result.test_files, ("tests/test_mod.py",))
+
+    def test_bidirectional_coverage_flags_untagged_active_items(self) -> None:
+        needs = {
+            "ICD_IPC_0001": {"type": "icd", "status": "active", "tags": []},
+            "COMP_IPC_0001": {"type": "comp", "status": "active", "tags": []},
+            "COMP_IPC_0002": {"type": "comp", "status": "draft", "tags": []},
+            "VER_IPC_0001": {
+                "type": "ver",
+                "status": "active",
+                "tags": ["unit"],
+            },
+            "VER_IPC_0002": {
+                "type": "ver",
+                "status": "active",
+                "tags": ["analysis"],
+            },
+        }
+        missing = find_untagged_active_needs(needs, {"ICD_IPC_0001"})
+        ids = [need_id for need_id, _ in missing]
+        self.assertEqual(ids, ["COMP_IPC_0001", "VER_IPC_0001"])
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <sys/microkernel.h>
 
+/* need:: COMP_LIBC_0001 */
+
 /* Until a console server owns fd 0/1/2, output goes to the kernel early
  * debug log (SYS_DEBUG_LOG). Raw syscalls return negative errno; wrappers set
  * thread-local errno only on failure and never clear it on success. */

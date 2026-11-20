@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+
+/* need:: ICD_PROC_0002 */
 /* Microkernel thread management (Milestone 4): two-phase creation — NewThread
  * makes an unarmed embryo thread, ThreadReset arms it with a start context
  * and makes it runnable. */

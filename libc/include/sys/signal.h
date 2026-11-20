@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+
+/* need:: ICD_SIG_0001 */
 /* Microkernel signals (Milestone 4). Handler registration is an ABI extension
  * (SYS_SIGACTION); delivery uses the kernel-built signal frame and libc's
  * __sigreturn_trampoline. */

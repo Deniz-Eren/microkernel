@@ -8,6 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
+/* need:: COMP_LIBC_0001 */
+
 static const char g_digits[] = "0123456789abcdef";
 
 struct sbuf {

@@ -76,6 +76,12 @@ needs_fields = {
             "enum": ALL_STATUSES,
         },
     },
+    "posix": {
+        "schema": {
+            "type": "string",
+        },
+        "default": "",
+    },
 }
 needs_role_need_template = "{{ id }}"
 

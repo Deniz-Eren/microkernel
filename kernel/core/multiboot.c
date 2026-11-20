@@ -6,6 +6,8 @@
 #include <kernel/printk.h>
 #include <kernel/vmm.h>
 
+/* need:: COMP_BOOT_0001 */
+
 #define MAX_MMAP 32
 #define MAX_MODULES 8
 

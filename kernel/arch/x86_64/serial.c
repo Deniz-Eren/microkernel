@@ -4,6 +4,8 @@
 #include "serial.h"
 #include "io.h"
 
+/* need:: COMP_BOOT_0001 */
+
 #define COM1 0x3F8
 
 void serial_init(void) {

@@ -5,6 +5,8 @@
 #include <kernel/vmm.h>
 #include <string.h>
 
+/* need:: COMP_BOOT_0002 */
+
 /* Minimal POSIX ustar reader over the Multiboot2 bootfs module (already
  * resident in physical memory, accessed through the HHDM). */
 typedef struct {

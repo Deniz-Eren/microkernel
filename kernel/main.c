@@ -15,6 +15,8 @@
 #include "../arch/x86_64/apic.h"
 #include "../arch/x86_64/msr.h"
 
+/* need:: COMP_BOOT_0001 */
+
 extern void syscall_entry(void);
 
 static void syscall_init(void) {

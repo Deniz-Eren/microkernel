@@ -12,6 +12,8 @@
 #include <sys/ipc.h>
 #include <sys/bootinfo.h>
 
+/* need:: COMP_IPC_0002 */
+
 #define NAME_TABLE_MAX 8
 
 typedef struct {

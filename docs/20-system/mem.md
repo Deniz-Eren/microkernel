@@ -44,6 +44,7 @@ bypassing SMAP ({need}`SYS_MEM_0001`).
 ```{swr} Provide POSIX.1-2024 Base memory mapping interfaces
 :id: SWR_MEM_0004
 :status: draft
+:posix: XBD/sys/mman.h (BASE), XSH/mmap (BASE)
 :derives: SYS_MEM_0001
 :traces: BDR_0003, ADR_0003
 
@@ -56,6 +57,7 @@ functions `mmap` ([mmap][fn-mmap]), `mprotect`, `msync`, and `munmap` backed by
 ```{swr} Gate optional POSIX memory locking and shared memory objects
 :id: SWR_MEM_0005
 :status: draft
+:posix: XBD/sys/mman.h (ML, MLR, SHM)
 :derives: SYS_MEM_0001
 :traces: BDR_0003, ADR_0003
 

@@ -15,6 +15,8 @@
 #include <kernel/string.h>
 #include "../arch/x86_64/gdt.h"
 
+/* need:: COMP_PROC_0001 */
+
 /* Maintained by the scheduler for syscall_entry (switch.S). */
 extern unsigned long g_syscall_kstack;
 

@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <kernel/printk.h>
 
+/* need:: COMP_MEM_0001 */
+
 /* Bitmap frame allocator: bit 1 = free, bit 0 = reserved/allocated.
  * Covers up to 4 GiB of physical memory (QEMU tests use 256 MiB). */
 #define PMM_MAX_BYTES (4ULL * 1024 * 1024 * 1024)

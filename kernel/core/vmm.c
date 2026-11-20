@@ -7,6 +7,8 @@
 #include <kernel/printk.h>
 #include <kernel/panic.h>
 
+/* need:: COMP_MEM_0002 */
+
 extern char __bss_start[];
 extern char __kboot_stack_top[];
 

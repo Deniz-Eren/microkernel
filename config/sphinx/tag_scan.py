@@ -9,6 +9,8 @@
 
 """Single in-code traceability tag scanner for the target project."""
 
+# need:: COMP_DOCS_0002
+
 from __future__ import annotations
 
 import os

@@ -14,6 +14,8 @@
 #include <kernel/pmm.h>
 #include "channel.h"
 
+/* need:: COMP_BOOT_0002 COMP_PROC_0002 */
+
 /* Locate the ACPI RSDP by scanning the BIOS ROM area (QEMU places it there). */
 static uint64_t find_rsdp(void) {
     for (uint64_t a = 0xE0000; a < 0xFFFFF; a += 16) {

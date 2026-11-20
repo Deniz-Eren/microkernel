@@ -10,6 +10,8 @@
 #include <sys/signal.h>
 #include <kernel/ipc.h>
 
+/* need:: COMP_SIG_0001 */
+
 long sys_sigaction(uint64_t sig, uint64_t handler, uint64_t restorer) {
     pcb_t *p = proc_current();
     if (!p) {

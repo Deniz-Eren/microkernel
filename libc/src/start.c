@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <sys/bootinfo.h>
 
+/* need:: COMP_LIBC_0001 */
+
 char **environ;
 void *__auxv;
 

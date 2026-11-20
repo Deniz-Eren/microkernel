@@ -7,6 +7,8 @@
 #include <kernel/vmm.h>
 #include <kernel/string.h>
 
+/* need:: COMP_BOOT_0002 */
+
 typedef struct {
     uint8_t e_ident[16];
     uint16_t e_type, e_machine;

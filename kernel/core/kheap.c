@@ -9,6 +9,8 @@
 #include <kernel/printk.h>
 #include <kernel/panic.h>
 
+/* need:: COMP_MEM_0001 */
+
 /* First-fit free-list allocator growing over a kernel VA window at
  * KERNEL_HEAP_BASE. Pages are mapped on demand from the PMM. */
 
