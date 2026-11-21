@@ -10,7 +10,7 @@
 
 #include <kernel/trapframe.h>
 #include <kernel/printk.h>
-#include "../arch/x86_64/serial.h"
+#include <arch/x86_64/serial.h>
 #include <kernel/sched.h>
 #include <kernel/intr.h>
 #include <kernel/ipc.h>

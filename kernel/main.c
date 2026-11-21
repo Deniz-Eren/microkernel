@@ -16,11 +16,11 @@
 #include <kernel/vmm.h>
 #include <kernel/kheap.h>
 #include <kernel/sched.h>
-#include "../arch/x86_64/gdt.h"
-#include "../arch/x86_64/idt.h"
-#include "../arch/x86_64/serial.h"
-#include "../arch/x86_64/apic.h"
-#include "../arch/x86_64/msr.h"
+#include <arch/x86_64/gdt.h>
+#include <arch/x86_64/idt.h>
+#include <arch/x86_64/serial.h>
+#include <arch/x86_64/apic.h>
+#include <arch/x86_64/msr.h>
 
 /* need:: COMP_BOOT_0001 */
 

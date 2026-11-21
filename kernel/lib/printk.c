@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <kernel/printk.h>
-#include "../arch/x86_64/serial.h"
+#include <arch/x86_64/serial.h>
 
 static int g_quiet;
 

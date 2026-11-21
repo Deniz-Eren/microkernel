@@ -15,7 +15,7 @@
 #include <kernel/vmm.h>
 #include <sys/errno.h>
 #include <sys/intr.h>
-#include "../arch/x86_64/apic.h"
+#include <arch/x86_64/apic.h>
 #include "channel.h"
 
 /* need:: COMP_IPC_0003 */

@@ -162,3 +162,5 @@ For the full traceability backlog and longer-term roadmap, see
   bring all 82 Markdown docs to 0 STE errors (ADR-17)
 - [x] COMPLETE 2026-11-21 ci(hooks): run full CTest (including all Sphinx-Needs
   and POSIX checks) inside .git/hooks/pre-commit via scripts/install-hooks.sh
+- [x] COMPLETE 2026-11-21 refactor(kernel): add kernel/ to CMake include paths
+  and eliminate all parent-relative ../ #include directives

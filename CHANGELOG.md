@@ -97,6 +97,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Added `${CMAKE_SOURCE_DIR}/kernel` to `kernel.elf` include directories in
+  `CMakeLists.txt` and replaced all parent-relative `../arch/x86_64/` includes
+  with `<arch/x86_64/...>` across the kernel.
 - Updated `scripts/install-hooks.sh` so `.git/hooks/pre-commit` also runs full
   CTest (`traceability.unit`, `docs.html`, `docs.needs`, `docs.audit`,
   `posix.headers`, `posix.async_signal_safe`) with fresh `build/docs/doctrees`.

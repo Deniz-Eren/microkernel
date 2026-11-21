@@ -23,8 +23,8 @@
 #include <kernel/string.h>
 #include <sys/microkernel.h>
 #include <time.h>
-#include "../arch/x86_64/gdt.h"
-#include "../arch/x86_64/msr.h"
+#include <arch/x86_64/gdt.h>
+#include <arch/x86_64/msr.h>
 
 #define MSR_FS_BASE 0xC0000100U
 

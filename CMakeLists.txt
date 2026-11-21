@@ -188,6 +188,7 @@ add_executable(kernel.elf
 )
 target_compile_options(kernel.elf PRIVATE ${KERNEL_CFLAGS})
 target_include_directories(kernel.elf PRIVATE
+    ${CMAKE_SOURCE_DIR}/kernel
     ${CMAKE_SOURCE_DIR}/kernel/include
     ${CMAKE_SOURCE_DIR}/libc/include
 )
