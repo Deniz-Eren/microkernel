@@ -18,13 +18,26 @@ skill](docs/skills/git/SKILL.md) defines each mode and its workflow.
 
 1. **Predict:** examine the task, plan the steps, and find possible failures
    before you act.
-2. **Act:** do the planned steps. Make an atomic commit after each phase.
-3. **Verify:** run all checks (build, QEMU tests, CTest, `clang-format`,
-   `clang-tidy`, `docs-traceability-setup` `check_text.py`, and `asd-ste100`)
-   and confirm that every check passes.
+2. **Act:** do the planned steps. Stage any newly created files (`git add -N`)
+   before running verification so `tag_scan.py` includes them.
+3. **Verify (mandatory hard gate):** run `./scripts/build-agent.sh` and confirm
+   it prints `BUILD: PASS` with exit code `0`. This single command enforces
+   every required gate across the entire repository (never substitute partial or
+   hand-picked file lists):
+   - `clang-format` (`./scripts/formatter-agent.sh`)
+   - `docs-traceability-setup` full-repo text check (`check_text.py --root .`)
+   - `asd-ste100` full-repo STE check (`python3 tools/check_ste.py --root .`)
+   - 4-stage build + Sphinx `-W`
+   - headless QEMU test suite
+   - `clang-tidy` static analysis
+   - full CTest suite (`posix.headers`, `posix.async_signal_safe`,
+     `traceability.unit`, `docs.html`, `docs.needs`, `docs.audit`)
 
-If verification fails, go back to Act, repair the problem, and verify again. Do
-not start the next phase until the current phase passes.
+If verification fails, go back to Act, repair every failure, and re-run
+`./scripts/build-agent.sh` until it prints `BUILD: PASS`. Never run `git commit`
+before `./scripts/build-agent.sh` passes on the final working tree. Also keep
+the local git `pre-commit` hook installed via `./scripts/install-hooks.sh`
+(never pass `--no-verify`).
 
 ---
 
@@ -96,17 +109,16 @@ For the full procedure, see the [git skill](docs/skills/git/SKILL.md).
 
 ## Pre-Commit Checklist
 
-Before each commit, verify:
+Before every `git commit`, you MUST run `./scripts/build-agent.sh` on the final
+working tree (with new files `git add -N`'d) and confirm `BUILD: PASS`. Never
+skip gates, never check only a hand-picked subset of files, and never pass
+`--no-verify` to bypass `.git/hooks/pre-commit`.
 
+- [ ] `./scripts/build-agent.sh` ran on the final working tree and exited 0
+  (`FORMAT: PASS`, full-repo `check_text.py --root .`, full-repo
+  `tools/check_ste.py --root .`, 4-stage build + Sphinx `-W`, QEMU tests,
+  `clang-tidy`, and all CTest targets)
 - [ ] Commit message obeys Conventional Commits with `Assisted-by:` footer
-- [ ] Build and tests pass, including QEMU and CTest (`docs.html`, `docs.audit`,
-  `posix.headers`, `posix.async_signal_safe`)
-- [ ] Code formatters and linters pass (`clang-format`, `clang-tidy`)
-- [ ] `.editorconfig` and `docs-traceability-setup` source-text checks pass on
-  all new or changed files (`check_text.py --root .`: max line width, greedy
-  prose packing, and Doxygen file headers)
-- [ ] All new or changed requirements and docs in `README.md` and `docs/` obey
-  ASD-STE100 Issue 9 (checked with the `asd-ste100` skill, modal verb `must`)
 - [ ] All new or changed interfaces, components, and test files carry valid
   `need::` tags (`ICD_`, `COMP_`, `VER_`)
 - [ ] `README.md` user-space support breakdown is updated whenever user-space

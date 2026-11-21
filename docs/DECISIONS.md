@@ -22,23 +22,57 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-17 (2026-11-21): Enforce all quality gates in build-agent and pre-commit
+
+### Context
+
+Manual per-file runs of `ste_check.py` missed `docs/DECISIONS.md` on recent
+commits. Relying on agents to assemble ad-hoc shell commands for
+`docs-traceability-setup` and `asd-ste100` allowed non-compliant prose to pass
+without failing the commit gate.
+
+### Decision
+
+- Add `tools/check_ste.py` to run `ste_check.py scan` across `README.md` and all
+  non-immutable Markdown files under `docs/`, including MyST Sphinx-Needs
+  bodies.
+- Make `scripts/build-agent.sh` the single mandatory pre-commit gate running
+  `formatter-agent.sh`, `check_text.py --root .`, `tools/check_ste.py`, build,
+  QEMU tests, `clang-tidy`, and CTest.
+- Add `scripts/install-hooks.sh` to install `.git/hooks/pre-commit` running
+  format, `check_text.py`, and `tools/check_ste.py` automatically on commit.
+- Update `AGENTS.md` to forbid committing unless `./scripts/build-agent.sh`
+  passes on the final working tree.
+
+### Alternatives
+
+- Keep manual `ste_check.py` commands in `AGENTS.md` without script automation
+- Check only changed files in `check_ste.py` (leaves latent drift across
+  `docs/`)
+
+### Consequences
+
+- Every commit automatically enforces full-repo formatting, `.editorconfig` and
+  `check_text.py`, ASD-STE100, build, QEMU tests, `clang-tidy`, and CTest.
+- All 82 Markdown files across `README.md` and `docs/` pass `tools/check_ste.py`
+  with zero errors.
+
 ## ADR-16 (2026-11-21): IOAPIC IRQ pulses, CAP_SYS_INTR IOPL, and MsgV IPC
 
 ### Context
 
-Milestone 6 (`TSK_0004`) moves hardware device drivers into isolated Ring 3
-servers by routing hardware interrupts into IPC pulses (`AttachIntrEvent` /
-`IntrUnmask`), granting Ring 3 port I/O only to authorized processes
-(`IOPLSet`), and adding scatter-gather `ReadMsgV`/`WriteMsgV` IPC. Delivering
-interrupts from IDT context cannot allocate kernel heap memory, and QEMU `q35`
-must run a real hardware driver test with zero extra command-line flags.
+Milestone 6 (`TSK_0004`) moves hardware drivers into isolated Ring 3 servers. It
+routes hardware IRQs into IPC pulses (`AttachIntrEvent`/`IntrUnmask`), gates
+Ring 3 port I/O (`IOPLSet`), and adds `ReadMsgV`/`WriteMsgV`. Interrupt handlers
+cannot allocate heap memory, and QEMU `q35` must run a real driver with zero
+extra flags.
 
 ### Decision
 
-- Map the IOAPIC at `0xFEC00000` inside `kernel/core/intr.c`, mask all 24 lines
-  at boot, and keep one static pre-allocated `chan_msg_t` pulse node per IRQ
-  (`is_static = 1`) so `intr_dispatch_irq()` masks the line, sends LAPIC EOI,
-  and delivers an IPC pulse without calling `kmalloc()` or `kfree()`.
+- Map the IOAPIC at `0xFEC00000` in `kernel/core/intr.c` and mask all 24 lines
+  at boot. Keep one static `chan_msg_t` pulse node per IRQ (`is_static = 1`).
+  `intr_dispatch_irq()` masks the line, sends EOI, and queues the pulse with no
+  `kmalloc()` or `kfree()`.
 - Gate `AttachIntrEvent`, `IntrUnmask`, and `IOPLSet(3)` with `CAP_SYS_INTR` on
   `pcb_t.caps` (granted only to `sysproc` and `rtcdrv` in `proc_spawn_init()`),
   store `tcb_t.iopl`, and preserve IOPL bits across signal delivery.
@@ -70,9 +104,8 @@ must run a real hardware driver test with zero extra command-line flags.
 Milestone 5 (`TSK_0002`) requires `ProcCreate`, `VMMap`, `VMUnmap`,
 `VMCloneCow`, and child exit-code reporting, while laying the foundation for
 POSIX.1-2024 `<sys/mman.h>` (`SWR_MEM_0004`) and `<sys/wait.h>`
-(`SWR_PROC_0007`). Sharing physical frames copy-on-write across parent and child
-address spaces requires safe frame lifetime tracking and Ring 3 `#PF` fault
-resolution without bloating kernel `.bss` or violating W^X.
+(`SWR_PROC_0007`). Copy-on-write frame sharing needs safe lifetime tracking and
+Ring 3 `#PF` handling. It must avoid kernel `.bss` bloat and obey W^X.
 
 ### Decision
 
@@ -80,15 +113,13 @@ resolution without bloating kernel `.bss` or violating W^X.
   of `pmm_init()` via `pmm_alloc_contiguous()` (~128 KiB on 256 MiB RAM), and
   make `pmm_free_frame()` refcount-aware with `pmm_frame_inc()` and
   `pmm_frame_refcount()`.
-- Reserve x86-64 software PTE bit 9 as `VMM_COW`, resolve COW write faults in
-  `vmm_resolve_cow_to()` from both `idt.c` (`#PF`, vector 14) and SMAP-safe
-  `copy_user_pml4()`, promote sole-owner (`refcount <= 1`) pages in-place, and
-  reclaim user PML4 trees on child reap via `vmm_destroy_user_pml4()`.
-- Add `SYS_PROC_WAIT = 28` and `SYS_VM_PROTECT = 29` alongside reserved
-  `SYS_PROC_CREATE = 13`, `SYS_VM_MAP = 15`, `SYS_VM_UNMAP = 16`, and
-  `SYS_VM_CLONE_COW = 17`, expose native `<sys/proc.h>` / `<sys/vm.h>` and clean
-  POSIX.1-2024 `<sys/mman.h>` / `<sys/wait.h>`, and enforce W^X by rejecting
-  `PROT_WRITE | PROT_EXEC` with `-EACCES`.
+- Reserve x86-64 software PTE bit 9 as `VMM_COW`. Resolve COW faults in
+  `vmm_resolve_cow_to()` from `idt.c` (`#PF`) and `copy_user_pml4()`. Promote
+  sole-owner pages in-place and reclaim user PML4 trees via
+  `vmm_destroy_user_pml4()`.
+- Add `SYS_PROC_WAIT = 28` and `SYS_VM_PROTECT = 29` alongside `SYS_PROC_CREATE`
+  and `SYS_VM_*`. Expose native `<sys/proc.h>`/`<sys/vm.h>` and POSIX
+  `<sys/mman.h>`/`<sys/wait.h>`. Reject `PROT_WRITE | PROT_EXEC` with `-EACCES`.
 
 ### Alternatives
 
@@ -99,9 +130,9 @@ resolution without bloating kernel `.bss` or violating W^X.
 
 ### Consequences
 
-- `proctest` and `procchild` verify `ProcCreate`, `waitpid` (`WNOHANG` and exit
-  status 42), `mmap`/`mprotect`/`msync`/`munmap`, W^X rejection, and real Ring 3
-  COW page faults in headless QEMU alongside Milestones 1–4.
+- `proctest` and `procchild` check `ProcCreate`, `waitpid` (`WNOHANG` and exit
+  code 42), `mmap`/`mprotect`/`msync`/`munmap`, W^X rejection, and Ring 3 COW
+  faults alongside Milestones 1–4.
 - `SWR_MEM_0004` and `SWR_PROC_0007` are active and verified by both QEMU and
   CTest (`posix.headers`, `posix.async_signal_safe`).
 
@@ -109,12 +140,10 @@ resolution without bloating kernel `.bss` or violating W^X.
 
 ### Context
 
-`SWR_SIG_0003` and `SWR_SIG_0004` require standard POSIX.1-2024 `<signal.h>`
-APIs (`sigaction`, `sigprocmask`, `pthread_sigmask`, `kill`, `pthread_kill`,
-`raise`, `signal`, and `sigset_t` helpers), `-EINVAL` rejection of `SIGKILL` and
-`SIGSTOP` overrides, signal mask save and restore across `SYS_SIGRETURN`, and
-verified async-signal-safety. The Milestone 4 `<sys/signal.h>` exposed non-POSIX
-inline syscall wrappers, leaked `<sys/microkernel.h>`, had no `SYS_SIGPROCMASK`
+`SWR_SIG_0003` and `SWR_SIG_0004` require POSIX.1-2024 `<signal.h>` APIs,
+`-EINVAL` for `SIGKILL`/`SIGSTOP`, mask reload across `SYS_SIGRETURN`, and
+async-signal-safety. The Milestone 4 `<sys/signal.h>` exposed non-POSIX inline
+syscall wrappers, leaked `<sys/microkernel.h>`, had no `SYS_SIGPROCMASK`
 syscall, and left `sig_frame_t.pad` unused.
 
 ### Decision
@@ -122,14 +151,12 @@ syscall, and left `sig_frame_t.pad` unused.
 - Separate the low-level kernel ABI (`libc/include/sys/signal.h`, `struct
   __k_sigaction`, `SYS_SIGPROCMASK = 27`) from the public POSIX.1-2024 header
   (`libc/include/signal.h`) and its out-of-line wrappers in `libc/src/signal.c`.
-- Repurpose the 8-byte `pad` slot in `sig_frame_t` as `saved_mask` (keeping the
-  16-byte aligned 24-uint64 frame size intact) so `signal_deliver_check` saves
-  and `sys_sigreturn` restores `blocked_signals`, and store per-signal `sa_mask`
-  and `sa_flags` arrays in `pcb_t`.
+- Use the 8-byte `pad` slot in `sig_frame_t` as `saved_mask` to keep the 16-byte
+  frame size. Save and reload `blocked_signals`, and store `sa_mask` and
+  `sa_flags` in `pcb_t`.
 - Add CTest `posix.async_signal_safe` (`tests/posix/test_async_signal_safe.py`)
-  running `llvm-objdump -dr` on `sysroot/usr/lib/libc.a` to parse direct calls
-  and `R_X86_64_*` relocations and fail if any async-signal-safe function
-  transitively reaches heap, stdio, or `exit` routines.
+  using `llvm-objdump -dr` on `libc.a`. Parse direct calls and `R_X86_64_*`
+  relocations to block heap, stdio, or `exit` callees.
 
 ### Alternatives
 
@@ -151,21 +178,17 @@ syscall, and left `sig_frame_t.pad` unused.
 
 ### Context
 
-Full-repository `docs-traceability-setup` `check_text.py` validation revealed a
-conflict between `.clang-format` (`ColumnLimit: 100`) and `.editorconfig`
-(`max_line_length = 80`), legacy 2-line copyright headers on pre-existing C/H,
-CMake, and shell files, and false findings on verbatim `LICENSE.md` and
-immutable vendor specifications under `docs/skills/*/references/`.
+Full-repository `check_text.py` runs found a conflict between `.clang-format`
+(100 columns) and `.editorconfig` (80 columns). Pre-existing source files also
+had 2-line headers, and verbatim `LICENSE.md` and `docs/skills/*/references/`
+triggered false findings.
 
 ### Decision
 
-Set `ColumnLimit: 80` in `.clang-format` to match `.editorconfig`, add
-`max_line_length = off` exemptions in `.editorconfig` only for verbatim
-`LICENSE.md` and immutable `docs/skills/*/references/*`, upgrade all existing
-C/H, CMake, shell, and Python files to Doxygen `@file`/`@brief`/`@copyright`
-headers, and zero-initialize syscall output structs in `servers/` and `tests/`
-so 80-column formatting stays clean under `clang-tidy` without fragile trailing
-`NOLINT` comments.
+Set `ColumnLimit: 80` in `.clang-format` to match `.editorconfig`. Exempt only
+`LICENSE.md` and `docs/skills/*/references/*` in `.editorconfig`. Upgrade source
+files to Doxygen headers and zero-initialize syscall output structs so
+`clang-tidy` passes cleanly.
 
 ### Alternatives
 
@@ -193,12 +216,10 @@ with `ste_check.py` over extracted MyST `{sys}`/`{swr}` bodies found 59 errors
 
 ### Decision
 
-Set `authoring.modal_verb: must` in `.docs-traceability-setup.yml`, revise all
-requirements documents in `docs/20-system/` to comply with ASD-STE100 Issue 9
-(using `must`, active voice, and sentences of at most 25 words), update the
-project glossaries (`technical_terms.txt`, `allowed_phrases.txt`), and make
-ASD-STE100 compliance for all requirements explicit in `AGENTS.md`, `WDR_0002`,
-and `CNV_0002`.
+Set `authoring.modal_verb: must` in `.docs-traceability-setup.yml` and align all
+`docs/20-system/` requirements to ASD-STE100 Issue 9 (`must`, active voice, at
+most 25 words). Update `technical_terms.txt`, `allowed_phrases.txt`,
+`AGENTS.md`, `WDR_0002`, and `CNV_0002`.
 
 ### Alternatives
 
@@ -218,11 +239,9 @@ and `CNV_0002`.
 ### Context
 
 End-to-end verification of POSIX.1-2024 requirements demands unbroken links from
-standard clauses down to headers, C implementations, and automated tests. Until
-now, `need_tag_check.py` only checked tags present in code without flagging
-active `ICD_`, `COMP_`, or automated `VER_` items that lacked code tags, most
-existing kernel and `libc` sources carried no `need::` tags, and POSIX
-references existed only as prose links.
+standard clauses down to headers, C implementations, and automated tests.
+Earlier, `need_tag_check.py` missed active `ICD_`, `COMP_`, and `VER_` items
+with no code tags. Most kernel and `libc` sources also had no `need::` tags.
 
 ### Decision
 
@@ -291,24 +310,17 @@ changing the `<errno.h>` ABI.
 
 ### Context
 
-The initial `microkernel` traceability domains describe the current milestones
-1–4 implementation, but an audit against IEEE Std 1003.1-2024 (Issue 8) using
-the `posix-issue8-os-dev` skill identified concrete gaps:
-`libc/include/unistd.h` leaks `<sys/microkernel.h>`, `<errno.h>` and
-thread-local `errno` are absent, `<sys/signal.h>` exposes non-POSIX
-`sigaction`/`kill` signatures, `sys_sigaction` allows catching
-`SIGKILL`/`SIGSTOP`, and mandatory Issue 8 Base groups (`pthread_*`, `sem_*`,
-clocks/timers, `mmap`, `aio_*`) had no normative specs.
+The initial `microkernel` domains covered milestones 1–4. An audit against IEEE
+Std 1003.1-2024 (Issue 8) found concrete gaps. `unistd.h` leaked
+`<sys/microkernel.h>`, `<errno.h>` was absent, and `<sys/signal.h>` was
+non-POSIX. Mandatory Issue 8 Base groups also lacked normative specs.
 
 ### Decision
 
-Refine the requirements across `LIBC`, `SIG`, `MEM`, `PROC`, `IPC`, and `DOCS`
-with atomic `draft` POSIX.1-2024 Base and option-group software requirements
-(`SWR_LIBC_0002`–`0005`, `SWR_SIG_0003`–`0004`, `SWR_MEM_0004`–`0005`,
-`SWR_PROC_0004`–`0006`, `SWR_IPC_0004`–`0005`, `SWR_DOCS_0003`), each citing
-canonical Open Group publication `9799919799` URLs. Record the layered
-microkernel strategy in `docs/30-architecture/adr/ADR_0003.md` and standing
-header/citation rules in `CNV_0004`.
+Add `draft` POSIX.1-2024 requirements across `LIBC`, `SIG`, `MEM`, `PROC`,
+`IPC`, and `DOCS` with `9799919799` URLs. Record the layered microkernel plan in
+`docs/30-architecture/adr/ADR_0003.md` and standing header/citation rules in
+`CNV_0004`.
 
 ### Alternatives
 
@@ -340,12 +352,11 @@ skill.
 
 Remove the `POWER` placeholder files and configure seven real domains in
 `.docs-traceability-setup.yml`: `BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and
-`DOCS`. Populate all traceability layers (BDR, WDR, ADR, SYS, SWR, ARC, ICD,
-COMP, VER, tasks, and roadmap) from the implemented kernel, `libc`, servers,
-tests, and traceability tooling, with `BDR_0003` and draft `SWR_LIBC_0002`
-prepared for POSIX.1-2024 Base alignment. Retarget in-code `VER_` tags in
-`tests/test_runner.py`, `tools/traceability/check_needs_audit.py`, and
-`tests/traceability/` to the real domains.
+`DOCS`. Populate all traceability layers from the kernel, `libc`, servers,
+tests, and tooling. Add `BDR_0003` and draft `SWR_LIBC_0002` for POSIX.1-2024
+alignment. Retarget in-code `VER_` tags in `tests/test_runner.py`,
+`tools/traceability/check_needs_audit.py`, and `tests/traceability/` to the real
+domains.
 
 ### Alternatives
 
@@ -370,10 +381,9 @@ milestone, but no model connects the tests to normative items.
 
 ### Decision
 
-Apply the docs-traceability-setup agent skill 0.1.0. The configuration is in
-`.docs-traceability-setup.yml`: item IDs use the `number` style with 4 digits,
-the primary markup is MyST, the initial domain is the schema default `POWER`
-with the template example items, and the build connects through
+Apply the docs-traceability-setup agent skill 0.1.0. In
+`.docs-traceability-setup.yml`, item IDs use 4-digit numbers, the markup is
+MyST, and the initial domain is `POWER`. The build connects through
 `add_subdirectory(docs)` with CTest. The default build runs Sphinx with warnings
 as errors and CTest runs the unit tests, the HTML build, the needs export, and
 the model audit.
@@ -413,10 +423,10 @@ Two configuration decisions belong to this adoption:
 ### Context
 
 The new `.clang-tidy` and `.clang-format` must work with the existing code. The
-verification in the container found three problems: clang-tidy flags the linker
-symbols (`__bss_start`, `__text_start`, and similar) as reserved identifiers;
-the analyzer flags the reads of syscall out-params as uninitialized; and
-clang-tidy needs a compilation database that the configure step did not make.
+verification in the container found three problems. First, `clang-tidy` flags
+linker symbols (`__bss_start`, `__text_start`) as reserved identifiers. Second,
+the analyzer flags reads of syscall out-params as uninitialized. Third,
+`clang-tidy` needs a compilation database.
 
 ### Decision
 

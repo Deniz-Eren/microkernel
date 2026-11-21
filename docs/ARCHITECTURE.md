@@ -20,10 +20,9 @@ descriptions, and the integration points.
 ## System Overview
 
 Microkernel is a small operating system for x86-64 computers. The kernel runs in
-Ring 0 at the high virtual address `0xFFFFFFFF80000000`. It gives five services:
-preemptive thread scheduling with 256 priority levels, synchronous messages
-between processes, threads and signals, memory management with page tables and
-the W^X policy, and fast system calls with the `syscall`/`sysret` instructions.
+Ring 0 at `0xFFFFFFFF80000000`. It gives preemptive 256-priority scheduling,
+synchronous IPC, threads, and signals. It also gives W^X page tables,
+copy-on-write memory, IOAPIC IRQ routing, and `syscall`/`sysret` dispatch.
 
 GRUB boots the kernel with the Multiboot2 protocol. The kernel starts in 32-bit
 mode, makes the 64-bit page tables, and jumps to the high half. The first user
@@ -71,11 +70,10 @@ echo server `ipcserv`, run as user processes in Ring 3.
 
 - `kernel/arch/x86_64/`: CPU and machine start: boot code (`boot.S`), GDT, IDT,
   interrupt stubs, APIC timer, serial port, context switch.
-- `kernel/core/`: Core subsystems: physical and virtual memory (`pmm`, `vmm`),
-  scheduler (`sched`), processes (`proc`), messages and channels (`ipc`,
-  `channel`), signals (`signal`), system call entry (`syscall`), ELF loader
-  (`elf`), boot archive reader (`ustar`), Multiboot2 (`multiboot`), and kernel
-  heap (`kheap`).
+- `kernel/core/`: Core subsystems. These cover memory (`pmm`, `vmm`, `kheap`),
+  scheduling and processes (`sched`, `proc`), IPC and IRQs (`ipc`, `channel`,
+  `intr`), signals (`signal`), syscalls (`syscall`), and boot (`elf`, `ustar`,
+  `multiboot`).
 - `kernel/include/`, `kernel/lib/`: Kernel-internal headers and small helpers.
 - `libc/`: The C library for Ring 3: `printf`, memory allocation, string
   functions, thread-local `errno`, syscall wrappers (`include/sys/`), and `crt0`
@@ -97,23 +95,24 @@ echo server `ipcserv`, run as user processes in Ring 3.
 
 ## Integration Points
 
-- `AGENTS.md`: References `docs/skills/git` and `docs/skills/state-management`;
-  used by all agent platforms.
-- `.agents/skills`: Symlink to `docs/skills`; used by agent platforms for skill
+- `AGENTS.md`: Links to `docs/skills/git` and `docs/skills/state-management`.
+  All agent platforms use it.
+- `.agents/skills`: Symlink to `docs/skills`. Agent platforms use it for skill
   discovery.
-- `scripts/env.sh`: References `Containerfile` (image `microkernel-dev`),
-  `cmake/clang-x86_64.cmake`, and `tests/test_runner.py`; used for all build,
-  test, and lint work.
-- `CMakeLists.txt`: References `libc/`, `servers/`, `tests/`, `kernel/`,
-  `docs/`, `scripts/mk_boot_tar.py`, and `iso/boot/grub/grub.cfg`; drives the
+- `scripts/env.sh`: Uses `Containerfile` (`microkernel-dev`),
+  `cmake/clang-x86_64.cmake`, and `tests/test_runner.py`. It drives all build,
+  test, and lint runs.
+- `CMakeLists.txt`: Connects `libc/`, `servers/`, `tests/`, `kernel/`, `docs/`,
+  `scripts/mk_boot_tar.py`, and `iso/boot/grub/grub.cfg`. It drives the
   four-stage build and CTest.
-- `boot.tar` (build output): Packages programs from `servers/` and `tests/`;
-  used by the kernel ELF loader at boot.
-- `build/compile_commands.json`: Produced by configure; used by `clang-tidy`
-  (see the [clang-tidy skill](skills/clang-tidy/SKILL.md)).
-- `scripts/build-agent.sh`: Uses `env.sh` and `run-clang-tidy`; used by the
-  [build agent](agents/build.md).
-- `scripts/formatter-agent.sh`: Uses `.clang-format` and `env.sh`; used by the
-  [format validator](agents/format-validator.md).
-- `technical_terms.txt`, `allowed_phrases.txt`: STE term lists; used by
-  documentation checks (see [CONVENTIONS.md](CONVENTIONS.md)).
+- `boot.tar` (build output): Packs programs from `servers/` and `tests/`. The
+  kernel ELF loader reads it at boot.
+- `build/compile_commands.json`: Made by configure. `clang-tidy` uses it (see
+  the [clang-tidy skill](skills/clang-tidy/SKILL.md)).
+- `scripts/build-agent.sh`: Runs format, `check_text.py`, `tools/check_ste.py`,
+  build, QEMU tests, `run-clang-tidy`, and CTest. The [build
+  agent](agents/build.md) runs it.
+- `scripts/formatter-agent.sh`: Uses `.clang-format` and `env.sh`. The [format
+  validator](agents/format-validator.md) runs it.
+- `technical_terms.txt`, `allowed_phrases.txt`: STE term lists. Documentation
+  checks use them (see [CONVENTIONS.md](CONVENTIONS.md)).

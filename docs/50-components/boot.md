@@ -10,9 +10,9 @@ loading.
 :satisfies: SWR_BOOT_0001
 
 `kernel/arch/x86_64/` (`boot.S`, `gdt.c`, `idt.c`, `apic.c`, `serial.c`) and
-`kernel/core/multiboot.c` perform 32-to-64-bit higher-half entry, parse
-Multiboot2 tags, and initialize the serial console, GDT, IDT, TSS, and LAPIC
-timer for the boot subsystem ({need}`ARC_BOOT_0001`).
+`kernel/core/multiboot.c` do 32-to-64-bit entry and parse Multiboot2 tags. They
+start the serial console, GDT, IDT, TSS, and LAPIC timer
+({need}`ARC_BOOT_0001`).
 ```
 
 ```{comp} Bootfs ustar reader and ELF loader

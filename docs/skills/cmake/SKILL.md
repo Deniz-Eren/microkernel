@@ -32,7 +32,7 @@ Each stage gives its output to the next stage:
 
 1. **Headers.** The public headers from `libc/include/` and the Clang
    freestanding headers go into `sysroot/usr/include`.
-2. **C library.** `libc` compiles to `sysroot/usr/lib/libc.a`; `crt0.S` becomes
+2. **C library.** `libc` compiles to `sysroot/usr/lib/libc.a`. `crt0.S` becomes
    `sysroot/usr/lib/crt0.o`.
 3. **User programs.** Each program links static with libc against the sysroot.
    `scripts/mk_boot_tar.py` packs the programs into `build/boot.tar` (ustar).

@@ -1,19 +1,49 @@
 #!/usr/bin/env bash
 ##
 # @file     build-agent.sh
-# @brief    Run build, QEMU tests, and clang-tidy static analysis
+# @brief    Run pre-commit gates: format, text, STE, build, QEMU, lint, CTest
 #
 # @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
 #
 
-# Build agent: build, test and static analysis for microkernel. The exit code is
-# 0 for PASS, and not 0 for FAIL.
+# Unified pre-commit gate for microkernel. Exit code is 0 only when every gate
+# passes: clang-format, docs-traceability-setup check_text.py, ASD-STE100
+# tools/check_ste.py, 4-stage build + Sphinx -W, QEMU tests, clang-tidy, and
+# CTest.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
 ENV=./scripts/env.sh
+DEFAULT_TRACE_DIR="$HOME/.gemini/skills/docs-traceability-setup"
+SKILL_DIR="${DOCS_TRACEABILITY_SKILL:-$DEFAULT_TRACE_DIR}"
+CHECK_TEXT="$SKILL_DIR/scripts/check_text.py"
+
+if ! ./scripts/formatter-agent.sh; then
+    echo "BUILD: FAIL (format step)"
+    exit 1
+fi
+
+echo "==> text (docs-traceability-setup)"
+if [ ! -f "$CHECK_TEXT" ]; then
+    echo "BUILD: FAIL (missing check_text.py at $CHECK_TEXT)"
+    exit 1
+fi
+TEXT_LOG="$(mktemp)"
+if ! python3 "$CHECK_TEXT" --root . > "$TEXT_LOG" 2>&1; then
+    echo "BUILD: FAIL (check_text step; log: $TEXT_LOG)"
+    head -30 "$TEXT_LOG"
+    exit 1
+fi
+
+echo "==> ste (asd-ste100)"
+STE_LOG="$(mktemp)"
+if ! python3 tools/check_ste.py --root . > "$STE_LOG" 2>&1; then
+    echo "BUILD: FAIL (ste step; log: $STE_LOG)"
+    head -40 "$STE_LOG"
+    exit 1
+fi
 
 echo "==> build"
 BUILD_LOG="$(mktemp)"
@@ -59,5 +89,14 @@ if grep -qE 'warning:|error:' "$LINT_LOG"; then
     grep -E 'warning:|error:' "$LINT_LOG" | head -20
     exit 1
 fi
+
+echo "==> ctest"
+CTEST_LOG="$(mktemp)"
+if ! "$ENV" ctest --test-dir build --output-on-failure > "$CTEST_LOG" 2>&1; then
+    echo "BUILD: FAIL (ctest step; log: $CTEST_LOG)"
+    tail -30 "$CTEST_LOG"
+    exit 1
+fi
+grep -E 'tests passed|Total Test time' "$CTEST_LOG" || true
 
 echo "BUILD: PASS"

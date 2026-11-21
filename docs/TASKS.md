@@ -156,3 +156,6 @@ For the full traceability backlog and longer-term roadmap, see
 - [x] COMPLETE 2026-11-21 feat(ipc,drivers): complete TSK_0004 / Milestone 6
   (IOAPIC AttachIntrEvent/IntrUnmask IRQ pulses, CAP_SYS_INTR IOPLSet,
   ReadMsgV/WriteMsgV scatter-gather IPC, Ring 3 rtcdrv + drvtest QEMU gate)
+- [x] COMPLETE 2026-11-21 ci(gates): enforce full-repo check_text.py and
+  tools/check_ste.py inside build-agent.sh, pre-commit hook, and AGENTS.md, and
+  bring all 82 Markdown docs to 0 STE errors (ADR-17)

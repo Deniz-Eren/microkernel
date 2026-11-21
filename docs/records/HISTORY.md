@@ -75,10 +75,9 @@ reporting, and automated QEMU verification tests to lay the foundation for POSIX
 :status: done
 :traces: ADR_0003, SWR_SIG_0003, SWR_SIG_0004
 
-Add `<signal.h>` with standard `sigaction` and `kill` signatures, reject
-`SIGKILL`/`SIGSTOP` overrides with `-EINVAL` in `sys_sigaction`, save/restore
-`blocked_signals` in `sig_frame_t`, and audit async-signal-safety
-({need}`SWR_SIG_0003`, {need}`SWR_SIG_0004`).
+Add `<signal.h>` with POSIX `sigaction` and `kill`, and reject `SIGKILL` and
+`SIGSTOP` in `sys_sigaction`. Keep `blocked_signals` in `sig_frame_t` and audit
+async-signal-safety ({need}`SWR_SIG_0003`, {need}`SWR_SIG_0004`).
 ```
 
 ### TSK_0001 — Align libc headers and thread-local errno to POSIX.1-2024
@@ -88,8 +87,8 @@ Add `<signal.h>` with standard `sigaction` and `kill` signatures, reject
 :status: done
 :traces: BDR_0003, ADR_0003, SWR_LIBC_0002, SWR_LIBC_0003, SWR_DOCS_0003
 
-Remove `<sys/microkernel.h>` leakage from `<unistd.h>`, define `_POSIX_VERSION`
-and `_POSIX2_VERSION` as `202405L`, add `<errno.h>` with thread-local `errno`,
-and add the standalone header compilation gate ({need}`SWR_LIBC_0002`,
-{need}`SWR_LIBC_0003`, {need}`SWR_DOCS_0003`).
+Remove `<sys/microkernel.h>` leakage from `<unistd.h>` and set `_POSIX_VERSION`
+and `_POSIX2_VERSION` to `202405L`. Add `<errno.h>` with thread-local `errno`
+and the standalone header gate ({need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0003`,
+{need}`SWR_DOCS_0003`).
 ```

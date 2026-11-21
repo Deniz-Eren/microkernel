@@ -20,12 +20,11 @@ through `tests/test_runner.py` ({need}`SYS_LIBC_0001`, {need}`SWR_LIBC_0001`).
 :tags: unit
 :verifies: SWR_LIBC_0002, SWR_LIBC_0003
 
-Verified by CTest `posix.headers` running `PosixHeaderMatrixTests` in
-`tests/posix/test_headers.py`, compiling each provided Issue 8 header standalone
-under `-std=c17 -D_POSIX_C_SOURCE=202405L -Wall -Wextra -Werror -pedantic` and
-`-D_XOPEN_SOURCE=800`, and checking `_POSIX_VERSION`, `<unistd.h>` namespace
-isolation, and `<errno.h>` lvalue/constants ({need}`SWR_LIBC_0002`,
-{need}`SWR_LIBC_0003`).
+CTest `posix.headers` runs `PosixHeaderMatrixTests` in
+`tests/posix/test_headers.py`. It compiles each Issue 8 header standalone under
+`-std=c17 -D_POSIX_C_SOURCE=202405L` and `-D_XOPEN_SOURCE=800`. It also checks
+`_POSIX_VERSION`, `<unistd.h>` namespace isolation, and `<errno.h>` constants
+({need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0003`).
 ```
 
 ```{ver} Verify thread-local errno isolation and preservation in QEMU
@@ -34,8 +33,7 @@ isolation, and `<errno.h>` lvalue/constants ({need}`SWR_LIBC_0002`,
 :tags: integration
 :verifies: SWR_LIBC_0003
 
-Verified by `tests/sigtest/main.c` executed under headless QEMU via
-`tests/test_runner.py`, confirming per-thread `errno` starts at `0`, records
-`EBADF` on failed `write`, preserves `errno` across successful writes, and stays
-isolated between `main` and `worker` threads ({need}`SWR_LIBC_0003`).
+The headless QEMU harness `tests/test_runner.py` runs `tests/sigtest/main.c`. It
+checks that `errno` starts at `0`, records `EBADF` on bad `write`, stays intact
+on success, and stays isolated across threads ({need}`SWR_LIBC_0003`).
 ```

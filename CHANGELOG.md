@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Unified pre-commit quality gate (`tools/check_ste.py`, updated
+  `scripts/build-agent.sh`, and `scripts/install-hooks.sh`) enforcing full-repo
+  `clang-format`, `docs-traceability-setup` `check_text.py --root .`,
+  `asd-ste100` `ste_check.py`, build, QEMU tests, `clang-tidy`, and CTest before
+  every commit (ADR-17).
 - Milestone 6 (`TSK_0004`) hardware interrupt, port I/O, and scatter-gather IPC
   syscalls: `SYS_INTR_ATTACH_EVENT` (`11`), `SYS_INTR_UNMASK` (`12`),
   `SYS_IOPL_SET` (`25`, `CAP_SYS_INTR`-guarded), `SYS_MSG_READV` (`8`), and

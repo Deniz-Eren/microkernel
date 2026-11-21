@@ -9,7 +9,6 @@ library.
 :satisfies: SYS_LIBC_0001
 :traces: ADR_0002
 
-The `libc` subsystem installs public headers into the sysroot and provides
-`crt0.o` and `libc.a` for all Ring 3 servers and test programs to satisfy C
-runtime requirements ({need}`SYS_LIBC_0001`).
+The `libc` subsystem installs public headers into the sysroot. It gives `crt0.o`
+and `libc.a` for all Ring 3 servers and test programs ({need}`SYS_LIBC_0001`).
 ```

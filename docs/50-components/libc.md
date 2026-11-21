@@ -10,10 +10,9 @@ thread-local `errno` storage.
 :satisfies: SWR_LIBC_0001, SWR_LIBC_0003
 
 `libc/crt/crt0.S` and `libc/src/` (`start.c`, `stdio.c`, `stdlib.c`, `string.c`,
-`unistd.c`) implement Ring 3 entry, `__sigreturn_trampoline`,
-`printf`/`snprintf`, heap allocation, string utilities, and `errno`-preserving
-syscall wrappers ({need}`ICD_LIBC_0001`, {need}`ICD_LIBC_0002`) for the C
-library subsystem ({need}`ARC_LIBC_0001`).
+`unistd.c`) give Ring 3 startup, `__sigreturn_trampoline`, `printf`, heap,
+string helpers, and `errno` wrappers ({need}`ICD_LIBC_0001`,
+{need}`ICD_LIBC_0002`, {need}`ARC_LIBC_0001`).
 ```
 
 ```{comp} Lock-free TID-indexed thread-local errno storage
@@ -22,8 +21,7 @@ library subsystem ({need}`ARC_LIBC_0001`).
 :refines: ARC_LIBC_0001, ICD_LIBC_0003
 :satisfies: SWR_LIBC_0003
 
-`libc/src/errno.c` implements `__errno_location()` over a fixed 64-slot atomic
-table indexed by the calling thread's kernel TID, providing lock-free and
-async-signal-safe per-thread `errno` ({need}`ICD_LIBC_0003`) for the C library
-subsystem ({need}`ARC_LIBC_0001`).
+`libc/src/errno.c` puts `__errno_location()` on a 64-slot atomic table keyed by
+kernel TID. It gives lock-free, async-signal-safe `errno` for each thread
+({need}`ICD_LIBC_0003`, {need}`ARC_LIBC_0001`).
 ```

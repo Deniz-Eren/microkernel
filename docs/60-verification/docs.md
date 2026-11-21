@@ -30,8 +30,8 @@ Verified by `CheckNeedsAuditTests` in
 :tags: unit
 :verifies: SWR_DOCS_0002
 
-Verified by `TagScanTests` in `tests/traceability/test_tag_scan.py`, covering
-comment-anchored tag extraction, repository scanning, and bidirectional
-detection of active `ICD_`, `COMP_`, and automated `VER_` items lacking code
-tags ({need}`SWR_DOCS_0002`).
+`TagScanTests` in `tests/traceability/test_tag_scan.py` checks comment-anchored
+tag extraction and repository scanning. It also checks bidirectional detection
+of active `ICD_`, `COMP_`, and `VER_` items with no code tags
+({need}`SWR_DOCS_0002`).
 ```

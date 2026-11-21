@@ -18,7 +18,7 @@ container.
 ## Setup
 
 1. Install Podman on the host. The container is the only place where the build
-   tools run; the host needs only Podman, git, and bash.
+   tools run. The host needs only Podman, git, and bash.
 2. Run one command. On the first run it makes the container image, then it
    configures the build directory:
 

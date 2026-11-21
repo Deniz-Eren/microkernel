@@ -91,7 +91,7 @@ SOFTWARE.
 * **Role:** boot loader. `grub-mkrescue` makes the bootable ISO in build stage
   4.
 * **Source:** [gnu.org/software/grub](https://www.gnu.org/software/grub)
-* **License:** GPL-3.0-or-later. Used as a build tool; GRUB code is not part of
+* **License:** GPL-3.0-or-later. Used as a build tool. GRUB code is not part of
   the kernel or the user programs.
 
 ### QEMU

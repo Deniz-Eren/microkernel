@@ -91,5 +91,5 @@ Each human-authored source file starts with a Doxygen header block matching
 **Exclusions:** markdown (`.md`, `.mdx`), `.gitignore`, license files, and files
 that cannot hold comments. The files in `sysroot/` are copies of the Clang
 freestanding headers. They keep the license of LLVM (see
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)); this project adds no headers
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)). This project adds no headers
 to them.

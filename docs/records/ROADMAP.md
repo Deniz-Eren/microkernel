@@ -32,10 +32,8 @@ traces: >
   SYS_MEM_0001, SYS_IPC_0001
 ---
 
-Achieve IEEE Std 1003.1-2024 Base conformance across headers, `errno`,
-cancellation points, signals, `pthread_*`, `sem_*`, monotonic clocks/timers,
-`mmap`, `pipe2`/`dup3`/`ppoll`, `aio_*`, and future XCU shell/utilities (XBD
-Chapter 12 and XCU Chapter 2, including `$'...'`, `set -o pipefail`, and `read
--d`) verified by automated conformance gates ({need}`BDR_0003`,
-{need}`ADR_0003`).
+Reach IEEE Std 1003.1-2024 Base conformance across headers, `errno`, signals,
+`pthread_*`, `sem_*`, clocks/timers, `mmap`, `pipe2`/`dup3`/`ppoll`, and
+`aio_*`. Cover future XCU shell utilities (`$'...'`, `set -o pipefail`, `read
+-d`) with automated gates ({need}`BDR_0003`, {need}`ADR_0003`).
 ```

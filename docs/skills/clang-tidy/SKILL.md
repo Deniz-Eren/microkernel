@@ -29,7 +29,7 @@ One file:
 ./scripts/env.sh bash -c "clang-tidy -p build --quiet <file>"
 ```
 
-`clang-tidy` takes one file per run; `run-clang-tidy` takes many and runs them
+`clang-tidy` takes one file per run. `run-clang-tidy` takes many and runs them
 in parallel.
 
 ## Suppression rules
