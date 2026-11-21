@@ -21,6 +21,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Removed volatile test and assertion counts from the `README.md` Mermaid
+  architecture diagram and workflow overview so the diagram stays focused on
+  tools and technologies.
 - Included the root `README.md` dynamically as the top section of the generated
   Sphinx-Needs HTML home page (`docs/index.md` via
   `config/sphinx/readme_include.py`) with automatic Sphinx link rewriting and

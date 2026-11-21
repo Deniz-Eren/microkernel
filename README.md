@@ -22,16 +22,16 @@ hardware emulation, and automated audits into one reproducible loop governed by
 ```mermaid
 flowchart TD
     AGENT["AI Engineering Agent (AGENTS.md + docs/skills)"]
-    BLUEPRINT["1. Blueprint & Traceability (POSIX.1-2024 + Sphinx-Needs)"]
-    FABRICATOR["2. Fabricator (Podman + LLVM/Clang + CMake/Ninja + GRUB ISO)"]
-    TESTBED["3. Testbed (Headless QEMU x86-64 q35 + COM1 serial)"]
-    GATES["4. Quality Gates (format, text, STE, clang-tidy, CTest 8/8)"]
+    BLUEPRINT["Blueprint & Traceability (POSIX.1-2024 + Sphinx-Needs + MyST)"]
+    FABRICATOR["Fabricator (Podman + LLVM/Clang + CMake/Ninja + GRUB ISO)"]
+    TESTBED["Testbed (Headless QEMU x86-64 q35 + COM1 serial + Python)"]
+    GATES["Quality Gates (clang-format, STE, clang-tidy, CTest, Sphinx -W)"]
 
-    AGENT -->|"1. Predict and update specs, headers, and code"| BLUEPRINT
-    BLUEPRINT -->|"2. Cross-compile 4-stage OS and Sphinx -W"| FABRICATOR
-    FABRICATOR -->|"3. Boot microkernel.iso and stream telemetry"| TESTBED
-    TESTBED -->|"4. Match 54 [OK] assertions and run CTest"| GATES
-    GATES -->|"5. Pass: commit via pre-commit / Fail: repair"| AGENT
+    AGENT -->|"Predict and update specs, headers, and code"| BLUEPRINT
+    BLUEPRINT -->|"Cross-compile OS image and build docs"| FABRICATOR
+    FABRICATOR -->|"Boot microkernel.iso and stream COM1 telemetry"| TESTBED
+    TESTBED -->|"Verify serial assertions and run CTest suites"| GATES
+    GATES -->|"Pass: commit via pre-commit / Fail: repair"| AGENT
 ```
 
 ### 1. The Blueprint and bidirectional traceability
@@ -82,11 +82,11 @@ assembly. The build runs inside the `microkernel-dev` Podman image
 **QEMU** (`x86-64` `q35`, Local APIC, IOAPIC, CMOS RTC) boots
 `build/microkernel.iso` headlessly inside the container with no KVM requirement.
 The Python harness (`tests/test_runner.py`) reads `COM1` serial output and
-asserts 54 ordered `[OK]` patterns. The suite tests boot, W^X/COW faults, IPC
-name lookup, signals, Ring 3 IRQ 8 driver pulses, clocks/timers, and
-pthreads/TLS. It also tests `fork`/`execve`/`pipe2`/`ppoll`, `<aio.h>`, deferred
-cancellation, `<stdio.h>` locks, and Issue 8 C17 `libc`. Any kernel panic or
-missing pattern exits with code 1.
+asserts ordered `[OK]` patterns. The suite tests boot, W^X/COW faults, IPC name
+lookup, signals, Ring 3 IRQ 8 driver pulses, clocks/timers, and pthreads/TLS. It
+also tests `fork`/`execve`/`pipe2`/`ppoll`, `<aio.h>`, deferred cancellation,
+`<stdio.h>` locks, and Issue 8 C17 `libc`. Any kernel panic or missing pattern
+exits with code 1.
 
 ### 4. Quality gates and the agent workflow
 
@@ -103,10 +103,10 @@ gates:
 3. **Controlled English:** `tools/check_ste.py --root .` checks ASD-STE100 Issue
    9 compliance across `README.md` and `docs/`.
 4. **Build and docs:** Four-stage cross-build plus clean Sphinx `-W` HTML build.
-5. **Hardware testbed:** Headless QEMU serial suite (`54 [OK]` assertions).
+5. **Hardware testbed:** Headless QEMU serial suite (`[OK]` assertions).
 6. **Static analysis:** `clang-tidy` across all C sources and headers using
    `build/compile_commands.json`.
-7. **CTest (`8/8`):** `posix.headers` (standalone C17 matrix under
+7. **CTest:** `posix.headers` (standalone C17 matrix under
    `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800`), `posix.symbol_diff`
    (Clang AST and `llvm-nm` diff against `issue8-manifest.tsv`),
    `posix.async_signal_safe` and `posix.cancellation` (`llvm-objdump -dr`
