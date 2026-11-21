@@ -113,6 +113,13 @@ SOFTWARE.
 * **Source:** [podman.io](https://podman.io)
 * **License:** Apache-2.0. Used as a host tool at development time.
 
+### Mermaid.js
+* **Role:** client-side diagram rendering for `mermaid` fences in the generated
+  Sphinx HTML documentation (loaded via jsDelivr CDN with plain-text `<pre>`
+  fallback when offline).
+* **Source:** [mermaid.js.org](https://mermaid.js.org)
+* **License:** MIT License.
+
 [cc-src]: https://www.conventionalcommits.org/en/v1.0.0/
 [agentskills-src]:
   https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx

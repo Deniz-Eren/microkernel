@@ -39,6 +39,7 @@ extensions = [
     "myst_parser",
     "sphinx_needs",
     "need_tag_check",
+    "readme_include",
 ]
 
 _graphviz_mode = CONFIG["build"]["graphviz"]
@@ -55,6 +56,8 @@ def setup(app: object) -> None:
         app.tags.add("has_graphviz")
 
 myst_enable_extensions = ["colon_fence"]
+myst_fence_as_directive = ["mermaid"]
+myst_heading_anchors = 2
 
 exclude_patterns = [
     "README.md",

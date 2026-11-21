@@ -21,6 +21,10 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Included the root `README.md` dynamically as the top section of the generated
+  Sphinx-Needs HTML home page (`docs/index.md` via
+  `config/sphinx/readme_include.py`) with automatic Sphinx link rewriting and
+  Mermaid diagram rendering.
 - Updated `README.md` to document the closed-loop AI agent development cycle
   (Blueprint & bidirectional Sphinx-Needs traceability, Podman/LLVM Fabricator,
   headless QEMU Testbed, and automated Quality Gates) with a Mermaid flowchart.
