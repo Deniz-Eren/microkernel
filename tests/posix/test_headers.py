@@ -9,7 +9,7 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002
+# need:: VER_LIBC_0002 VER_LIBC_0004 VER_SIG_0003 VER_MEM_0002
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
 # need:: VER_IPC_0003 VER_IPC_0004
 
@@ -399,6 +399,44 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"aio.h check failed:\n{err}")
+
+    def test_cancellation_and_stdio_locking_headers(self) -> None:
+        src = "\n".join(
+            (
+                "#include <pthread.h>",
+                "#include <stdio.h>",
+                "static void __noop_cleanup(void *p) { (void)p; }",
+                "static int __check_cancel_stdio(void) {",
+                "    int st = 0;",
+                "    int ty = 0;",
+                "    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,",
+                "                                 &st);",
+                "    (void)pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED,",
+                "                                &ty);",
+                "    pthread_cleanup_push(__noop_cleanup, (void *)0);",
+                "    pthread_testcancel();",
+                "    pthread_cleanup_pop(0);",
+                "    (void)pthread_cancel((pthread_t)0);",
+                "    flockfile(stdout);",
+                "    (void)ftrylockfile(stderr);",
+                "    (void)fprintf(stdout, \"%d\", EOF);",
+                "    (void)fputs(\"\", stdout);",
+                "    (void)fputc('x', stdout);",
+                "    (void)putchar_unlocked('x');",
+                "    (void)fflush(stdout);",
+                "    funlockfile(stdout);",
+                "    return PTHREAD_CANCEL_ENABLE +",
+                "           PTHREAD_CANCEL_ASYNCHRONOUS +",
+                "           (PTHREAD_CANCELED != (void *)0);",
+                "}",
+                "int (*__cs_fn_ref)(void) = __check_cancel_stdio;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"cancel/stdio check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

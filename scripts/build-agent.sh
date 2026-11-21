@@ -83,6 +83,10 @@ if ! "$ENV" test --timeout 120 \
     --expect 'aio_read, aio_write, aio_suspend, and SIGEV_SIGNAL verified' \
     --expect 'aio_cancel, aio_suspend EAGAIN timeout, and aio_fsync verified' \
     --expect 'lio_listio LIO_WAIT and LIO_NOWAIT batch verified' \
+    --expect 'pthread_cancel woke cond_wait and ran cleanup' \
+    --expect 'PTHREAD_CANCEL_DISABLE, testcancel, and LIFO cleanup verified' \
+    --expect 'cancellation points read, ppoll, sem_wait, and clock_nanosleep' \
+    --expect 'flockfile/ftrylockfile/funlockfile serialized concurrent stdio' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

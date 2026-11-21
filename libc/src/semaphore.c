@@ -12,6 +12,7 @@
 #include <semaphore.h>
 #include <stdint.h>
 #include <sys/microkernel.h>
+#include "tls_internal.h"
 
 /* need:: COMP_PROC_0006 */
 
@@ -59,6 +60,7 @@ int sem_trywait(sem_t *sem) {
 
 int sem_clockwait(sem_t *restrict sem, clockid_t clock_id,
                   const struct timespec *restrict abstime) {
+    __libc_cancel_point();
     if (!sem || (clock_id != CLOCK_REALTIME && clock_id != CLOCK_MONOTONIC)) {
         errno = EINVAL;
         return -1;
@@ -77,6 +79,9 @@ int sem_clockwait(sem_t *restrict sem, clockid_t clock_id,
         long r = __sys5(SYS_FUTEX, (long)(uintptr_t)&sem->__val, FUTEX_WAIT, 0,
                         (long)(uintptr_t)abstime, (long)clock_id);
         (void)__atomic_fetch_sub(&sem->__waiters, 1u, __ATOMIC_RELAXED);
+        if (r == -EINTR) {
+            __libc_cancel_point();
+        }
         if (r == -ETIMEDOUT || r == -EINTR || r == -EINVAL) {
             errno = (int)(-r);
             return -1;

@@ -53,10 +53,10 @@ success and must obey the mandatory error sequence ({need}`SYS_LIBC_0001`).
 
 ```{swr} Supply mandatory POSIX.1-2024 thread cancellation points
 :id: SWR_LIBC_0004
-:status: draft
+:status: active
 :posix: XSH/2.9.5 (BASE)
 :derives: SYS_LIBC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0013
 
 Libc wrappers for mandatory cancellation points (`read`, `write`, `open`,
 `close`, `nanosleep`, `clock_nanosleep`, `ppoll`, `pthread_cond_wait`,

@@ -37,3 +37,16 @@ The headless QEMU harness `tests/test_runner.py` runs `tests/sigtest/main.c`. It
 checks that `errno` starts at `0`, records `EBADF` on bad `write`, stays intact
 on success, and stays isolated across threads ({need}`SWR_LIBC_0003`).
 ```
+
+```{ver} Verify POSIX.1-2024 thread cancellation points and stdio stream locks
+:id: VER_LIBC_0004
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0004
+
+The headless QEMU harness `tests/test_runner.py` runs `canceltest`. It checks
+`pthread_cancel` on `pthread_cond_wait`, `read`, `ppoll`, `sem_wait`, and
+`clock_nanosleep`, LIFO cleanup handlers, and recursive `flockfile` locking.
+CTest `posix.headers` checks `<pthread.h>` and `<stdio.h>`
+({need}`SWR_LIBC_0004`).
+```

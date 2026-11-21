@@ -1,6 +1,6 @@
 /**
  * @file     stdio.c
- * @brief    Freestanding Ring 3 printf, snprintf, puts, and putchar
+ * @brief    Thread-safe freestanding Ring 3 stdio formatting and stream locks
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -8,6 +8,7 @@
  *
  */
 
+#include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,6 +17,45 @@
 #include <unistd.h>
 
 /* need:: COMP_LIBC_0001 */
+
+struct __microkernel_file {
+    int fd;
+    pthread_mutex_t lock;
+};
+
+static struct __microkernel_file g_stdin_file = {
+    STDIN_FILENO, {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u}};
+static struct __microkernel_file g_stdout_file = {
+    STDOUT_FILENO, {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u}};
+static struct __microkernel_file g_stderr_file = {
+    STDERR_FILENO, {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u}};
+
+FILE *stdin = &g_stdin_file;
+FILE *stdout = &g_stdout_file;
+FILE *stderr = &g_stderr_file;
+
+void flockfile(FILE *file) {
+    if (file) {
+        (void)pthread_mutex_lock(&file->lock);
+    }
+}
+
+int ftrylockfile(FILE *file) {
+    if (!file) {
+        return -1;
+    }
+    return pthread_mutex_trylock(&file->lock) == 0 ? 0 : -1;
+}
+
+void funlockfile(FILE *file) {
+    if (file) {
+        (void)pthread_mutex_unlock(&file->lock);
+    }
+}
+
+static void stdio_unlock_cleanup(void *arg) {
+    funlockfile((FILE *)arg);
+}
 
 static const char g_digits[] = "0123456789abcdef";
 
@@ -125,7 +165,7 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
     }
 }
 
-int snprintf(char *buf, size_t n, const char *fmt, ...) {
+int snprintf(char *restrict buf, size_t n, const char *restrict fmt, ...) {
     struct sbuf b = {buf, buf + n - 1, 0};
     va_list ap;
     va_start(ap, fmt);
@@ -137,30 +177,91 @@ int snprintf(char *buf, size_t n, const char *fmt, ...) {
     return (int)b.written;
 }
 
-int printf(const char *fmt, ...) {
-    /* Per-call stack buffer: multiple threads may print concurrently. */
+static int vfprintf_locked(FILE *stream, const char *fmt, va_list ap) {
     char buf[1024];
     struct sbuf b = {buf, buf + sizeof(buf) - 1, 0};
-    va_list ap;
-    va_start(ap, fmt);
     kvformat(&b, fmt, ap);
-    va_end(ap);
     *b.p = '\0';
     size_t n = (size_t)(b.p - buf);
-    ssize_t r = write(1, buf, n);
+
+    ssize_t r = -1;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    r = write(stream->fd, buf, n);
+    pthread_cleanup_pop(1);
     return r < 0 ? -1 : (int)r;
 }
 
-int puts(const char *s) {
-    ssize_t r = write(1, s, strlen(s));
-    if (r >= 0) {
-        r = write(1, "\n", 1);
+int fprintf(FILE *restrict stream, const char *restrict fmt, ...) {
+    if (!stream) {
+        return -1;
     }
-    return r < 0 ? -1 : 0;
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vfprintf_locked(stream, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+int printf(const char *restrict fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vfprintf_locked(stdout, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+int fputs(const char *restrict s, FILE *restrict stream) {
+    if (!s || !stream) {
+        return EOF;
+    }
+    ssize_t r = -1;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    r = write(stream->fd, s, strlen(s));
+    pthread_cleanup_pop(1);
+    return r < 0 ? EOF : 0;
+}
+
+int puts(const char *s) {
+    if (!s) {
+        return EOF;
+    }
+    ssize_t r = -1;
+    flockfile(stdout);
+    pthread_cleanup_push(stdio_unlock_cleanup, stdout);
+    r = write(stdout->fd, s, strlen(s));
+    if (r >= 0) {
+        r = write(stdout->fd, "\n", 1);
+    }
+    pthread_cleanup_pop(1);
+    return r < 0 ? EOF : 0;
+}
+
+int putchar_unlocked(int c) {
+    char ch = (char)c;
+    ssize_t r = write(stdout->fd, &ch, 1);
+    return r < 0 ? EOF : (unsigned char)c;
+}
+
+int fputc(int c, FILE *stream) {
+    if (!stream) {
+        return EOF;
+    }
+    char ch = (char)c;
+    ssize_t r = -1;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    r = write(stream->fd, &ch, 1);
+    pthread_cleanup_pop(1);
+    return r < 0 ? EOF : (unsigned char)c;
 }
 
 int putchar(int c) {
-    char ch = (char)c;
-    ssize_t r = write(1, &ch, 1);
-    return r < 0 ? -1 : (unsigned char)c;
+    return fputc(c, stdout);
+}
+
+int fflush(FILE *stream) {
+    (void)stream;
+    return 0;
 }

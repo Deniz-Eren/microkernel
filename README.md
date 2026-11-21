@@ -87,10 +87,15 @@ The headers below show all user-space functions available at this time:
   `timer_gettime`, `timer_getoverrun`, and `timer_delete`
 - **POSIX threads and semaphores (`<pthread.h>`, `<semaphore.h>`):**
   `pthread_create`, `pthread_join`, `pthread_detach`, `pthread_exit`,
-  `pthread_once`, TSD keys, mutexes (`NORMAL`/`ERRORCHECK`/`RECURSIVE`),
+  `pthread_once`, TSD keys, deferred cancellation (`pthread_cancel`,
+  `pthread_setcancelstate`, `pthread_setcanceltype`, `pthread_testcancel`,
+  `pthread_cleanup_push`/`pop`), mutexes (`NORMAL`/`ERRORCHECK`/`RECURSIVE`),
   `pthread_cond_*`, `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, and
   `sem_*` (with async-signal-safe `sem_post`)
-- **Formatted I/O (`<stdio.h>`):** `printf`, `snprintf`, `puts`, `putchar`
+- **Formatted I/O (`<stdio.h>`):** `FILE` (`stdin`/`stdout`/`stderr`), recursive
+  stream locking (`flockfile`, `ftrylockfile`, `funlockfile`), `printf`,
+  `fprintf`, `snprintf`, `puts`, `fputs`, `putchar`, `putchar_unlocked`,
+  `fputc`, `fflush`
 - **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `exit`, `abort`,
   `strtol`, `atoi`
 - **Memory and strings (`<string.h>`):** `memset`, `memcpy`, `memmove`,
@@ -124,8 +129,8 @@ What you can build today:
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): `pthread` cancellation points,
-`<stdio.h>` stream locking, POSIX shell, file systems, and sockets. See
+Not available at this time (next tasks): `strlcpy`/`getentropy`/`<uchar.h>`,
+option-gated `SHM`/`ML`, file systems, and sockets. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
@@ -172,7 +177,7 @@ POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
 - `servers/` — the system servers (`sysproc`, `pipeserv`, `ipcserv`, `rtcdrv`)
 - `tests/` — the test harness (`test_runner.py`) and the test programs
   (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`, `pthreadtest`,
-  `forkpipetest`, `exechelper`, `aiotest`)
+  `forkpipetest`, `exechelper`, `aiotest`, `canceltest`)
 - `scripts/` — helper scripts for the environment, the build, and the agents
 - `docs/` — the project documents and the agent skills
 - `iso/` — the boot configuration for the GRUB boot loader
@@ -222,9 +227,9 @@ are in [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
 See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/HISTORY.md](docs/records/HISTORY.md) for the milestone plan and
 task records. The build completed milestones 1 to 6, POSIX clocks/timers, and
-pthreads/semaphores. It also completed `fork`/`execve`/`pipe2`/`dup3`/`ppoll`
-and `<aio.h>` asynchronous I/O. The next task adds `pthread` cancellation points
-and `<stdio.h>` locking.
+pthreads/semaphores. It also completed `fork`/`execve`/`pipe2`/`dup3`/`ppoll`,
+`<aio.h>`, thread cancellation points, and `<stdio.h>` locking. The next task
+adds Issue 8 Base functions (`strlcpy`, `getentropy`) and C11/C17 headers.
 
 ## Documentation
 

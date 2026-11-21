@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <sys/microkernel.h>
 #include <time.h>
+#include "tls_internal.h"
 
 /* need:: COMP_PROC_0004 */
 
@@ -44,8 +45,12 @@ int clock_settime(clockid_t clock_id, const struct timespec *tp) {
 
 int clock_nanosleep(clockid_t clock_id, int flags, const struct timespec *rqtp,
                     struct timespec *rmtp) {
+    __libc_cancel_point();
     long r = __sys4(SYS_CLOCK_NANOSLEEP, (long)clock_id, (long)flags,
                     (long)(uintptr_t)rqtp, (long)(uintptr_t)rmtp);
+    if (r == -EINTR) {
+        __libc_cancel_point();
+    }
     return (r < 0) ? (int)(-r) : 0;
 }
 

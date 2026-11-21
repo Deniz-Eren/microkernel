@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <sys/microkernel.h>
 #include <sys/thread.h>
+#include "tls_internal.h"
 
 /* need:: COMP_SIG_0002 */
 
@@ -103,6 +104,9 @@ int pthread_sigmask(int how, const sigset_t *restrict set,
 
     if (set) {
         kset = (uint32_t)*set;
+        if (how == SIG_BLOCK || how == SIG_SETMASK) {
+            kset &= ~(1u << LIBC_SIGCANCEL);
+        }
         set_ptr = &kset;
     }
     if (oset) {

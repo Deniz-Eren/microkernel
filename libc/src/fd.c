@@ -21,6 +21,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "fd_internal.h"
+#include "tls_internal.h"
 
 /* need:: COMP_IPC_0006 */
 
@@ -147,6 +148,7 @@ void __libc_fd_postfork_rollback(void) {
 }
 
 ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
+    __libc_cancel_point();
     if (fd < 0) {
         errno = EBADF;
         return -1;
@@ -178,6 +180,9 @@ ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
     req.flags = (uint32_t)e.status_flags;
 
     long r = pipe_rpc(&req, &rep);
+    if (r == -EINTR) {
+        __libc_cancel_point();
+    }
     if (r < 0) {
         errno = (int)(-r);
         return -1;
@@ -189,6 +194,7 @@ ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
 }
 
 ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
+    __libc_cancel_point();
     if (fd < 0) {
         errno = EBADF;
         return -1;
@@ -225,6 +231,9 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
     memcpy(req.data, buf, chunk);
 
     long r = pipe_rpc(&req, &rep);
+    if (r == -EINTR) {
+        __libc_cancel_point();
+    }
     if (r < 0) {
         if (r == -EPIPE) {
             (void)raise(SIGPIPE);
@@ -236,6 +245,7 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
 }
 
 int close(int fd) {
+    __libc_cancel_point();
     if (fd < 0) {
         errno = EBADF;
         return -1;
@@ -480,6 +490,7 @@ static void restore_sigmask(int swapped, const sigset_t *oldmask) {
 int ppoll(struct pollfd fds[], nfds_t nfds,
           const struct timespec *restrict timeout,
           const sigset_t *restrict sigmask) {
+    __libc_cancel_point();
     if (nfds > PIPE_POLL_MAX) {
         errno = EINVAL;
         return -1;
@@ -501,18 +512,20 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
     sigset_t oldmask = 0;
     int swapped = 0;
     if (sigmask) {
+        sigset_t eff_mask = *sigmask & ~(sigset_t)(1u << LIBC_SIGCANCEL);
         sigset_t pend = 0;
         if (__sys1(SYS_SIGPENDING, (long)(uintptr_t)&pend) == 0 &&
-            (pend & ~(*sigmask)) != 0u) {
-            (void)__sys3(SYS_SIGPROCMASK, SIG_SETMASK, (long)(uintptr_t)sigmask,
-                         (long)(uintptr_t)&oldmask);
+            (pend & ~eff_mask) != 0u) {
+            (void)__sys3(SYS_SIGPROCMASK, SIG_SETMASK,
+                         (long)(uintptr_t)&eff_mask, (long)(uintptr_t)&oldmask);
             (void)__sys3(SYS_SIGPROCMASK, SIG_SETMASK,
                          (long)(uintptr_t)&oldmask, 0);
+            __libc_cancel_point();
             errno = EINTR;
             return -1;
         }
-        long mr = __sys3(SYS_SIGPROCMASK, SIG_SETMASK, (long)(uintptr_t)sigmask,
-                         (long)(uintptr_t)&oldmask);
+        long mr = __sys3(SYS_SIGPROCMASK, SIG_SETMASK,
+                         (long)(uintptr_t)&eff_mask, (long)(uintptr_t)&oldmask);
         if (mr < 0) {
             errno = (int)(-mr);
             return -1;
@@ -565,6 +578,9 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
             long sr = __sys4(SYS_CLOCK_NANOSLEEP, CLOCK_MONOTONIC, 0,
                              (long)(uintptr_t)timeout, 0);
             restore_sigmask(swapped, &oldmask);
+            if (sr == -EINTR) {
+                __libc_cancel_point();
+            }
             if (sr < 0) {
                 errno = (int)(-sr);
                 return -1;
@@ -578,6 +594,9 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
                              (long)(uintptr_t)&lng, 0);
             if (sr < 0) {
                 restore_sigmask(swapped, &oldmask);
+                if (sr == -EINTR) {
+                    __libc_cancel_point();
+                }
                 errno = (int)(-sr);
                 return -1;
             }
@@ -598,6 +617,9 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
     long r = SendMsg(conn, &preq, sizeof(preq), &prep, sizeof(prep));
     if (r < 0) {
         restore_sigmask(swapped, &oldmask);
+        if (r == -EINTR) {
+            __libc_cancel_point();
+        }
         errno = (int)(-r);
         return -1;
     }

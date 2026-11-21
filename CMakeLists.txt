@@ -142,6 +142,7 @@ add_subdirectory(tests/timetest)
 add_subdirectory(tests/pthreadtest)
 add_subdirectory(tests/forkpipetest)
 add_subdirectory(tests/aiotest)
+add_subdirectory(tests/canceltest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

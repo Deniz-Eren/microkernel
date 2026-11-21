@@ -6,11 +6,12 @@ Domain `LIBC`: Public Ring 3 C headers grouped by POSIX.1-2024 interface area.
 :id: ICD_LIBC_0001
 :status: active
 :refines: ARC_LIBC_0001
-:satisfies: SWR_LIBC_0001, SWR_LIBC_0002
+:satisfies: SWR_LIBC_0001, SWR_LIBC_0002, SWR_LIBC_0004
 
-`libc/include/` gives `<stdio.h>`, `<stdlib.h>`, `<string.h>`, and
-`<sys/types.h>` installed into `sysroot/usr/include/` ({need}`ARC_LIBC_0001`,
-{need}`SWR_LIBC_0001`, {need}`SWR_LIBC_0002`).
+`libc/include/` gives `<stdio.h>` (`FILE`, `flockfile`, `ftrylockfile`,
+`funlockfile`), `<stdlib.h>`, `<string.h>`, and `<sys/types.h>` installed into
+`sysroot/usr/include/` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0001`,
+{need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0004`).
 ```
 
 ```{icd} POSIX.1-2024 unistd.h header and feature-test constants

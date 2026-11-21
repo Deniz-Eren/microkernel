@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0010 — Add pthread cancellation points and thread-safe <stdio.h> locking
+
+```{task} Add pthread cancellation points and thread-safe <stdio.h> locking
+:id: TSK_0010
+:status: done
+:traces: ADR_0003, ADR_0013, SWR_LIBC_0004
+
+Add `pthread_cancel`, `pthread_setcancelstate`, `pthread_setcanceltype`,
+`pthread_testcancel`, and `<stdio.h>` stream locking (`flockfile`,
+`funlockfile`) with QEMU and CTest verification ({need}`SWR_LIBC_0004`).
+```
+
 ### TSK_0009 — Implement POSIX.1-2024 Base asynchronous I/O (<aio.h>)
 
 ```{task} Implement POSIX.1-2024 Base asynchronous I/O (<aio.h>)

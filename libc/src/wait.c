@@ -11,16 +11,21 @@
 #include <errno.h>
 #include <sys/proc.h>
 #include <sys/wait.h>
+#include "tls_internal.h"
 
 /* need:: COMP_PROC_0003 */
 
 pid_t waitpid(pid_t pid, int *stat_loc, int options) {
+    __libc_cancel_point();
     if ((options & ~(WNOHANG | WUNTRACED)) != 0) {
         errno = EINVAL;
         return -1;
     }
     unsigned kopts = (options & WNOHANG) ? PROC_WAIT_NOHANG : 0u;
     long r = ProcWait((long)pid, stat_loc, kopts);
+    if (r == -EINTR) {
+        __libc_cancel_point();
+    }
     if (r < 0) {
         errno = (int)(-r);
         return -1;

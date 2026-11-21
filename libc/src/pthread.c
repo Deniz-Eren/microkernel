@@ -14,15 +14,35 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/microkernel.h>
+#include <sys/signal.h>
 #include <sys/thread.h>
 #include "tls_internal.h"
 
 /* need:: COMP_PROC_0005 */
 
+extern void __sigreturn_trampoline(void);
+
 #define PTHREAD_POOL_MAX 64
 #define RWLOCK_WRITER_BIT 0x80000000u
 
 static __pthread_tls_t g_tls_pool[PTHREAD_POOL_MAX];
+static __pthread_tls_t *find_tls_by_tid(pthread_t thread);
+
+static void sigcancel_handler(int sig) {
+    (void)sig;
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (!tls) {
+        return;
+    }
+    if (__atomic_load_n(&tls->cancel_pending, __ATOMIC_ACQUIRE) &&
+        !__atomic_load_n(&tls->cancel_disabled, __ATOMIC_ACQUIRE) &&
+        __atomic_load_n(&tls->cancel_async, __ATOMIC_ACQUIRE) &&
+        !__atomic_load_n(&tls->canceling, __ATOMIC_ACQUIRE)) {
+        __atomic_store_n(&tls->canceling, 1u, __ATOMIC_RELEASE);
+        __atomic_store_n(&tls->cancel_disabled, 1u, __ATOMIC_RELEASE);
+        pthread_exit(PTHREAD_CANCELED);
+    }
+}
 
 typedef struct {
     unsigned int used;
@@ -56,6 +76,107 @@ void __libc_init_main_tls(void) {
     tls->errno_val = 0;
     tls->used = 1u;
     (void)__sys1(SYS_THREAD_SET_FSBASE, (long)(uintptr_t)tls);
+
+    struct __k_sigaction kact = {
+        .handler = (uint64_t)(uintptr_t)sigcancel_handler,
+        .mask = 0u,
+        .flags = SA_NODEFER,
+    };
+    (void)__sys4(SYS_SIGACTION, (long)LIBC_SIGCANCEL, (long)(uintptr_t)&kact, 0,
+                 (long)(uintptr_t)__sigreturn_trampoline);
+}
+
+void __libc_cancel_point(void) {
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (!tls) {
+        return;
+    }
+    if (__atomic_load_n(&tls->cancel_pending, __ATOMIC_ACQUIRE) &&
+        !__atomic_load_n(&tls->cancel_disabled, __ATOMIC_ACQUIRE) &&
+        !__atomic_load_n(&tls->canceling, __ATOMIC_ACQUIRE)) {
+        __atomic_store_n(&tls->canceling, 1u, __ATOMIC_RELEASE);
+        __atomic_store_n(&tls->cancel_disabled, 1u, __ATOMIC_RELEASE);
+        pthread_exit(PTHREAD_CANCELED);
+    }
+}
+
+void __pthread_cleanup_push(struct __pthread_cleanup_frame *frame,
+                            void (*routine)(void *), void *arg) {
+    __pthread_tls_t *tls = __libc_tls_self();
+    frame->__routine = routine;
+    frame->__arg = arg;
+    if (tls) {
+        frame->__prev = tls->cleanup_head;
+        tls->cleanup_head = frame;
+    } else {
+        frame->__prev = (struct __pthread_cleanup_frame *)0;
+    }
+}
+
+void __pthread_cleanup_pop(struct __pthread_cleanup_frame *frame, int execute) {
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (tls && tls->cleanup_head == frame) {
+        tls->cleanup_head = frame->__prev;
+    }
+    if (execute && frame->__routine) {
+        frame->__routine(frame->__arg);
+    }
+}
+
+int pthread_cancel(pthread_t thread) {
+    __pthread_tls_t *tls = find_tls_by_tid(thread);
+    if (!tls) {
+        return ESRCH;
+    }
+    __atomic_store_n(&tls->cancel_pending, 1u, __ATOMIC_RELEASE);
+    (void)__sys3(SYS_THREAD_INJECT_SIG, 0, (long)tls->tid,
+                 (long)LIBC_SIGCANCEL);
+    return 0;
+}
+
+int pthread_setcancelstate(int state, int *oldstate) {
+    if (state != PTHREAD_CANCEL_ENABLE && state != PTHREAD_CANCEL_DISABLE) {
+        return EINVAL;
+    }
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (!tls) {
+        return EINVAL;
+    }
+    unsigned int next = (state == PTHREAD_CANCEL_DISABLE) ? 1u : 0u;
+    unsigned int prev =
+        __atomic_exchange_n(&tls->cancel_disabled, next, __ATOMIC_ACQ_REL);
+    if (oldstate) {
+        *oldstate = prev ? PTHREAD_CANCEL_DISABLE : PTHREAD_CANCEL_ENABLE;
+    }
+    if (next == 0u && __atomic_load_n(&tls->cancel_async, __ATOMIC_ACQUIRE)) {
+        __libc_cancel_point();
+    }
+    return 0;
+}
+
+int pthread_setcanceltype(int type, int *oldtype) {
+    if (type != PTHREAD_CANCEL_DEFERRED &&
+        type != PTHREAD_CANCEL_ASYNCHRONOUS) {
+        return EINVAL;
+    }
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (!tls) {
+        return EINVAL;
+    }
+    unsigned int next = (type == PTHREAD_CANCEL_ASYNCHRONOUS) ? 1u : 0u;
+    unsigned int prev =
+        __atomic_exchange_n(&tls->cancel_async, next, __ATOMIC_ACQ_REL);
+    if (oldtype) {
+        *oldtype = prev ? PTHREAD_CANCEL_ASYNCHRONOUS : PTHREAD_CANCEL_DEFERRED;
+    }
+    if (next != 0u) {
+        __libc_cancel_point();
+    }
+    return 0;
+}
+
+void pthread_testcancel(void) {
+    __libc_cancel_point();
 }
 
 static __pthread_tls_t *alloc_tls_slot(void) {
@@ -180,6 +301,14 @@ int pthread_create(pthread_t *restrict thread,
 void pthread_exit(void *value_ptr) {
     __pthread_tls_t *tls = __libc_tls_self();
     if (tls) {
+        __atomic_store_n(&tls->cancel_disabled, 1u, __ATOMIC_RELEASE);
+        while (tls->cleanup_head) {
+            struct __pthread_cleanup_frame *f = tls->cleanup_head;
+            tls->cleanup_head = f->__prev;
+            if (f->__routine) {
+                f->__routine(f->__arg);
+            }
+        }
         run_tsd_destructors(tls);
         tls->retval = value_ptr;
         if (__atomic_load_n(&tls->detached, __ATOMIC_ACQUIRE)) {
@@ -195,6 +324,7 @@ void pthread_exit(void *value_ptr) {
 }
 
 int pthread_join(pthread_t thread, void **value_ptr) {
+    __libc_cancel_point();
     if (pthread_equal(thread, pthread_self())) {
         return EDEADLK;
     }
@@ -206,8 +336,11 @@ int pthread_join(pthread_t thread, void **value_ptr) {
         return EINVAL;
     }
     while (__atomic_load_n(&tls->done, __ATOMIC_ACQUIRE) == 0u) {
-        (void)futex_wait(&tls->done, 0u, (const struct timespec *)0,
-                         CLOCK_MONOTONIC);
+        long r = futex_wait(&tls->done, 0u, (const struct timespec *)0,
+                            CLOCK_MONOTONIC);
+        if (r == -EINTR) {
+            __libc_cancel_point();
+        }
     }
     if (value_ptr) {
         *value_ptr = tls->retval;
@@ -515,6 +648,7 @@ int pthread_cond_destroy(pthread_cond_t *cond) {
 int pthread_cond_clockwait(pthread_cond_t *restrict cond,
                            pthread_mutex_t *restrict mutex, clockid_t clock_id,
                            const struct timespec *restrict abstime) {
+    __libc_cancel_point();
     if (!cond || !mutex ||
         (clock_id != CLOCK_REALTIME && clock_id != CLOCK_MONOTONIC)) {
         return EINVAL;
@@ -525,7 +659,11 @@ int pthread_cond_clockwait(pthread_cond_t *restrict cond,
         return urc;
     }
     long r = futex_wait(&cond->__seq, seq, abstime, clock_id);
+    /* POSIX: re-acquire mutex before acting upon cancellation or returning. */
     (void)pthread_mutex_lock(mutex);
+    if (r == -EINTR) {
+        __libc_cancel_point();
+    }
     if (r == -ETIMEDOUT) {
         return ETIMEDOUT;
     }

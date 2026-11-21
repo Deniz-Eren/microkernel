@@ -19,6 +19,7 @@
 #include <sys/thread.h>
 #include <time.h>
 #include <unistd.h>
+#include "tls_internal.h"
 
 /* need:: COMP_IPC_0007 */
 
@@ -363,6 +364,7 @@ int aio_cancel(int fildes, struct aiocb *aiocbp) {
 
 int aio_suspend(const struct aiocb *const list[], int nent,
                 const struct timespec *timeout) {
+    __libc_cancel_point();
     if (nent < 0 || (nent > 0 && !list)) {
         errno = EINVAL;
         return -1;
@@ -417,6 +419,7 @@ int aio_suspend(const struct aiocb *const list[], int nent,
         long r = __sys5(SYS_FUTEX, (long)(uintptr_t)&g_done_seq, FUTEX_WAIT,
                         (long)seq, (long)(uintptr_t)dl_ptr, CLOCK_MONOTONIC);
         if (r == -EINTR) {
+            __libc_cancel_point();
             errno = EINTR;
             return -1;
         }

@@ -30,6 +30,18 @@
 
 #define PTHREAD_BARRIER_SERIAL_THREAD (-1)
 
+#define PTHREAD_CANCEL_ENABLE 0
+#define PTHREAD_CANCEL_DISABLE 1
+#define PTHREAD_CANCEL_DEFERRED 0
+#define PTHREAD_CANCEL_ASYNCHRONOUS 1
+#define PTHREAD_CANCELED ((void *)(-1))
+
+struct __pthread_cleanup_frame {
+    void (*__routine)(void *);
+    void *__arg;
+    struct __pthread_cleanup_frame *__prev;
+};
+
 typedef struct {
     int __detachstate;
 } pthread_attr_t;
@@ -101,6 +113,25 @@ _Noreturn void pthread_exit(void *value_ptr);
 pthread_t pthread_self(void);
 int pthread_equal(pthread_t t1, pthread_t t2);
 int pthread_once(pthread_once_t *once_control, void (*init_routine)(void));
+
+int pthread_cancel(pthread_t thread);
+int pthread_setcancelstate(int state, int *oldstate);
+int pthread_setcanceltype(int type, int *oldtype);
+void pthread_testcancel(void);
+void __pthread_cleanup_push(struct __pthread_cleanup_frame *__frame,
+                            void (*__routine)(void *), void *__arg);
+void __pthread_cleanup_pop(struct __pthread_cleanup_frame *__frame,
+                           int __execute);
+
+#define pthread_cleanup_push(routine, arg)                                     \
+    do {                                                                       \
+        struct __pthread_cleanup_frame __cl_frame;                             \
+    __pthread_cleanup_push(&__cl_frame, (routine), (arg))
+
+#define pthread_cleanup_pop(execute)                                           \
+    __pthread_cleanup_pop(&__cl_frame, (execute));                             \
+    }                                                                          \
+    while (0)
 
 int pthread_key_create(pthread_key_t *key, void (*destructor)(void *));
 int pthread_key_delete(pthread_key_t key);

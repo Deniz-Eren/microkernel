@@ -32,6 +32,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- POSIX.1-2024 Base thread cancellation points and recursive `<stdio.h>` stream
+  locking (`SWR_LIBC_0004`, `ADR_0013`): `pthread_cancel`,
+  `pthread_setcancelstate`, `pthread_setcanceltype`, `pthread_testcancel`,
+  `pthread_cleanup_push`/`pop`, internal `LIBC_SIGCANCEL` wakeup across
+  `pthread_cond_wait`, `read`, `write`, `close`, `ppoll`, `sem_wait`,
+  `clock_nanosleep`, `waitpid`, `aio_suspend`, and `pthread_join`, plus `FILE`
+  (`stdin`/`stdout`/`stderr`), `flockfile`, `ftrylockfile`, `funlockfile`,
+  `fprintf`, `fputs`, `fputc`, `putchar_unlocked`, `fflush`, and QEMU
+  `tests/canceltest`.
 - POSIX.1-2024 Base asynchronous I/O (`SWR_IPC_0005`, `ADR_0012`): `<aio.h>`,
   `O_SYNC`/`O_DSYNC` in `<fcntl.h>`, Ring 3 worker-thread engine
   (`libc/src/aio.c`) with `aio_read`, `aio_write`, `aio_fsync`, `aio_cancel`,

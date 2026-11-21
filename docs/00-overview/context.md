@@ -80,8 +80,9 @@ and clients resolve them. All other system services, such as the echo server
   `/dev/rtc`, using `CAP_SYS_INTR` port I/O and IOAPIC IRQ 8 pulses.
 - `tests/`: `test_runner.py` (headless QEMU serial assertion harness), Ring 3
   test binaries (`ipccli`, `sigtest`, `proctest`, `procchild`, `drvtest`,
-  `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`), `posix/`
-  (`posix.headers`, `posix.async_signal_safe`), and `traceability/` unit tests.
+  `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`,
+  `canceltest`), `posix/` (`posix.headers`, `posix.async_signal_safe`), and
+  `traceability/` unit tests.
 - `config/sphinx/`, `tools/`: Sphinx-Needs model (`needs_model.py`), code tag
   checker (`need_tag_check.py`), `check_needs_audit.py`, and `check_ste.py`.
 - `scripts/`: `env.sh` (Podman workflow), `enter-dev.sh` (interactive shell),
