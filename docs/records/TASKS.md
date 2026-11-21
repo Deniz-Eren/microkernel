@@ -59,6 +59,19 @@ Implement Ring 3 POSIX `sh` and minimal core utilities (`echo`, `cat`, `ls`,
 quoting, `set -o pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
 ```
 
+### TSK_0021 — Add ACPI MADT/SPCR discovery and parameterized Ring 3 drivers
+
+```{task} Add ACPI MADT/SPCR discovery and parameterized Ring 3 drivers
+:id: TSK_0021
+:status: open
+:traces: ADR_0003, SWR_BOOT_0003, SWR_IPC_0008
+
+Parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides (ISOs) plus `SPCR`
+serial configuration. Parameterize `ttyserv` (`-p`/`-i`) and `rtcdrv` instead of
+hardcoded ISA addresses, and route user `stdout`/`stderr` TX (`OPOST`/`ONLCR`)
+through `ttyserv` ({need}`SWR_BOOT_0003`).
+```
+
 ### TSK_0020 — Add pselect and end-to-end cross-subsystem POSIX hardening
 
 ```{task} Add pselect and end-to-end cross-subsystem POSIX hardening

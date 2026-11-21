@@ -21,6 +21,10 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Added follow-up task `TSK_0021` (`SWR_BOOT_0003`) to `docs/records/TASKS.md`
+  for ACPI `MADT`/`SPCR` hardware discovery, IOAPIC ISO routing, parameterized
+  Ring 3 `ttyserv`/`rtcdrv`, and user `OPOST` TX ownership before final
+  hardening (`TSK_0020`).
 - Refined and dependency-ordered the remaining backlog in
   `docs/records/TASKS.md` (`TSK_0012` -> `TSK_0016` -> `TSK_0019` -> `TSK_0018`
   -> `TSK_0017` -> `TSK_0020`), adding draft requirements `SWR_LIBC_0007`
