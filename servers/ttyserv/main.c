@@ -13,6 +13,7 @@
 #include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/fd.h>
 #include <sys/intr.h>
@@ -25,8 +26,11 @@
 
 /* need:: COMP_IPC_0010 */
 
-#define COM1_BASE 0x3F8u
-#define COM1_IRQ 4u
+#define DEFAULT_UART_BASE 0x3F8u
+#define DEFAULT_UART_IRQ 4u
+
+static uint16_t g_uart_base = (uint16_t)DEFAULT_UART_BASE;
+static uint32_t g_uart_irq = DEFAULT_UART_IRQ;
 
 #define EDIT_CAP 512u
 #define READY_CAP 2048u
@@ -224,7 +228,24 @@ static void commit_edit_buffer(void) {
     g_edit_len = 0u;
 }
 
-static void tty_feed_byte(uint8_t c) {
+static void uart_putc_raw(uint8_t c) {
+    for (uint32_t spin = 0; spin < 100000u; spin++) {
+        if (port_inb((uint16_t)(g_uart_base + 5u)) & 0x20u) {
+            break;
+        }
+    }
+    port_outb(g_uart_base, c);
+}
+
+static void tty_tx_byte(uint8_t c) {
+    if ((g_tio.c_oflag & OPOST) != 0u && (g_tio.c_oflag & ONLCR) != 0u &&
+        c == '\n') {
+        uart_putc_raw('\r');
+    }
+    uart_putc_raw(c);
+}
+
+static void tty_feed_byte(uint8_t c, int allow_echo) {
     if (g_tio.c_iflag & ISTRIP) {
         c &= 0x7Fu;
     }
@@ -239,15 +260,31 @@ static void tty_feed_byte(uint8_t c) {
         c = '\r';
     }
 
+    int do_echo = allow_echo && ((g_tio.c_lflag & ECHO) != 0u);
+
     if (g_tio.c_lflag & ICANON) {
         if (c == g_tio.c_cc[VERASE] || c == '\b') {
             if (g_edit_len > 0u) {
                 g_edit_len--;
+                if (do_echo && (g_tio.c_lflag & ECHOE) != 0u) {
+                    uart_putc_raw('\b');
+                    uart_putc_raw(' ');
+                    uart_putc_raw('\b');
+                }
             }
             return;
         }
         if (c == g_tio.c_cc[VKILL]) {
-            g_edit_len = 0u;
+            if (do_echo && (g_tio.c_lflag & ECHOE) != 0u) {
+                while (g_edit_len > 0u) {
+                    g_edit_len--;
+                    uart_putc_raw('\b');
+                    uart_putc_raw(' ');
+                    uart_putc_raw('\b');
+                }
+            } else {
+                g_edit_len = 0u;
+            }
             return;
         }
         if (c == g_tio.c_cc[VEOF]) {
@@ -261,6 +298,9 @@ static void tty_feed_byte(uint8_t c) {
         }
         if (g_edit_len < EDIT_CAP) {
             g_edit[g_edit_len++] = c;
+            if (do_echo) {
+                tty_tx_byte(c);
+            }
         }
         int is_eol = (c == '\n') ||
                      (g_tio.c_cc[VEOL] != 0u && c == g_tio.c_cc[VEOL]) ||
@@ -271,28 +311,31 @@ static void tty_feed_byte(uint8_t c) {
         }
     } else {
         ready_push(c);
+        if (do_echo) {
+            tty_tx_byte(c);
+        }
         wake_waiters();
     }
 }
 
 static void drain_com1_rx(int feed_ldisc) {
-    while (port_inb((uint16_t)(COM1_BASE + 5u)) & 0x01u) {
-        uint8_t b = port_inb((uint16_t)COM1_BASE);
+    while (port_inb((uint16_t)(g_uart_base + 5u)) & 0x01u) {
+        uint8_t b = port_inb(g_uart_base);
         if (feed_ldisc) {
-            tty_feed_byte(b);
+            tty_feed_byte(b, 1);
         }
     }
 }
 
 static int run_com1_irq4_selftest(int chan) {
     /* 1-byte FIFO trigger, clear FIFOs, enable Received Data Available IRQ. */
-    port_outb((uint16_t)(COM1_BASE + 2u), 0x07u);
+    port_outb((uint16_t)(g_uart_base + 2u), 0x07u);
     drain_com1_rx(0);
-    port_outb((uint16_t)(COM1_BASE + 1u), 0x01u);
+    port_outb((uint16_t)(g_uart_base + 1u), 0x01u);
 
-    /* Brief 16550A loopback (MCR bit 4) to verify IOAPIC IRQ 4 -> IPC pulse. */
-    port_outb((uint16_t)(COM1_BASE + 4u), 0x1Bu);
-    port_outb((uint16_t)COM1_BASE, 0x5Au);
+    /* Brief 16550A loopback (MCR bit 4) to verify IOAPIC IRQ -> IPC pulse. */
+    port_outb((uint16_t)(g_uart_base + 4u), 0x1Bu);
+    port_outb(g_uart_base, 0x5Au);
 
     int ok = 0;
     for (int tries = 0; tries < 8; tries++) {
@@ -300,9 +343,9 @@ static int run_com1_irq4_selftest(int chan) {
         ipc_recv_info_t info = {0};
         long msgid = ReceiveMsg(chan, &pulse, sizeof(pulse), &info);
         if (msgid == 0 && pulse.code == PULSE_CODE_IRQ &&
-            pulse.value == COM1_IRQ) {
-            while (port_inb((uint16_t)(COM1_BASE + 5u)) & 0x01u) {
-                if (port_inb((uint16_t)COM1_BASE) == 0x5Au) {
+            pulse.value == g_uart_irq) {
+            while (port_inb((uint16_t)(g_uart_base + 5u)) & 0x01u) {
+                if (port_inb(g_uart_base) == 0x5Au) {
                     ok = 1;
                 }
             }
@@ -310,9 +353,9 @@ static int run_com1_irq4_selftest(int chan) {
         }
     }
 
-    /* Restore normal COM1 operation (DTR | RTS | OUT2, no loopback). */
-    port_outb((uint16_t)(COM1_BASE + 4u), 0x0Bu);
-    (void)IntrUnmask(COM1_IRQ);
+    /* Restore normal UART operation (DTR | RTS | OUT2, no loopback). */
+    port_outb((uint16_t)(g_uart_base + 4u), 0x0Bu);
+    (void)IntrUnmask(g_uart_irq);
     return ok ? 0 : -1;
 }
 
@@ -403,7 +446,21 @@ static void handle_poll(uint32_t msgid, const tty_req_t *req) {
     (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    for (int i = 1; i + 1 < argc; i++) {
+        if (strcmp(argv[i], "-p") == 0) {
+            unsigned long p = strtoul(argv[++i], NULL, 0);
+            if (p > 0UL && p <= 0xFFF8UL) {
+                g_uart_base = (uint16_t)p;
+            }
+        } else if (strcmp(argv[i], "-i") == 0) {
+            unsigned long irq = strtoul(argv[++i], NULL, 0);
+            if (irq > 0UL && irq < 24UL) {
+                g_uart_irq = (uint32_t)irq;
+            }
+        }
+    }
+
     init_default_termios();
 
     if (IOPLSet(3) != 0) {
@@ -415,15 +472,19 @@ int main(void) {
         printf("[FAIL] ttyserv CreateChannel failed\n");
         return 1;
     }
-    if (AttachIntrEvent(COM1_IRQ, chan, PULSE_CODE_IRQ, COM1_IRQ) != 0) {
-        printf("[FAIL] ttyserv AttachIntrEvent(4) failed\n");
+    if (AttachIntrEvent(g_uart_irq, chan, PULSE_CODE_IRQ, g_uart_irq) != 0) {
+        printf("[FAIL] ttyserv AttachIntrEvent(%u) failed\n", g_uart_irq);
         return 1;
     }
     if (run_com1_irq4_selftest(chan) != 0) {
-        printf("[FAIL] ttyserv COM1 IRQ 4 loopback self-test failed\n");
+        printf("[FAIL] ttyserv UART IRQ %u loopback self-test failed\n",
+               g_uart_irq);
         return 1;
     }
-    printf("[OK] ttyserv handled COM1 IRQ 4 pulse via IOAPIC\n");
+    printf("[OK] ttyserv handled COM1 IRQ %u pulse via IOAPIC\n", g_uart_irq);
+    printf("[OK] ttyserv configured UART port=0x%x gsi=%u (OPOST/ECHO "
+           "active)\n",
+           (unsigned)g_uart_base, g_uart_irq);
 
     if (register_tty_service(chan) != 0) {
         printf("[FAIL] ttyserv failed to register /dev/tty\n");
@@ -450,9 +511,9 @@ int main(void) {
         }
         if (msgid == 0) {
             const ipc_pulse_t *pulse = (const ipc_pulse_t *)(const void *)&req;
-            if (pulse->code == PULSE_CODE_IRQ && pulse->value == COM1_IRQ) {
+            if (pulse->code == PULSE_CODE_IRQ && pulse->value == g_uart_irq) {
                 drain_com1_rx(1);
-                (void)IntrUnmask(COM1_IRQ);
+                (void)IntrUnmask(g_uart_irq);
             } else if (pulse->code == PULSE_CODE_TTY_TICK) {
                 wake_waiters();
             }
@@ -465,9 +526,8 @@ int main(void) {
             break;
         case TTY_OP_WRITE: {
             uint32_t len = req.len > TTY_DATA_MAX ? TTY_DATA_MAX : req.len;
-            if (len > 0u) {
-                (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)req.u.data,
-                             (long)len);
+            for (uint32_t i = 0; i < len; i++) {
+                tty_tx_byte(req.u.data[i]);
             }
             rep.err = 0;
             rep.len = len;
@@ -520,7 +580,7 @@ int main(void) {
         case TTY_OP_INJECT: {
             uint32_t len = req.len > TTY_DATA_MAX ? TTY_DATA_MAX : req.len;
             for (uint32_t i = 0; i < len; i++) {
-                tty_feed_byte(req.u.data[i]);
+                tty_feed_byte(req.u.data[i], 0);
             }
             rep.err = 0;
             rep.len = len;

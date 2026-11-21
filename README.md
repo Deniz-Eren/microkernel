@@ -131,8 +131,44 @@ Your host needs only Podman. The first `./scripts/env.sh` run builds the pinned
     --expect 'signal handler entered'
 ./scripts/env.sh ctest --test-dir build --output-on-failure
 
-# Open an interactive shell inside the container
+# Boot Microkernel interactively into the Ring 3 POSIX shell (Ctrl-A X to exit)
+./scripts/env.sh run
+
+# Open a development bash shell inside the Podman container
 ./scripts/enter-dev.sh
+```
+
+### Running Microkernel interactively in QEMU
+
+Build the OS image once and launch an interactive serial session straight into
+the Ring 3 POSIX shell (`/boot/sh`):
+
+```bash
+./scripts/env.sh build
+./scripts/env.sh run
+```
+
+`./scripts/env.sh run` builds `build/microkernel-shell.iso` with the Multiboot2
+command line `init=sh`. It starts the Ring 3 system servers (`sysproc`,
+`ttyserv`, `pipeserv`, `vfsserv`, `sockserv`, `rtcdrv`) plus `/boot/sh` and
+connects `COM1` to your terminal (`-serial mon:stdio`). Once the `$ ` prompt
+appears, you can run POSIX commands directly:
+
+```sh
+ls /boot
+echo hello microkernel > /tmp/note.txt && cat /tmp/note.txt
+cd /tmp && pwd
+set -o pipefail; /boot/false | /boot/true; echo $?
+```
+
+Press `Ctrl-A` followed by `X` to exit QEMU cleanly. If `qemu-system-x86_64` is
+installed directly on your host, you can also boot `build/microkernel-shell.iso`
+without Podman:
+
+```bash
+qemu-system-x86_64 -machine q35 -cpu qemu64,+smap,+smep -m 256M -smp 2 \
+    -cdrom build/microkernel-shell.iso -serial mon:stdio -display none \
+    -no-reboot
 ```
 
 For full build and container procedures, see the [cmake
@@ -310,9 +346,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): ACPI `MADT`/`SPCR` driver discovery and
-`OPOST` TX routing, plus `<sys/select.h>` (`pselect`) and cross-subsystem leak
-hardening. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (next task): `<sys/select.h>` (`select`, `pselect`)
+and cross-subsystem stress and leak hardening. See
+[docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -359,8 +395,9 @@ library functions. Recent milestones added the 4-gate POSIX harness,
 `<stdio.h>`, `setenv`/`unsetenv`, `execvp`, and core C17/POSIX headers.
 
 Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`) and Ring 3
-POSIX `sh` with core utilities. Next tasks add ACPI `MADT`/`SPCR` discovery and
-`<sys/select.h>` hardening.
+POSIX `sh` with core utilities. They also added ACPI `MADT`/`SPCR` driver
+discovery, Ring 3 `OPOST` TX, and interactive `./scripts/env.sh run` boot. The
+remaining task adds `<sys/select.h>` and cross-subsystem hardening.
 
 ## Documentation
 

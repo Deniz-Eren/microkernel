@@ -27,6 +27,11 @@ typedef struct boot_info {
     uint64_t boot_tar_size;
     uint64_t rsdp_phys; /* ACPI RSDP physical address (0 if not found) */
     uint64_t mem_total_bytes;
+    uint64_t ioapic_phys; /* ACPI MADT IOAPIC base physical address */
+    uint32_t serial_port; /* ACPI SPCR / COM1 I/O base port */
+    uint32_t serial_gsi;  /* ACPI SPCR / MADT serial GSI */
+    uint32_t rtc_gsi;     /* ACPI MADT RTC GSI */
+    uint32_t reserved;
     char cmdline[128];
 } boot_info_t;
 

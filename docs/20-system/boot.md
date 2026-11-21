@@ -34,9 +34,9 @@ module with page permissions. It must map a read-only `boot_info_t` page for PID
 
 ```{swr} Discover IOAPIC and serial resources via ACPI MADT and SPCR
 :id: SWR_BOOT_0003
-:status: draft
+:status: active
 :derives: SYS_BOOT_0001
-:traces: ADR_0003
+:traces: ADR_0003, ADR_0022
 
 The system must parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides
 (ISOs) and `SPCR` when present (falling back to COM1). Ring 3 drivers

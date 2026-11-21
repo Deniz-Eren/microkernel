@@ -226,15 +226,7 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
         errno = (int)(-gr);
         return -1;
     }
-    if (e.kind == FD_KIND_CONSOLE) {
-        long r = __sys2(SYS_DEBUG_LOG, (long)(uintptr_t)buf, (long)n);
-        if (r < 0) {
-            errno = (int)(-r);
-            return -1;
-        }
-        return (ssize_t)r;
-    }
-    if (e.kind == FD_KIND_TTY) {
+    if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY) {
         return __libc_tty_write(buf, n);
     }
     if (e.kind == FD_KIND_VFS) {

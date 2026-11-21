@@ -61,6 +61,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- ACPI `MADT`/`SPCR` hardware discovery, parameterized Ring 3 drivers, Ring 3
+  `OPOST`/`ECHO` TX, and interactive QEMU shell boot (`SWR_BOOT_0003`,
+  `ADR_0022`, `COMP_BOOT_0003`, `VER_BOOT_0002`): added `kernel/core/acpi.c`
+  parsing RSDP/RSDT/XSDT, `MADT` IOAPIC base and ISOs, and optional `SPCR`,
+  ISO-aware IOAPIC setup in `kernel/core/intr.c`, `spawn_image_argv()` and
+  `init=sh` interactive boot mode in `kernel/core/proc.c`, `-p`/`-i` driver
+  arguments in `servers/ttyserv/main.c` and `servers/rtcdrv/main.c`, Ring 3
+  16550A `OPOST`/`ONLCR`/`ECHO` TX routing via `/dev/tty` in `libc/src/tty.c`
+  and `libc/src/fd.c`, `./scripts/env.sh run` interactive launcher, and user
+  instructions in `README.md`.
 - Ring 3 POSIX.1-2024 XCU shell (`sh`) and core utilities (`SWR_LIBC_0006`,
   `ADR_0021`, `COMP_LIBC_0005`, `VER_LIBC_0007`): added `bin/sh/main.c` (`-c`,
   script files, interactive `isatty()` prompt, pipelines over `pipe2`/`fork`/

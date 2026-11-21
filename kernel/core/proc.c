@@ -11,6 +11,7 @@
 #include <arch/x86_64/gdt.h>
 #include <arch/x86_64/msr.h>
 #include <fcntl.h>
+#include <kernel/acpi.h>
 #include <kernel/elf.h>
 #include <kernel/ipc.h>
 #include <kernel/kheap.h>
@@ -231,11 +232,12 @@ static uint64_t build_user_stack_argv(uint64_t pml4_phys,
 
 static boot_info_t g_bootinfo;
 
-/* Load one ustar bootfs image into a fresh process and make it runnable. */
-static pcb_t *proc_spawn_from_bootfs(pcb_t *parent, uint64_t tar_phys,
-                                     uint64_t tar_size, const char *name,
-                                     uint8_t prio, int precreate_chan,
-                                     int *err_out) {
+/* Load one ustar bootfs image into a fresh process with optional argv. */
+static pcb_t *proc_spawn_from_bootfs_argv(pcb_t *parent, uint64_t tar_phys,
+                                          uint64_t tar_size, const char *name,
+                                          const char *const *argv, int argc,
+                                          uint8_t prio, int precreate_chan,
+                                          int *err_out) {
     const void *image = NULL;
     uint64_t image_size = 0;
     if (find_bootfs_image(tar_phys, tar_size, name, &image, &image_size) != 0) {
@@ -267,8 +269,10 @@ static pcb_t *proc_spawn_from_bootfs(pcb_t *parent, uint64_t tar_phys,
     p->brk = brk;
 
     const char *argv_one[1] = {name};
-    uint64_t user_rsp =
-        build_user_stack_argv(p->pml4_phys, argv_one, 1, NULL, 0, &g_bootinfo);
+    const char *const *use_argv = (argv && argc > 0) ? argv : argv_one;
+    int use_argc = (argv && argc > 0) ? argc : 1;
+    uint64_t user_rsp = build_user_stack_argv(p->pml4_phys, use_argv, use_argc,
+                                              NULL, 0, &g_bootinfo);
     if (!user_rsp) {
         p->state = PROC_DEAD;
         vmm_destroy_user_pml4(p->pml4_phys);
@@ -289,6 +293,14 @@ static pcb_t *proc_spawn_from_bootfs(pcb_t *parent, uint64_t tar_phys,
            name, p->pid, p->parent_pid, (unsigned long long)entry,
            (unsigned long long)user_rsp, prio);
     return p;
+}
+
+static pcb_t *proc_spawn_from_bootfs(pcb_t *parent, uint64_t tar_phys,
+                                     uint64_t tar_size, const char *name,
+                                     uint8_t prio, int precreate_chan,
+                                     int *err_out) {
+    return proc_spawn_from_bootfs_argv(parent, tar_phys, tar_size, name, NULL,
+                                       0, prio, precreate_chan, err_out);
 }
 
 static void map_bootfs_readonly(pcb_t *p, uint64_t tar_phys,
@@ -313,6 +325,48 @@ static pcb_t *spawn_image(uint64_t tar_phys, uint64_t tar_size,
                           const char *name, uint8_t prio, int precreate_chan) {
     return proc_spawn_from_bootfs(NULL, tar_phys, tar_size, name, prio,
                                   precreate_chan, NULL);
+}
+
+static pcb_t *spawn_image_argv(uint64_t tar_phys, uint64_t tar_size,
+                               const char *name, const char *const *argv,
+                               int argc, uint8_t prio, int precreate_chan) {
+    return proc_spawn_from_bootfs_argv(NULL, tar_phys, tar_size, name, argv,
+                                       argc, prio, precreate_chan, NULL);
+}
+
+static void fmt_hex_u32(char *buf, uint32_t v) {
+    static const char hex[] = "0123456789abcdef";
+    char rev[8];
+    int n = 0;
+    if (v == 0u) {
+        rev[n++] = '0';
+    }
+    while (v != 0u) {
+        rev[n++] = hex[v & 0xFu];
+        v >>= 4;
+    }
+    buf[0] = '0';
+    buf[1] = 'x';
+    for (int i = 0; i < n; i++) {
+        buf[2 + i] = rev[n - 1 - i];
+    }
+    buf[2 + n] = '\0';
+}
+
+static void fmt_dec_u32(char *buf, uint32_t v) {
+    char rev[12];
+    int n = 0;
+    if (v == 0u) {
+        rev[n++] = '0';
+    }
+    while (v != 0u) {
+        rev[n++] = (char)('0' + (v % 10u));
+        v /= 10u;
+    }
+    for (int i = 0; i < n; i++) {
+        buf[i] = rev[n - 1 - i];
+    }
+    buf[n] = '\0';
 }
 
 void proc_close_fds(pcb_t *p, int cloexec_only) {
@@ -813,11 +867,16 @@ void proc_spawn_init(void) {
         panic("proc: no bootfs module loaded by GRUB");
     }
 
+    const acpi_info_t *ai = acpi_info();
     g_bootinfo.magic = BOOTINFO_MAGIC;
     g_bootinfo.boot_tar_phys = tar_phys;
     g_bootinfo.boot_tar_size = tar_size;
-    g_bootinfo.rsdp_phys = find_rsdp();
+    g_bootinfo.rsdp_phys = ai->rsdp_phys ? ai->rsdp_phys : find_rsdp();
     g_bootinfo.mem_total_bytes = pmm_total_bytes();
+    g_bootinfo.ioapic_phys = ai->ioapic_phys;
+    g_bootinfo.serial_port = ai->serial_port;
+    g_bootinfo.serial_gsi = ai->serial_gsi;
+    g_bootinfo.rtc_gsi = ai->rtc_gsi;
     const char *cmd = mb_cmdline();
     memcpy(g_bootinfo.cmdline, cmd,
            strlen(cmd) < sizeof(g_bootinfo.cmdline) - 1
@@ -831,34 +890,54 @@ void proc_spawn_init(void) {
         panic("proc: failed to spawn sysproc");
     }
     p1->caps |= CAP_SYS_INTR;
-    /* Ring 3 serial TTY server (/dev/tty) with COM1 IRQ 4 and IOPL=3. Priority
-     * 105 (below sysproc 110, above tests 100) lets ttyserv complete its 1-byte
-     * UART loopback IRQ 4 check before any test writes to COM1. */
-    pcb_t *tty = spawn_image(tar_phys, tar_size, "ttyserv", 105, 0);
+
+    /* Ring 3 serial TTY server (/dev/tty) parameterized from ACPI discovery.
+     * Priority 105 (below sysproc 110, above apps 100) lets ttyserv finish its
+     * 1-byte UART loopback IRQ check before any user process writes to COM1. */
+    char tty_port_arg[16];
+    char tty_gsi_arg[16];
+    fmt_hex_u32(tty_port_arg, ai->serial_port);
+    fmt_dec_u32(tty_gsi_arg, ai->serial_gsi);
+    const char *tty_argv[] = {"ttyserv", "-p", tty_port_arg, "-i", tty_gsi_arg};
+    pcb_t *tty =
+        spawn_image_argv(tar_phys, tar_size, "ttyserv", tty_argv, 5, 105, 0);
     if (tty) {
         tty->caps |= CAP_SYS_INTR;
     }
-    /* Ring 3 POSIX pipe and poll server (/dev/pipe). */
+
+    /* Ring 3 POSIX pipe, socket, VFS, and reference IPC servers. */
     spawn_image(tar_phys, tar_size, "pipeserv", 100, 0);
-    /* Ring 3 POSIX AF_UNIX local sockets server (/dev/sock). */
     spawn_image(tar_phys, tar_size, "sockserv", 100, 0);
-    /* Ring 3 VFS server (/dev/vfs) with read-only bootfs mapping. */
     pcb_t *vfs = spawn_image(tar_phys, tar_size, "vfsserv", 100, 0);
     if (vfs) {
         map_bootfs_readonly(vfs, tar_phys, tar_size);
     }
     spawn_image(tar_phys, tar_size, "ipcserv", 100, 0);
+
+    /* Ring 3 CMOS RTC driver parameterized from ACPI MADT GSI discovery. */
+    char rtc_gsi_arg[16];
+    fmt_dec_u32(rtc_gsi_arg, ai->rtc_gsi);
+    const char *rtc_argv[] = {"rtcdrv", "-p", "0x70", "-i", rtc_gsi_arg};
+    pcb_t *drv =
+        spawn_image_argv(tar_phys, tar_size, "rtcdrv", rtc_argv, 5, 100, 0);
+    if (drv) {
+        drv->caps |= CAP_SYS_INTR;
+    }
+
+    if (kstrstr(cmd, "init=sh") != NULL) {
+        printk("[OK] interactive boot mode (init=sh): spawning /boot/sh\n");
+        spawn_image(tar_phys, tar_size, "sh", 95, 0);
+        sched_activate();
+        return;
+    }
+
     spawn_image(tar_phys, tar_size, "ipccli", 100, 0);
     /* Milestone 4 demo: threads + signal delivery (worker thread, caught
      * SIGUSR1, then terminates itself with an unhandled SIGUSR2). */
     spawn_image(tar_phys, tar_size, "sigtest", 100, 0);
     /* Milestone 5 demo: ProcCreate, VMMap/VMUnmap, VMCloneCow, and waitpid. */
     spawn_image(tar_phys, tar_size, "proctest", 100, 0);
-    /* Milestone 6 demo: privileged Ring 3 RTC driver + unprivileged client. */
-    pcb_t *drv = spawn_image(tar_phys, tar_size, "rtcdrv", 100, 0);
-    if (drv) {
-        drv->caps |= CAP_SYS_INTR;
-    }
+    /* Milestone 6 demo: unprivileged client testing /dev/rtc and EPERM. */
     spawn_image(tar_phys, tar_size, "drvtest", 100, 0);
     /* POSIX.1-2024 CLOCK_MONOTONIC/CLOCK_REALTIME and interval timers test. */
     spawn_image(tar_phys, tar_size, "timetest", 100, 0);

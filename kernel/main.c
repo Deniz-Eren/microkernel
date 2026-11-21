@@ -14,6 +14,7 @@
 #include <kernel/multiboot.h>
 #include <kernel/pmm.h>
 #include <kernel/vmm.h>
+#include <kernel/acpi.h>
 #include <kernel/kheap.h>
 #include <kernel/sched.h>
 #include <arch/x86_64/gdt.h>
@@ -58,6 +59,7 @@ void kmain64(uint64_t mbi_phys) {
 
     vmm_init();
     kheap_init();
+    acpi_init();
 
     size_t nmod;
     const mb_module_t *mods = mb_modules(&nmod);

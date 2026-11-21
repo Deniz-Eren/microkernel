@@ -124,9 +124,72 @@ ssize_t __libc_tty_read(void *buf, size_t n, uint32_t status_flags) {
     return (ssize_t)rep.len;
 }
 
+static int ensure_ttyserv_fast(void) {
+    long cur_pid = __sys0(SYS_PROC_GETPID);
+    if (cur_pid <= 1) {
+        /* PID 1 (sysproc) must not query itself; fall back to SYS_DEBUG_LOG. */
+        return -EAGAIN;
+    }
+    if (g_tty_conn >= 0 && g_tty_conn_pid == cur_pid) {
+        return g_tty_conn;
+    }
+    if (g_tty_srv_pid == 0u || g_tty_srv_chan == 0u) {
+        long ns = OpenConnection(1, 1);
+        if (ns >= 0) {
+            name_msg_t q = {0};
+            q.type = NAME_MSG_QUERY;
+            (void)strlcpy(q.path, "/dev/tty", sizeof(q.path));
+            name_reply_t rep = {0};
+            long r = SendMsg((int)ns, &q, sizeof(q), &rep, sizeof(rep));
+            CloseConnection((int)ns);
+            if (r >= 0 && rep.err == 0 && rep.pid > 0 && rep.chanid > 0) {
+                g_tty_srv_pid = (uint32_t)rep.pid;
+                g_tty_srv_chan = (uint32_t)rep.chanid;
+            }
+        }
+    }
+    if (g_tty_srv_pid == 0u || g_tty_srv_chan == 0u ||
+        (long)g_tty_srv_pid == cur_pid) {
+        /* Not registered yet, or caller is ttyserv itself. */
+        return -EAGAIN;
+    }
+    long conn = OpenConnection(g_tty_srv_pid, g_tty_srv_chan);
+    if (conn < 0) {
+        return (int)conn;
+    }
+    g_tty_conn = (int)conn;
+    g_tty_conn_pid = cur_pid;
+    return g_tty_conn;
+}
+
 ssize_t __libc_tty_write(const void *buf, size_t n) {
     if (n == 0u) {
         return 0;
+    }
+    int conn = ensure_ttyserv_fast();
+    if (conn >= 0) {
+        const uint8_t *src = (const uint8_t *)buf;
+        size_t sent = 0;
+        while (sent < n) {
+            size_t chunk =
+                (n - sent) > TTY_DATA_MAX ? TTY_DATA_MAX : (n - sent);
+            tty_req_t req = {0};
+            tty_rep_t rep = {0};
+            req.op = TTY_OP_WRITE;
+            req.len = (uint32_t)chunk;
+            memcpy(req.u.data, src + sent, chunk);
+            long r = SendMsg(conn, &req, sizeof(req), &rep, sizeof(rep));
+            if (r < 0 || rep.err < 0) {
+                break;
+            }
+            sent += (size_t)rep.len;
+            if (rep.len == 0u) {
+                break;
+            }
+        }
+        if (sent > 0u) {
+            return (ssize_t)sent;
+        }
     }
     long r = __sys2(SYS_DEBUG_LOG, (long)(uintptr_t)buf, (long)n);
     if (r < 0) {

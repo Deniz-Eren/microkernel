@@ -21,20 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0021 — Add ACPI MADT/SPCR discovery and parameterized Ring 3 drivers
-
-```{task} Add ACPI MADT/SPCR discovery and parameterized Ring 3 drivers
-:id: TSK_0021
-:status: open
-:traces: ADR_0003, SWR_BOOT_0003, SWR_IPC_0008
-
-Parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides (ISOs), plus
-`SPCR` when present (falling back to COM1 `0x3F8`/IRQ 4). Pass discovered `argv`
-(`-p`/`-i`) to `ttyserv` and `rtcdrv`, and route user `stdout`/`stderr` TX
-(`OPOST`/`ONLCR`) through `ttyserv` with safe early-boot fallback
-({need}`SWR_BOOT_0003`).
-```
-
 ### TSK_0020 — Add pselect and end-to-end cross-subsystem POSIX hardening
 
 ```{task} Add pselect and end-to-end cross-subsystem POSIX hardening

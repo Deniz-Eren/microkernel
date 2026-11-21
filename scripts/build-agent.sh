@@ -58,6 +58,7 @@ echo "==> test"
 TEST_LOG="$(mktemp)"
 if ! "$ENV" test --timeout 120 \
     --expect '\[OK\] PMM/VMM/APIC initialized' \
+    --expect 'ACPI MADT discovered IOAPIC @ 0x' \
     --expect 'name resolved /dev/echo' \
     --expect 'sigaction rejects SIGKILL and SIGSTOP with EINVAL' \
     --expect 'errno thread-local and preserved across success' \
@@ -69,6 +70,7 @@ if ! "$ENV" test --timeout 120 \
     --expect 'waitpid reaped procchild .* exit=42' \
     --expect 'VMCloneCow isolated parent and child writes cleanly' \
     --expect 'rtcdrv granted Ring 3 IOPL=3' \
+    --expect 'rtcdrv configured CMOS port=0x70 gsi=8' \
     --expect 'rtcdrv handled 3 hardware IRQ 8 events via IPC' \
     --expect 'unprivileged IOPLSet and AttachIntrEvent rejected with EPERM' \
     --expect 'drvtest ReadMsgV/WriteMsgV /dev/rtc round trip succeeded' \
@@ -100,6 +102,7 @@ if ! "$ENV" test --timeout 120 \
     --expect 'SHM shm_open/shm_unlink, ftruncate, and cross-process' \
     --expect 'ML/MLR mlock, munlock, mlockall, and munlockall verified' \
     --expect 'ttyserv handled COM1 IRQ 4 pulse via IOAPIC' \
+    --expect 'ttyserv configured UART port=0x3f8 gsi=4 \(OPOST/ECHO' \
     --expect 'ttyserv registered /dev/tty' \
     --expect 'isatty, /dev/tty, tcgetattr/tcsetattr, and speeds verified' \
     --expect 'canonical line discipline \(VERASE, VKILL, ICRNL, VEOF\)' \

@@ -8,6 +8,7 @@
  *
  */
 
+#include <kernel/acpi.h>
 #include <kernel/intr.h>
 #include <kernel/ipc.h>
 #include <kernel/printk.h>
@@ -26,6 +27,8 @@
 #define IOAPIC_IOWIN 0x10
 #define IOAPIC_REG_VER 0x01
 #define IOAPIC_REDTBL_BASE 0x10
+#define IOAPIC_POLARITY_LOW (1u << 13)
+#define IOAPIC_TRIGGER_LEVEL (1u << 15)
 #define IOAPIC_MASK_BIT (1u << 16)
 
 #define IRQ_VECTOR_BASE 0x20u
@@ -60,6 +63,13 @@ static void ioapic_set_entry(uint32_t irq, uint32_t vector, int masked) {
         return;
     }
     uint32_t lo = vector & 0xFFu;
+    uint16_t iso_flags = acpi_gsi_flags(irq);
+    if ((iso_flags & 0x03u) == 0x03u) {
+        lo |= IOAPIC_POLARITY_LOW;
+    }
+    if (((iso_flags >> 2) & 0x03u) == 0x03u) {
+        lo |= IOAPIC_TRIGGER_LEVEL;
+    }
     if (masked) {
         lo |= IOAPIC_MASK_BIT;
     }
@@ -85,7 +95,11 @@ static void ioapic_unmask_irq(uint32_t irq) {
 }
 
 void ioapic_init(void) {
-    vmm_map_page(IOAPIC_VA, IOAPIC_PHYS_BASE,
+    uint64_t ioapic_phys = acpi_info()->ioapic_phys;
+    if (ioapic_phys == 0ULL) {
+        ioapic_phys = IOAPIC_PHYS_BASE;
+    }
+    vmm_map_page(IOAPIC_VA, ioapic_phys,
                  VMM_PRESENT | VMM_WRITE | VMM_PCD | VMM_NX);
     g_ioapic = (volatile uint32_t *)IOAPIC_VA;
     uint32_t ver = ioapic_read(IOAPIC_REG_VER);
@@ -101,8 +115,7 @@ void ioapic_init(void) {
         ioapic_set_entry(i, IRQ_VECTOR_BASE + i, 1);
     }
     printk("[ioapic] mapped @ %llx, %u redirection entries (bsp id=%u)\n",
-           (unsigned long long)IOAPIC_PHYS_BASE, g_ioapic_max_irq,
-           g_bsp_lapic_id);
+           (unsigned long long)ioapic_phys, g_ioapic_max_irq, g_bsp_lapic_id);
 }
 
 int intr_dispatch_irq(uint64_t vec) {

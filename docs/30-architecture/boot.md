@@ -24,10 +24,13 @@ flowchart TD
     GRUB["GRUB Multiboot2 (32-bit Protected Mode)"]
     BOOTS["boot.S (4-Level Page Tables + Long Mode)"]
     KMAIN["kmain (GDT, IDT, COM1, PMM, VMM, HHDM, KHeap)"]
-    APIC["LAPIC Timer & IOAPIC Setup"]
+    ACPI["ACPI RSDP / MADT (IOAPIC + ISOs) & SPCR Discovery"]
+    APIC["LAPIC Timer & ISO-Aware IOAPIC Setup"]
     TAR["ustar boot.tar ELF Loader"]
-    INIT["Spawn sysproc (110) -> ttyserv (105) -> Servers & Apps (100)"]
+    INIT["Spawn sysproc (110) -> ttyserv -p/-i (105) -> Servers & rtcdrv (100)"]
+    MODE["Cmdline init=sh -> /boot/sh | Default -> Verification Suite"]
     SCHED["sched_activate (Enter Ring 3 via iretq)"]
 
-    GRUB --> BOOTS --> KMAIN --> APIC --> TAR --> INIT --> SCHED
+    GRUB --> BOOTS --> KMAIN --> ACPI --> APIC
+    APIC --> TAR --> INIT --> MODE --> SCHED
 ```
