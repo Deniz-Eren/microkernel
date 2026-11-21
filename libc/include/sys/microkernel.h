@@ -45,6 +45,15 @@
 #define SYS_SIGPROCMASK 27 /* extension: read or update thread signal mask */
 #define SYS_PROC_WAIT 28   /* extension: wait for child process exit status */
 #define SYS_VM_PROTECT 29  /* extension: update user page permissions */
+#define SYS_CLOCK_GETTIME 30
+#define SYS_CLOCK_SETTIME 31
+#define SYS_CLOCK_GETRES 32
+#define SYS_CLOCK_NANOSLEEP 33
+#define SYS_TIMER_CREATE 34
+#define SYS_TIMER_DELETE 35
+#define SYS_TIMER_SETTIME 36
+#define SYS_TIMER_GETTIME 37
+#define SYS_TIMER_GETOVERRUN 38
 
 #ifndef __ASSEMBLER__
 

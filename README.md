@@ -70,6 +70,10 @@ The headers below show all user-space functions available at this time:
 - **POSIX process wait (`<sys/wait.h>`):** async-signal-safe `wait`, `waitpid`
   (`WNOHANG`), and exit/signal status macros (`WIFEXITED`, `WEXITSTATUS`,
   `WIFSIGNALED`, `WTERMSIG`)
+- **POSIX clocks and timers (`<time.h>`):** `CLOCK_MONOTONIC`, `CLOCK_REALTIME`,
+  `TIMER_ABSTIME`, `clock_getres`, `clock_gettime`, `clock_settime`,
+  `clock_nanosleep`, `nanosleep`, `timer_create`, `timer_settime`,
+  `timer_gettime`, `timer_getoverrun`, and `timer_delete`
 - **Formatted I/O (`<stdio.h>`):** `printf`, `snprintf`, `puts`, `putchar`
 - **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `exit`, `abort`,
   `strtol`, `atoi`
@@ -104,9 +108,9 @@ What you can build today:
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): POSIX clocks and timers (`<time.h>`),
-`pthread_*` locks and `sem_*`, POSIX `fork`/`execve`, `pipe2`/`dup3`/`ppoll`,
-file systems, and sockets. See [docs/TASKS.md](docs/TASKS.md) and
+Not available at this time (next tasks): `pthread_*` locks and `sem_*`, POSIX
+`fork`/`execve`, `pipe2`/`dup3`/`ppoll`, file systems, and sockets. See
+[docs/TASKS.md](docs/TASKS.md) and
 [docs/records/TASKS.md](docs/records/TASKS.md).
 
 ## POSIX.1-2024 compliance and bidirectional traceability
@@ -151,7 +155,7 @@ POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
 - `libc/` — a small C library for user processes
 - `servers/` — the system servers (`sysproc`, `ipcserv`, `rtcdrv`)
 - `tests/` — the test harness (`test_runner.py`) and the test programs
-  (`ipccli`, `sigtest`, `proctest`, `drvtest`)
+  (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`)
 - `scripts/` — helper scripts for the environment, the build, and the agents
 - `docs/` — the project documents and the agent skills
 - `iso/` — the boot configuration for the GRUB boot loader
@@ -199,7 +203,7 @@ are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 ## Status
 
 See [docs/TASKS.md](docs/TASKS.md) for the milestone plan. The build completed
-milestones 1 to 6. The next tasks add POSIX.1-2024 clocks and timers,
+milestones 1 to 6 and POSIX.1-2024 clocks and timers. The next tasks add
 `pthread_*` and `sem_*`, and `fork`/`execve`/pipes.
 
 ## Documentation

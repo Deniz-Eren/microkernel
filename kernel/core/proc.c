@@ -377,6 +377,8 @@ void proc_spawn_init(void) {
         drv->caps |= CAP_SYS_INTR;
     }
     spawn_image(tar_phys, tar_size, "drvtest", 100, 0);
+    /* TSK_0005: POSIX.1-2024 CLOCK_MONOTONIC/CLOCK_REALTIME and timers test. */
+    spawn_image(tar_phys, tar_size, "timetest", 100, 0);
 
     sched_activate();
 }

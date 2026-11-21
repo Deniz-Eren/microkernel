@@ -20,6 +20,7 @@ typedef enum {
     THREAD_REPLY_BLOCKED,
     THREAD_RECEIVE_BLOCKED,
     THREAD_WAIT_BLOCKED,
+    THREAD_SLEEP_BLOCKED,
     THREAD_ZOMBIE,
 } thread_state_t;
 
@@ -57,7 +58,9 @@ typedef struct tcb {
     uint64_t start_rip;
     uint64_t start_arg;
     uint64_t start_rsp;
-    uint8_t iopl; /* Ring 3 port I/O privilege level (0 or 3) */
+    uint8_t iopl;           /* Ring 3 port I/O privilege level (0 or 3) */
+    uint8_t sleep_clock_id; /* CLOCK_REALTIME or CLOCK_MONOTONIC */
+    uint64_t sleep_deadline_ns;
 } tcb_t;
 
 /* switch.S reads these fields at fixed offsets. */

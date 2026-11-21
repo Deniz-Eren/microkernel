@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0005 — Implement POSIX.1-2024 monotonic clocks and timers
+
+```{task} Implement POSIX.1-2024 monotonic clocks and timers
+:id: TSK_0005
+:status: done
+:traces: ADR_0003, SWR_PROC_0006
+
+Add kernel monotonic and realtime clock syscalls and `<time.h>`
+(`clock_gettime`, `clock_settime`, `clock_nanosleep`, `timer_create`,
+`timer_settime`) for `CLOCK_MONOTONIC` and `CLOCK_REALTIME`
+({need}`SWR_PROC_0006`).
+```
+
 ### RDM_0002 — Milestone 6: Interrupts and user-space drivers
 
 ```{roadmap} Milestone 6: Interrupts and user-space drivers

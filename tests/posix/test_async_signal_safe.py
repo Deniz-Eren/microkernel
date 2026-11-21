@@ -41,6 +41,10 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "sigismember",
     "wait",
     "waitpid",
+    "clock_gettime",
+    "timer_getoverrun",
+    "timer_gettime",
+    "timer_settime",
     "__errno_location",
 )
 

@@ -9,7 +9,7 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002 VER_PROC_0002
+# need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002 VER_PROC_0002 VER_PROC_0003
 
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "stdio.h",
     "stdlib.h",
     "string.h",
+    "time.h",
     "unistd.h",
     "sys/mman.h",
     "sys/types.h",
@@ -222,6 +223,42 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"mman/wait check failed:\n{err}")
+
+    def test_time_header_api_and_namespace_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <time.h>",
+                "#ifdef SYS_CLOCK_GETTIME",
+                '#error "time.h leaked SYS_CLOCK_GETTIME"',
+                "#endif",
+                "#ifdef SYS_TIMER_CREATE",
+                '#error "time.h leaked SYS_TIMER_CREATE"',
+                "#endif",
+                "static int __check_time_api(void) {",
+                "    struct timespec ts = {0, 0};",
+                "    struct itimerspec its = {{0, 0}, {0, 0}};",
+                "    struct sigevent ev = {SIGEV_SIGNAL, 0, {0}};",
+                "    timer_t tid = 0;",
+                "    (void)clock_getres(CLOCK_MONOTONIC, &ts);",
+                "    (void)clock_gettime(CLOCK_REALTIME, &ts);",
+                "    (void)clock_settime(CLOCK_REALTIME, &ts);",
+                "    (void)clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME,",
+                "                          &ts, (struct timespec *)0);",
+                "    (void)nanosleep(&ts, &ts);",
+                "    (void)timer_create(CLOCK_MONOTONIC, &ev, &tid);",
+                "    (void)timer_settime(tid, 0, &its, &its);",
+                "    (void)timer_gettime(tid, &its);",
+                "    (void)timer_getoverrun(tid);",
+                "    return timer_delete(tid);",
+                "}",
+                "int (*__time_fn_ref)(void) = __check_time_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"time.h check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

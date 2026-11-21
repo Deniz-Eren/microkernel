@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include <kernel/intr.h>
 #include <kernel/printk.h>
+#include <kernel/time.h>
 #include <kernel/vmm.h>
 
 /* need:: COMP_BOOT_0001 */
@@ -127,6 +128,7 @@ void apic_irq_dispatch(uint64_t vec) {
     if (vec == TIMER_VECTOR) {
         g_timer_ticks++;
         apic_eoi();
+        time_tick();
         extern void sched_tick(void);
         sched_tick();
         return;

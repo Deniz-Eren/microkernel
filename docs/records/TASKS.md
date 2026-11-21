@@ -21,19 +21,6 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0005 — Implement POSIX.1-2024 monotonic clocks and timers
-
-```{task} Implement POSIX.1-2024 monotonic clocks and timers
-:id: TSK_0005
-:status: open
-:traces: ADR_0003, SWR_PROC_0006
-
-Add kernel monotonic and realtime clock syscalls and `<time.h>`
-(`clock_gettime`, `clock_settime`, `clock_nanosleep`, `timer_create`,
-`timer_settime`) for `CLOCK_MONOTONIC` and `CLOCK_REALTIME`
-({need}`SWR_PROC_0006`).
-```
-
 ### TSK_0006 — Implement POSIX.1-2024 pthreads, semaphores, and FS.base TLS
 
 ```{task} Implement POSIX.1-2024 pthreads, semaphores, and FS.base TLS

@@ -29,6 +29,24 @@ struct sigaction {
     int sa_flags;
 };
 
+#ifndef _SIGEVENT_DEFINED
+#define _SIGEVENT_DEFINED
+#define SIGEV_NONE 0
+#define SIGEV_SIGNAL 1
+#define SIGEV_THREAD 2
+
+union sigval {
+    int sival_int;
+    void *sival_ptr;
+};
+
+struct sigevent {
+    int sigev_notify;
+    int sigev_signo;
+    union sigval sigev_value;
+};
+#endif /* _SIGEVENT_DEFINED */
+
 int sigemptyset(sigset_t *set);
 int sigfillset(sigset_t *set);
 int sigaddset(sigset_t *set, int signo);

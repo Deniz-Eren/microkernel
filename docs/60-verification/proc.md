@@ -27,3 +27,15 @@ The headless QEMU harness `tests/test_runner.py` runs `proctest` and
 42. CTest `posix.headers` and `posix.async_signal_safe` check `<sys/wait.h>` and
 `waitpid` safety ({need}`SWR_PROC_0007`).
 ```
+
+```{ver} Verify POSIX.1-2024 monotonic clocks, nanosleep, and timers
+:id: VER_PROC_0003
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0006
+
+The headless QEMU harness `tests/test_runner.py` runs `timetest`. It checks
+`CLOCK_MONOTONIC`, `CLOCK_REALTIME`, `clock_nanosleep`, and periodic
+`timer_create`/`timer_settime` signals. CTest `posix.headers` and
+`posix.async_signal_safe` check `<time.h>` ({need}`SWR_PROC_0006`).
+```

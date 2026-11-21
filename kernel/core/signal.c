@@ -149,15 +149,45 @@ long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig) {
 
     target->pending_signals |= (1u << sig);
 
-    /* A thread blocked in IPC or waitpid wakes with -EINTR (kill semantics);
+    /* A thread blocked in IPC, waitpid, or sleep wakes with -EINTR;
      * the signal itself is delivered at its next return to user mode. */
     if (target->state >= THREAD_SEND_BLOCKED &&
         target->state <= THREAD_RECEIVE_BLOCKED) {
         ipc_unblock_thread(target, -EINTR);
-    } else if (target->state == THREAD_WAIT_BLOCKED) {
+    } else if (target->state == THREAD_WAIT_BLOCKED ||
+               target->state == THREAD_SLEEP_BLOCKED) {
         sched_unblock(target);
     }
     return 0;
+}
+
+/* Timer-IRQ-safe helper: post a signal to pid's main thread without calling
+ * schedule() inside the timer interrupt handler. */
+void signal_post_to_proc(uint32_t pid, int sig) {
+    if (sig < 1 || sig >= NSIG) {
+        return;
+    }
+    pcb_t *p = proc_find(pid);
+    if (!p || p->state != PROC_ALIVE) {
+        return;
+    }
+    tcb_t *target = NULL;
+    for (tcb_t *t = p->threads; t; t = t->proc_next) {
+        if (t->state == THREAD_ZOMBIE) {
+            continue;
+        }
+        if (!target || t->tid < target->tid) {
+            target = t;
+        }
+    }
+    if (!target) {
+        return;
+    }
+    target->pending_signals |= (1u << (unsigned)sig);
+    if (target->state == THREAD_WAIT_BLOCKED ||
+        target->state == THREAD_SLEEP_BLOCKED) {
+        sched_ready(target);
+    }
 }
 
 void signal_deliver_check(trapframe_t *tf) {

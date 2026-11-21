@@ -70,7 +70,7 @@ load, `waitpid` ([sys/wait.h][hdr-wait]), and `_Exit` on `ProcCreate` and
 
 ```{swr} Supply POSIX.1-2024 Base monotonic clocks and timers
 :id: SWR_PROC_0006
-:status: draft
+:status: active
 :posix: XBD/time.h (CX), XSH/clock_gettime (CX), XSH/timer_create (CX)
 :derives: SYS_PROC_0001
 :traces: BDR_0003, ADR_0003

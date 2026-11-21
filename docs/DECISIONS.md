@@ -22,6 +22,41 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-18 (2026-11-21): Kernel 1 ms LAPIC clocks and static POSIX timer pool
+
+### Context
+
+`SWR_PROC_0006` (`TSK_0005`) requires mandatory POSIX.1-2024 `<time.h>` clocks
+and timers (`CLOCK_MONOTONIC`, `CLOCK_REALTIME`, `clock_nanosleep`, and
+`timer_*`). Timer expiry runs inside the 1 ms LAPIC interrupt handler, which
+cannot allocate kernel heap memory.
+
+### Decision
+
+- Keep a 1 ms monotonic nanosecond counter (`g_mono_ns`) and a signed realtime
+  offset (`g_realtime_offset_ns`) in `kernel/core/time.c`. Advance them on each
+  LAPIC tick in `apic_irq_dispatch()`.
+- Add `THREAD_SLEEP_BLOCKED` for `clock_nanosleep` (relative and
+  `TIMER_ABSTIME`) with `-EINTR` wakeup and remaining-time copy on signal
+  arrival.
+- Store per-process POSIX timers in a static 64-slot pool (`g_timers`) cleaned
+  on process exit (`time_cleanup_proc()`). Post timer signals via
+  `signal_post_to_proc()` without calling `schedule()` inside `time_tick()`.
+- Add syscalls `30`..`38` and clean `<time.h>` / `libc/src/time.c` wrappers
+  keeping `clock_gettime` and `timer_*` async-signal-safe.
+
+### Alternatives
+
+- Allocate timer nodes with `kmalloc()` (adds heap work and teardown risk)
+- Poll `CLOCK_MONOTONIC` in Ring 3 for `nanosleep` (wastes CPU slices)
+
+### Consequences
+
+- `timetest` checks `CLOCK_MONOTONIC`, `CLOCK_REALTIME`, `clock_nanosleep`, and
+  periodic `timer_create`/`timer_settime` `SIGUSR1` ticks in QEMU.
+- `SWR_PROC_0006` is active and checked by `posix.headers` and
+  `posix.async_signal_safe`.
+
 ## ADR-17 (2026-11-21): Enforce all quality gates in build-agent and pre-commit
 
 ### Context

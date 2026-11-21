@@ -37,3 +37,16 @@ and FPU state ({need}`ARC_PROC_0001`).
 with no heap allocation or locks ({need}`ICD_PROC_0003`, {need}`ICD_PROC_0004`,
 {need}`SWR_PROC_0007`).
 ```
+
+```{comp} Kernel monotonic/realtime clocks, timers, and libc <time.h> wrappers
+:id: COMP_PROC_0004
+:status: active
+:posix: XBD/time.h (CX), XSH/clock_gettime (CX), XSH/timer_create (CX)
+:refines: ARC_PROC_0001, ICD_PROC_0005
+:satisfies: SWR_PROC_0006
+
+`kernel/core/time.c` tracks 1 ms LAPIC ticks for `CLOCK_MONOTONIC` and
+`CLOCK_REALTIME`, wakes sleepers, and fires POSIX timers. `libc/src/time.c`
+gives async-signal-safe clock and timer wrappers ({need}`ICD_PROC_0005`,
+{need}`SWR_PROC_0006`).
+```

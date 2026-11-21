@@ -72,6 +72,8 @@ if ! "$ENV" test --timeout 120 \
     --expect 'rtcdrv handled 3 hardware IRQ 8 events via IPC' \
     --expect 'unprivileged IOPLSet and AttachIntrEvent rejected with EPERM' \
     --expect 'drvtest ReadMsgV/WriteMsgV /dev/rtc round trip succeeded' \
+    --expect 'CLOCK_MONOTONIC, CLOCK_REALTIME, and clock_nanosleep verified' \
+    --expect 'POSIX timer_create/timer_settime fired .* SIGUSR1 ticks' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

@@ -9,8 +9,9 @@
  */
 
 #include <errno.h>
-#include <unistd.h>
 #include <sys/microkernel.h>
+#include <time.h>
+#include <unistd.h>
 
 /* need:: COMP_LIBC_0001 */
 
@@ -48,6 +49,13 @@ void _exit(int status) {
 }
 
 unsigned int sleep(unsigned int seconds) {
-    (void)seconds;
-    return 0;
+    if (seconds == 0u) {
+        return 0u;
+    }
+    struct timespec req = {.tv_sec = (time_t)seconds, .tv_nsec = 0};
+    struct timespec rem = {0};
+    if (clock_nanosleep(CLOCK_MONOTONIC, 0, &req, &rem) == EINTR) {
+        return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1u : 0u);
+    }
+    return 0u;
 }

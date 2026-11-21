@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- POSIX.1-2024 Base monotonic/realtime clocks and interval timers (`TSK_0005`,
+  `SWR_PROC_0006`): syscalls `30`–`38`, `kernel/core/time.c`, `<time.h>`,
+  async-signal-safe `libc/src/time.c`, `sleep()` backed by `clock_nanosleep`,
+  QEMU `tests/timetest`, and `posix.headers`/`posix.async_signal_safe` coverage
+  (ADR-18).
 - Unified pre-commit quality gate (`tools/check_ste.py`, updated
   `scripts/build-agent.sh`, and `scripts/install-hooks.sh`) enforcing full-repo
   `clang-format`, `docs-traceability-setup` `check_text.py --root .`,
@@ -134,6 +139,9 @@ Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- Fixed `schedule()` idle loop in `kernel/core/sched.c` to enable interrupts
+  (`sti; hlt; cli`), re-poll `pick_next()`, pop woken self-threads properly, and
+  avoid recursive `sched_tick()` preemption when all threads are blocked.
 - Reserved Multiboot2 boot modules (`bootfs`) in `pmm_init()` so dynamic frame
   allocations never overwrite the boot archive needed by `ProcCreate`.
 - Fixed `ISR_STUB` in `kernel/arch/x86_64/isr.S` to pop all 16 bytes (`vec` and

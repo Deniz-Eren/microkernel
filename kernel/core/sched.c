@@ -10,6 +10,7 @@
 
 #include <kernel/sched.h>
 #include <kernel/ipc.h>
+#include <kernel/time.h>
 #include <kernel/trapframe.h>
 #include <kernel/uaccess.h>
 #include <sys/errno.h>
@@ -169,19 +170,15 @@ static void apply_switch(tcb_t *next) {
 
 void schedule(void) {
     tcb_t *next = pick_next();
-    if (!next) {
+    while (!next) {
         if (g_current && g_current->state == THREAD_RUNNING) {
             return; /* nothing else ready: keep running */
         }
-        /* Nothing runnable and the current thread cannot continue (blocked
-         * or reaped): park the CPU until something external wakes work. */
-        for (;;) {
-            __asm__ volatile("hlt");
-        }
-    }
-    if (next == g_current) {
-        g_current->slice_ticks = 0;
-        return;
+        /* Nothing runnable and the current thread cannot continue (blocked or
+         * reaped): enable interrupts and halt until a timer/IRQ wakes runnable
+         * work. */
+        __asm__ volatile("sti; hlt; cli" : : : "memory");
+        next = pick_next();
     }
 
     /* Pop `next` from its level queue. */
@@ -192,6 +189,12 @@ void schedule(void) {
         bitmap_clear(p);
     }
     next->queue_next = NULL;
+
+    if (next == g_current) {
+        g_current->state = THREAD_RUNNING;
+        g_current->slice_ticks = 0;
+        return;
+    }
 
     /* Re-enqueue the preempted current (READY while it waits). */
     if (g_current && g_current->state == THREAD_RUNNING) {
@@ -223,7 +226,7 @@ void sched_tick(void) {
         return;
     }
     tcb_t *cur = g_current;
-    if (!cur) {
+    if (!cur || cur->state != THREAD_RUNNING) {
         return;
     }
     cur->slice_ticks++;
@@ -361,6 +364,7 @@ void thread_exit_current(int status) {
     reap_thread(t);
     p->nthreads--;
     if (p->nthreads == 0) {
+        time_cleanup_proc(p->pid);
         p->state = PROC_ZOMBIE;
         p->exit_code = status;
         printk("[proc] pid %u became zombie (exit %d)\n", p->pid, status);

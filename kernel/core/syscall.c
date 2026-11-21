@@ -16,6 +16,7 @@
 #include <kernel/ipc.h>
 #include <kernel/signal.h>
 #include <kernel/string.h>
+#include <kernel/time.h>
 #include <kernel/uaccess.h>
 #include <kernel/vmm.h>
 #include "channel.h"
@@ -173,6 +174,33 @@ void syscall_handler(trapframe_t *tf) {
         break;
     case SYS_VM_PROTECT:
         ret = sys_vm_protect(tf->rdi, tf->rsi, tf->rdx);
+        break;
+    case SYS_CLOCK_GETTIME:
+        ret = sys_clock_gettime(tf->rdi, tf->rsi);
+        break;
+    case SYS_CLOCK_SETTIME:
+        ret = sys_clock_settime(tf->rdi, tf->rsi);
+        break;
+    case SYS_CLOCK_GETRES:
+        ret = sys_clock_getres(tf->rdi, tf->rsi);
+        break;
+    case SYS_CLOCK_NANOSLEEP:
+        ret = sys_clock_nanosleep(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
+    case SYS_TIMER_CREATE:
+        ret = sys_timer_create(tf->rdi, tf->rsi, tf->rdx);
+        break;
+    case SYS_TIMER_DELETE:
+        ret = sys_timer_delete(tf->rdi);
+        break;
+    case SYS_TIMER_SETTIME:
+        ret = sys_timer_settime(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
+    case SYS_TIMER_GETTIME:
+        ret = sys_timer_gettime(tf->rdi, tf->rsi);
+        break;
+    case SYS_TIMER_GETOVERRUN:
+        ret = sys_timer_getoverrun(tf->rdi);
         break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();

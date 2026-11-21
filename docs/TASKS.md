@@ -90,9 +90,10 @@ with its status and date.
 
 ## Near-term POSIX.1-2024 tasks (next)
 
-- [ ] feat(proc,time): TSK_0005 — add kernel monotonic/realtime clocks and
-  POSIX.1-2024 `<time.h>` (`clock_gettime`, `clock_settime`, `clock_nanosleep`,
-  `timer_create`, `timer_settime`) for `CLOCK_MONOTONIC` and `CLOCK_REALTIME`
+- [x] COMPLETE 2026-11-21 feat(proc,time): TSK_0005 — add kernel
+  monotonic/realtime clocks and POSIX.1-2024 `<time.h>` (`clock_gettime`,
+  `clock_settime`, `clock_nanosleep`, `timer_create`, `timer_settime`) for
+  `CLOCK_MONOTONIC` and `CLOCK_REALTIME`
 - [ ] feat(proc,pthread): TSK_0006 — add per-thread `FS.base` TLS, `<pthread.h>`
   (`pthread_create`, `pthread_join`, mutexes, `pthread_cond_*`,
   `pthread_cond_clockwait`), and `<semaphore.h>` (`sem_*`)
