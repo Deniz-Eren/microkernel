@@ -288,6 +288,12 @@ pcb_t *proc_create(pcb_t *parent) {
         return NULL;
     }
     p->conn_count = CONN_TABLE_SIZE;
+    p->fds[0].kind = FD_KIND_CONSOLE;
+    p->fds[0].status_flags = 0; /* O_RDONLY */
+    p->fds[1].kind = FD_KIND_CONSOLE;
+    p->fds[1].status_flags = 1; /* O_WRONLY */
+    p->fds[2].kind = FD_KIND_CONSOLE;
+    p->fds[2].status_flags = 1; /* O_WRONLY */
     p->next = g_proc_list;
     g_proc_list = p;
     return p;
@@ -341,6 +347,27 @@ void thread_arm(tcb_t *t, uint64_t entry_rip, uint64_t arg, uint64_t user_rsp) {
     sched_ready(t);
 }
 
+void thread_arm_fork(tcb_t *t, const trapframe_t *tf) {
+    __asm__ volatile("fxsave %0" : : "m"(*t->fpu_area) : "memory");
+
+    uint64_t *sp = (uint64_t *)(t->kstack_top - 56 - sizeof(trapframe_t));
+    t->kernel_rsp = (uint64_t)sp;
+    sp[6] = (uint64_t)thread_bootstrap;
+
+    trapframe_t *ctf = (trapframe_t *)(sp + 7);
+    memcpy(ctf, tf, sizeof(*ctf));
+    ctf->rax = 0;
+    ctf->cs = GDT_UCODE | 3;
+    ctf->ss = GDT_UDATA | 3;
+    ctf->rflags = (tf->rflags & ~(uint64_t)(3ULL << 12)) | 0x202ULL |
+                  (((uint64_t)t->iopl & 3ULL) << 12);
+
+    t->start_rip = ctf->rip;
+    t->start_arg = 0;
+    t->start_rsp = ctf->rsp;
+    sched_ready(t);
+}
+
 tcb_t *thread_create(pcb_t *p, uint64_t entry_rip, uint64_t user_rsp,
                      uint8_t priority) {
     tcb_t *t = thread_create_embryo(p, priority);
@@ -371,6 +398,7 @@ void thread_exit_current(int status) {
     p->nthreads--;
     if (p->nthreads == 0) {
         time_cleanup_proc(p->pid);
+        proc_close_fds(p, 0);
         p->state = PROC_ZOMBIE;
         p->exit_code = status;
         printk("[proc] pid %u became zombie (exit %d)\n", p->pid, status);
@@ -385,6 +413,15 @@ void thread_exit_current(int status) {
     }
     schedule();
     panic("thread_exit_current: returned to zombie");
+}
+
+void proc_kill_other_threads(pcb_t *p, tcb_t *keep) {
+    for (tcb_t *x = p->threads; x; x = x->proc_next) {
+        if (x != keep && x->state != THREAD_ZOMBIE) {
+            reap_thread(x);
+        }
+    }
+    p->nthreads = 1;
 }
 
 void proc_exit_current(int status) {

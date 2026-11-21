@@ -18,12 +18,12 @@ and FPU state ({need}`ARC_PROC_0001`).
 :id: COMP_PROC_0002
 :status: active
 :refines: ARC_PROC_0001, ICD_PROC_0001, ICD_PROC_0002, ICD_PROC_0003
-:satisfies: SWR_PROC_0002, SWR_PROC_0003, SWR_PROC_0007
+:satisfies: SWR_PROC_0002, SWR_PROC_0003, SWR_PROC_0004, SWR_PROC_0007
 
 `kernel/core/proc.c` and `kernel/core/syscall.c` manage PCB/TCB lifecycle,
-`sys_proc_create`, `sys_proc_wait`, two-phase thread creation, and
-`syscall_handler` dispatch ({need}`ICD_PROC_0001`, {need}`ICD_PROC_0002`,
-{need}`ICD_PROC_0003`, {need}`ARC_PROC_0001`).
+`sys_proc_create`, `sys_proc_fork`, `sys_proc_execve`, `sys_proc_wait`,
+`sys_fd_op`, and `syscall_handler` dispatch ({need}`ICD_PROC_0001`,
+{need}`ICD_PROC_0002`, {need}`ICD_PROC_0003`, {need}`ARC_PROC_0001`).
 ```
 
 ```{comp} Async-signal-safe libc waitpid wrappers

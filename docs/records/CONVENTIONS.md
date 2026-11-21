@@ -31,9 +31,10 @@ one `{con}` directive tracing the decision that established it.
 
 Put standalone `need:: <ID>` comments near code or in module docstrings, outside
 the Doxygen header. Tag headers with `ICD_`, source modules with `COMP_`, and
-tests with `VER_`. Never put `SYS_` or `SWR_` IDs in code. All active `ICD_`,
-`COMP_`, and automated `VER_` items must have a `need::` tag. Name new POSIX C
-tests `test_*.c`.
+tests with `VER_`. Never put `SYS_` or `SWR_` IDs in code, and never reference
+transient `TSK_` or `RDM_` IDs anywhere in source code or comments. All active
+`ICD_`, `COMP_`, and automated `VER_` items must have a `need::` tag. Name new
+POSIX C tests `test_*.c`.
 ```
 
 ### CNV_0002 — Source Text and ASD-STE100 Conventions

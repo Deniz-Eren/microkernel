@@ -11,6 +11,9 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/fd.h>
+
+struct trapframe;
 
 typedef enum {
     THREAD_EMBRYO,
@@ -104,6 +107,9 @@ struct pcb {
     uint64_t sig_restorer;  /* __sigreturn_trampoline address */
     uint64_t next_stack_va; /* bump cursor for per-thread user stacks */
 
+    /* Per-process file descriptor table. */
+    struct __k_fd_entry fds[PROC_MAX_FDS];
+
     pcb_t *next; /* global process list */
 };
 
@@ -138,13 +144,16 @@ tcb_t *thread_create(pcb_t *p, uint64_t entry_rip, uint64_t user_rsp,
  * it (start context + user stack) to make it runnable. */
 tcb_t *thread_create_embryo(pcb_t *p, uint8_t priority);
 void thread_arm(tcb_t *t, uint64_t entry_rip, uint64_t arg, uint64_t user_rsp);
+void thread_arm_fork(tcb_t *t, const struct trapframe *tf);
 tcb_t *thread_find(pcb_t *p, uint32_t tid);
+void proc_kill_other_threads(pcb_t *p, tcb_t *keep);
+void proc_close_fds(pcb_t *p, int cloexec_only);
 
 /* Allocate a fresh zeroed user stack in p's address space; returns its top
  * VA (stacks grow down), or 0. */
 uint64_t proc_user_stack_alloc(pcb_t *p);
 
-/* Milestone 4/5 thread and process syscalls (caller is current). */
+/* Milestone 4/5/POSIX thread and process syscalls (caller is current). */
 long sys_thread_create(uint64_t prio);
 long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
                       uint64_t stack_top);
@@ -154,6 +163,12 @@ long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
                uint64_t clock_id);
 long sys_proc_create(uint64_t name_va, uint64_t prio, uint64_t flags);
 long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options);
+long sys_proc_fork(const struct trapframe *tf);
+long sys_proc_execve(struct trapframe *tf, uint64_t path_va, uint64_t argv_va,
+                     uint64_t envp_va);
+long sys_proc_getpid(void);
+long sys_proc_getppid(void);
+long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4);
 void thread_exit_current(int status) __attribute__((noreturn));
 void proc_exit_current(int status) __attribute__((noreturn));
 void proc_exit_signal(int sig) __attribute__((noreturn));

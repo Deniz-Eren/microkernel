@@ -131,6 +131,7 @@ function(microkernel_add_user_executable name)
 endfunction()
 
 add_subdirectory(servers/sysproc)
+add_subdirectory(servers/pipeserv)
 add_subdirectory(servers/ipcserv)
 add_subdirectory(servers/rtcdrv)
 add_subdirectory(tests/ipccli)
@@ -139,6 +140,7 @@ add_subdirectory(tests/proctest)
 add_subdirectory(tests/drvtest)
 add_subdirectory(tests/timetest)
 add_subdirectory(tests/pthreadtest)
+add_subdirectory(tests/forkpipetest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

@@ -56,14 +56,21 @@ Developers can build Ring 3 C17 servers and applications packed into `boot.tar`.
 The headers below show all user-space functions available at this time:
 
 - **POSIX core (`<unistd.h>`):** `_POSIX_VERSION` and `_POSIX2_VERSION`
-  (`202405L`), `write` and `read` (serial console), `_exit`, `sleep`, `environ`,
-  `STDIN_FILENO`, `STDOUT_FILENO`, `STDERR_FILENO`
+  (`202405L`), `fork` (COW), `execve` (bootfs `argv`/`envp` and `O_CLOEXEC`),
+  `getpid`, `getppid`, `pipe`, `pipe2`, `dup`, `dup2`, `dup3`, `close`, `write`,
+  `read`, `_exit`, `sleep`, `environ`, `STDIN_FILENO`, `STDOUT_FILENO`,
+  `STDERR_FILENO`
+- **POSIX descriptors and polling (`<fcntl.h>`, `<poll.h>`):** `fcntl`
+  (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`),
+  `O_CLOEXEC`, `O_NONBLOCK`, `poll`, and `ppoll` (finite timeout and atomic
+  `sigmask`) backed by Ring 3 `pipeserv` (`/dev/pipe`)
 - **Thread-local errors (`<errno.h>`):** O(1) `FS.base` TLS `errno`
   (`__errno_location`, with lock-free fallback) and POSIX.1-2024 `E*` constants
 - **POSIX signals (`<signal.h>`):** async-signal-safe `sigaction`,
-  `sigprocmask`, `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`,
-  `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`, `sigismember`,
-  `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across `SYS_SIGRETURN`
+  `sigprocmask`, `sigpending`, `pthread_sigmask`, `kill`, `pthread_kill`,
+  `raise`, `signal`, `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`,
+  `sigismember`, `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across
+  `SYS_SIGRETURN`
 - **POSIX memory mapping (`<sys/mman.h>`):** W^X-enforced anonymous `mmap`,
   `mprotect`, `msync`, and `munmap` (`PROT_*`, `MAP_PRIVATE`, `MAP_ANONYMOUS`,
   `MAP_FIXED`, `MS_*`)
@@ -113,8 +120,8 @@ What you can build today:
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): POSIX `fork`/`execve`,
-`pipe2`/`dup3`/`ppoll`, file systems, and sockets. See
+Not available at this time (next tasks): POSIX `<aio.h>`, `pthread` cancellation
+points, file systems, and sockets. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
@@ -158,9 +165,10 @@ POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
 
 - `kernel/` — the kernel: boot code, x86-64 code, and the core subsystems
 - `libc/` — a small C library for user processes
-- `servers/` — the system servers (`sysproc`, `ipcserv`, `rtcdrv`)
+- `servers/` — the system servers (`sysproc`, `pipeserv`, `ipcserv`, `rtcdrv`)
 - `tests/` — the test harness (`test_runner.py`) and the test programs
-  (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`, `pthreadtest`)
+  (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`, `pthreadtest`,
+  `forkpipetest`, `exechelper`)
 - `scripts/` — helper scripts for the environment, the build, and the agents
 - `docs/` — the project documents and the agent skills
 - `iso/` — the boot configuration for the GRUB boot loader
@@ -210,8 +218,8 @@ are in [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
 See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/HISTORY.md](docs/records/HISTORY.md) for the milestone plan and
 task records. The build completed milestones 1 to 6, POSIX clocks and timers,
-and pthreads/semaphores. The next task adds `fork`, `execve`, and
-`pipe2`/`dup3`/`ppoll`.
+pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. The next task
+adds `<aio.h>` asynchronous I/O.
 
 ## Documentation
 

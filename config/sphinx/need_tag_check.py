@@ -201,6 +201,15 @@ def _check_tags_on_build_finished(
     for _, message in find_untagged_active_needs(needs_view, tagged_ids):
         LOGGER.warning("need_tag_check: %s", message)
 
+    for rel, line_no, pid in result.planning_refs:
+        LOGGER.warning(
+            "need_tag_check: %s:%d: transient planning ID '%s' must not be "
+            "referenced in source code",
+            rel,
+            line_no,
+            pid,
+        )
+
 
 def _extract_row_need_id(row: nodes.Node) -> str | None:
     """Return the first-cell need ID text of a rendered `needtable` row."""

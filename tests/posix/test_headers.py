@@ -10,7 +10,7 @@
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
 # need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002
-# need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
+# need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_IPC_0003
 
 from __future__ import annotations
 
@@ -26,6 +26,8 @@ SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 
 POSIX_HEADERS: tuple[str, ...] = (
     "errno.h",
+    "fcntl.h",
+    "poll.h",
     "pthread.h",
     "semaphore.h",
     "signal.h",
@@ -307,6 +309,54 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"pthread/sem check failed:\n{err}")
+
+    def test_fcntl_poll_and_fork_pipe_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <fcntl.h>",
+                "#include <poll.h>",
+                "#include <unistd.h>",
+                "#ifdef SYS_FD_OP",
+                '#error "fcntl/poll/unistd leaked SYS_FD_OP"',
+                "#endif",
+                "#ifdef SYS_PROC_FORK",
+                '#error "unistd.h leaked SYS_PROC_FORK"',
+                "#endif",
+                "#ifdef PIPE_OP_CREATE",
+                '#error "poll.h/fcntl.h leaked PIPE_OP_CREATE"',
+                "#endif",
+                "static int __check_fork_pipe_api(void) {",
+                "    int fds[2] = {0, 0};",
+                "    struct pollfd p = {0, POLLIN | POLLOUT, 0};",
+                "    struct timespec ts = {0, 0};",
+                "    sigset_t mask = 0;",
+                "    char *const argv[] = {(char *)0};",
+                "    char *const envp[] = {(char *)0};",
+                "    (void)pipe(fds);",
+                "    (void)pipe2(fds, O_CLOEXEC | O_NONBLOCK);",
+                "    (void)dup(fds[0]);",
+                "    (void)dup2(fds[0], fds[1]);",
+                "    (void)dup3(fds[0], fds[1], O_CLOEXEC);",
+                "    (void)fcntl(fds[0], F_GETFD);",
+                "    (void)fcntl(fds[0], F_SETFD, FD_CLOEXEC);",
+                "    (void)fcntl(fds[0], F_DUPFD_CLOEXEC, 3);",
+                "    (void)poll(&p, (nfds_t)1, 0);",
+                "    (void)ppoll(&p, (nfds_t)1, &ts, &mask);",
+                "    (void)sigpending(&mask);",
+                "    (void)getpid();",
+                "    (void)getppid();",
+                "    (void)fork();",
+                "    (void)execve(\"/bin/sh\", argv, envp);",
+                "    return close(fds[0]);",
+                "}",
+                "int (*__fp_fn_ref)(void) = __check_fork_pipe_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"fcntl/poll/unistd failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

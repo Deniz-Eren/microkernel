@@ -51,3 +51,15 @@ The headless QEMU harness `tests/test_runner.py` runs `pthreadtest`. It checks
 and `sem_*`. CTest `posix.headers` and `posix.async_signal_safe` check headers
 and `sem_post` ({need}`SWR_PROC_0005`).
 ```
+
+```{ver} Verify POSIX.1-2024 fork COW isolation and execve argv/envp/O_CLOEXEC
+:id: VER_PROC_0005
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0004
+
+The headless QEMU harness `tests/test_runner.py` runs `forkpipetest` and
+`exechelper`. It checks `fork` COW isolation, `execve` `argv`/`envp`, and
+`O_CLOEXEC` cleanup. CTest `posix.headers` and `posix.async_signal_safe` check
+`<unistd.h>` and `fork`/`execve` safety ({need}`SWR_PROC_0004`).
+```

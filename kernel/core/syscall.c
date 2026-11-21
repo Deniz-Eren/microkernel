@@ -108,6 +108,17 @@ void syscall_handler(trapframe_t *tf) {
         return;
     }
 
+    /* EXECVE replaces the address space and rewrites the frame on success. */
+    if (nr == SYS_PROC_EXECVE) {
+        ret = sys_proc_execve(tf, tf->rdi, tf->rsi, tf->rdx);
+        if (ret == 0) {
+            return;
+        }
+        tf->rax = (uint64_t)ret;
+        signal_deliver_check(tf);
+        return;
+    }
+
     switch (nr) {
     case SYS_DEBUG_LOG:
         ret = sys_debug_log(tf->rdi, tf->rsi);
@@ -210,6 +221,21 @@ void syscall_handler(trapframe_t *tf) {
         break; /* noreturn */
     case SYS_FUTEX:
         ret = sys_futex(tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8);
+        break;
+    case SYS_PROC_FORK:
+        ret = sys_proc_fork(tf);
+        break;
+    case SYS_PROC_GETPID:
+        ret = sys_proc_getpid();
+        break;
+    case SYS_PROC_GETPPID:
+        ret = sys_proc_getppid();
+        break;
+    case SYS_FD_OP:
+        ret = sys_fd_op(tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8);
+        break;
+    case SYS_SIGPENDING:
+        ret = sys_sigpending(tf->rdi);
         break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();

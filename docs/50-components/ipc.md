@@ -48,3 +48,29 @@ pulses through `AttachIntrEvent`/`IntrUnmask`, registers `/dev/rtc`, and serves
 clients with `ReadMsgV` and `WriteMsgV` ({need}`ICD_IPC_0001`,
 {need}`ICD_IPC_0002`, {need}`SWR_IPC_0006`).
 ```
+
+```{comp} Ring 3 POSIX pipe and ppoll server
+:id: COMP_IPC_0005
+:status: active
+:posix: XSH/pipe2 (BASE), XSH/ppoll (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0003, ICD_IPC_0005
+:satisfies: SWR_IPC_0004
+
+`servers/pipeserv/main.c` registers `/dev/pipe` in Ring 3, keeps 4 KiB pipe
+buffers, serves deferred blocking `read`/`write`/`ppoll` requests, and processes
+`PULSE_CODE_FD_CLOSE` close notifications ({need}`ICD_IPC_0003`,
+{need}`SWR_IPC_0004`).
+```
+
+```{comp} Async-signal-safe libc descriptor, pipe2, dup3, and ppoll wrappers
+:id: COMP_IPC_0006
+:status: active
+:posix: XSH/pipe2 (BASE), XSH/dup3 (BASE), XSH/ppoll (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0003, ICD_IPC_0004, ICD_IPC_0005
+:satisfies: SWR_IPC_0004
+
+`libc/src/fd.c` builds `pipe`, `pipe2`, `dup`, `dup2`, `dup3`, `fcntl`, `close`,
+`poll`, and `ppoll` over `SYS_FD_OP` and `/dev/pipe` IPC with atomic `O_CLOEXEC`
+and signal mask rules ({need}`ICD_IPC_0004`, {need}`ICD_IPC_0005`,
+{need}`SWR_IPC_0004`).
+```

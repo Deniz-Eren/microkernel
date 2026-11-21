@@ -7,11 +7,11 @@ Domain `PROC`: system call ABI, native thread/process wrappers, and POSIX.1-2024
 :id: ICD_PROC_0001
 :status: active
 :refines: ARC_PROC_0001
-:satisfies: SWR_PROC_0002
+:satisfies: SWR_PROC_0002, SWR_PROC_0004
 
-`libc/include/sys/microkernel.h` specifies system call numbers (`0`..`41`) and
+`libc/include/sys/microkernel.h` specifies system call numbers (`0`..`47`) and
 the `RAX`/`RDI`/`RSI`/`RDX`/`R10`/`R8`/`R9` register convention
-({need}`ARC_PROC_0001`, {need}`SWR_PROC_0002`).
+({need}`ARC_PROC_0001`, {need}`SWR_PROC_0002`, {need}`SWR_PROC_0004`).
 ```
 
 ```{icd} Ring 3 thread management interface

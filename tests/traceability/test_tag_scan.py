@@ -97,6 +97,24 @@ class TagScanTests(unittest.TestCase):
         ids = [need_id for need_id, _ in missing]
         self.assertEqual(ids, ["COMP_IPC_0001", "VER_IPC_0001"])
 
+    def test_scan_repository_flags_transient_planning_ids_in_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "mod.c").write_text(
+                "/* need:: COMP_IPC_0001 */\n"
+                "/* TSK_0007 and RDM_0003 should be flagged */\n",
+                encoding="utf-8",
+            )
+            result = scan_repository(root)
+            self.assertEqual(
+                result.planning_refs,
+                (
+                    ("src/mod.c", 2, "TSK_0007"),
+                    ("src/mod.c", 2, "RDM_0003"),
+                ),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

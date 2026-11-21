@@ -76,6 +76,10 @@ if ! "$ENV" test --timeout 120 \
     --expect 'POSIX timer_create/timer_settime fired .* SIGUSR1 ticks' \
     --expect 'pthreads FS\.base TLS, mutex, spinlock, barrier, rwlock' \
     --expect 'pthread_cond_clockwait and sem_wait/sem_clockwait verified' \
+    --expect 'pipeserv registered /dev/pipe' \
+    --expect 'fork COW isolated parent and child \(child=.* exit=33\)' \
+    --expect 'pipe2, dup3 O_CLOEXEC, and execve argv/envp/pipe verified' \
+    --expect 'ppoll finite timeout and atomic sigmask EINTR verified' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

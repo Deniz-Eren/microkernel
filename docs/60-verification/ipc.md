@@ -26,3 +26,16 @@ checks Ring 3 `IOPLSet`, `-EPERM` denial for unprivileged processes, 3 hardware
 IRQ 8 pulses, and `/dev/rtc` `ReadMsgV`/`WriteMsgV` round trips
 ({need}`SWR_IPC_0006`).
 ```
+
+```{ver} Verify Ring 3 pipeserv, pipe2, dup3, and ppoll sigmask rules
+:id: VER_IPC_0003
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0004
+
+The headless QEMU harness `tests/test_runner.py` runs `pipeserv` and
+`forkpipetest`. It checks `pipe2`, `dup3` `O_CLOEXEC`, cross-process pipe I/O,
+EOF/`POLLHUP`, and `ppoll` timeout and `sigmask` `EINTR`. CTest `posix.headers`
+and `posix.async_signal_safe` check `<fcntl.h>` and `<poll.h>`
+({need}`SWR_IPC_0004`).
+```

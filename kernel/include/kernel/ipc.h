@@ -74,6 +74,8 @@ long ipc_msg_readv(int msgid, uint64_t offset, uint64_t iov_va,
 long ipc_msg_writev(int msgid, uint64_t offset, uint64_t iov_va,
                     uint64_t iovcnt);
 long ipc_msg_send_pulse(int connid, uint32_t code, uint32_t value);
+long ipc_send_pulse_kernel(uint32_t target_pid, uint32_t chanid, uint32_t code,
+                           uint32_t value);
 void ipc_deliver_irq_pulse(int chanid, chan_msg_t *node, uint32_t code,
                            uint32_t value);
 

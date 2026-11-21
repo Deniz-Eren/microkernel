@@ -32,6 +32,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- POSIX.1-2024 Base `fork`, `execve`, `pipe2`, `dup3`, `fcntl`, `poll`, `ppoll`,
+  and `sigpending` (`TSK_0007`, `SWR_PROC_0004`, `SWR_IPC_0004`): syscalls
+  `SYS_PROC_FORK` (`42`), `SYS_PROC_EXECVE` (`43`), `SYS_PROC_GETPID` (`44`),
+  `SYS_PROC_GETPPID` (`45`), `SYS_FD_OP` (`46`), and `SYS_SIGPENDING` (`47`),
+  kernel per-process FD metadata with `PULSE_CODE_FD_CLOSE` cleanup, Ring 3
+  `servers/pipeserv` (`/dev/pipe`), `<fcntl.h>`, `<poll.h>`, async-signal-safe
+  `libc/src/fd.c`, QEMU `tests/forkpipetest`/`exechelper`, and CTest coverage
+  (`ADR_0011`).
 - POSIX.1-2024 Base `<pthread.h>` and `<semaphore.h>` plus hardware x86-64
   `FS.base` TLS (`TSK_0006`, `SWR_PROC_0005`): syscalls `SYS_THREAD_SET_FSBASE`
   (`39`), `SYS_THREAD_EXIT` (`40`), and `SYS_FUTEX` (`41`), O(1) TLS `errno`,

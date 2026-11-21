@@ -29,6 +29,16 @@ extern char **environ;
 
 ssize_t write(int fd, const void *buf, size_t n);
 ssize_t read(int fd, void *buf, size_t n);
+int close(int fd);
+int dup(int oldfd);
+int dup2(int oldfd, int newfd);
+int dup3(int oldfd, int newfd, int flags);
+int pipe(int fildes[2]);
+int pipe2(int fildes[2], int flags);
+pid_t fork(void);
+pid_t getpid(void);
+pid_t getppid(void);
+int execve(const char *path, char *const argv[], char *const envp[]);
 _Noreturn void _exit(int status);
 unsigned int sleep(unsigned int seconds);
 

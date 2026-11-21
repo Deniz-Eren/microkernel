@@ -56,6 +56,7 @@ uint64_t vmm_get_pte_to(uint64_t pml4_phys, uint64_t vaddr); /* raw PTE or 0 */
 uint64_t vmm_create_user_pml4(void);
 void vmm_destroy_user_pml4(uint64_t pml4_phys);
 int vmm_resolve_cow_to(uint64_t pml4_phys, uint64_t vaddr);
+int vmm_clone_user_cow(uint64_t src_pml4, uint64_t dst_pml4);
 int vmm_handle_page_fault(uint64_t fault_va, uint64_t err);
 long sys_vm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags);
 long sys_vm_unmap(uint64_t va, uint64_t len);

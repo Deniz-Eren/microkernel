@@ -120,6 +120,21 @@ int pthread_sigmask(int how, const sigset_t *restrict set,
     return 0;
 }
 
+int sigpending(sigset_t *set) {
+    if (!set) {
+        errno = EFAULT;
+        return -1;
+    }
+    uint32_t kset = 0;
+    long r = __sys1(SYS_SIGPENDING, (long)(uintptr_t)&kset);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    *set = (sigset_t)kset;
+    return 0;
+}
+
 int sigprocmask(int how, const sigset_t *restrict set,
                 sigset_t *restrict oset) {
     int err = pthread_sigmask(how, set, oset);

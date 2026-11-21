@@ -43,10 +43,10 @@ state ({need}`SYS_PROC_0001`).
 
 ```{swr} Supply POSIX.1-2024 Base process operations and optional spawn
 :id: SWR_PROC_0004
-:status: draft
+:status: active
 :posix: XBD/sys/wait.h (BASE), XSH/fork (BASE), XBD/spawn.h (SPN)
 :derives: SYS_PROC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0011
 
 The process subsystem must supply POSIX.1-2024 Base process creation, program
 load, `waitpid` ([sys/wait.h][hdr-wait]), and `_Exit` on `ProcCreate` and

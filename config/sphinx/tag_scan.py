@@ -55,10 +55,11 @@ class TagOccurrence:
 
 @dataclass(frozen=True)
 class TagScanResult:
-    """Aggregated tag occurrences and discovered test files."""
+    """Aggregated tag occurrences, test files, and stray planning-ID refs."""
 
     tags: tuple[TagOccurrence, ...]
     test_files: tuple[str, ...]
+    planning_refs: tuple[tuple[str, int, str], ...] = ()
 
 
 def _is_excluded(rel_posix: str, extra_excludes: Iterable[str]) -> bool:
@@ -115,6 +116,7 @@ def _iter_repo_files(
 
 
 DOXYGEN_REQ_RE = re.compile(r"^\s*(?:/\*\*|\*)\s*\\req\{([^}]*)\}?")
+PLANNING_ID_RE = re.compile(r"\b(?:TSK|RDM)_[0-9]+\b")
 
 
 def extract_tags_from_line(
@@ -158,6 +160,7 @@ def scan_repository(
     )
     tags: list[TagOccurrence] = []
     test_files: list[str] = []
+    planning_refs: list[tuple[str, int, str]] = []
 
     for rel in _iter_repo_files(root, excludes):
         markers = get_comment_markers(rel)
@@ -170,6 +173,7 @@ def scan_repository(
             text = (root / rel).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
+        check_planning = not rel.startswith("tests/traceability/")
         for line_no, raw_line in enumerate(text.splitlines(), start=1):
             ids = extract_tags_from_line(raw_line, markers)
             if ids is not None:
@@ -181,5 +185,12 @@ def scan_repository(
                         is_test=file_is_test,
                     )
                 )
+            elif check_planning:
+                for pid in PLANNING_ID_RE.findall(raw_line):
+                    planning_refs.append((rel, line_no, pid))
 
-    return TagScanResult(tags=tuple(tags), test_files=tuple(test_files))
+    return TagScanResult(
+        tags=tuple(tags),
+        test_files=tuple(test_files),
+        planning_refs=tuple(planning_refs),
+    )

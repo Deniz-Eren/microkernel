@@ -42,10 +42,10 @@ It must resolve `NAME_MSG_QUERY` lookups to `(pid, chanid)` pairs
 
 ```{swr} Supply POSIX.1-2024 Base descriptor IPC and ppoll
 :id: SWR_IPC_0004
-:status: draft
+:status: active
 :posix: XSH/pipe2 (BASE), XSH/dup3 (BASE), XSH/ppoll (BASE)
 :derives: SYS_IPC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0011
 
 Ring 3 system servers through kernel channels must supply mandatory Issue 8 Base
 functions `pipe2` ([pipe2][fn-pipe2]), `dup3`, and `ppoll` ([ppoll][fn-ppoll],

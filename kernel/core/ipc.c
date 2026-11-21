@@ -439,6 +439,32 @@ long ipc_msg_send_pulse(int connid, uint32_t code, uint32_t value) {
     return 0;
 }
 
+long ipc_send_pulse_kernel(uint32_t target_pid, uint32_t chanid, uint32_t code,
+                           uint32_t value) {
+    channel_t *ch = channel_get((int)chanid);
+    if (!ch || ch->owner_pid != target_pid) {
+        return -ESRCH;
+    }
+    chan_msg_t *m = kmalloc(sizeof(*m));
+    if (!m) {
+        return -ENOMEM;
+    }
+    memset(m, 0, sizeof(*m));
+    m->len = sizeof(ipc_pulse_t);
+    ipc_pulse_t p = {.code = code, .value = value};
+    memcpy(m->data, &p, sizeof(p));
+
+    channel_pulse_enqueue(ch, m);
+
+    tcb_t *w = channel_recv_dequeue(ch);
+    if (w) {
+        w->blocked_on_chan = NULL;
+        w->ipc_result = 1;
+        sched_ready(w);
+    }
+    return 0;
+}
+
 /* Wake a thread out of any IPC block, handing back `result` (used by
  * signal delivery: blocked threads resume with -EINTR). */
 void ipc_unblock_thread(tcb_t *t, long result) {

@@ -516,6 +516,41 @@ static int clone_cow_page(uint64_t src_pml4, uint64_t dst_pml4, uint64_t page) {
     return 0;
 }
 
+int vmm_clone_user_cow(uint64_t src_pml4, uint64_t dst_pml4) {
+    uint64_t *pml4 = table_at(src_pml4);
+    for (int i4 = 0; i4 < 256; i4++) {
+        if (!(pml4[i4] & VMM_PRESENT)) {
+            continue;
+        }
+        uint64_t *pdpt = table_at(pml4[i4]);
+        for (int i3 = 0; i3 < 512; i3++) {
+            if (!(pdpt[i3] & VMM_PRESENT) || (pdpt[i3] & VMM_HUGE)) {
+                continue;
+            }
+            uint64_t *pd = table_at(pdpt[i3]);
+            for (int i2 = 0; i2 < 512; i2++) {
+                if (!(pd[i2] & VMM_PRESENT) || (pd[i2] & VMM_HUGE)) {
+                    continue;
+                }
+                uint64_t *pt = table_at(pd[i2]);
+                for (int i1 = 0; i1 < 512; i1++) {
+                    if (!(pt[i1] & VMM_PRESENT)) {
+                        continue;
+                    }
+                    uint64_t page = ((uint64_t)i4 << 39) |
+                                    ((uint64_t)i3 << 30) |
+                                    ((uint64_t)i2 << 21) | ((uint64_t)i1 << 12);
+                    int rc = clone_cow_page(src_pml4, dst_pml4, page);
+                    if (rc < 0) {
+                        return rc;
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 long sys_vm_clone_cow(uint64_t dst_pid, uint64_t va, uint64_t len) {
     pcb_t *src = proc_current();
     if (!src) {
@@ -530,40 +565,7 @@ long sys_vm_clone_cow(uint64_t dst_pid, uint64_t va, uint64_t len) {
     }
 
     if (va == 0 && len == 0) {
-        /* Clone entire lower-half user address space COW. */
-        uint64_t *pml4 = table_at(src->pml4_phys);
-        for (int i4 = 0; i4 < 256; i4++) {
-            if (!(pml4[i4] & VMM_PRESENT)) {
-                continue;
-            }
-            uint64_t *pdpt = table_at(pml4[i4]);
-            for (int i3 = 0; i3 < 512; i3++) {
-                if (!(pdpt[i3] & VMM_PRESENT) || (pdpt[i3] & VMM_HUGE)) {
-                    continue;
-                }
-                uint64_t *pd = table_at(pdpt[i3]);
-                for (int i2 = 0; i2 < 512; i2++) {
-                    if (!(pd[i2] & VMM_PRESENT) || (pd[i2] & VMM_HUGE)) {
-                        continue;
-                    }
-                    uint64_t *pt = table_at(pd[i2]);
-                    for (int i1 = 0; i1 < 512; i1++) {
-                        if (!(pt[i1] & VMM_PRESENT)) {
-                            continue;
-                        }
-                        uint64_t page =
-                            ((uint64_t)i4 << 39) | ((uint64_t)i3 << 30) |
-                            ((uint64_t)i2 << 21) | ((uint64_t)i1 << 12);
-                        int rc = clone_cow_page(src->pml4_phys, dst->pml4_phys,
-                                                page);
-                        if (rc < 0) {
-                            return rc;
-                        }
-                    }
-                }
-            }
-        }
-        return 0;
+        return vmm_clone_user_cow(src->pml4_phys, dst->pml4_phys);
     }
 
     if (len == 0 || (va & 0xFFFULL) != 0 || va < USER_VA_MIN ||

@@ -56,6 +56,7 @@ int sigismember(const sigset_t *set, int signo);
 int sigaction(int sig, const struct sigaction *restrict act,
               struct sigaction *restrict oact);
 int sigprocmask(int how, const sigset_t *restrict set, sigset_t *restrict oset);
+int sigpending(sigset_t *set);
 int pthread_sigmask(int how, const sigset_t *restrict set,
                     sigset_t *restrict oset);
 int kill(pid_t pid, int sig);

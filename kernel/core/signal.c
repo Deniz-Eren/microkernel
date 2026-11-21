@@ -100,6 +100,21 @@ long sys_sigprocmask(uint64_t how, uint64_t set_va, uint64_t oset_va) {
     return 0;
 }
 
+long sys_sigpending(uint64_t set_va) {
+    tcb_t *t = sched_current();
+    if (!t) {
+        return -EPERM;
+    }
+    if (!set_va) {
+        return -EFAULT;
+    }
+    uint32_t pend = t->pending_signals;
+    if (copy_to_user(set_va, &pend, sizeof(pend)) < 0) {
+        return -EFAULT;
+    }
+    return 0;
+}
+
 void sys_sigreturn(trapframe_t *tf) {
     sig_frame_t f = {0};
     if (copy_from_user(&f, tf->rdi, sizeof(f)) < 0) {
@@ -149,8 +164,11 @@ long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig) {
 
     target->pending_signals |= (1u << sig);
 
-    /* A thread blocked in IPC, waitpid, or sleep wakes with -EINTR;
-     * the signal itself is delivered at its next return to user mode. */
+    /* Wake a blocked thread only when an unblocked signal is now deliverable.
+     * The signal itself is delivered at its next return to user mode. */
+    if (!(target->pending_signals & ~target->blocked_signals)) {
+        return 0;
+    }
     if (target->state >= THREAD_SEND_BLOCKED &&
         target->state <= THREAD_RECEIVE_BLOCKED) {
         ipc_unblock_thread(target, -EINTR);
