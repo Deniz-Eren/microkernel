@@ -55,6 +55,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Buffered POSIX.1-2024 `<stdio.h>`, environment mutation, `execvp`, and core
+  C17/POSIX headers (`SWR_LIBC_0007`, `ADR_0019`, `ICD_LIBC_0005`,
+  `COMP_LIBC_0004`, `VER_LIBC_0006`): added standalone `<ctype.h>`,
+  `<assert.h>`, `<inttypes.h>`, `<strings.h>`, and `<limits.h>` (with C17 and
+  POSIX runtime limits), buffered `FILE` streams (`fopen`, `fdopen`, `fclose`,
+  `fread`, `fwrite`, `fgets`, `fgetc`, `ungetc`, `fseeko`, `ftello`, `fileno`,
+  `setvbuf`, `vsnprintf`, `vfprintf`, `perror`), `setenv`/`unsetenv`,
+  `execv`/`execvp` with `/boot/` `bootfs` lookup, `strdup`/`strndup`/`strstr`,
+  `strrchr`/`memchr`/`strtok_r`/`strerror`, and QEMU
+  `tests/stdiotest/test_stdio.c`.
 - Ring 3 serial TTY server and multi-server `ppoll()` (`SWR_IPC_0008`,
   `ADR_0018`, `ICD_IPC_0010`–`0011`, `COMP_IPC_0010`–`0011`, `VER_IPC_0006`):
   added `servers/ttyserv/main.c` (`/dev/tty`) driven by COM1 IRQ 4 IOAPIC pulses

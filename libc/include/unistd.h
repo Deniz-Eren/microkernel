@@ -11,7 +11,7 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H
 
-/* need:: ICD_LIBC_0002 */
+/* need:: ICD_LIBC_0002 ICD_LIBC_0005 */
 
 #include <stddef.h>
 #include <stdint.h>
@@ -63,6 +63,8 @@ pid_t fork(void);
 pid_t getpid(void);
 pid_t getppid(void);
 int execve(const char *path, char *const argv[], char *const envp[]);
+int execv(const char *path, char *const argv[]);
+int execvp(const char *file, char *const argv[]);
 int getentropy(void *buffer, size_t length);
 _Noreturn void _exit(int status);
 unsigned int sleep(unsigned int seconds);

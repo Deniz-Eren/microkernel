@@ -73,6 +73,7 @@ NON_CANCELLATION_POINTS: tuple[str, ...] = (
     "unlink",
     "rmdir",
     "chdir",
+    "execv",
 )
 
 CANCEL_CHECK_TARGETS: frozenset[str] = frozenset(

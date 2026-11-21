@@ -38,3 +38,18 @@ handling and `EILSEQ` checks. `string.c`, `stdlib.c`, and `unistd.c` provide
 `strlcpy`, `strlcat`, `reallocarray`, `secure_getenv`, and `getentropy` over
 `SYS_GETENTROPY` ({need}`ICD_LIBC_0004`, {need}`SWR_LIBC_0005`).
 ```
+
+```{comp} Buffered stdio streams, env mutation, execvp, and C17 helpers
+:id: COMP_LIBC_0004
+:status: active
+:posix: XBD/ctype.h (CX), XSH/fopen (CX), XSH/setenv (BASE), XSH/exec (BASE)
+:refines: ARC_LIBC_0001, ICD_LIBC_0005
+:satisfies: SWR_LIBC_0007
+
+`libc/src/stdio.c` provides buffered `FILE` I/O (`fopen`, `fdopen`, `fclose`,
+`fread`, `fwrite`, `fgets`, `fseeko`, `ftello`, `ungetc`, `vsnprintf`, `perror`)
+with mutex-protected stream flushing. `ctype.c`, `stdlib.c`, `string.c`, and
+`unistd.c` implement `<ctype.h>`, `<strings.h>`, `<inttypes.h>`,
+`__assert_fail`, `setenv`, `unsetenv`, `execv`, `execvp`, `strdup`, `strstr`,
+and `strerror` ({need}`ICD_LIBC_0005`, {need}`SWR_LIBC_0007`).
+```

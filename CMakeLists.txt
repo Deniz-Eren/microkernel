@@ -75,8 +75,8 @@ file(GLOB LIBC_SRCS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/libc/src/*.c)
 add_library(c STATIC ${LIBC_SRCS})
 target_compile_options(c PRIVATE ${USER_CFLAGS})
 target_include_directories(c SYSTEM PRIVATE
-    ${CLANG_RESOURCE_DIR}/include
     ${SYSROOT_DIR}/usr/include
+    ${CLANG_RESOURCE_DIR}/include
 )
 set_target_properties(c PROPERTIES
     ARCHIVE_OUTPUT_NAME "c"
@@ -110,8 +110,8 @@ function(microkernel_add_user_executable name)
     add_executable(${name} ${ARGN})
     target_compile_options(${name} PRIVATE ${USER_CFLAGS})
     target_include_directories(${name} SYSTEM PRIVATE
-        ${CLANG_RESOURCE_DIR}/include
         ${SYSROOT_DIR}/usr/include
+        ${CLANG_RESOURCE_DIR}/include
     )
     target_link_options(${name} PRIVATE
         -static
@@ -150,6 +150,7 @@ add_subdirectory(tests/heaptest)
 add_subdirectory(tests/vfstest)
 add_subdirectory(tests/shmtest)
 add_subdirectory(tests/ttytest)
+add_subdirectory(tests/stdiotest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

@@ -9,9 +9,10 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_SIG_0003 VER_MEM_0002
-# need:: VER_MEM_0004 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
-# need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_DOCS_0004
+# need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_SIG_0003
+# need:: VER_MEM_0002 VER_MEM_0004 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
+# need:: VER_PROC_0005 VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006
+# need:: VER_DOCS_0004
 
 from __future__ import annotations
 
@@ -27,9 +28,13 @@ SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 
 POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
+    "assert.h",
+    "ctype.h",
     "dirent.h",
     "errno.h",
     "fcntl.h",
+    "inttypes.h",
+    "limits.h",
     "poll.h",
     "pthread.h",
     "semaphore.h",
@@ -39,6 +44,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "stdio.h",
     "stdlib.h",
     "string.h",
+    "strings.h",
     "termios.h",
     "time.h",
     "uchar.h",
@@ -83,9 +89,9 @@ def _compile_snippet(source: str, extra_flags: list[str]) -> tuple[int, str]:
             "-ffreestanding",
             "-nostdinc",
             "-isystem",
-            str(clang_inc),
-            "-isystem",
             str(_SYSROOT),
+            "-isystem",
+            str(clang_inc),
             "-std=c17",
             "-Wall",
             "-Wextra",
@@ -581,6 +587,53 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"termios check failed:\n{err}")
+
+    def test_buffered_stdio_and_core_c17_headers_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <assert.h>",
+                "#include <ctype.h>",
+                "#include <inttypes.h>",
+                "#include <limits.h>",
+                "#include <stdio.h>",
+                "#include <stdlib.h>",
+                "#include <string.h>",
+                "#include <strings.h>",
+                "#include <unistd.h>",
+                "#ifdef SYS_PROC_EXECVE",
+                '#error "core headers leaked SYS_PROC_EXECVE"',
+                "#endif",
+                "static_assert(PATH_MAX >= _POSIX_PATH_MAX, \"PATH_MAX\");",
+                "static_assert(NAME_MAX >= _POSIX_NAME_MAX, \"NAME_MAX\");",
+                "static_assert(PIPE_BUF >= _POSIX_PIPE_BUF, \"PIPE_BUF\");",
+                "static int __check_core_stdio_api(void) {",
+                "    assert(BUFSIZ >= 256);",
+                "    FILE *f = fopen(\"/tmp/x\", \"r\");",
+                "    (void)fdopen(0, \"r\");",
+                "    (void)fseeko(f, (off_t)0, SEEK_SET);",
+                "    (void)ftello(f);",
+                "    (void)fileno(f);",
+                "    (void)fclose(f);",
+                "    (void)setenv(\"K\", \"V\", 1);",
+                "    (void)unsetenv(\"K\");",
+                "    char *const av[] = {\"sh\", (char *)0};",
+                "    (void)execv(\"/boot/sh\", av);",
+                "    (void)execvp(\"sh\", av);",
+                "    (void)strdup(\"a\");",
+                "    (void)strstr(\"ab\", \"b\");",
+                "    (void)strerror(0);",
+                "    (void)strcasecmp(\"a\", \"A\");",
+                "    (void)imaxabs((intmax_t)-1);",
+                "    return isalnum('A') + tolower('A') + toupper('a');",
+                "}",
+                "int (*__core_fn_ref)(void) = __check_core_stdio_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"core/stdio check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

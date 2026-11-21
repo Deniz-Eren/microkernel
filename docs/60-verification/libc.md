@@ -63,3 +63,18 @@ The headless QEMU harness `tests/test_runner.py` runs `libctest`. It checks
 `posix.async_signal_safe` check standalone compilation and `getentropy` safety
 ({need}`SWR_LIBC_0005`).
 ```
+
+```{ver} Verify buffered stdio, env, execvp, and core C17 headers in QEMU
+:id: VER_LIBC_0006
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0007
+
+The headless QEMU harness `tests/test_runner.py` runs `stdiotest`. It checks
+buffered `fopen`, `fdopen`, `fread`, `fwrite`, `fgets`, `ungetc`, `fseeko`, and
+`ftello` over `tmpfs` and `bootfs`. It also checks `setenv`/`unsetenv`, `execvp`
+`PATH` lookup, `<ctype.h>`, `<strings.h>`, `<inttypes.h>`, `<limits.h>`,
+`<assert.h>`, `strdup`, `strstr`, and `strerror`. CTest `posix.headers`,
+`posix.symbol_diff`, and `posix.async_signal_safe` check header hygiene and
+`execv` safety ({need}`SWR_LIBC_0007`).
+```

@@ -49,3 +49,17 @@ error constants and thread-local `errno` ({need}`ARC_LIBC_0001`,
 `getentropy` alongside `<stdatomic.h>` and `<stdalign.h>`
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0005`).
 ```
+
+```{icd} POSIX.1-2024 buffered stdio, env, execvp, and core C17 headers
+:id: ICD_LIBC_0005
+:status: active
+:posix: XBD/ctype.h (CX), XBD/limits.h (CX), XSH/fopen (CX), XSH/exec (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0007
+
+`libc/include/` adds `<ctype.h>`, `<assert.h>`, `<inttypes.h>`, `<strings.h>`,
+and `<limits.h>` with POSIX limits. `<stdio.h>`, `<stdlib.h>`, `<string.h>`, and
+`<unistd.h>` declare buffered `FILE` operations, `setenv`, `unsetenv`, `execv`,
+`execvp`, `strdup`, `strstr`, and `strerror` ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0007`).
+```

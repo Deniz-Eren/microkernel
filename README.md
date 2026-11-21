@@ -165,11 +165,11 @@ Developers can build Ring 3 C17 servers and applications packed into `boot.tar`.
 The headers below show all user-space functions available at this time:
 
 - **POSIX core (`<unistd.h>`):** `_POSIX_VERSION` and `_POSIX2_VERSION`
-  (`202405L`), `fork` (COW), `execve` (bootfs `argv`/`envp`), `getpid`,
-  `getppid`, and `getentropy`. Also `pipe`/`pipe2`, `dup`/`dup2`/`dup3`,
-  `close`, `write`, `read`, `lseek`, `ftruncate`, `unlink`/`unlinkat`, `rmdir`,
-  `chdir`/`fchdir`, `getcwd`, `access`, `isatty`, `_exit`, `sleep`, `environ`,
-  and `STD*_FILENO`
+  (`202405L`), `fork` (COW), `execve`/`execv`/`execvp` (`PATH` lookup and bootfs
+  `argv`/`envp`), `getpid`, `getppid`, and `getentropy`. Also `pipe`/`pipe2`,
+  `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`, `ftruncate`,
+  `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, `getcwd`, `access`, `isatty`,
+  `_exit`, `sleep`, `environ`, and `STD*_FILENO`
 - **POSIX descriptors and polling (`<fcntl.h>`, `<poll.h>`):** `open`, `openat`,
   `creat`, `fcntl` (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`,
   `F_GETFL`, `F_SETFL`), `O_CLOEXEC`, `O_NONBLOCK`, `O_DIRECTORY`, `O_SYNC`,
@@ -213,19 +213,32 @@ The headers below show all user-space functions available at this time:
   `pthread_cleanup_push`/`pop`), mutexes (`NORMAL`/`ERRORCHECK`/`RECURSIVE`),
   `pthread_cond_*`, `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, and
   `sem_*` (with async-signal-safe `sem_post`)
-- **Formatted I/O (`<stdio.h>`):** `FILE` (`stdin`/`stdout`/`stderr`), recursive
-  stream locking (`flockfile`, `ftrylockfile`, `funlockfile`), `printf`,
-  `fprintf`, `snprintf`, `puts`, `fputs`, `putchar`, `putchar_unlocked`,
-  `fputc`, `fflush`
-- **Heap and exit (`<stdlib.h>`):** `mmap`/`munmap`-backed thread-safe
-  coalescing `malloc`, `free`, `calloc`, `realloc`, and `reallocarray`, plus
-  `getenv`, `secure_getenv`, `exit`, `_Exit`, `abort`, `strtol`, `atoi`
-- **Memory and strings (`<string.h>`):** `memset`, `memcpy`, `memmove`,
-  `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy`, `strlcpy`,
-  `strlcat`, `strchr`
-- **Freestanding C17 and Unicode headers:** `<stdint.h>`, `<stddef.h>`,
-  `<stdbool.h>`, `<stdarg.h>`, `<limits.h>`, `<stdatomic.h>`, `<stdalign.h>`,
-  and `<uchar.h>` (`mbrtoc16`, `c16rtomb`, `mbrtoc32`, `c32rtomb`)
+- **Buffered and formatted I/O (`<stdio.h>`):** `FILE`
+  (`stdin`/`stdout`/`stderr`), `fopen`, `fdopen`, `fclose`, `fread`, `fwrite`,
+  `fgets`, `fgetc`, `getc`/`getc_unlocked`, `getchar`/`getchar_unlocked`, and
+  `ungetc`. Also `fseek`/`fseeko`, `ftell`/`ftello`, `rewind`, `feof`, `ferror`,
+  `clearerr`, `fileno`, `setvbuf`, `setbuf`, `fflush`, and recursive stream
+  locks (`flockfile`, `ftrylockfile`, `funlockfile`). Formatted output covers
+  `printf`/`vprintf`, `fprintf`/`vfprintf`, `snprintf`/`vsnprintf`,
+  `sprintf`/`vsprintf`, `puts`, `fputs`, `putchar`/`putchar_unlocked`, `fputc`,
+  `putc`/`putc_unlocked`, and `perror`
+- **Heap, environment, and exit (`<stdlib.h>`):** `mmap`/`munmap`-backed
+  thread-safe coalescing `malloc`, `free`, `calloc`, `realloc`, and
+  `reallocarray`. Also `getenv`, `secure_getenv`, `setenv`, `unsetenv`, `exit`,
+  `_Exit`, `abort`, `strtol`/`strtoul`/`strtoll`/`strtoull`,
+  `atoi`/`atol`/`atoll`, and `abs`/`labs`/`llabs`
+- **Memory, strings, and character classes (`<string.h>`, `<strings.h>`,
+  `<ctype.h>`):** `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`, `strlen`,
+  `strnlen`, `strcmp`, `strncmp`, `strcasecmp`, `strncasecmp`, `strcpy`,
+  `strncpy`, `strcat`, and `strncat`. Also `strlcpy`, `strlcat`, `strchr`,
+  `strrchr`, `strstr`, `strspn`, `strcspn`, `strpbrk`, `strtok`, `strtok_r`,
+  `strdup`, `strndup`, `strerror`, and C locale `<ctype.h>` helpers
+- **Freestanding C17, limits, and Unicode headers:** `<stdint.h>`, `<stddef.h>`,
+  `<stdbool.h>`, `<stdarg.h>`, `<assert.h>`, `<inttypes.h>` (`PRI*`/`SCN*`,
+  `imaxabs`, `imaxdiv`, `strtoimax`, `strtoumax`), `<limits.h>` (C17 and POSIX
+  `PATH_MAX`, `NAME_MAX`, `OPEN_MAX`, `PIPE_BUF`, `ARG_MAX`, `SSIZE_MAX`),
+  `<stdatomic.h>`, `<stdalign.h>`, and `<uchar.h>` (`mbrtoc16`, `c16rtomb`,
+  `mbrtoc32`, `c32rtomb`)
 - **Synchronous IPC (`<sys/ipc.h>`):** `CreateChannel`, `DestroyChannel`,
   `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
   `ReadMsgV`, `WriteMsgV`, `SendPulse`, and `sysproc` name registry
@@ -253,8 +266,8 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): buffered `fopen` and `execvp`,
-`AF_UNIX` sockets, POSIX `sh`, and `pselect` hardening. See
+Not available at this time (next tasks): `AF_UNIX` sockets, POSIX `sh`, ACPI
+`MADT`/`SPCR` driver discovery, and `pselect` hardening. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
@@ -267,7 +280,7 @@ Not available at this time (next tasks): buffered `fopen` and `execvp`,
 - `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,
   `proctest`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
   `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`, `vfstest`,
-  `shmtest`, `ttytest`), `posix/`, and `traceability/`
+  `shmtest`, `ttytest`, `stdiotest`), `posix/`, and `traceability/`
 - `config/sphinx/`, `tools/` — Sphinx-Needs traceability model, tag scanner,
   auditor, and repository STE gate
 - `scripts/` — container, build, format, hook, and `boot.tar` helper scripts
@@ -294,9 +307,11 @@ task records. The build completed milestones 1 to 6, POSIX clocks/timers,
 pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. It also
 completed `<aio.h>`, cancellation points, `<stdio.h>` locking, and Issue 8 C17
 library functions. Recent milestones added the 4-gate POSIX harness,
-`mmap`-backed heap reclamation, Ring 3 VFS (`bootfs`/`tmpfs`), option-gated
-`SHM`/`ML`/`MLR`, and Ring 3 COM1 TTY (`<termios.h>`). Next tasks add buffered
-`stdio` and `execvp`, `AF_UNIX` sockets, POSIX `sh`, and `pselect` hardening.
+`mmap`-backed heap reclamation, Ring 3 VFS (`bootfs`/`tmpfs`), and option-gated
+`SHM`/`ML`/`MLR`. They also added Ring 3 COM1 TTY (`<termios.h>`), buffered
+`<stdio.h>`, `setenv`/`unsetenv`, `execvp`, and core C17/POSIX headers. Next
+tasks add `AF_UNIX` sockets, POSIX `sh`, ACPI `MADT`/`SPCR` discovery, and
+`pselect` hardening.
 
 ## Documentation
 

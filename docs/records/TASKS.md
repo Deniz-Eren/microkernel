@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0019 — Add POSIX buffered stdio, env, execvp, and core C17 headers
-
-```{task} Add POSIX buffered stdio, env, execvp, and core C17 headers
-:id: TSK_0019
-:status: open
-:traces: ADR_0003, SWR_LIBC_0007
-
-Add `<ctype.h>`, `<assert.h>`, `<inttypes.h>`, `<strings.h>`, and `<limits.h>`
-POSIX limits. Implement buffered `FILE` I/O (`fopen`, `fdopen`, `fclose`,
-`fread`, `fwrite`, `fgets`, `fseek`, `fileno`), `setenv`, `unsetenv`, `execv`,
-`execvp`, `strdup`, `strstr`, and `strerror` ({need}`SWR_LIBC_0007`).
-```
-
 ### TSK_0018 — Build Ring 3 AF_UNIX local sockets server and accept4
 
 ```{task} Build Ring 3 AF_UNIX local sockets server and accept4

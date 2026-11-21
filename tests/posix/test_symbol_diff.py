@@ -39,9 +39,13 @@ DEFAULT_MANIFEST = ROOT / "tests" / "posix" / "issue8-manifest.tsv"
 
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
+    "assert.h",
+    "ctype.h",
     "dirent.h",
     "errno.h",
     "fcntl.h",
+    "inttypes.h",
+    "limits.h",
     "poll.h",
     "pthread.h",
     "semaphore.h",
@@ -51,6 +55,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "stdio.h",
     "stdlib.h",
     "string.h",
+    "strings.h",
     "termios.h",
     "time.h",
     "uchar.h",

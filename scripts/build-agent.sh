@@ -104,6 +104,9 @@ if ! "$ENV" test --timeout 120 \
     --expect 'isatty, /dev/tty, tcgetattr/tcsetattr, and speeds verified' \
     --expect 'canonical line discipline \(VERASE, VKILL, ICRNL, VEOF\)' \
     --expect 'raw mode and multi-server ppoll \(TTY \+ pipe\) verified' \
+    --expect 'buffered stdio fopen, fread/fwrite, fgets, ungetc, fseek, and' \
+    --expect 'setenv/unsetenv and execvp PATH lookup with environ' \
+    --expect 'ctype, strings, inttypes, limits, assert, strdup, strstr, and' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

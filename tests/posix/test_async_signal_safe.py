@@ -42,6 +42,7 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "ppoll",
     "fork",
     "execve",
+    "execv",
     "getpid",
     "getppid",
     "sigaction",

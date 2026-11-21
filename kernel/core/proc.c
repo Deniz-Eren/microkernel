@@ -74,8 +74,11 @@ static int find_bootfs_image(uint64_t tar_phys, uint64_t tar_size,
                              const char *name, const void **img_out,
                              uint64_t *sz_out) {
     const char *base = name;
-    if (base[0] == '/' && base[1] == 'b' && base[2] == 'i' && base[3] == 'n' &&
-        base[4] == '/') {
+    if (base[0] == '/' && base[1] == 'b' && base[2] == 'o' && base[3] == 'o' &&
+        base[4] == 't' && base[5] == '/') {
+        base += 6;
+    } else if (base[0] == '/' && base[1] == 'b' && base[2] == 'i' &&
+               base[3] == 'n' && base[4] == '/') {
         base += 5;
     } else if (base[0] == '/') {
         base += 1;
@@ -875,6 +878,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "shmtest", 100, 0);
     /* POSIX.1-2024 serial TTY, termios, and multi-server ppoll test. */
     spawn_image(tar_phys, tar_size, "ttytest", 100, 0);
+    /* POSIX.1-2024 buffered stdio, env, execvp, and core C17 headers test. */
+    spawn_image(tar_phys, tar_size, "stdiotest", 100, 0);
 
     sched_activate();
 }

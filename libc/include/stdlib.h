@@ -1,6 +1,6 @@
 /**
  * @file     stdlib.h
- * @brief    Freestanding Ring 3 process exit and heap declarations
+ * @brief    POSIX.1-2024 process exit, environment, heap, and integer APIs
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -11,9 +11,12 @@
 #ifndef _STDLIB_H
 #define _STDLIB_H
 
-/* need:: ICD_LIBC_0001 */
+/* need:: ICD_LIBC_0001 ICD_LIBC_0005 */
 
 #include <stddef.h>
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 
 _Noreturn void exit(int status);
 _Noreturn void _Exit(int status);
@@ -25,7 +28,19 @@ void *realloc(void *ptr, size_t size);
 void *reallocarray(void *ptr, size_t nelem, size_t elsize);
 char *getenv(const char *name);
 char *secure_getenv(const char *name);
-long strtol(const char *s, char **end, int base);
+int setenv(const char *envname, const char *envval, int overwrite);
+int unsetenv(const char *name);
+long strtol(const char *restrict str, char **restrict endptr, int base);
+unsigned long strtoul(const char *restrict str, char **restrict endptr,
+                      int base);
+long long strtoll(const char *restrict str, char **restrict endptr, int base);
+unsigned long long strtoull(const char *restrict str, char **restrict endptr,
+                            int base);
 int atoi(const char *s);
+long atol(const char *s);
+long long atoll(const char *s);
+int abs(int i);
+long labs(long i);
+long long llabs(long long i);
 
 #endif /* _STDLIB_H */
