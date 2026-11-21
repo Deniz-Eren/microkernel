@@ -159,3 +159,5 @@ For the full traceability backlog and longer-term roadmap, see
 - [x] COMPLETE 2026-11-21 ci(gates): enforce full-repo check_text.py and
   tools/check_ste.py inside build-agent.sh, pre-commit hook, and AGENTS.md, and
   bring all 82 Markdown docs to 0 STE errors (ADR-17)
+- [x] COMPLETE 2026-11-21 ci(hooks): run full CTest (including all Sphinx-Needs
+  and POSIX checks) inside .git/hooks/pre-commit via scripts/install-hooks.sh

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ##
 # @file     install-hooks.sh
-# @brief    Install local git pre-commit hook enforcing format, text, and STE
+# @brief    Install git pre-commit hook for format, text, STE, and CTest/Needs
 #
 # @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -29,6 +29,8 @@ fi
 ./scripts/formatter-agent.sh
 python3 "$CHECK_TEXT" --root .
 python3 tools/check_ste.py --root .
+rm -rf build/docs/doctrees
+./scripts/env.sh ctest --test-dir build --output-on-failure
 EOF
 chmod +x "$HOOK"
 echo "Installed $HOOK"

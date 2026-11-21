@@ -86,6 +86,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Updated `scripts/install-hooks.sh` so `.git/hooks/pre-commit` also runs full
+  CTest (`traceability.unit`, `docs.html`, `docs.needs`, `docs.audit`,
+  `posix.headers`, `posix.async_signal_safe`) with fresh `build/docs/doctrees`.
 - Expanded `docs/00-overview/glossary.md` to explain Ring 0, Ring 3, syscalls,
   PCB/TCB, IPC, PMM/VMM, PML4, SMEP/SMAP, COW, bootfs, sysroot, and
   async-signal-safety.

@@ -46,6 +46,7 @@ if ! python3 tools/check_ste.py --root . > "$STE_LOG" 2>&1; then
 fi
 
 echo "==> build"
+rm -rf build/docs/doctrees
 BUILD_LOG="$(mktemp)"
 if ! "$ENV" build > "$BUILD_LOG" 2>&1; then
     echo "BUILD: FAIL (build step; log: $BUILD_LOG)"
