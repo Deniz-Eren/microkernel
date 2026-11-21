@@ -12,6 +12,7 @@
 #include <kernel/printk.h>
 #include <arch/x86_64/serial.h>
 #include <kernel/sched.h>
+#include <kernel/entropy.h>
 #include <kernel/intr.h>
 #include <kernel/ipc.h>
 #include <kernel/signal.h>
@@ -236,6 +237,9 @@ void syscall_handler(trapframe_t *tf) {
         break;
     case SYS_SIGPENDING:
         ret = sys_sigpending(tf->rdi);
+        break;
+    case SYS_GETENTROPY:
+        ret = sys_getentropy(tf->rdi, tf->rsi);
         break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();

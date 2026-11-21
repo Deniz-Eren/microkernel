@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0011 — Implement POSIX.1-2024 Base functions and C11/C17 headers
+
+```{task} Implement POSIX.1-2024 Base functions and C11/C17 headers
+:id: TSK_0011
+:status: done
+:traces: ADR_0003, ADR_0014, SWR_LIBC_0005
+
+Add `strlcpy`, `strlcat`, `reallocarray`, `getentropy`, and `secure_getenv`
+under `-D_POSIX_C_SOURCE=202405L`, plus `<stdatomic.h>`, `<stdalign.h>`, and
+`<uchar.h>` with QEMU and CTest verification ({need}`SWR_LIBC_0005`).
+```
+
 ### TSK_0010 — Add pthread cancellation points and thread-safe <stdio.h> locking
 
 ```{task} Add pthread cancellation points and thread-safe <stdio.h> locking

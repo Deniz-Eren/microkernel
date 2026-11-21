@@ -21,18 +21,6 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0011 — Implement POSIX.1-2024 Base functions and C11/C17 headers
-
-```{task} Implement POSIX.1-2024 Base functions and C11/C17 headers
-:id: TSK_0011
-:status: open
-:traces: ADR_0003, SWR_LIBC_0005
-
-Add `strlcpy`, `strlcat`, `reallocarray`, `getentropy`, and `secure_getenv`
-under `-D_POSIX_C_SOURCE=202405L`, plus `<stdatomic.h>`, `<stdalign.h>`, and
-`<uchar.h>` with QEMU and CTest verification ({need}`SWR_LIBC_0005`).
-```
-
 ### TSK_0012 — Implement option-gated POSIX memory extensions (SHM, ML, MLR)
 
 ```{task} Implement option-gated POSIX memory extensions (SHM, ML, MLR)

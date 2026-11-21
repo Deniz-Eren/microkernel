@@ -26,8 +26,10 @@ DEFAULT_LIBC = ROOT / "sysroot" / "usr" / "lib" / "libc.a"
 
 ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "_exit",
+    "_Exit",
     "write",
     "read",
+    "getentropy",
     "close",
     "dup",
     "dup2",

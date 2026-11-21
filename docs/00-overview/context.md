@@ -63,14 +63,14 @@ and clients resolve them. All other system services, such as the echo server
 - `kernel/arch/x86_64/`: CPU and platform bring-up (`boot.S`), GDT, IDT,
   interrupt stubs, LAPIC timer, serial port, and context switch.
 - `kernel/core/`: Core subsystems for memory (`pmm`, `vmm`, `kheap`), scheduling
-  and processes (`sched`, `proc`, `time`), IPC and IRQs (`ipc`, `channel`,
-  `intr`), signals (`signal`), syscalls (`syscall`), and boot (`elf`, `ustar`,
-  `multiboot`).
+  and processes (`sched`, `proc`, `time`, `entropy`), IPC and IRQs (`ipc`,
+  `channel`, `intr`), signals (`signal`), syscalls (`syscall`), and boot (`elf`,
+  `ustar`, `multiboot`).
 - `kernel/include/`, `kernel/lib/`: Kernel-internal headers and freestanding
   helpers included via `kernel/` CMake include paths.
 - `libc/`: Freestanding Ring 3 C17 / POSIX.1-2024 library (`crt0`, `errno`,
   `signal`, `time`, `pthread`, `semaphore`, `fd`, `aio`, `mman`, `wait`,
-  `stdio`, `stdlib`, `string`, and `include/sys/` syscall wrappers).
+  `uchar`, `stdio`, `stdlib`, `string`, and `include/sys/` syscall wrappers).
 - `servers/sysproc/`: First Ring 3 process. It spawns system servers and hosts
   the service name registry.
 - `servers/pipeserv/`: Ring 3 POSIX pipe and `ppoll` server registered at
@@ -81,8 +81,8 @@ and clients resolve them. All other system services, such as the echo server
 - `tests/`: `test_runner.py` (headless QEMU serial assertion harness), Ring 3
   test binaries (`ipccli`, `sigtest`, `proctest`, `procchild`, `drvtest`,
   `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`,
-  `canceltest`), `posix/` (`posix.headers`, `posix.async_signal_safe`), and
-  `traceability/` unit tests.
+  `canceltest`, `libctest`), `posix/` (`posix.headers`,
+  `posix.async_signal_safe`), and `traceability/` unit tests.
 - `config/sphinx/`, `tools/`: Sphinx-Needs model (`needs_model.py`), code tag
   checker (`need_tag_check.py`), `check_needs_audit.py`, and `check_ste.py`.
 - `scripts/`: `env.sh` (Podman workflow), `enter-dev.sh` (interactive shell),

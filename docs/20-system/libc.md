@@ -67,10 +67,10 @@ set) must examine deferred cancellation at safe points with no locks held
 
 ```{swr} Supply new POSIX.1-2024 Base functions and C17/C11 headers
 :id: SWR_LIBC_0005
-:status: draft
+:status: active
 :posix: XSH/getentropy (BASE), XSH/strlcpy (CX), XBD/stdatomic.h (CX)
 :derives: SYS_LIBC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0014
 
 With `-D_POSIX_C_SOURCE=202405L`, `libc` must declare new Issue 8 Base functions
 `strlcpy`, `strlcat`, `reallocarray`, `getentropy` ([getentropy][fn-getent]),

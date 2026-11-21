@@ -25,6 +25,8 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
+#define GETENTROPY_MAX 256
+
 extern char **environ;
 
 ssize_t write(int fd, const void *buf, size_t n);
@@ -39,6 +41,7 @@ pid_t fork(void);
 pid_t getpid(void);
 pid_t getppid(void);
 int execve(const char *path, char *const argv[], char *const envp[]);
+int getentropy(void *buffer, size_t length);
 _Noreturn void _exit(int status);
 unsigned int sleep(unsigned int seconds);
 

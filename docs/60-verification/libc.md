@@ -50,3 +50,16 @@ The headless QEMU harness `tests/test_runner.py` runs `canceltest`. It checks
 CTest `posix.headers` checks `<pthread.h>` and `<stdio.h>`
 ({need}`SWR_LIBC_0004`).
 ```
+
+```{ver} Verify POSIX.1-2024 Base functions and C17 headers
+:id: VER_LIBC_0005
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0005
+
+The headless QEMU harness `tests/test_runner.py` runs `libctest`. It checks
+`strlcpy`, `strlcat`, `reallocarray`, `secure_getenv`, `getentropy`,
+`<stdatomic.h>`, `<stdalign.h>`, and `<uchar.h>`. CTest `posix.headers` and
+`posix.async_signal_safe` check standalone compilation and `getentropy` safety
+({need}`SWR_LIBC_0005`).
+```

@@ -32,6 +32,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- POSIX.1-2024 Base library functions and C17 headers (`SWR_LIBC_0005`,
+  `ADR_0014`): kernel `SYS_GETENTROPY` (`48`) mixer (`kernel/core/entropy.c`),
+  `getentropy` (`GETENTROPY_MAX = 256`), `strlcpy`, `strlcat`, `realloc`,
+  `reallocarray`, `_Exit`, `getenv`, `secure_getenv`, `<uchar.h>` UTF-16/UTF-32
+  conversions (`libc/src/uchar.c`), standalone `<stdatomic.h>`/`<stdalign.h>`
+  verification, and QEMU `tests/libctest/test_libc_issue8.c`.
 - POSIX.1-2024 Base thread cancellation points and recursive `<stdio.h>` stream
   locking (`SWR_LIBC_0004`, `ADR_0013`): `pthread_cancel`,
   `pthread_setcancelstate`, `pthread_setcanceltype`, `pthread_testcancel`,

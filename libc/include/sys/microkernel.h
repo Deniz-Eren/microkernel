@@ -63,6 +63,7 @@
 #define SYS_PROC_GETPPID 45
 #define SYS_FD_OP 46
 #define SYS_SIGPENDING 47
+#define SYS_GETENTROPY 48
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1

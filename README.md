@@ -56,10 +56,9 @@ Developers can build Ring 3 C17 servers and applications packed into `boot.tar`.
 The headers below show all user-space functions available at this time:
 
 - **POSIX core (`<unistd.h>`):** `_POSIX_VERSION` and `_POSIX2_VERSION`
-  (`202405L`), `fork` (COW), `execve` (bootfs `argv`/`envp` and `O_CLOEXEC`),
-  `getpid`, `getppid`, `pipe`, `pipe2`, `dup`, `dup2`, `dup3`, `close`, `write`,
-  `read`, `_exit`, `sleep`, `environ`, `STDIN_FILENO`, `STDOUT_FILENO`,
-  `STDERR_FILENO`
+  (`202405L`), `fork` (COW), `execve` (bootfs `argv`/`envp`), `getpid`,
+  `getppid`, and `getentropy`. Also `pipe`/`pipe2`, `dup`/`dup2`/`dup3`,
+  `close`, `write`, `read`, `_exit`, `sleep`, `environ`, and `STD*_FILENO`
 - **POSIX descriptors and polling (`<fcntl.h>`, `<poll.h>`):** `fcntl`
   (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`),
   `O_CLOEXEC`, `O_NONBLOCK`, `O_SYNC`, `O_DSYNC`, `poll`, and `ppoll` (finite
@@ -96,12 +95,15 @@ The headers below show all user-space functions available at this time:
   stream locking (`flockfile`, `ftrylockfile`, `funlockfile`), `printf`,
   `fprintf`, `snprintf`, `puts`, `fputs`, `putchar`, `putchar_unlocked`,
   `fputc`, `fflush`
-- **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `exit`, `abort`,
-  `strtol`, `atoi`
+- **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `realloc`,
+  `reallocarray`, `getenv`, `secure_getenv`, `exit`, `_Exit`, `abort`, `strtol`,
+  `atoi`
 - **Memory and strings (`<string.h>`):** `memset`, `memcpy`, `memmove`,
-  `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy`, `strchr`
-- **Freestanding C17 (compiler headers):** `<stdint.h>`, `<stddef.h>`,
-  `<stdbool.h>`, `<stdarg.h>`, `<limits.h>`
+  `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy`, `strlcpy`,
+  `strlcat`, `strchr`
+- **Freestanding C17 and Unicode headers:** `<stdint.h>`, `<stddef.h>`,
+  `<stdbool.h>`, `<stdarg.h>`, `<limits.h>`, `<stdatomic.h>`, `<stdalign.h>`,
+  and `<uchar.h>` (`mbrtoc16`, `c16rtomb`, `mbrtoc32`, `c32rtomb`)
 - **Synchronous IPC (`<sys/ipc.h>`):** `CreateChannel`, `DestroyChannel`,
   `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
   `ReadMsgV`, `WriteMsgV`, `SendPulse`, and `sysproc` name registry
@@ -129,8 +131,8 @@ What you can build today:
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): `strlcpy`/`getentropy`/`<uchar.h>`,
-option-gated `SHM`/`ML`, file systems, and sockets. See
+Not available at this time (next tasks): option-gated `SHM`/`ML`/`MLR` memory
+extensions, full Tier-2 symbol manifest gate, file systems, and sockets. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
@@ -177,7 +179,7 @@ POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
 - `servers/` — the system servers (`sysproc`, `pipeserv`, `ipcserv`, `rtcdrv`)
 - `tests/` — the test harness (`test_runner.py`) and the test programs
   (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`, `pthreadtest`,
-  `forkpipetest`, `exechelper`, `aiotest`, `canceltest`)
+  `forkpipetest`, `exechelper`, `aiotest`, `canceltest`, `libctest`)
 - `scripts/` — helper scripts for the environment, the build, and the agents
 - `docs/` — the project documents and the agent skills
 - `iso/` — the boot configuration for the GRUB boot loader
@@ -226,10 +228,10 @@ are in [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
 
 See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/HISTORY.md](docs/records/HISTORY.md) for the milestone plan and
-task records. The build completed milestones 1 to 6, POSIX clocks/timers, and
-pthreads/semaphores. It also completed `fork`/`execve`/`pipe2`/`dup3`/`ppoll`,
-`<aio.h>`, thread cancellation points, and `<stdio.h>` locking. The next task
-adds Issue 8 Base functions (`strlcpy`, `getentropy`) and C11/C17 headers.
+task records. The build completed milestones 1 to 6, POSIX clocks/timers,
+pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. It also
+completed `<aio.h>`, cancellation points, `<stdio.h>` locking, and Issue 8 C17
+library functions. The next task adds option-gated `SHM`/`ML`/`MLR` extensions.
 
 ## Documentation
 

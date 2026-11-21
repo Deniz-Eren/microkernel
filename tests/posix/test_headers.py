@@ -9,7 +9,7 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002 VER_LIBC_0004 VER_SIG_0003 VER_MEM_0002
+# need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_SIG_0003 VER_MEM_0002
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
 # need:: VER_IPC_0003 VER_IPC_0004
 
@@ -33,10 +33,13 @@ POSIX_HEADERS: tuple[str, ...] = (
     "pthread.h",
     "semaphore.h",
     "signal.h",
+    "stdalign.h",
+    "stdatomic.h",
     "stdio.h",
     "stdlib.h",
     "string.h",
     "time.h",
+    "uchar.h",
     "unistd.h",
     "sys/mman.h",
     "sys/types.h",
@@ -437,6 +440,45 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"cancel/stdio check failed:\n{err}")
+
+    def test_issue8_base_functions_and_c17_headers(self) -> None:
+        src = "\n".join(
+            (
+                "#include <stdalign.h>",
+                "#include <stdatomic.h>",
+                "#include <stdlib.h>",
+                "#include <string.h>",
+                "#include <uchar.h>",
+                "#include <unistd.h>",
+                "#ifdef SYS_GETENTROPY",
+                '#error "unistd.h leaked SYS_GETENTROPY"',
+                "#endif",
+                "static int __check_issue8_libc(void) {",
+                "    char buf[16] = {0};",
+                "    mbstate_t st = {0};",
+                "    char16_t c16 = 0;",
+                "    char32_t c32 = 0;",
+                "    alignas(8) atomic_int a = 0;",
+                "    (void)strlcpy(buf, \"x\", sizeof(buf));",
+                "    (void)strlcat(buf, \"y\", sizeof(buf));",
+                "    (void)reallocarray((void *)0, 1u, 1u);",
+                "    (void)getenv(\"PATH\");",
+                "    (void)secure_getenv(\"PATH\");",
+                "    (void)getentropy(buf, 4u);",
+                "    (void)mbrtoc16(&c16, buf, 1u, &st);",
+                "    (void)c16rtomb(buf, c16, &st);",
+                "    (void)mbrtoc32(&c32, buf, 1u, &st);",
+                "    (void)c32rtomb(buf, c32, &st);",
+                "    return atomic_load(&a) + GETENTROPY_MAX;",
+                "}",
+                "int (*__i8_fn_ref)(void) = __check_issue8_libc;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"issue8 libc check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

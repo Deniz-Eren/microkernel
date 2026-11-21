@@ -67,6 +67,15 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
     return -1;
 }
 
+int getentropy(void *buffer, size_t length) {
+    long r = __sys2(SYS_GETENTROPY, (long)(uintptr_t)buffer, (long)length);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
 void _exit(int status) {
     __sys1(SYS_PROC_EXIT, status);
     for (;;) {

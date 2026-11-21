@@ -35,3 +35,17 @@ Domain `LIBC`: Public Ring 3 C headers grouped by POSIX.1-2024 interface area.
 error constants and thread-local `errno` ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0003`).
 ```
+
+```{icd} POSIX.1-2024 <uchar.h> and Issue 8 Base library extensions
+:id: ICD_LIBC_0004
+:status: active
+:posix: XSH/getentropy (BASE), XSH/strlcpy (CX), XBD/uchar.h (CX)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0005
+
+`libc/include/uchar.h` declares `char16_t`, `char32_t`, `mbstate_t`, `mbrtoc16`,
+`c16rtomb`, `mbrtoc32`, and `c32rtomb`. `<string.h>`, `<stdlib.h>`, and
+`<unistd.h>` declare `strlcpy`, `strlcat`, `reallocarray`, `secure_getenv`, and
+`getentropy` alongside `<stdatomic.h>` and `<stdalign.h>`
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0005`).
+```

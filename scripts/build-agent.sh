@@ -87,6 +87,9 @@ if ! "$ENV" test --timeout 120 \
     --expect 'PTHREAD_CANCEL_DISABLE, testcancel, and LIFO cleanup verified' \
     --expect 'cancellation points read, ppoll, sem_wait, and clock_nanosleep' \
     --expect 'flockfile/ftrylockfile/funlockfile serialized concurrent stdio' \
+    --expect 'strlcpy, strlcat, reallocarray, and secure_getenv verified' \
+    --expect 'getentropy\(32\) uniqueness and >256 EINVAL verified' \
+    --expect '<stdatomic\.h>, <stdalign\.h>, and <uchar\.h> UTF-16/UTF-32' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

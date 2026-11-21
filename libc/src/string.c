@@ -98,6 +98,36 @@ char *strncpy(char *dst, const char *src, size_t n) {
     return dst;
 }
 
+size_t strlcpy(char *restrict dst, const char *restrict src, size_t dstsize) {
+    size_t slen = strlen(src);
+    if (dstsize > 0u) {
+        size_t copy = (slen < dstsize - 1u) ? slen : (dstsize - 1u);
+        if (copy > 0u) {
+            memcpy(dst, src, copy);
+        }
+        dst[copy] = '\0';
+    }
+    return slen;
+}
+
+size_t strlcat(char *restrict dst, const char *restrict src, size_t dstsize) {
+    size_t dlen = 0u;
+    while (dlen < dstsize && dst[dlen] != '\0') {
+        dlen++;
+    }
+    size_t slen = strlen(src);
+    if (dlen == dstsize) {
+        return dstsize + slen;
+    }
+    size_t avail = dstsize - dlen - 1u;
+    size_t copy = (slen < avail) ? slen : avail;
+    if (copy > 0u) {
+        memcpy(dst + dlen, src, copy);
+    }
+    dst[dlen + copy] = '\0';
+    return dlen + slen;
+}
+
 char *strchr(const char *s, int c) {
     for (; *s; s++) {
         if (*s == (char)c) {
