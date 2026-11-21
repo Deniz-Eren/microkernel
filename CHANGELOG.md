@@ -21,6 +21,12 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Added Mermaid architecture, sequence, and state diagrams across `README.md`,
+  `docs/00-overview/context.md`, and all domain architecture pages
+  (`docs/30-architecture/{boot,mem,proc,ipc,sig,libc,docs}.md`) illustrating
+  Ring 0/Ring 3 topology, boot bring-up, x86-64 memory map, COW faults, thread
+  states, synchronous channel IPC, IRQ pulses, multi-server `ppoll()`, signal
+  frames, three-layer POSIX `libc`, and bidirectional traceability.
 - Added follow-up task `TSK_0021` (`SWR_BOOT_0003`) to `docs/records/TASKS.md`
   for ACPI `MADT`/`SPCR` hardware discovery, IOAPIC ISO routing, parameterized
   Ring 3 `ttyserv`/`rtcdrv`, and user `OPOST` TX ownership before final

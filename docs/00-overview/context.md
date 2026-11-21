@@ -13,8 +13,71 @@ GRUB boots the kernel with the Multiboot2 protocol. The kernel starts in 32-bit
 mode, builds 64-bit higher-half page tables, and jumps to long mode. The first
 user process `sysproc` loads from a `ustar` archive (`boot.tar`) on the boot
 ISO. `sysproc` hosts the system name registry so servers register service names
-and clients resolve them. All other system services, such as the echo server
-`ipcserv` and the CMOS RTC driver `rtcdrv`, run as isolated Ring 3 processes.
+and clients resolve them. All other system services and device drivers run as
+isolated Ring 3 processes.
+
+## System Topology
+
+The diagram below shows how user applications, Ring 3 system servers, privileged
+Ring 3 device drivers, the Ring 0 kernel, and x86-64 hardware connect.
+
+```mermaid
+flowchart TB
+    subgraph RING3_APP["Ring 3: User Applications and Test Binaries"]
+        APPS["User Binaries (linked with crt0.o + libc.a)"]
+        LIBC["POSIX.1-2024 libc (stdio, pthreads, VFS, sockets, termios)"]
+        APPS --> LIBC
+    end
+
+    subgraph RING3_SRV["Ring 3: Isolated System Servers and Drivers"]
+        SYSPROC["sysproc (PID 1, Chan 1: /dev/* name registry)"]
+        VFS["vfsserv (/dev/vfs: bootfs + tmpfs)"]
+        PIPE["pipeserv (/dev/pipe: pipes + ppoll)"]
+        SOCK["sockserv (/dev/sock: AF_UNIX + accept4)"]
+        TTY["ttyserv (/dev/tty: CAP_SYS_INTR, COM1 IRQ 4)"]
+        RTC["rtcdrv (/dev/rtc: CAP_SYS_INTR, IOPL=3, IRQ 8)"]
+        ECHO["ipcserv (/dev/echo: reference service)"]
+    end
+
+    subgraph RING0["Ring 0: Minimal Microkernel (0xFFFFFFFF80000000)"]
+        SYSCALL["syscall / sysret Dispatch & FD Table"]
+        IPC["Synchronous IPC Channels, MsgV & Pulses"]
+        SCHED["256-Priority Scheduler, Threads & Futexes"]
+        MM["PMM / VMM (W^X, COW, SHM, HHDM, SMAP)"]
+        SIGTIME["Signals & Monotonic / Realtime Clocks"]
+        IRQ["IOAPIC IRQ-to-Pulse Router & CAP_SYS_INTR"]
+    end
+
+    subgraph HW["Hardware / QEMU x86-64 q35 Platform"]
+        CPU["x86-64 CPU (MMU, LAPIC Timer)"]
+        IOAPIC["IOAPIC Interrupt Controller"]
+        DEV["COM1 16550A UART (IRQ 4) & CMOS RTC (IRQ 8)"]
+        ISO["GRUB Multiboot2 + boot.tar"]
+    end
+
+    LIBC -->|"syscall / SendMsg"| SYSCALL
+    SYSCALL --> IPC
+    SYSCALL --> SCHED
+    SYSCALL --> MM
+    SYSCALL --> SIGTIME
+
+    IPC <-->|"Channels & Replies"| SYSPROC
+    IPC <-->|"Channels & Replies"| VFS
+    IPC <-->|"Channels & Replies"| PIPE
+    IPC <-->|"Channels & Replies"| SOCK
+    IPC <-->|"Channels & Replies"| TTY
+    IPC <-->|"Channels & Replies"| RTC
+    IPC <-->|"Channels & Replies"| ECHO
+
+    DEV -->|"Hardware IRQs"| IOAPIC
+    IOAPIC --> IRQ
+    IRQ -->|"PULSE_CODE_IRQ"| TTY
+    IRQ -->|"PULSE_CODE_IRQ"| RTC
+    TTY -.->|"Port I/O (IOPL=3)"| DEV
+    RTC -.->|"Port I/O (IOPL=3)"| DEV
+    ISO -->|"Multiboot2 Boot"| MM
+    CPU --> SCHED
+```
 
 ## Directory Structure
 
@@ -35,10 +98,10 @@ and clients resolve them. All other system services, such as the echo server
 ├── technical_terms.txt         <- ASD-STE100 technical nouns and verbs
 ├── kernel/                     <- Ring 0 kernel (arch, core, include, lib)
 ├── libc/                       <- Freestanding C17 / POSIX.1-2024 user library
-├── servers/                    <- Ring 3 servers (sysproc, ipcserv, rtcdrv)
+├── servers/                    <- Ring 3 system servers and device drivers
 ├── tests/                      <- QEMU harness, Ring 3, POSIX, and doc tests
 ├── config/sphinx/              <- Sphinx-Needs model, config, and tag scanner
-├── tools/                      <- Traceability audit and repository STE gate
+├── tools/                      <- Traceability audit, POSIX audit, STE gate
 ├── scripts/                    <- Container, build, format, hook, tar scripts
 ├── iso/                        <- GRUB Multiboot2 boot configuration
 ├── cmake/                      <- Clang x86-64 cross-compilation toolchain
@@ -62,29 +125,39 @@ and clients resolve them. All other system services, such as the echo server
 
 - `kernel/arch/x86_64/`: CPU and platform bring-up (`boot.S`), GDT, IDT,
   interrupt stubs, LAPIC timer, serial port, and context switch.
-- `kernel/core/`: Core subsystems for memory (`pmm`, `vmm`, `kheap`), scheduling
-  and processes (`sched`, `proc`, `time`, `entropy`), IPC and IRQs (`ipc`,
-  `channel`, `intr`), signals (`signal`), syscalls (`syscall`), and boot (`elf`,
-  `ustar`, `multiboot`).
+- `kernel/core/`: Core subsystems for memory (`pmm`, `vmm`, `shm`, `kheap`),
+  scheduling and processes (`sched`, `proc`, `time`, `entropy`), IPC and IRQs
+  (`ipc`, `channel`, `intr`), signals (`signal`), syscalls (`syscall`), and boot
+  (`elf`, `ustar`, `multiboot`).
 - `kernel/include/`, `kernel/lib/`: Kernel-internal headers and freestanding
   helpers included via `kernel/` CMake include paths.
-- `libc/`: Freestanding Ring 3 C17 / POSIX.1-2024 library (`crt0`, `errno`,
-  `signal`, `time`, `pthread`, `semaphore`, `fd`, `aio`, `mman`, `wait`,
-  `uchar`, `stdio`, `stdlib`, `string`, and `include/sys/` syscall wrappers).
-- `servers/sysproc/`: First Ring 3 process. It spawns system servers and hosts
-  the service name registry.
+- `libc/`: Freestanding Ring 3 C17 and POSIX.1-2024 library (`crt0`, `errno`,
+  `signal`, `time`, `pthread`, `semaphore`, `fd`, `vfs`, `tty`, `socket`, `aio`,
+  `mman`, `malloc`, `wait`, `uchar`, `ctype`, `stdatomic`, `stdio`, `stdlib`,
+  `string`, `unistd`, and `include/sys/` syscall wrappers).
+- `servers/sysproc/`: First Ring 3 process (PID 1, channel 1). It hosts the
+  service name registry for all Ring 3 servers.
 - `servers/pipeserv/`: Ring 3 POSIX pipe and `ppoll` server registered at
   `/dev/pipe`.
-- `servers/ipcserv/`: Ring 3 echo server registered at `/dev/echo`.
+- `servers/vfsserv/`: Ring 3 virtual filesystem server registered at `/dev/vfs`,
+  serving read-only `bootfs` at `/boot` and writable `tmpfs` at `/` and `/tmp`.
+- `servers/ttyserv/`: Privileged Ring 3 COM1 serial TTY server registered at
+  `/dev/tty`, using `CAP_SYS_INTR` IRQ 4 pulses and `<termios.h>` line
+  discipline.
+- `servers/sockserv/`: Ring 3 `AF_UNIX` local sockets server registered at
+  `/dev/sock`, supporting `SOCK_STREAM`, `SOCK_DGRAM`, `accept4`, and `ppoll`.
+- `servers/ipcserv/`: Ring 3 reference echo server registered at `/dev/echo`.
 - `servers/rtcdrv/`: Privileged Ring 3 MC146818 CMOS RTC driver registered at
   `/dev/rtc`, using `CAP_SYS_INTR` port I/O and IOAPIC IRQ 8 pulses.
 - `tests/`: `test_runner.py` (headless QEMU serial assertion harness), Ring 3
   test binaries (`ipccli`, `sigtest`, `proctest`, `procchild`, `drvtest`,
   `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`,
-  `canceltest`, `libctest`), `posix/` (`posix.headers`,
-  `posix.async_signal_safe`), and `traceability/` unit tests.
+  `canceltest`, `libctest`, `heaptest`, `vfstest`, `shmtest`, `ttytest`,
+  `stdiotest`, `socktest`), `posix/` conformance gates, and `traceability/` unit
+  tests.
 - `config/sphinx/`, `tools/`: Sphinx-Needs model (`needs_model.py`), code tag
-  checker (`need_tag_check.py`), `check_needs_audit.py`, and `check_ste.py`.
+  checker (`need_tag_check.py`), `check_needs_audit.py`, `audit_lib.py`, and
+  `check_ste.py`.
 - `scripts/`: `env.sh` (Podman workflow), `enter-dev.sh` (interactive shell),
   `mk_boot_tar.py` (ustar packer), `build-agent.sh` (all pre-commit gates),
   `formatter-agent.sh`, and `install-hooks.sh`.

@@ -12,3 +12,38 @@ library.
 The `libc` subsystem installs public headers into the sysroot. It gives `crt0.o`
 and `libc.a` for all Ring 3 servers and test programs ({need}`SYS_LIBC_0001`).
 ```
+
+## Three-Layer POSIX.1-2024 Architecture (`ADR_0003`)
+
+`libc` keeps Ring 0 small while isolating applications from kernel ABI details.
+Public headers expose clean POSIX.1-2024 namespaces, while `libc.a` translates
+between POSIX semantics, raw negative-`RAX` kernel syscalls, and Ring 3 servers.
+
+```mermaid
+flowchart TD
+    subgraph L1["Layer 1: Standalone POSIX.1-2024 Headers"]
+        HDR["unistd.h, stdio.h, pthread.h, sys/socket.h, termios.h, limits.h"]
+        OPT["Option Gates (_POSIX_SHARED_MEMORY_OBJECTS, _POSIX_MEMLOCK)"]
+        HDR --- OPT
+    end
+
+    subgraph L2["Layer 2: Freestanding Ring 3 libc.a + crt0.o"]
+        TLS["FS.base TLS: thread-local errno & pthread state"]
+        STDIO["Buffered FILE streams, recursive flockfile, mmap heap"]
+        CANCEL["Deferred cancellation & async-signal-safe wrappers"]
+        ROUTER["Descriptor router (fd.c, vfs.c, tty.c, socket.c, aio.c)"]
+    end
+
+    subgraph L3["Layer 3: Execution Backends"]
+        RAW["Ring 0 Raw Syscalls (negative errno in RAX)"]
+        SRVS["Ring 3 Servers (sysproc, vfsserv, pipeserv, ttyserv, sockserv)"]
+    end
+
+    L1 --> L2
+    TLS --> RAW
+    STDIO --> RAW
+    STDIO --> ROUTER
+    CANCEL --> RAW
+    ROUTER -->|"SendMsg / ReceiveMsg / ReplyMsg"| SRVS
+    SRVS -->|"Kernel Channels & Pulses"| RAW
+```

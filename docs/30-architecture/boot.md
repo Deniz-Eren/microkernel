@@ -13,3 +13,21 @@ The boot subsystem moves the CPU from 32-bit Multiboot2 entry to 64-bit
 higher-half execution and starts platform timers. It loads initial Ring 3 ELF
 programs from `boot.tar` ({need}`SYS_BOOT_0001`).
 ```
+
+## Boot Bring-Up Sequence
+
+The boot path transitions from GRUB Multiboot2 32-bit entry through 64-bit
+higher-half paging into prioritized Ring 3 server startup.
+
+```mermaid
+flowchart LR
+    GRUB["GRUB Multiboot2 (32-bit Protected Mode)"]
+    BOOTS["boot.S (4-Level Page Tables + Long Mode)"]
+    KMAIN["kmain (GDT, IDT, COM1, PMM, VMM, HHDM, KHeap)"]
+    APIC["LAPIC Timer & IOAPIC Setup"]
+    TAR["ustar boot.tar ELF Loader"]
+    INIT["Spawn sysproc (110) -> ttyserv (105) -> Servers & Apps (100)"]
+    SCHED["sched_activate (Enter Ring 3 via iretq)"]
+
+    GRUB --> BOOTS --> KMAIN --> APIC --> TAR --> INIT --> SCHED
+```
