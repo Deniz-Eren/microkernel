@@ -21,18 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0016 — Build Ring 3 serial TTY server, termios, and multi-server ppoll
-
-```{task} Build Ring 3 serial TTY server, termios, and multi-server ppoll
-:id: TSK_0016
-:status: open
-:traces: ADR_0003, SWR_IPC_0008
-
-Implement Ring 3 `ttyserv` (`/dev/tty`) with COM1 IRQ 4 pulses, `<termios.h>`,
-`isatty`, and blocking `stdin` `read()`. Add multi-server `ppoll()` routing
-across pipes, VFS, and TTY descriptors ({need}`SWR_IPC_0008`).
-```
-
 ### TSK_0019 — Add POSIX buffered stdio, env, execvp, and core C17 headers
 
 ```{task} Add POSIX buffered stdio, env, execvp, and core C17 headers

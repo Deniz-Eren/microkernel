@@ -51,6 +51,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "stdio.h",
     "stdlib.h",
     "string.h",
+    "termios.h",
     "time.h",
     "uchar.h",
     "unistd.h",

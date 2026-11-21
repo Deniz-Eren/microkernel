@@ -58,6 +58,7 @@ int chdir(const char *path);
 int fchdir(int fildes);
 char *getcwd(char *buf, size_t size);
 int access(const char *path, int amode);
+int isatty(int fildes);
 pid_t fork(void);
 pid_t getpid(void);
 pid_t getppid(void);

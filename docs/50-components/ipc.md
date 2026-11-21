@@ -114,3 +114,29 @@ offsets, and `PULSE_CODE_FD_CLOSE` handle cleanup ({need}`ICD_IPC_0007`,
 ({need}`ICD_IPC_0007`, {need}`ICD_IPC_0008`, {need}`ICD_IPC_0009`,
 {need}`SWR_IPC_0007`).
 ```
+
+```{comp} Ring 3 serial TTY server and termios line discipline
+:id: COMP_IPC_0010
+:status: active
+:posix: XBD/termios.h (BASE), XSH/tcgetattr (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0002, ICD_IPC_0010
+:satisfies: SWR_IPC_0008
+
+`servers/ttyserv/main.c` runs with `CAP_SYS_INTR` and COM1 IRQ 4 pulses and
+registers `/dev/tty`. It implements canonical and raw `<termios.h>` line
+discipline and serves deferred blocking `read` and `ppoll` requests
+({need}`ICD_IPC_0010`, {need}`SWR_IPC_0008`).
+```
+
+```{comp} POSIX.1-2024 libc termios, isatty, and /dev/tty client wrappers
+:id: COMP_IPC_0011
+:status: active
+:posix: XBD/termios.h (BASE), XSH/tcgetattr (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0010, ICD_IPC_0011
+:satisfies: SWR_IPC_0008
+
+`libc/src/tty.c` implements async-signal-safe `tcgetattr`, `tcsetattr`,
+`tcflush`, `tcdrain`, `tcflow`, `tcsendbreak`, `cf*speed`, `isatty`, and
+`/dev/tty` `read`/`ppoll` helpers ({need}`ICD_IPC_0010`, {need}`ICD_IPC_0011`,
+{need}`SWR_IPC_0008`).
+```

@@ -828,6 +828,13 @@ void proc_spawn_init(void) {
         panic("proc: failed to spawn sysproc");
     }
     p1->caps |= CAP_SYS_INTR;
+    /* Ring 3 serial TTY server (/dev/tty) with COM1 IRQ 4 and IOPL=3. Priority
+     * 105 (below sysproc 110, above tests 100) lets ttyserv complete its 1-byte
+     * UART loopback IRQ 4 check before any test writes to COM1. */
+    pcb_t *tty = spawn_image(tar_phys, tar_size, "ttyserv", 105, 0);
+    if (tty) {
+        tty->caps |= CAP_SYS_INTR;
+    }
     /* Ring 3 POSIX pipe and poll server (/dev/pipe). */
     spawn_image(tar_phys, tar_size, "pipeserv", 100, 0);
     /* Ring 3 VFS server (/dev/vfs) with read-only bootfs mapping. */
@@ -866,6 +873,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "vfstest", 100, 0);
     /* POSIX.1-2024 option-gated SHM, ML, and MLR memory extensions test. */
     spawn_image(tar_phys, tar_size, "shmtest", 100, 0);
+    /* POSIX.1-2024 serial TTY, termios, and multi-server ppoll test. */
+    spawn_image(tar_phys, tar_size, "ttytest", 100, 0);
 
     sched_activate();
 }

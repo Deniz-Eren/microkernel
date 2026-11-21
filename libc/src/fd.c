@@ -165,9 +165,8 @@ ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
         errno = (int)(-gr);
         return -1;
     }
-    if (e.kind == FD_KIND_CONSOLE) {
-        errno = ENOSYS;
-        return -1;
+    if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY) {
+        return __libc_tty_read(buf, n, e.status_flags);
     }
     if (e.kind == FD_KIND_VFS) {
         return __libc_vfs_read(e.srv_handle, buf, n);
@@ -221,6 +220,9 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
             return -1;
         }
         return (ssize_t)r;
+    }
+    if (e.kind == FD_KIND_TTY) {
+        return __libc_tty_write(buf, n);
     }
     if (e.kind == FD_KIND_VFS) {
         return __libc_vfs_write(e.srv_handle, buf, n, e.status_flags);
@@ -559,6 +561,9 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
     preq.op = PIPE_OP_POLL;
     nfds_t srv_map[PIPE_POLL_MAX];
     uint32_t srv_count = 0;
+    nfds_t tty_map[PIPE_POLL_MAX];
+    int16_t tty_events[PIPE_POLL_MAX];
+    uint32_t tty_count = 0;
     int local_ready = 0;
 
     for (nfds_t i = 0; i < nfds; i++) {
@@ -574,11 +579,17 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
             local_ready++;
             continue;
         }
-        if (e.kind == FD_KIND_CONSOLE) {
+        if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY) {
             short out = (short)(fds[i].events & (POLLOUT | POLLWRNORM));
+            short in = (short)(fds[i].events & (POLLIN | POLLRDNORM));
             if (out) {
                 fds[i].revents = out;
                 local_ready++;
+            }
+            if (in) {
+                tty_map[tty_count] = i;
+                tty_events[tty_count] = in;
+                tty_count++;
             }
             continue;
         }
@@ -600,7 +611,7 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
         }
     }
 
-    if (srv_count == 0u) {
+    if (srv_count == 0u && tty_count == 0u) {
         if (local_ready > 0 || timeout_ns == 0) {
             restore_sigmask(swapped, &oldmask);
             return local_ready;
@@ -634,41 +645,177 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
         }
     }
 
-    preq.nfds = srv_count;
-    preq.timeout_ns = (local_ready > 0) ? 0 : timeout_ns;
-
-    int conn = ensure_pipeserv();
-    if (conn < 0) {
-        restore_sigmask(swapped, &oldmask);
-        errno = -conn;
-        return -1;
-    }
-
-    pipe_poll_rep_t prep = {0};
-    long r = SendMsg(conn, &preq, sizeof(preq), &prep, sizeof(prep));
-    if (r < 0) {
-        restore_sigmask(swapped, &oldmask);
-        if (r == -EINTR) {
-            __libc_cancel_point();
+    /* Single-server fast path: only /dev/tty FDs being polled. */
+    if (srv_count == 0u && tty_count > 0u) {
+        int16_t agg_events = 0;
+        for (uint32_t k = 0; k < tty_count; k++) {
+            agg_events = (int16_t)(agg_events | tty_events[k]);
         }
-        errno = (int)(-r);
-        return -1;
-    }
-    if (prep.err < 0) {
+        int16_t trev = 0;
+        long tr = __libc_tty_poll(agg_events,
+                                  (local_ready > 0) ? 0 : timeout_ns, &trev);
+        if (tr < 0) {
+            restore_sigmask(swapped, &oldmask);
+            if (tr == -EINTR) {
+                __libc_cancel_point();
+            }
+            errno = (int)(-tr);
+            return -1;
+        }
+        int total_ready = local_ready;
+        for (uint32_t k = 0; k < tty_count; k++) {
+            short hit = (short)(trev & tty_events[k]);
+            if (hit != 0) {
+                if (fds[tty_map[k]].revents == 0) {
+                    total_ready++;
+                }
+                fds[tty_map[k]].revents =
+                    (short)(fds[tty_map[k]].revents | hit);
+            }
+        }
         restore_sigmask(swapped, &oldmask);
-        errno = -prep.err;
-        return -1;
+        return total_ready;
     }
 
-    int total_ready = local_ready;
-    for (uint32_t k = 0; k < srv_count; k++) {
-        fds[srv_map[k]].revents = prep.items[k].revents;
-        if (prep.items[k].revents != 0) {
-            total_ready++;
+    /* Single-server fast path: only /dev/pipe FDs being polled. */
+    if (tty_count == 0u) {
+        preq.nfds = srv_count;
+        preq.timeout_ns = (local_ready > 0) ? 0 : timeout_ns;
+
+        int conn = ensure_pipeserv();
+        if (conn < 0) {
+            restore_sigmask(swapped, &oldmask);
+            errno = -conn;
+            return -1;
+        }
+
+        pipe_poll_rep_t prep = {0};
+        long r = SendMsg(conn, &preq, sizeof(preq), &prep, sizeof(prep));
+        if (r < 0) {
+            restore_sigmask(swapped, &oldmask);
+            if (r == -EINTR) {
+                __libc_cancel_point();
+            }
+            errno = (int)(-r);
+            return -1;
+        }
+        if (prep.err < 0) {
+            restore_sigmask(swapped, &oldmask);
+            errno = -prep.err;
+            return -1;
+        }
+
+        int total_ready = local_ready;
+        for (uint32_t k = 0; k < srv_count; k++) {
+            fds[srv_map[k]].revents = prep.items[k].revents;
+            if (prep.items[k].revents != 0) {
+                total_ready++;
+            }
+        }
+        restore_sigmask(swapped, &oldmask);
+        return total_ready;
+    }
+
+    /* Multi-server poll: coordinate /dev/pipe and /dev/tty with deadline. */
+    int pconn = ensure_pipeserv();
+    if (pconn < 0) {
+        restore_sigmask(swapped, &oldmask);
+        errno = -pconn;
+        return -1;
+    }
+    int16_t agg_tty_events = 0;
+    for (uint32_t k = 0; k < tty_count; k++) {
+        agg_tty_events = (int16_t)(agg_tty_events | tty_events[k]);
+    }
+    int64_t deadline_ns = -1;
+    if (timeout_ns > 0) {
+        struct timespec now_ts = {0};
+        (void)__sys2(SYS_CLOCK_GETTIME, CLOCK_MONOTONIC,
+                     (long)(uintptr_t)&now_ts);
+        deadline_ns =
+            (int64_t)now_ts.tv_sec * 1000000000LL + now_ts.tv_nsec + timeout_ns;
+    }
+
+    for (;;) {
+        int total_ready = local_ready;
+
+        preq.nfds = srv_count;
+        preq.timeout_ns = 0;
+        pipe_poll_rep_t prep = {0};
+        long r = SendMsg(pconn, &preq, sizeof(preq), &prep, sizeof(prep));
+        if (r < 0) {
+            restore_sigmask(swapped, &oldmask);
+            if (r == -EINTR) {
+                __libc_cancel_point();
+            }
+            errno = (int)(-r);
+            return -1;
+        }
+        if (prep.err < 0) {
+            restore_sigmask(swapped, &oldmask);
+            errno = -prep.err;
+            return -1;
+        }
+        for (uint32_t k = 0; k < srv_count; k++) {
+            fds[srv_map[k]].revents = prep.items[k].revents;
+            if (prep.items[k].revents != 0) {
+                total_ready++;
+            }
+        }
+
+        int16_t trev = 0;
+        long tr = __libc_tty_poll(agg_tty_events, 0, &trev);
+        if (tr < 0) {
+            restore_sigmask(swapped, &oldmask);
+            if (tr == -EINTR) {
+                __libc_cancel_point();
+            }
+            errno = (int)(-tr);
+            return -1;
+        }
+        for (uint32_t k = 0; k < tty_count; k++) {
+            short hit = (short)(trev & tty_events[k]);
+            if (hit != 0) {
+                if (fds[tty_map[k]].revents == 0) {
+                    total_ready++;
+                }
+                fds[tty_map[k]].revents =
+                    (short)(fds[tty_map[k]].revents | hit);
+            }
+        }
+
+        if (total_ready > 0 || timeout_ns == 0) {
+            restore_sigmask(swapped, &oldmask);
+            return total_ready;
+        }
+
+        struct timespec step = {.tv_sec = 0, .tv_nsec = 5000000L};
+        if (deadline_ns >= 0) {
+            struct timespec now_ts = {0};
+            (void)__sys2(SYS_CLOCK_GETTIME, CLOCK_MONOTONIC,
+                         (long)(uintptr_t)&now_ts);
+            int64_t now_ns =
+                (int64_t)now_ts.tv_sec * 1000000000LL + now_ts.tv_nsec;
+            if (now_ns >= deadline_ns) {
+                restore_sigmask(swapped, &oldmask);
+                return 0;
+            }
+            int64_t rem = deadline_ns - now_ns;
+            if (rem < 5000000LL) {
+                step.tv_nsec = (long)rem;
+            }
+        }
+        long sr = __sys4(SYS_CLOCK_NANOSLEEP, CLOCK_MONOTONIC, 0,
+                         (long)(uintptr_t)&step, 0);
+        if (sr < 0) {
+            restore_sigmask(swapped, &oldmask);
+            if (sr == -EINTR) {
+                __libc_cancel_point();
+            }
+            errno = (int)(-sr);
+            return -1;
         }
     }
-    restore_sigmask(swapped, &oldmask);
-    return total_ready;
 }
 
 int poll(struct pollfd fds[], nfds_t nfds, int timeout) {

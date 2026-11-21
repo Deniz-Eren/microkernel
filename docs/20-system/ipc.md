@@ -92,10 +92,10 @@ files. It must support `open`, `openat`, `lseek`, `ftruncate`, `stat`, `fstat`,
 
 ```{swr} Supply Ring 3 serial TTY server and termios line discipline
 :id: SWR_IPC_0008
-:status: draft
+:status: active
 :posix: XBD/termios.h (BASE), XSH/tcgetattr (BASE)
 :derives: SYS_IPC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0018
 
 A Ring 3 TTY server using COM1 IRQ 4 pulses must supply `<termios.h>` line
 discipline and `stdin` `read()` with `poll`/`ppoll` readiness

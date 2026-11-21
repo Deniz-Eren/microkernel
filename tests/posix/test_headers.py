@@ -11,7 +11,7 @@
 
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_SIG_0003 VER_MEM_0002
 # need:: VER_MEM_0004 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
-# need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_DOCS_0004
+# need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_DOCS_0004
 
 from __future__ import annotations
 
@@ -39,6 +39,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "stdio.h",
     "stdlib.h",
     "string.h",
+    "termios.h",
     "time.h",
     "uchar.h",
     "unistd.h",
@@ -547,6 +548,39 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"vfs headers check failed:\n{err}")
+
+    def test_termios_and_isatty_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <termios.h>",
+                "#include <unistd.h>",
+                "#ifdef TTY_OP_READ",
+                '#error "termios.h leaked TTY_OP_READ"',
+                "#endif",
+                "#ifdef SYS_FD_OP",
+                '#error "termios.h leaked SYS_FD_OP"',
+                "#endif",
+                "static int __check_tty_api(void) {",
+                "    struct termios t = {0};",
+                "    (void)tcgetattr(0, &t);",
+                "    (void)cfsetispeed(&t, B115200);",
+                "    (void)cfsetospeed(&t, B115200);",
+                "    (void)tcsetattr(0, TCSANOW, &t);",
+                "    (void)tcflush(0, TCIFLUSH);",
+                "    (void)tcdrain(0);",
+                "    (void)tcflow(0, TCOON);",
+                "    (void)tcsendbreak(0, 0);",
+                "    return isatty(0) + (int)cfgetispeed(&t) +",
+                "           (int)cfgetospeed(&t);",
+                "}",
+                "int (*__tty_fn_ref)(void) = __check_tty_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"termios check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

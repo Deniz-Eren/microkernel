@@ -45,6 +45,7 @@ MANDATORY_CANCELLATION_POINTS: tuple[str, ...] = (
     "sem_timedwait",
     "sem_wait",
     "sleep",
+    "tcdrain",
     "wait",
     "waitpid",
     "write",

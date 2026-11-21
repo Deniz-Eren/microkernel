@@ -51,6 +51,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Ring 3 serial TTY server and multi-server `ppoll()` (`SWR_IPC_0008`,
+  `ADR_0018`, `ICD_IPC_0010`–`0011`, `COMP_IPC_0010`–`0011`, `VER_IPC_0006`):
+  added `servers/ttyserv/main.c` (`/dev/tty`) driven by COM1 IRQ 4 IOAPIC pulses
+  with canonical (`ICANON`, `VERASE`, `VKILL`, `ICRNL`, `VEOF`) and raw (`VMIN`)
+  line discipline, standalone `<termios.h>`, `isatty`, async-signal-safe
+  `libc/src/tty.c` (`tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
+  `tcsendbreak`, `cf*speed`), multi-server `ppoll()` routing in `libc/src/fd.c`,
+  and QEMU `tests/ttytest/test_tty.c`.
 - Option-gated POSIX.1-2024 memory extensions (`SWR_MEM_0005`, `ADR_0017`,
   `COMP_MEM_0005`, `VER_MEM_0004`): added `_POSIX_SHARED_MEMORY_OBJECTS`,
   `_POSIX_MEMLOCK`, and `_POSIX_MEMLOCK_RANGE` (`202405L`) in

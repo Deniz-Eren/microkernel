@@ -21,6 +21,7 @@
 #define FD_KIND_SERVER 2u
 #define FD_KIND_VFS 3u
 #define FD_KIND_SHM 4u
+#define FD_KIND_TTY 5u
 
 #define FD_FLAG_CLOEXEC 0x01u
 
@@ -37,8 +38,9 @@
 /* Kernel-to-server pulse sent on execve O_CLOEXEC close or process exit. */
 #define PULSE_CODE_FD_CLOSE 0x4644u
 
-/* Internal timer tick pulse used by pipeserv for finite ppoll deadlines. */
+/* Internal timer tick pulses for finite ppoll deadlines. */
 #define PULSE_CODE_PIPE_TICK 0x5054u
+#define PULSE_CODE_TTY_TICK 0x5454u
 
 struct __k_fd_entry {
     uint8_t kind;

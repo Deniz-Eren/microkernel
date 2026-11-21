@@ -110,3 +110,27 @@ no `<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
 `readdir`, `rewinddir`, `closedir`, and `dirfd` with no `<sys/microkernel.h>`
 leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
 ```
+
+```{icd} Ring 3 /dev/tty IPC protocol
+:id: ICD_IPC_0010
+:status: active
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0008
+
+`libc/include/sys/tty.h` defines `TTY_OP_*`, `tty_req_t`, and `tty_rep_t`
+message structures within `IPC_MSG_MAX` for Ring 3 `/dev/tty` IPC
+({need}`ARC_IPC_0001`, {need}`SWR_IPC_0008`).
+```
+
+```{icd} POSIX.1-2024 <termios.h> public interface
+:id: ICD_IPC_0011
+:status: active
+:posix: XBD/termios.h (BASE), XSH/tcgetattr (BASE)
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0008
+
+`libc/include/termios.h` declares `struct termios`, `c_cc[]` indices, mode and
+baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
+`tcsendbreak`, and `cf*speed` with no `<sys/microkernel.h>` leakage
+({need}`ARC_IPC_0001`, {need}`SWR_IPC_0008`).
+```

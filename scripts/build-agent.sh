@@ -99,6 +99,11 @@ if ! "$ENV" test --timeout 120 \
     --expect 'VFS shared dup/fork offsets, unlinked open persistence' \
     --expect 'SHM shm_open/shm_unlink, ftruncate, and cross-process' \
     --expect 'ML/MLR mlock, munlock, mlockall, and munlockall verified' \
+    --expect 'ttyserv handled COM1 IRQ 4 pulse via IOAPIC' \
+    --expect 'ttyserv registered /dev/tty' \
+    --expect 'isatty, /dev/tty, tcgetattr/tcsetattr, and speeds verified' \
+    --expect 'canonical line discipline \(VERASE, VKILL, ICRNL, VEOF\)' \
+    --expect 'raw mode and multi-server ppoll \(TTY \+ pipe\) verified' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

@@ -65,3 +65,15 @@ It checks `/boot` read-only `bootfs`, `/tmp` `tmpfs` I/O, `openat`, `lseek`,
 and `rmdir`. CTest POSIX gates check `<sys/stat.h>` and `<dirent.h>`
 ({need}`SWR_IPC_0007`).
 ```
+
+```{ver} Verify Ring 3 ttyserv, COM1 IRQ 4, termios, and multi-server ppoll
+:id: VER_IPC_0006
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0008
+
+The headless QEMU harness `tests/test_runner.py` runs `ttyserv` and `ttytest`.
+It checks COM1 IRQ 4 pulses, `isatty`, `/dev/tty`, canonical line editing, raw
+mode, and multi-server `ppoll`. CTest POSIX gates check `<termios.h>` and
+`tcdrain` ({need}`SWR_IPC_0008`).
+```

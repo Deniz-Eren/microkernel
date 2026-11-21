@@ -84,6 +84,16 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "fchdir",
     "umask",
     "access",
+    "cfgetispeed",
+    "cfgetospeed",
+    "cfsetispeed",
+    "cfsetospeed",
+    "tcdrain",
+    "tcflow",
+    "tcflush",
+    "tcgetattr",
+    "tcsendbreak",
+    "tcsetattr",
     "__errno_location",
 )
 

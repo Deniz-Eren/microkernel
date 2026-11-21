@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0016 — Build Ring 3 serial TTY server, termios, and multi-server ppoll
+
+```{task} Build Ring 3 serial TTY server, termios, and multi-server ppoll
+:id: TSK_0016
+:status: done
+:traces: ADR_0003, SWR_IPC_0008
+
+Implement Ring 3 `ttyserv` (`/dev/tty`) with COM1 IRQ 4 pulses, `<termios.h>`,
+`isatty`, and blocking `stdin` `read()`. Add multi-server `ppoll()` routing
+across pipes, VFS, and TTY descriptors ({need}`SWR_IPC_0008`).
+```
+
 ### TSK_0012 — Implement option-gated POSIX memory extensions (SHM, ML, MLR)
 
 ```{task} Implement option-gated POSIX memory extensions (SHM, ML, MLR)

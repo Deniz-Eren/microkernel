@@ -260,6 +260,24 @@ int openat(int fd, const char *path, int oflag, ...) {
         va_end(ap);
     }
 
+    if (path && strcmp(path, "/dev/tty") == 0) {
+        struct __k_fd_entry te = {
+            .kind = FD_KIND_TTY,
+            .fd_flags = (oflag & O_CLOEXEC) ? FD_FLAG_CLOEXEC : 0u,
+            .status_flags = (uint16_t)(oflag & (O_ACCMODE | O_NONBLOCK)),
+            .srv_pid = 0u,
+            .srv_chanid = 0u,
+            .srv_handle = 0u,
+        };
+        long tfd =
+            __sys5(SYS_FD_OP, FD_OP_ALLOC, 0, (long)(uintptr_t)&te, 0, 0);
+        if (tfd < 0) {
+            errno = (int)(-tfd);
+            return -1;
+        }
+        return (int)tfd;
+    }
+
     vfs_req_t req = {0};
     vfs_rep_t rep = {0};
     req.op = VFS_OP_OPEN;
@@ -321,7 +339,8 @@ off_t lseek(int fildes, off_t offset, int whence) {
         errno = (int)(-gr);
         return (off_t)-1;
     }
-    if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_CONSOLE) {
+    if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_CONSOLE ||
+        e.kind == FD_KIND_TTY) {
         errno = ESPIPE;
         return (off_t)-1;
     }
@@ -435,7 +454,7 @@ int fstat(int fildes, struct stat *buf) {
         errno = (int)(-gr);
         return -1;
     }
-    if (e.kind == FD_KIND_CONSOLE) {
+    if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY) {
         memset(buf, 0, sizeof(*buf));
         buf->st_mode = S_IFCHR | 0620u;
         buf->st_nlink = 1u;
