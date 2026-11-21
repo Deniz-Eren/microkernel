@@ -57,10 +57,10 @@ functions must use `VMMap`, `VMUnmap`, and `VMCloneCow` and obey the W^X policy
 
 ```{swr} Put optional POSIX memory locking and shared memory behind macros
 :id: SWR_MEM_0005
-:status: draft
+:status: active
 :posix: XBD/sys/mman.h (ML, MLR, SHM)
 :derives: SYS_MEM_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0017
 
 `<sys/mman.h>` ([sys/mman.h][hdr-mman]) must put `mlock`/`munlock` (`MLR`),
 `mlockall`/`munlockall` (`ML`), and `shm_open`/`shm_unlink` (`SHM`) behind

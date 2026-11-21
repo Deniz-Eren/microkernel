@@ -20,9 +20,26 @@
 #define VM_PROT_WRITE 2
 #define VM_PROT_EXEC 4
 
+#define VM_MAP_SHARED 0x01
 #define VM_MAP_PRIVATE 0x02
 #define VM_MAP_FIXED 0x10
 #define VM_MAP_ANON 0x20
+
+#define SHM_OP_OPEN 1u
+#define SHM_OP_UNLINK 2u
+#define SHM_OP_TRUNCATE 3u
+#define SHM_OP_STAT 4u
+
+#define VM_MLOCK_RANGE 1u
+#define VM_MUNLOCK_RANGE 2u
+#define VM_MLOCK_ALL 3u
+#define VM_MUNLOCK_ALL 4u
+
+struct __k_shm_stat {
+    uint64_t size;
+    uint32_t mode;
+    uint32_t id;
+};
 
 static inline long VMMap(uintptr_t va_hint, size_t len, unsigned prot,
                          unsigned flags) {

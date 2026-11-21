@@ -20,6 +20,7 @@
 #include <sys/microkernel.h>
 #include <sys/stat.h>
 #include <sys/vfs.h>
+#include <sys/vm.h>
 #include <time.h>
 #include <unistd.h>
 #include "fd_internal.h"
@@ -357,6 +358,15 @@ int ftruncate(int fildes, off_t length) {
         errno = (int)(-gr);
         return -1;
     }
+    if (e.kind == FD_KIND_SHM) {
+        long r =
+            __sys4(SYS_SHM_OP, SHM_OP_TRUNCATE, (long)fildes, (long)length, 0);
+        if (r < 0) {
+            errno = (int)(-r);
+            return -1;
+        }
+        return 0;
+    }
     if (e.kind != FD_KIND_VFS) {
         errno = EINVAL;
         return -1;
@@ -435,6 +445,22 @@ int fstat(int fildes, struct stat *buf) {
         memset(buf, 0, sizeof(*buf));
         buf->st_mode = S_IFIFO | 0600u;
         buf->st_nlink = 1u;
+        return 0;
+    }
+    if (e.kind == FD_KIND_SHM) {
+        struct __k_shm_stat ks = {0};
+        long r = __sys4(SYS_SHM_OP, SHM_OP_STAT, (long)fildes,
+                        (long)(uintptr_t)&ks, 0);
+        if (r < 0) {
+            errno = (int)(-r);
+            return -1;
+        }
+        memset(buf, 0, sizeof(*buf));
+        buf->st_ino = (ino_t)ks.id;
+        buf->st_mode = (mode_t)(S_IFREG | (ks.mode & 0777u));
+        buf->st_nlink = 1u;
+        buf->st_size = (off_t)ks.size;
+        buf->st_blksize = 4096;
         return 0;
     }
     if (e.kind != FD_KIND_VFS) {

@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0012 — Implement option-gated POSIX memory extensions (SHM, ML, MLR)
-
-```{task} Implement option-gated POSIX memory extensions (SHM, ML, MLR)
-:id: TSK_0012
-:status: open
-:traces: ADR_0003, SWR_MEM_0005
-
-Add kernel shared-frame `MAP_SHARED` backing for `shm_open`/`shm_unlink`
-(`SHM`). Implement `mlock`, `munlock`, `mlockall`, and `munlockall` (`ML`/`MLR`)
-behind standard `_POSIX_*` macros with QEMU and Gate 2 tests
-({need}`SWR_MEM_0005`).
-```
-
 ### TSK_0016 — Build Ring 3 serial TTY server, termios, and multi-server ppoll
 
 ```{task} Build Ring 3 serial TTY server, termios, and multi-server ppoll

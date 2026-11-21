@@ -20,6 +20,7 @@
 #define FD_KIND_CONSOLE 1u
 #define FD_KIND_SERVER 2u
 #define FD_KIND_VFS 3u
+#define FD_KIND_SHM 4u
 
 #define FD_FLAG_CLOEXEC 0x01u
 

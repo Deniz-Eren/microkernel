@@ -16,6 +16,7 @@
 #include <kernel/printk.h>
 #include <kernel/panic.h>
 #include <sys/errno.h>
+#include <sys/mman.h>
 #include <sys/vm.h>
 
 /* need:: COMP_MEM_0002 */
@@ -304,19 +305,19 @@ static int range_is_unmapped(uint64_t pml4_phys, uint64_t base,
     return 1;
 }
 
-static uint64_t find_mmap_region(pcb_t *p, uint64_t npages) {
+uint64_t vmm_alloc_mmap_va(uint64_t pml4_phys, uint64_t *next_va,
+                           uint64_t npages) {
     uint64_t bytes = npages * PAGE_SIZE;
-    if (p->next_mmap_va < USER_MMAP_BASE ||
-        p->next_mmap_va >= USER_MMAP_LIMIT) {
-        p->next_mmap_va = USER_MMAP_BASE;
+    if (*next_va < USER_MMAP_BASE || *next_va >= USER_MMAP_LIMIT) {
+        *next_va = USER_MMAP_BASE;
     }
-    uint64_t start = p->next_mmap_va;
+    uint64_t start = *next_va;
     for (int pass = 0; pass < 2; pass++) {
         uint64_t va = (pass == 0) ? start : USER_MMAP_BASE;
         uint64_t end = (pass == 0) ? USER_MMAP_LIMIT : start;
         while (va + bytes <= end) {
-            if (range_is_unmapped(p->pml4_phys, va, npages)) {
-                p->next_mmap_va = va + bytes;
+            if (range_is_unmapped(pml4_phys, va, npages)) {
+                *next_va = va + bytes;
                 return va;
             }
             va += PAGE_SIZE;
@@ -325,7 +326,11 @@ static uint64_t find_mmap_region(pcb_t *p, uint64_t npages) {
     return 0;
 }
 
-static uint64_t prot_to_pte_flags(uint64_t prot) {
+static uint64_t find_mmap_region(pcb_t *p, uint64_t npages) {
+    return vmm_alloc_mmap_va(p->pml4_phys, &p->next_mmap_va, npages);
+}
+
+uint64_t vmm_prot_to_pte_flags(uint64_t prot) {
     uint64_t flags = VMM_PRESENT;
     if (prot != VM_PROT_NONE) {
         flags |= VMM_USER;
@@ -337,6 +342,10 @@ static uint64_t prot_to_pte_flags(uint64_t prot) {
         flags |= VMM_NX;
     }
     return flags;
+}
+
+static uint64_t prot_to_pte_flags(uint64_t prot) {
+    return vmm_prot_to_pte_flags(prot);
 }
 
 long sys_vm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags) {
@@ -351,7 +360,8 @@ long sys_vm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags) {
     if ((prot & VM_PROT_WRITE) && (prot & VM_PROT_EXEC)) {
         return -EACCES; /* W^X policy */
     }
-    if (flags & ~(uint64_t)(VM_MAP_PRIVATE | VM_MAP_ANON | VM_MAP_FIXED)) {
+    if (flags & ~(uint64_t)(VM_MAP_SHARED | VM_MAP_PRIVATE | VM_MAP_ANON |
+                            VM_MAP_FIXED)) {
         return -EINVAL;
     }
     uint64_t npages = (len + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -390,6 +400,12 @@ long sys_vm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags) {
     }
 
     uint64_t pte_flags = prot_to_pte_flags(prot);
+    if (flags & VM_MAP_SHARED) {
+        pte_flags |= VMM_SHARED;
+    }
+    if (p->mlock_flags & MCL_FUTURE) {
+        pte_flags |= VMM_LOCKED;
+    }
     for (uint64_t i = 0; i < npages; i++) {
         uint64_t frame = pmm_alloc_frame();
         if (!frame) {
@@ -475,12 +491,99 @@ long sys_vm_protect(uint64_t va, uint64_t len, uint64_t prot) {
         unsigned i1 = (page >> 12) & 0x1FF;
         uint64_t pte = pt[i1];
         uint64_t phys = pte & PTE_ADDR_MASK;
-        uint64_t nflags = want_flags;
+        uint64_t nflags = want_flags | (pte & (VMM_SHARED | VMM_LOCKED));
         if ((pte & VMM_COW) && (prot & VM_PROT_WRITE)) {
             nflags = (nflags & ~VMM_WRITE) | VMM_COW;
         }
         pt[i1] = phys | nflags;
         vmm_invlpg(page);
+    }
+    return 0;
+}
+
+static void vmm_set_all_user_lock(uint64_t pml4_phys, int lock) {
+    uint64_t *pml4 = table_at(pml4_phys);
+    for (int i4 = 0; i4 < 256; i4++) {
+        if (!(pml4[i4] & VMM_PRESENT)) {
+            continue;
+        }
+        uint64_t *pdpt = table_at(pml4[i4]);
+        for (int i3 = 0; i3 < 512; i3++) {
+            if (!(pdpt[i3] & VMM_PRESENT) || (pdpt[i3] & VMM_HUGE)) {
+                continue;
+            }
+            uint64_t *pd = table_at(pdpt[i3]);
+            for (int i2 = 0; i2 < 512; i2++) {
+                if (!(pd[i2] & VMM_PRESENT) || (pd[i2] & VMM_HUGE)) {
+                    continue;
+                }
+                uint64_t *pt = table_at(pd[i2]);
+                for (int i1 = 0; i1 < 512; i1++) {
+                    if (!(pt[i1] & VMM_PRESENT)) {
+                        continue;
+                    }
+                    if (lock) {
+                        pt[i1] |= VMM_LOCKED;
+                    } else {
+                        pt[i1] &= ~VMM_LOCKED;
+                    }
+                }
+            }
+        }
+    }
+}
+
+long sys_vm_mlock(uint64_t op, uint64_t a1, uint64_t a2) {
+    pcb_t *p = proc_current();
+    if (!p) {
+        return -EPERM;
+    }
+    if (op == VM_MLOCK_ALL) {
+        if (a1 == 0ULL ||
+            (a1 & ~(uint64_t)(MCL_CURRENT | MCL_FUTURE)) != 0ULL) {
+            return -EINVAL;
+        }
+        p->mlock_flags = (uint32_t)a1;
+        if (a1 & MCL_CURRENT) {
+            vmm_set_all_user_lock(p->pml4_phys, 1);
+        }
+        return 0;
+    }
+    if (op == VM_MUNLOCK_ALL) {
+        p->mlock_flags = 0u;
+        vmm_set_all_user_lock(p->pml4_phys, 0);
+        return 0;
+    }
+    if (op != VM_MLOCK_RANGE && op != VM_MUNLOCK_RANGE) {
+        return -EINVAL;
+    }
+    if (a2 == 0ULL) {
+        return 0;
+    }
+    if (a1 > USER_VA_MAX || a2 > USER_VA_MAX - a1) {
+        return -ENOMEM;
+    }
+    uint64_t start = a1 & ~0xFFFULL;
+    uint64_t end = (a1 + a2 + PAGE_SIZE - 1ULL) & ~0xFFFULL;
+    if (start < USER_VA_MIN || end > USER_VA_MAX) {
+        return -ENOMEM;
+    }
+    for (uint64_t pg = start; pg < end; pg += PAGE_SIZE) {
+        if (!(vmm_get_pte_to(p->pml4_phys, pg) & VMM_PRESENT)) {
+            return -ENOMEM;
+        }
+    }
+    int lock = (op == VM_MLOCK_RANGE);
+    for (uint64_t pg = start; pg < end; pg += PAGE_SIZE) {
+        uint64_t *pt = walk_pml4(p->pml4_phys, pg, 0, 0);
+        if (pt) {
+            unsigned i1 = (pg >> 12) & 0x1FF;
+            if (lock) {
+                pt[i1] |= VMM_LOCKED;
+            } else {
+                pt[i1] &= ~VMM_LOCKED;
+            }
+        }
     }
     return 0;
 }
@@ -497,19 +600,21 @@ static int clone_cow_page(uint64_t src_pml4, uint64_t dst_pml4, uint64_t page) {
     }
     uint64_t phys = pte & PTE_ADDR_MASK;
     uint64_t flags = pte & ~PTE_ADDR_MASK;
-    if (flags & VMM_WRITE) {
+    if ((flags & VMM_WRITE) && !(flags & VMM_SHARED)) {
         flags = (flags & ~VMM_WRITE) | VMM_COW;
         src_pt[i1] = phys | flags;
         if (src_pml4 == vmm_get_cr3()) {
             vmm_invlpg(page);
         }
     }
+    /* POSIX: memory locks are not inherited across fork(). */
+    uint64_t dst_flags = flags & ~VMM_LOCKED;
     pmm_frame_inc(phys);
     uint64_t old = vmm_unmap_page_to(dst_pml4, page);
     if (old) {
         pmm_free_frame(old);
     }
-    if (vmm_map_page_to(dst_pml4, page, phys, flags) != 0) {
+    if (vmm_map_page_to(dst_pml4, page, phys, dst_flags) != 0) {
         pmm_free_frame(phys);
         return -ENOMEM;
     }

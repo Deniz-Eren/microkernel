@@ -10,7 +10,7 @@
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_SIG_0003 VER_MEM_0002
-# need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
+# need:: VER_MEM_0004 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_DOCS_0004
 
 from __future__ import annotations
@@ -212,8 +212,16 @@ class PosixHeaderMatrixTests(unittest.TestCase):
                 "#ifdef SYS_VM_MAP",
                 '#error "sys/mman.h leaked SYS_VM_MAP"',
                 "#endif",
+                "#ifdef SYS_SHM_OP",
+                '#error "sys/mman.h leaked SYS_SHM_OP"',
+                "#endif",
                 "#ifdef SYS_PROC_WAIT",
                 '#error "sys/wait.h leaked SYS_PROC_WAIT"',
+                "#endif",
+                "#if !defined(_POSIX_SHARED_MEMORY_OBJECTS) || \\",
+                "    !defined(_POSIX_MEMLOCK) || \\",
+                "    !defined(_POSIX_MEMLOCK_RANGE)",
+                '#error "sys/mman.h missing SHM/ML/MLR feature macros"',
                 "#endif",
                 "static int __check_mman_wait_api(void) {",
                 "    void *p = mmap((void *)0, 4096, PROT_READ | PROT_WRITE,",
@@ -221,6 +229,12 @@ class PosixHeaderMatrixTests(unittest.TestCase):
                 "    if (p == MAP_FAILED) { return -1; }",
                 "    (void)mprotect(p, 4096, PROT_READ);",
                 "    (void)msync(p, 4096, MS_SYNC);",
+                "    (void)mlock(p, 4096);",
+                "    (void)munlock(p, 4096);",
+                "    (void)mlockall(MCL_CURRENT | MCL_FUTURE);",
+                "    (void)munlockall();",
+                "    (void)shm_open(\"/x\", 0, (mode_t)0600);",
+                "    (void)shm_unlink(\"/x\");",
                 "    (void)munmap(p, 4096);",
                 "    int st = 0;",
                 "    (void)wait(&st);",

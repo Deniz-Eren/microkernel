@@ -25,7 +25,9 @@
 #define VMM_PCD (1ULL << 4)
 #define VMM_HUGE (1ULL << 7)
 #define VMM_GLOBAL (1ULL << 8)
-#define VMM_COW (1ULL << 9) /* software-defined copy-on-write PTE marker */
+#define VMM_COW (1ULL << 9)     /* software-defined copy-on-write PTE marker */
+#define VMM_SHARED (1ULL << 10) /* software-defined MAP_SHARED PTE marker */
+#define VMM_LOCKED (1ULL << 11) /* software-defined mlock PTE marker */
 #define VMM_NX (1ULL << 63)
 
 static inline void *phys_to_virt(uint64_t p) {
@@ -62,6 +64,15 @@ long sys_vm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags);
 long sys_vm_unmap(uint64_t va, uint64_t len);
 long sys_vm_protect(uint64_t va, uint64_t len, uint64_t prot);
 long sys_vm_clone_cow(uint64_t dst_pid, uint64_t va, uint64_t len);
+long sys_vm_mlock(uint64_t op, uint64_t a1, uint64_t a2);
+long sys_shm_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3);
+long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
+                 uint64_t fd, uint64_t off);
+void shm_acquire_id(uint32_t id);
+void shm_release_id(uint32_t id);
+uint64_t vmm_alloc_mmap_va(uint64_t pml4_phys, uint64_t *next_va,
+                           uint64_t npages);
+uint64_t vmm_prot_to_pte_flags(uint64_t prot);
 void vmm_set_cr3(uint64_t pml4_phys);
 uint64_t vmm_get_cr3(void);
 void vmm_invlpg(uint64_t vaddr);

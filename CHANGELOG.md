@@ -51,6 +51,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Option-gated POSIX.1-2024 memory extensions (`SWR_MEM_0005`, `ADR_0017`,
+  `COMP_MEM_0005`, `VER_MEM_0004`): added `_POSIX_SHARED_MEMORY_OBJECTS`,
+  `_POSIX_MEMLOCK`, and `_POSIX_MEMLOCK_RANGE` (`202405L`) in
+  `libc/include/sys/_posix_opts.h`, kernel shared-frame `MAP_SHARED` and
+  `SYS_SHM_OP`/`SYS_SHM_MAP`/`FD_KIND_SHM` in `kernel/core/shm.c`, `VMM_SHARED`
+  and `VMM_LOCKED`/`SYS_VM_MLOCK` in `kernel/core/vmm.c`, `shm_open`,
+  `shm_unlink`, `mlock`, `munlock`, `mlockall`, and `munlockall` in
+  `libc/src/mman.c`, `ftruncate`/`fstat` SHM support in `libc/src/vfs.c`, and
+  QEMU `tests/shmtest/test_shm.c`.
 - Ring 3 POSIX VFS server (`SWR_IPC_0007`, `ADR_0016`, `ICD_IPC_0007`–`0009`,
   `COMP_IPC_0008`–`0009`, `VER_IPC_0005`): added `servers/vfsserv/main.c`
   (`/dev/vfs`) serving read-only `boot.tar` at `/boot` and writable dynamic

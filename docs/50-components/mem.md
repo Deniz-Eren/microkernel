@@ -50,3 +50,16 @@ per-process PML4 tables with W^X enforcement, `sys_vm_map`, `sys_vm_unmap`,
 coalescing slabs, direct large mappings, and `errno`-preserving `free`
 ({need}`ICD_MEM_0003`, {need}`SWR_MEM_0006`).
 ```
+
+```{comp} Kernel POSIX shared memory objects and ML/MLR page locking
+:id: COMP_MEM_0005
+:status: active
+:posix: XBD/sys/mman.h (ML, MLR, SHM)
+:refines: ARC_MEM_0001, ICD_MEM_0001, ICD_MEM_0002, ICD_MEM_0003
+:satisfies: SWR_MEM_0005
+
+`kernel/core/shm.c` manages PMM-refcounted SHM objects (`SYS_SHM_OP`,
+`SYS_SHM_MAP`, `FD_KIND_SHM`) for cross-process `MAP_SHARED`.
+`kernel/core/vmm.c` enforces `VMM_SHARED` across `fork()` and `VMM_LOCKED` for
+`SYS_VM_MLOCK` ({need}`ICD_MEM_0003`, {need}`SWR_MEM_0005`).
+```

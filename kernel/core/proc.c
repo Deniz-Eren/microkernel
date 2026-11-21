@@ -328,6 +328,8 @@ void proc_close_fds(pcb_t *p, int cloexec_only) {
             p->fds[i].srv_pid && p->fds[i].srv_chanid) {
             ipc_send_pulse_kernel(p->fds[i].srv_pid, p->fds[i].srv_chanid,
                                   PULSE_CODE_FD_CLOSE, p->fds[i].srv_handle);
+        } else if (p->fds[i].kind == FD_KIND_SHM) {
+            shm_release_id(p->fds[i].srv_handle);
         }
         memset(&p->fds[i], 0, sizeof(p->fds[i]));
     }
@@ -387,6 +389,9 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         }
         struct __k_fd_entry old = p->fds[a1];
         memset(&p->fds[a1], 0, sizeof(p->fds[a1]));
+        if (old.kind == FD_KIND_SHM) {
+            shm_release_id(old.srv_handle);
+        }
         if (a2 != 0 && copy_to_user(a2, &old, sizeof(old)) < 0) {
             return -EFAULT;
         }
@@ -403,6 +408,9 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
             if (p->fds[i].kind == FD_KIND_NONE) {
                 p->fds[i] = p->fds[a1];
                 p->fds[i].fd_flags = (uint8_t)(a3 & FD_FLAG_CLOEXEC);
+                if (p->fds[i].kind == FD_KIND_SHM) {
+                    shm_acquire_id(p->fds[i].srv_handle);
+                }
                 return i;
             }
         }
@@ -418,6 +426,12 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         struct __k_fd_entry replaced = p->fds[a2];
         p->fds[a2] = p->fds[a1];
         p->fds[a2].fd_flags = (uint8_t)(a3 & FD_FLAG_CLOEXEC);
+        if (p->fds[a2].kind == FD_KIND_SHM) {
+            shm_acquire_id(p->fds[a2].srv_handle);
+        }
+        if (replaced.kind == FD_KIND_SHM) {
+            shm_release_id(replaced.srv_handle);
+        }
         if (a4 != 0 && copy_to_user(a4, &replaced, sizeof(replaced)) < 0) {
             return -EFAULT;
         }
@@ -476,6 +490,7 @@ long sys_proc_fork(const trapframe_t *tf) {
 
     child->brk = parent->brk;
     child->next_mmap_va = parent->next_mmap_va;
+    child->mlock_flags = 0u; /* POSIX: memory locks not inherited on fork */
     child->next_stack_va = parent->next_stack_va;
     child->caps = parent->caps;
     memcpy(child->sig_handlers, parent->sig_handlers,
@@ -484,6 +499,11 @@ long sys_proc_fork(const trapframe_t *tf) {
     memcpy(child->sig_flags, parent->sig_flags, sizeof(child->sig_flags));
     child->sig_restorer = parent->sig_restorer;
     memcpy(child->fds, parent->fds, sizeof(child->fds));
+    for (int i = 0; i < PROC_MAX_FDS; i++) {
+        if (child->fds[i].kind == FD_KIND_SHM) {
+            shm_acquire_id(child->fds[i].srv_handle);
+        }
+    }
 
     tcb_t *ct = thread_create_embryo(child, cur->base_priority);
     ct->blocked_signals = cur->blocked_signals;
@@ -640,6 +660,7 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
     proc_kill_other_threads(p, cur);
     time_cleanup_proc(p->pid);
     proc_close_fds(p, 1);
+    p->mlock_flags = 0u;
 
     /* Reset caught signal handlers to SIG_DFL; keep SIG_IGN and masks. */
     for (int s = 1; s < 32; s++) {
@@ -800,19 +821,17 @@ void proc_spawn_init(void) {
                ? strlen(cmd) + 1
                : sizeof(g_bootinfo.cmdline) - 1);
 
-    /* PID 1: system process manager / pathname manager. Its syscall-created
-     * channel (chanid 1) is the name registry endpoint. */
-    pcb_t *p1 = spawn_image(tar_phys, tar_size, "sysproc", 100, 1);
+    /* PID 1: system process manager / pathname manager. Higher boot priority
+     * guarantees sysproc creates chanid 1 before other Ring 3 servers run. */
+    pcb_t *p1 = spawn_image(tar_phys, tar_size, "sysproc", 110, 1);
     if (!p1) {
         panic("proc: failed to spawn sysproc");
     }
     p1->caps |= CAP_SYS_INTR;
     /* Ring 3 POSIX pipe and poll server (/dev/pipe). */
     spawn_image(tar_phys, tar_size, "pipeserv", 100, 0);
-    /* Demo processes for the IPC milestone: an echo server that registers
-     * itself with sysproc, and a client that resolves and exercises it. */
     /* Ring 3 VFS server (/dev/vfs) with read-only bootfs mapping. */
-    pcb_t *vfs = spawn_image(tar_phys, tar_size, "vfsserv", 110, 0);
+    pcb_t *vfs = spawn_image(tar_phys, tar_size, "vfsserv", 100, 0);
     if (vfs) {
         map_bootfs_readonly(vfs, tar_phys, tar_size);
     }
@@ -845,6 +864,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "heaptest", 100, 0);
     /* POSIX.1-2024 Ring 3 VFS (bootfs/tmpfs, stat, dirent) test. */
     spawn_image(tar_phys, tar_size, "vfstest", 100, 0);
+    /* POSIX.1-2024 option-gated SHM, ML, and MLR memory extensions test. */
+    spawn_image(tar_phys, tar_size, "shmtest", 100, 0);
 
     sched_activate();
 }

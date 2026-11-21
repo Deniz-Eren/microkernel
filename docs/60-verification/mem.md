@@ -38,3 +38,15 @@ The headless QEMU harness `tests/test_runner.py` runs `heaptest`
 large `munmap` reclamation, `free` `errno` preservation, `realloc` boundaries,
 and 4-thread concurrency ({need}`SWR_MEM_0006`).
 ```
+
+```{ver} Verify option-gated SHM, MAP_SHARED, ML, and MLR memory extensions
+:id: VER_MEM_0004
+:status: active
+:tags: integration
+:verifies: SWR_MEM_0005
+
+The headless QEMU harness `tests/test_runner.py` runs `shmtest`
+(`tests/shmtest/test_shm.c`). It checks `shm_open`, `shm_unlink`, `FD_CLOEXEC`,
+cross-process `MAP_SHARED`, `mlock`, and `mlockall`. CTest `posix.headers` and
+`posix.symbol_diff` check option macros ({need}`SWR_MEM_0005`).
+```

@@ -147,6 +147,7 @@ add_subdirectory(tests/canceltest)
 add_subdirectory(tests/libctest)
 add_subdirectory(tests/heaptest)
 add_subdirectory(tests/vfstest)
+add_subdirectory(tests/shmtest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

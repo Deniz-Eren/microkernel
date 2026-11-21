@@ -241,6 +241,15 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_GETENTROPY:
         ret = sys_getentropy(tf->rdi, tf->rsi);
         break;
+    case SYS_SHM_OP:
+        ret = sys_shm_op(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
+    case SYS_SHM_MAP:
+        ret = sys_shm_map(tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8, tf->r9);
+        break;
+    case SYS_VM_MLOCK:
+        ret = sys_vm_mlock(tf->rdi, tf->rsi, tf->rdx);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (tf->rdi > 255) {

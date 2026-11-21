@@ -190,9 +190,11 @@ The headers below show all user-space functions available at this time:
   `raise`, `signal`, `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`,
   `sigismember`, `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across
   `SYS_SIGRETURN`
-- **POSIX memory mapping (`<sys/mman.h>`):** W^X-enforced anonymous `mmap`,
-  `mprotect`, `msync`, and `munmap` (`PROT_*`, `MAP_PRIVATE`, `MAP_ANONYMOUS`,
-  `MAP_FIXED`, `MS_*`)
+- **POSIX memory mapping (`<sys/mman.h>`):** W^X-enforced `mmap` (`MAP_PRIVATE`,
+  `MAP_SHARED`, `MAP_ANONYMOUS`, `MAP_FIXED`), `mprotect`, `msync`, `munmap`,
+  option-gated `shm_open`/`shm_unlink` (`SHM`), and
+  `mlock`/`munlock`/`mlockall`/`munlockall` (`ML`/`MLR`, `MCL_CURRENT`,
+  `MCL_FUTURE`)
 - **POSIX process wait (`<sys/wait.h>`):** async-signal-safe `wait`, `waitpid`
   (`WNOHANG`), and exit/signal status macros (`WIFEXITED`, `WEXITSTATUS`,
   `WIFSIGNALED`, `WTERMSIG`)
@@ -247,9 +249,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): option-gated `SHM`/`ML`, TTY `stdin`,
-buffered `fopen` and `execvp`, `AF_UNIX` sockets, POSIX `sh`, and `pselect`
-hardening. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (next tasks): TTY `stdin`, buffered `fopen` and
+`execvp`, `AF_UNIX` sockets, POSIX `sh`, and `pselect` hardening. See
+[docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -260,8 +262,8 @@ hardening. See [docs/records/TASKS.md](docs/records/TASKS.md) and
   `ipcserv`, `rtcdrv`)
 - `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,
   `proctest`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
-  `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`, `vfstest`),
-  `posix/`, and `traceability/`
+  `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`, `vfstest`,
+  `shmtest`), `posix/`, and `traceability/`
 - `config/sphinx/`, `tools/` — Sphinx-Needs traceability model, tag scanner,
   auditor, and repository STE gate
 - `scripts/` — container, build, format, hook, and `boot.tar` helper scripts
@@ -286,10 +288,11 @@ See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/HISTORY.md](docs/records/HISTORY.md) for the milestone plan and
 task records. The build completed milestones 1 to 6, POSIX clocks/timers,
 pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. It also
-completed `<aio.h>`, cancellation points, `<stdio.h>` locking, Issue 8 C17
-library functions, the 4-gate POSIX harness, `mmap`-backed heap reclamation, and
-Ring 3 VFS (`bootfs`/`tmpfs`). Next tasks add `SHM`/`ML`, TTY, buffered `stdio`
-and `execvp`, `AF_UNIX` sockets, POSIX `sh`, and `pselect` hardening.
+completed `<aio.h>`, cancellation points, `<stdio.h>` locking, and Issue 8 C17
+library functions. Recent milestones added the 4-gate POSIX harness,
+`mmap`-backed heap reclamation, Ring 3 VFS (`bootfs`/`tmpfs`), and option-gated
+`SHM`/`ML`/`MLR`. Next tasks add TTY, buffered `stdio` and `execvp`, `AF_UNIX`
+sockets, POSIX `sh`, and `pselect` hardening.
 
 ## Documentation
 

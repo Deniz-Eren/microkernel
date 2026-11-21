@@ -88,6 +88,7 @@ struct pcb {
     uint64_t pml4_phys;
     uint64_t brk;          /* program break (user VA) */
     uint64_t next_mmap_va; /* bump cursor for dynamic VMMap regions */
+    uint32_t mlock_flags;  /* MCL_CURRENT / MCL_FUTURE memory lock state */
 
     tcb_t *threads; /* singly-linked list of live threads */
     uint32_t nthreads;

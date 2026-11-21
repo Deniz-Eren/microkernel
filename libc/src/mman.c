@@ -27,11 +27,20 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off) {
         return MAP_FAILED;
     }
     if (!(flags & MAP_ANONYMOUS)) {
-        (void)fildes;
-        errno = ENOSYS;
-        return MAP_FAILED;
+        if (fildes < 0) {
+            errno = EBADF;
+            return MAP_FAILED;
+        }
+        long r = __sys6(SYS_SHM_MAP, (long)(uintptr_t)addr, (long)len,
+                        (long)prot, (long)flags, (long)fildes, (long)off);
+        if (r < 0) {
+            errno = (int)(-r);
+            return MAP_FAILED;
+        }
+        return (void *)(uintptr_t)r;
     }
-    unsigned kflags = VM_MAP_PRIVATE | VM_MAP_ANON;
+    unsigned kflags =
+        ((flags & MAP_SHARED) ? VM_MAP_SHARED : VM_MAP_PRIVATE) | VM_MAP_ANON;
     if (flags & MAP_FIXED) {
         kflags |= VM_MAP_FIXED;
     }
@@ -69,6 +78,63 @@ int msync(void *addr, size_t len, int flags) {
     if ((flags & ~(MS_ASYNC | MS_SYNC | MS_INVALIDATE)) != 0 ||
         ((flags & MS_ASYNC) && (flags & MS_SYNC))) {
         errno = EINVAL;
+        return -1;
+    }
+    return 0;
+}
+
+int mlock(const void *addr, size_t len) {
+    long r =
+        __sys3(SYS_VM_MLOCK, VM_MLOCK_RANGE, (long)(uintptr_t)addr, (long)len);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int munlock(const void *addr, size_t len) {
+    long r = __sys3(SYS_VM_MLOCK, VM_MUNLOCK_RANGE, (long)(uintptr_t)addr,
+                    (long)len);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int mlockall(int flags) {
+    long r = __sys3(SYS_VM_MLOCK, VM_MLOCK_ALL, (long)flags, 0);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int munlockall(void) {
+    long r = __sys3(SYS_VM_MLOCK, VM_MUNLOCK_ALL, 0, 0);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int shm_open(const char *name, int oflag, mode_t mode) {
+    long r = __sys4(SYS_SHM_OP, SHM_OP_OPEN, (long)(uintptr_t)name, (long)oflag,
+                    (long)mode);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return (int)r;
+}
+
+int shm_unlink(const char *name) {
+    long r = __sys4(SYS_SHM_OP, SHM_OP_UNLINK, (long)(uintptr_t)name, 0, 0);
+    if (r < 0) {
+        errno = (int)(-r);
         return -1;
     }
     return 0;

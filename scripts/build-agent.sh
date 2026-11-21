@@ -97,6 +97,8 @@ if ! "$ENV" test --timeout 120 \
     --expect 'bootfs /boot readdir, ELF read, fstat, and EROFS verified' \
     --expect 'tmpfs mkdir, chdir, getcwd, openat, lseek, ftruncate, and stat' \
     --expect 'VFS shared dup/fork offsets, unlinked open persistence' \
+    --expect 'SHM shm_open/shm_unlink, ftruncate, and cross-process' \
+    --expect 'ML/MLR mlock, munlock, mlockall, and munlockall verified' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

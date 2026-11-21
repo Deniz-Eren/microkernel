@@ -20,6 +20,7 @@
 /* POSIX.1-2024 (Issue 8) Base conformance constants. */
 #define _POSIX_VERSION 202405L
 #define _POSIX2_VERSION 202405L
+#include <sys/_posix_opts.h>
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
