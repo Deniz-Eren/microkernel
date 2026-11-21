@@ -21,6 +21,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Updated `README.md` to document the closed-loop AI agent development cycle
+  (Blueprint & bidirectional Sphinx-Needs traceability, Podman/LLVM Fabricator,
+  headless QEMU Testbed, and automated Quality Gates) with a Mermaid flowchart.
 - Extended and dependency-ordered the task backlog in `docs/records/TASKS.md`
   (`TSK_0013`, `TSK_0014`, `TSK_0015`, `TSK_0012`, `TSK_0016`, `TSK_0017`,
   `TSK_0018`) with matching draft requirements (`SWR_MEM_0006`, `SWR_IPC_0007`–

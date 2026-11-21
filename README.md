@@ -1,14 +1,126 @@
-# Microkernel
+# Microkernel — POSIX.1-2024 x86-64 Microkernel
 
-Microkernel is a small operating system for x86-64 computers that targets
-**POSIX.1-2024 (IEEE Std 1003.1-2024, Issue 8) Base** compliance in user space.
-The Ring 0 kernel stays small and supplies its services to user processes.
-Servers and applications run as isolated user processes in Ring 3 and send
-messages to each other.
+Microkernel is a preemptive, message-passing x86-64 operating system written in
+freestanding C17. It targets **POSIX.1-2024 (IEEE Std 1003.1-2024, Issue 8)
+Base** compliance in user space. The Ring 0 kernel stays minimal, while system
+servers and applications run as isolated Ring 3 processes that communicate over
+synchronous IPC channels.
 
-## Commands
+The project uses a closed **Blueprint -> Fabricator -> Testbed -> Gates** loop
+driven by AI engineering agents inside a deterministic **Podman** container
+(`microkernel-dev`). Every change moves from traceable specifications to
+cross-compiled ISO images, headless QEMU execution, static analysis, and
+automated conformance tests with zero host toolchain drift.
+
+## Development architecture: the closed loop
+
+Traditional operating system development breaks on host toolchain drift and
+manual reboot cycles. This repository connects specification, compilation,
+hardware emulation, and automated audits into one reproducible loop governed by
+[AGENTS.md](AGENTS.md) and [docs/skills/](docs/skills/):
+
+```mermaid
+flowchart TD
+    AGENT["AI Engineering Agent (AGENTS.md + docs/skills)"]
+    BLUEPRINT["1. Blueprint & Traceability (POSIX.1-2024 + Sphinx-Needs)"]
+    FABRICATOR["2. Fabricator (Podman + LLVM/Clang + CMake/Ninja + GRUB ISO)"]
+    TESTBED["3. Testbed (Headless QEMU x86-64 q35 + COM1 serial)"]
+    GATES["4. Quality Gates (format, text, STE, clang-tidy, CTest 6/6)"]
+
+    AGENT -->|"1. Predict and update specs, headers, and code"| BLUEPRINT
+    BLUEPRINT -->|"2. Cross-compile 4-stage OS and Sphinx -W"| FABRICATOR
+    FABRICATOR -->|"3. Boot microkernel.iso and stream telemetry"| TESTBED
+    TESTBED -->|"4. Match 54 [OK] assertions and run CTest"| GATES
+    GATES -->|"5. Pass: commit via pre-commit / Fail: repair"| AGENT
+```
+
+### 1. The Blueprint and bidirectional traceability
+
+Before implementation begins, **POSIX.1-2024 (Issue 8)** and the microkernel ABI
+define the system contract inside the Sphinx-Needs traceability model (`docs/`):
+
+- **Microkernel boundary:** Ring 0 provides only boot bring-up, W^X and
+  copy-on-write memory management, 256-level priority scheduling, and
+  synchronous or scatter-gather IPC. It also handles IOAPIC IRQ pulse routing,
+  signals, clocks/timers, futexes, and `syscall`/`sysret`. System servers
+  (`sysproc`, `pipeserv`, `ipcserv`, `rtcdrv`) and POSIX libraries run in
+  isolated Ring 3 processes.
+- **Two-tier bidirectional traceability:** Business decisions (`BDR_`),
+  architecture and workflow decisions (`ADR_`, `WDR_`), and requirements
+  (`SYS_`, `SWR_`) in ASD-STE100 Issue 9 carry `:posix:` links to IEEE Std
+  1003.1-2024. Every public header carries an `ICD_` `need::` tag, every source
+  module carries a `COMP_` tag, and every test file carries a `VER_` tag.
+- **Build-enforced integrity:** `config/sphinx/need_tag_check.py` and
+  `tools/traceability/check_needs_audit.py` fail the Sphinx `-W` build on broken
+  links or unverified requirements. They also reject untagged active
+  `ICD_`/`COMP_`/`VER_` items, untagged test files, and transient `TSK_`/`RDM_`
+  IDs in source code. See [WDR_0002](docs/00-overview/wdr/WDR_0002.md),
+  [BDR_0003](docs/10-product/bdr/BDR_0003.md),
+  [ADR_0003](docs/30-architecture/adr/ADR_0003.md), and the [traceability and
+  POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
+
+### 2. The Fabricator (Podman, LLVM, and four-stage build)
+
+**LLVM** (`clang`, `ld.lld`, `llvm-objdump`) with **CMake** and **Ninja**
+(`cmake/clang-x86_64.cmake`) cross-compiles freestanding C17 and x86-64
+assembly. The build runs inside the `microkernel-dev` Podman image
+(`Containerfile`) with no host headers or host libraries in four stages:
+
+1. **Headers:** Public `libc/include/` headers and Clang freestanding headers
+   install into `sysroot/usr/include`.
+2. **C library:** `libc.a` and `crt0.o` compile against the sysroot into
+   `sysroot/usr/lib`.
+3. **User space:** Ring 3 servers (`servers/`) and test binaries (`tests/`) link
+   statically against `libc.a` and pack into an uncompressed POSIX `ustar`
+   archive (`build/boot.tar`).
+4. **Kernel and ISO:** `kernel.elf` links at higher-half `0xFFFFFFFF80000000`,
+   and `grub-mkrescue` packages `kernel.elf` and `boot.tar` into a bootable
+   Multiboot2 ISO (`build/microkernel.iso`).
+
+### 3. The Testbed (headless QEMU serial verification)
+
+**QEMU** (`x86-64` `q35`, Local APIC, IOAPIC, CMOS RTC) boots
+`build/microkernel.iso` headlessly inside the container with no KVM requirement.
+The Python harness (`tests/test_runner.py`) reads `COM1` serial output and
+asserts 54 ordered `[OK]` patterns. The suite tests boot, W^X/COW faults, IPC
+name lookup, signals, Ring 3 IRQ 8 driver pulses, clocks/timers, and
+pthreads/TLS. It also tests `fork`/`execve`/`pipe2`/`ppoll`, `<aio.h>`, deferred
+cancellation, `<stdio.h>` locks, and Issue 8 C17 `libc`. Any kernel panic or
+missing pattern exits with code 1.
+
+### 4. Quality gates and the agent workflow
+
+AI agents follow the **Predict -> Act -> Verify** workflow in
+[AGENTS.md](AGENTS.md), delegating tool procedures to skills in `docs/skills/`.
+Before every commit, `./scripts/build-agent.sh` (and `.git/hooks/pre-commit`,
+installed via `./scripts/install-hooks.sh`) enforces seven repository-wide
+gates:
+
+1. **Formatting:** `clang-format` across `kernel/`, `libc/`, `servers/`, and
+   `tests/` (`./scripts/formatter-agent.sh`).
+2. **Source text:** `check_text.py --root .` checks 80-column line limits,
+   greedy prose packing, and Doxygen file headers.
+3. **Controlled English:** `tools/check_ste.py --root .` checks ASD-STE100 Issue
+   9 compliance across `README.md` and `docs/`.
+4. **Build and docs:** Four-stage cross-build plus clean Sphinx `-W` HTML build.
+5. **Hardware testbed:** Headless QEMU serial suite (`54 [OK]` assertions).
+6. **Static analysis:** `clang-tidy` across all C sources and headers using
+   `build/compile_commands.json`.
+7. **CTest (`6/6`):** `posix.headers` (standalone C17 matrix under
+   `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800`), `posix.async_signal_safe`
+   (`llvm-objdump -dr` call-graph audit on `libc.a`), `traceability.unit`,
+   `docs.html`, `docs.needs`, and `docs.audit`.
+
+## Containerized workflow and commands
+
+Your host needs only Podman. The first `./scripts/env.sh` run builds the pinned
+`microkernel-dev` image from `Containerfile`.
 
 ```bash
+# Run the complete closed loop (format, text, STE, build, QEMU, lint, CTest)
+./scripts/build-agent.sh
+
+# Or run individual stages inside the Podman container:
 ./scripts/env.sh build
 ./scripts/env.sh test --timeout 120 \
     --expect '\[OK\] PMM/VMM/APIC initialized' \
@@ -16,20 +128,13 @@ messages to each other.
     --expect 'errno thread-local and preserved across success' \
     --expect 'signal handler entered'
 ./scripts/env.sh ctest --test-dir build --output-on-failure
-```
 
-For the full procedures, see the [cmake skill](docs/skills/cmake/SKILL.md). For
-the build, test, and lint in one step, run `scripts/build-agent.sh`.
-
-## Development Environment
-
-```bash
+# Open an interactive shell inside the container
 ./scripts/enter-dev.sh
 ```
 
-The build runs in a Podman container. The image `microkernel-dev` contains the
-Clang compiler, CMake, and QEMU. Your host must have Podman. The first run of an
-`env.sh` command makes the image. For more information, see the [dev-environment
+For full build and container procedures, see the [cmake
+skill](docs/skills/cmake/SKILL.md) and the [dev-environment
 skill](docs/skills/dev-environment/SKILL.md).
 
 ## System services
@@ -37,18 +142,20 @@ skill](docs/skills/dev-environment/SKILL.md).
 The kernel supplies these services:
 
 - preemptive scheduling of threads with 256 priority levels
-- synchronous messages between processes, with channels, connections, replies,
-  and pulses
-- threads, and signals with user handlers
-- memory management with page tables and the W^X policy
+- synchronous and scatter-gather IPC with channels, connections, replies, and
+  pulses
+- threads, `FS.base` TLS, futexes, monotonic/realtime clocks, interval timers,
+  and signals with user handlers
+- memory management with four-level page tables, copy-on-write, and W^X policy
+- IOAPIC IRQ-to-IPC pulse routing and `CAP_SYS_INTR`-gated port I/O
 - fast system calls with the `syscall`/`sysret` instructions
 
 W^X means: the system maps a page as writable or as code, but not the two
 together.
 
 The process `sysproc` is the first user process. It contains the name registry
-of the system. Servers register a name with `sysproc`. Clients find the servers
-with this name.
+of the system. Servers (`pipeserv`, `ipcserv`, `rtcdrv`) register a name with
+`sysproc`, and clients resolve endpoints by name.
 
 ## User-space functionality (current support)
 
@@ -124,11 +231,11 @@ What you can build today:
   through `sysproc` and send synchronous or scatter-gather messages and pulses
 - privileged Ring 3 hardware device drivers (for example `rtcdrv` at `/dev/rtc`)
   using port I/O and IOAPIC IRQ-to-IPC pulse delivery
-- parent and child Ring 3 processes spawned with `ProcCreate` that share
-  copy-on-write memory (`VMCloneCow`), manage private pages (`mmap`/`munmap`),
-  and report exit codes with `waitpid`
-- multithreaded Ring 3 applications with isolated `errno` for each thread,
-  priority scheduling, and POSIX signal handlers and masks
+- parent and child Ring 3 processes (`fork`/`execve`, `ProcCreate`) with COW
+  memory, Ring 3 pipes (`pipe2`/`ppoll`), and `waitpid`
+- multithreaded Ring 3 applications with `FS.base` TLS `errno`, pthreads,
+  deferred cancellation, `<aio.h>`, recursive `<stdio.h>` locks, and POSIX
+  clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
 Not available at this time (next tasks): 4-gate Issue 8 symbol diff, `mmap` heap
@@ -136,93 +243,33 @@ reclamation, Ring 3 VFS/`tmpfs`, option-gated `SHM`/`ML`, TTY `stdin`, POSIX
 `sh`, and `AF_UNIX` sockets. See [docs/records/TASKS.md](docs/records/TASKS.md)
 and [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
-## POSIX.1-2024 compliance and bidirectional traceability
-
-Microkernel targets **POSIX.1-2024 (Issue 8) Base** (`_POSIX_VERSION = 202405L`,
-`_POSIX2_VERSION = 202405L`) in user space. The Ring 0 kernel stays small while
-`libc` and Ring 3 system servers supply standard POSIX interfaces through kernel
-channels and syscalls:
-
-- standalone C17 headers with clean namespaces (`-D_POSIX_C_SOURCE=202405L` and
-  `-D_XOPEN_SOURCE=800`), thread-local `errno`, and async-signal-safe
-  `<signal.h>`
-- planned mandatory Issue 8 Base groups: `pthread_*`, `sem_*`, monotonic clocks
-  and timers, `mmap`/`mprotect`/`msync`/`munmap`, `pipe2`/`dup3`/`ppoll`, and
-  `aio_*`
-- optional POSIX groups (`SHM`, `SPN`, `ML`, `MLR`, `MSG`) behind their
-  `_POSIX_*` feature macros
-
-The project keeps **bidirectional requirements traceability** with Sphinx,
-MyST-Parser, and Sphinx-Needs (`docs/`). All active requirements link in both
-directions across three layers:
-
-1. **Standards and requirements (`SYS_`, `SWR_`):** written in ASD-STE100 Issue
-   9 with `:posix:` links to IEEE Std 1003.1-2024.
-2. **Design and source code (`ARC_`, `ICD_`, `COMP_`):** all public headers have
-   an `ICD_` `need::` tag and all source modules have a `COMP_` `need::` tag.
-3. **Automated verification (`VER_`):** all test files have a `VER_` tag and run
-   in CI (`posix.headers`, `posix.async_signal_safe`, `docs.html`, `docs.audit`,
-   and headless QEMU runs).
-
-The Sphinx build (`-W`) stops with an error if a code tag points to an unknown
-item. It also stops if an active `ICD_`, `COMP_`, or automated `VER_` item has
-no code tag, or if a test file has no `VER_` tag. See
-[WDR_0002](docs/00-overview/wdr/WDR_0002.md),
-[BDR_0003](docs/10-product/bdr/BDR_0003.md),
-[ADR_0003](docs/30-architecture/adr/ADR_0003.md), and the [traceability and
-POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
-
 ## Source tree
 
-- `kernel/` — the kernel: boot code, x86-64 code, and the core subsystems
-- `libc/` — a small C library for user processes
-- `servers/` — the system servers (`sysproc`, `pipeserv`, `ipcserv`, `rtcdrv`)
-- `tests/` — the test harness (`test_runner.py`) and the test programs
-  (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`, `pthreadtest`,
-  `forkpipetest`, `exechelper`, `aiotest`, `canceltest`, `libctest`)
-- `scripts/` — helper scripts for the environment, the build, and the agents
-- `docs/` — the project documents and the agent skills
-- `iso/` — the boot configuration for the GRUB boot loader
-- `cmake/` — the Clang toolchain for CMake
-- `Containerfile` — the definition of the build container image
-
-The kernel starts at a high virtual address (`0xFFFFFFFF80000000`). The first
-user process comes from a `ustar` archive on the boot ISO. The kernel loads each
-program from this archive into a new process.
-
-## How the build runs
-
-The build has four stages. Each stage gives its output to the next stage:
-
-1. The public headers go into `sysroot/usr/include`.
-2. The C library and `crt0` go into `sysroot/usr/lib`.
-3. The linker connects the user programs to this library. A script puts the
-   programs into `boot.tar`.
-4. The linker connects the kernel, and a tool makes the boot ISO.
-
-The stage commands and the test harness usage are in the [cmake
-skill](docs/skills/cmake/SKILL.md).
-
-## How the tests work
-
-The test harness starts QEMU without a display. The kernel and the user
-processes write their status to the serial port. The harness reads the serial
-output and looks for text patterns. You give the patterns with the `--expect`
-option. A missing pattern or a kernel panic causes exit code 1. The expectations
-include all milestones: the kernel boots, the first user process starts in Ring
-3, the name registry resolves servers, messages move between processes, and a
-signal handler runs.
+- `kernel/` — Ring 0 kernel: boot code, x86-64 architecture, and core subsystems
+- `libc/` — freestanding C17 and POSIX.1-2024 user-space C library
+- `servers/` — Ring 3 system servers (`sysproc`, `pipeserv`, `ipcserv`,
+  `rtcdrv`)
+- `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,
+  `proctest`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
+  `exechelper`, `aiotest`, `canceltest`, `libctest`), `posix/`, and
+  `traceability/`
+- `config/sphinx/`, `tools/` — Sphinx-Needs traceability model, tag scanner,
+  auditor, and repository STE gate
+- `scripts/` — container, build, format, hook, and `boot.tar` helper scripts
+- `docs/` — Sphinx-Needs requirements, architecture, decisions, records, and
+  agent skills
+- `iso/` — GRUB Multiboot2 boot configuration
+- `cmake/` — Clang cross-compilation toolchain for CMake
+- `Containerfile` — reproducible Podman build and QEMU container definition
 
 ## Code rules
 
-The kernel and the library use the C17 standard, with warnings as errors. The
-kernel code runs without a C runtime. The kernel maps its code read-only. Data
-pages are not code pages. The same policy applies to user programs.
-
-The kernel does not write through user pointers directly. It moves the data
-through the physical memory map. It examines the page permissions before each
-copy. The file naming, the document formatting, and the copyright header rules
-are in [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
+The kernel and the library use freestanding C17 with warnings as errors. Kernel
+code runs without a C runtime and maps code read-only (W^X). The kernel never
+dereferences user pointers directly. It validates page permissions and copies
+through the physical direct map (HHDM) with SMAP active. File naming, source
+text, ASD-STE100, traceability, and copyright rules live in
+[docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
 
 ## Status
 
