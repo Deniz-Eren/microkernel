@@ -46,6 +46,13 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Thread-safe `mmap`/`munmap`-backed heap allocator (`SWR_MEM_0006`, `ADR_0015`,
+  `COMP_MEM_0004`, `VER_MEM_0003`): replaced the static 1 MiB bump arena in
+  `libc/src/stdlib.c` with `libc/src/malloc.c` featuring a `SYS_FUTEX` lock, 64
+  KiB coalescing slabs with whole-slab `munmap` reclamation, direct
+  `mmap`/`munmap` for allocations >= 32 KiB, in-place `realloc` growth and
+  splitting, POSIX.1-2024 `errno`-preserving `free`, and QEMU
+  `tests/heaptest/test_heap.c`.
 - Complete 4-gate POSIX.1-2024 conformance harness (`SWR_DOCS_0003`,
   `COMP_DOCS_0003`, `VER_DOCS_0004`): added CTest Gate 2 `posix.symbol_diff`
   (`tests/posix/test_symbol_diff.py` comparing Clang JSON AST declarations and

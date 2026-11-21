@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0014 — Implement mmap-backed thread-safe malloc and free allocator
+
+```{task} Implement mmap-backed thread-safe malloc and free allocator
+:id: TSK_0014
+:status: done
+:traces: ADR_0003, SWR_MEM_0006
+
+Replace the static 1 MiB bump arena in `libc/src/stdlib.c` with a thread-safe
+`mmap`/`munmap` free-list allocator. Reclaim memory on `free`, `realloc`, and
+`reallocarray` ({need}`SWR_MEM_0006`).
+```
+
 ### TSK_0013 — Enforce full 4-gate POSIX.1-2024 conformance harness
 
 ```{task} Enforce full 4-gate POSIX.1-2024 conformance harness

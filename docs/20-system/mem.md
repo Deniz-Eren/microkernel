@@ -70,10 +70,10 @@ functions must use `VMMap`, `VMUnmap`, and `VMCloneCow` and obey the W^X policy
 
 ```{swr} Supply mmap-backed thread-safe malloc, free, and realloc heap
 :id: SWR_MEM_0006
-:status: draft
+:status: active
 :posix: XSH/malloc (BASE), XSH/free (BASE), XSH/realloc (BASE)
 :derives: SYS_MEM_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0015
 
 The user-space heap in `<stdlib.h>` must allocate pages through `mmap`, reclaim
 blocks through `free` and `munmap`, and synchronize concurrent threads safely

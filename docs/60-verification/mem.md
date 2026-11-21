@@ -26,3 +26,15 @@ The headless QEMU harness `tests/test_runner.py` runs `proctest` and
 `VMCloneCow` page faults. CTest `posix.headers` (`tests/posix/test_headers.py`)
 checks standalone `<sys/mman.h>` compilation ({need}`SWR_MEM_0004`).
 ```
+
+```{ver} Verify mmap-backed heap reclamation, realloc, and thread safety
+:id: VER_MEM_0003
+:status: active
+:tags: integration
+:verifies: SWR_MEM_0006
+
+The headless QEMU harness `tests/test_runner.py` runs `heaptest`
+(`tests/heaptest/test_heap.c`). It checks 16-byte alignment, 20 MiB slab churn,
+large `munmap` reclamation, `free` `errno` preservation, `realloc` boundaries,
+and 4-thread concurrency ({need}`SWR_MEM_0006`).
+```

@@ -21,18 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0014 — Implement mmap-backed thread-safe malloc and free allocator
-
-```{task} Implement mmap-backed thread-safe malloc and free allocator
-:id: TSK_0014
-:status: open
-:traces: ADR_0003, SWR_MEM_0006
-
-Replace the static 1 MiB bump arena in `libc/src/stdlib.c` with a thread-safe
-`mmap`/`munmap` free-list allocator. Reclaim memory on `free`, `realloc`, and
-`reallocarray` ({need}`SWR_MEM_0006`).
-```
-
 ### TSK_0015 — Build Ring 3 VFS server with bootfs, tmpfs, stat, and dirent
 
 ```{task} Build Ring 3 VFS server with bootfs, tmpfs, stat, and dirent

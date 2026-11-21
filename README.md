@@ -204,9 +204,9 @@ The headers below show all user-space functions available at this time:
   stream locking (`flockfile`, `ftrylockfile`, `funlockfile`), `printf`,
   `fprintf`, `snprintf`, `puts`, `fputs`, `putchar`, `putchar_unlocked`,
   `fputc`, `fflush`
-- **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `realloc`,
-  `reallocarray`, `getenv`, `secure_getenv`, `exit`, `_Exit`, `abort`, `strtol`,
-  `atoi`
+- **Heap and exit (`<stdlib.h>`):** `mmap`/`munmap`-backed thread-safe
+  coalescing `malloc`, `free`, `calloc`, `realloc`, and `reallocarray`, plus
+  `getenv`, `secure_getenv`, `exit`, `_Exit`, `abort`, `strtol`, `atoi`
 - **Memory and strings (`<string.h>`):** `memset`, `memcpy`, `memmove`,
   `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy`, `strlcpy`,
   `strlcat`, `strchr`
@@ -240,9 +240,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): `mmap` heap reclamation, Ring 3
-VFS/`tmpfs`, option-gated `SHM`/`ML`, TTY `stdin`, POSIX `sh`, and `AF_UNIX`
-sockets. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (next tasks): Ring 3 VFS/`tmpfs`, option-gated
+`SHM`/`ML`, TTY `stdin`, POSIX `sh`, and `AF_UNIX` sockets. See
+[docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -253,7 +253,7 @@ sockets. See [docs/records/TASKS.md](docs/records/TASKS.md) and
   `rtcdrv`)
 - `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,
   `proctest`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
-  `exechelper`, `aiotest`, `canceltest`, `libctest`), `posix/`, and
+  `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`), `posix/`, and
   `traceability/`
 - `config/sphinx/`, `tools/` — Sphinx-Needs traceability model, tag scanner,
   auditor, and repository STE gate
@@ -280,9 +280,8 @@ See [docs/records/TASKS.md](docs/records/TASKS.md) and
 task records. The build completed milestones 1 to 6, POSIX clocks/timers,
 pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. It also
 completed `<aio.h>`, cancellation points, `<stdio.h>` locking, Issue 8 C17
-library functions, and the 4-gate POSIX conformance harness. Next tasks add
-`mmap` heap reclamation, Ring 3 VFS, `SHM`/`ML`, TTY, POSIX `sh`, and `AF_UNIX`
-sockets.
+library functions, the 4-gate POSIX harness, and `mmap`-backed heap reclamation.
+Next tasks add Ring 3 VFS, `SHM`/`ML`, TTY, POSIX `sh`, and `AF_UNIX` sockets.
 
 ## Documentation
 

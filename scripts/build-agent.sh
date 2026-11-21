@@ -90,6 +90,9 @@ if ! "$ENV" test --timeout 120 \
     --expect 'strlcpy, strlcat, reallocarray, and secure_getenv verified' \
     --expect 'getentropy\(32\) uniqueness and >256 EINVAL verified' \
     --expect '<stdatomic\.h>, <stdalign\.h>, and <uchar\.h> UTF-16/UTF-32' \
+    --expect 'mmap slab coalescing, alignment, and 20 MiB churn verified' \
+    --expect 'large munmap reclamation, free errno, and realloc boundaries' \
+    --expect '4-thread concurrent mmap malloc/calloc/realloc/free stress' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

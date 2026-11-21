@@ -817,6 +817,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "canceltest", 100, 0);
     /* POSIX.1-2024 Base functions and C17 headers test. */
     spawn_image(tar_phys, tar_size, "libctest", 100, 0);
+    /* POSIX.1-2024 mmap-backed thread-safe heap allocator test. */
+    spawn_image(tar_phys, tar_size, "heaptest", 100, 0);
 
     sched_activate();
 }

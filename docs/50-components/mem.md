@@ -37,3 +37,16 @@ per-process PML4 tables with W^X enforcement, `sys_vm_map`, `sys_vm_unmap`,
 `VMUnmap`, and `VMProtect` and sets thread-local `errno` only on error
 ({need}`ICD_MEM_0002`, {need}`ICD_MEM_0003`, {need}`SWR_MEM_0004`).
 ```
+
+```{comp} Thread-safe mmap-backed coalescing slab and large-block allocator
+:id: COMP_MEM_0004
+:status: active
+:posix: XSH/malloc (BASE), XSH/free (BASE), XSH/realloc (BASE)
+:refines: ARC_MEM_0001, ICD_MEM_0003
+:satisfies: SWR_MEM_0006
+
+`libc/src/malloc.c` supplies `malloc`, `free`, `calloc`, `realloc`, and
+`reallocarray` over `mmap` and `munmap`. It uses a `SYS_FUTEX` lock, 64 KiB
+coalescing slabs, direct large mappings, and `errno`-preserving `free`
+({need}`ICD_MEM_0003`, {need}`SWR_MEM_0006`).
+```

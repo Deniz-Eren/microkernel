@@ -144,6 +144,7 @@ add_subdirectory(tests/forkpipetest)
 add_subdirectory(tests/aiotest)
 add_subdirectory(tests/canceltest)
 add_subdirectory(tests/libctest)
+add_subdirectory(tests/heaptest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)
