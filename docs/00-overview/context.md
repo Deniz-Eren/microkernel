@@ -69,8 +69,8 @@ and clients resolve them. All other system services, such as the echo server
 - `kernel/include/`, `kernel/lib/`: Kernel-internal headers and freestanding
   helpers included via `kernel/` CMake include paths.
 - `libc/`: Freestanding Ring 3 C17 / POSIX.1-2024 library (`crt0`, `errno`,
-  `signal`, `time`, `pthread`, `semaphore`, `mman`, `wait`, `stdio`, `stdlib`,
-  `string`, and `include/sys/` syscall wrappers).
+  `signal`, `time`, `pthread`, `semaphore`, `fd`, `aio`, `mman`, `wait`,
+  `stdio`, `stdlib`, `string`, and `include/sys/` syscall wrappers).
 - `servers/sysproc/`: First Ring 3 process. It spawns system servers and hosts
   the service name registry.
 - `servers/pipeserv/`: Ring 3 POSIX pipe and `ppoll` server registered at
@@ -80,7 +80,7 @@ and clients resolve them. All other system services, such as the echo server
   `/dev/rtc`, using `CAP_SYS_INTR` port I/O and IOAPIC IRQ 8 pulses.
 - `tests/`: `test_runner.py` (headless QEMU serial assertion harness), Ring 3
   test binaries (`ipccli`, `sigtest`, `proctest`, `procchild`, `drvtest`,
-  `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`), `posix/`
+  `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`), `posix/`
   (`posix.headers`, `posix.async_signal_safe`), and `traceability/` unit tests.
 - `config/sphinx/`, `tools/`: Sphinx-Needs model (`needs_model.py`), code tag
   checker (`need_tag_check.py`), `check_needs_audit.py`, and `check_ste.py`.

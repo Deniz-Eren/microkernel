@@ -21,19 +21,6 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0009 — Implement POSIX.1-2024 Base asynchronous I/O (<aio.h>)
-
-```{task} Implement POSIX.1-2024 Base asynchronous I/O (<aio.h>)
-:id: TSK_0009
-:status: open
-:traces: ADR_0003, SWR_IPC_0005
-
-Add `<aio.h>` (`aio_read`, `aio_write`, `aio_error`, `aio_return`, `aio_cancel`,
-`aio_fsync`, `aio_suspend`, `lio_listio`) backed by Ring 3 worker threads or
-servers. Keep `<mqueue.h>` behind `_POSIX_MESSAGE_PASSING`
-({need}`SWR_IPC_0005`).
-```
-
 ### TSK_0010 — Add pthread cancellation points and thread-safe <stdio.h> locking
 
 ```{task} Add pthread cancellation points and thread-safe <stdio.h> locking
@@ -44,4 +31,15 @@ servers. Keep `<mqueue.h>` behind `_POSIX_MESSAGE_PASSING`
 Add `pthread_cancel`, `pthread_setcancelstate`, `pthread_setcanceltype`,
 `pthread_testcancel`, and `<stdio.h>` stream locking (`flockfile`,
 `funlockfile`) with QEMU and CTest verification ({need}`SWR_LIBC_0004`).
+```
+
+### TSK_0011 — Implement POSIX.1-2024 XCU shell utility baseline
+
+```{task} Implement POSIX.1-2024 XCU shell utility baseline
+:id: TSK_0011
+:status: open
+:traces: ADR_0003, SWR_LIBC_0005
+
+Build a Ring 3 POSIX shell supporting `$'...'` quoting, `set -o pipefail`, and
+`read -d` with QEMU verification ({need}`SWR_LIBC_0005`).
 ```

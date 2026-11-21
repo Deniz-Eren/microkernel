@@ -62,3 +62,16 @@ and Ring 3 port I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`).
 `POLLHUP`, `POLLERR`, `POLLNVAL`, `poll`, and `ppoll` with no
 `<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0004`).
 ```
+
+```{icd} POSIX.1-2024 <aio.h> public interface
+:id: ICD_IPC_0006
+:status: active
+:posix: XBD/aio.h (BASE)
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0005
+
+`libc/include/aio.h` declares `struct aiocb`, `AIO_*`, `LIO_*`, `aio_read`,
+`aio_write`, `aio_fsync`, `aio_error`, `aio_return`, `aio_cancel`,
+`aio_suspend`, and `lio_listio` with no `<sys/microkernel.h>` leakage
+({need}`ARC_IPC_0001`, {need}`SWR_IPC_0005`).
+```

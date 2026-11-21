@@ -74,3 +74,16 @@ buffers, serves deferred blocking `read`/`write`/`ppoll` requests, and processes
 and signal mask rules ({need}`ICD_IPC_0004`, {need}`ICD_IPC_0005`,
 {need}`SWR_IPC_0004`).
 ```
+
+```{comp} Ring 3 POSIX.1-2024 asynchronous I/O worker engine
+:id: COMP_IPC_0007
+:status: active
+:posix: XBD/aio.h (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0006
+:satisfies: SWR_IPC_0005
+
+`libc/src/aio.c` runs `aio_read`, `aio_write`, `aio_fsync`, `aio_cancel`, and
+`lio_listio` on a Ring 3 worker thread over `SYS_FUTEX` and descriptor IPC. It
+keeps `aio_error`, `aio_return`, and `aio_suspend` async-signal-safe
+({need}`ICD_IPC_0006`, {need}`SWR_IPC_0005`).
+```

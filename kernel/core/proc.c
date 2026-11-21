@@ -811,6 +811,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "pthreadtest", 100, 0);
     /* POSIX.1-2024 fork, execve, pipe2, dup3, and ppoll test. */
     spawn_image(tar_phys, tar_size, "forkpipetest", 100, 0);
+    /* POSIX.1-2024 asynchronous I/O (<aio.h>) test. */
+    spawn_image(tar_phys, tar_size, "aiotest", 100, 0);
 
     sched_activate();
 }

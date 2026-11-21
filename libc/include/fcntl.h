@@ -27,7 +27,9 @@
 #define O_TRUNC 0x0200
 #define O_APPEND 0x0400
 #define O_NONBLOCK 0x0800
+#define O_DSYNC 0x1000
 #define O_CLOEXEC 0x80000
+#define O_SYNC 0x101000
 
 /* File descriptor flags (F_GETFD / F_SETFD). */
 #define FD_CLOEXEC 1

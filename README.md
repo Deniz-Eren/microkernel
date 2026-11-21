@@ -62,8 +62,12 @@ The headers below show all user-space functions available at this time:
   `STDERR_FILENO`
 - **POSIX descriptors and polling (`<fcntl.h>`, `<poll.h>`):** `fcntl`
   (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`),
-  `O_CLOEXEC`, `O_NONBLOCK`, `poll`, and `ppoll` (finite timeout and atomic
-  `sigmask`) backed by Ring 3 `pipeserv` (`/dev/pipe`)
+  `O_CLOEXEC`, `O_NONBLOCK`, `O_SYNC`, `O_DSYNC`, `poll`, and `ppoll` (finite
+  timeout and atomic `sigmask`) backed by Ring 3 `pipeserv` (`/dev/pipe`)
+- **POSIX asynchronous I/O (`<aio.h>`):** `aio_read`, `aio_write`, `aio_fsync`,
+  `aio_cancel`, `lio_listio` (`LIO_WAIT`/`LIO_NOWAIT`, `SIGEV_SIGNAL`), and
+  async-signal-safe `aio_error`, `aio_return`, and `aio_suspend` backed by a
+  Ring 3 worker thread over `SYS_FUTEX`
 - **Thread-local errors (`<errno.h>`):** O(1) `FS.base` TLS `errno`
   (`__errno_location`, with lock-free fallback) and POSIX.1-2024 `E*` constants
 - **POSIX signals (`<signal.h>`):** async-signal-safe `sigaction`,
@@ -120,8 +124,8 @@ What you can build today:
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): POSIX `<aio.h>`, `pthread` cancellation
-points, file systems, and sockets. See
+Not available at this time (next tasks): `pthread` cancellation points,
+`<stdio.h>` stream locking, POSIX shell, file systems, and sockets. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
@@ -168,7 +172,7 @@ POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
 - `servers/` — the system servers (`sysproc`, `pipeserv`, `ipcserv`, `rtcdrv`)
 - `tests/` — the test harness (`test_runner.py`) and the test programs
   (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`, `pthreadtest`,
-  `forkpipetest`, `exechelper`)
+  `forkpipetest`, `exechelper`, `aiotest`)
 - `scripts/` — helper scripts for the environment, the build, and the agents
 - `docs/` — the project documents and the agent skills
 - `iso/` — the boot configuration for the GRUB boot loader
@@ -217,9 +221,10 @@ are in [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
 
 See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/HISTORY.md](docs/records/HISTORY.md) for the milestone plan and
-task records. The build completed milestones 1 to 6, POSIX clocks and timers,
-pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. The next task
-adds `<aio.h>` asynchronous I/O.
+task records. The build completed milestones 1 to 6, POSIX clocks/timers, and
+pthreads/semaphores. It also completed `fork`/`execve`/`pipe2`/`dup3`/`ppoll`
+and `<aio.h>` asynchronous I/O. The next task adds `pthread` cancellation points
+and `<stdio.h>` locking.
 
 ## Documentation
 

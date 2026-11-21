@@ -32,6 +32,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- POSIX.1-2024 Base asynchronous I/O (`SWR_IPC_0005`, `ADR_0012`): `<aio.h>`,
+  `O_SYNC`/`O_DSYNC` in `<fcntl.h>`, Ring 3 worker-thread engine
+  (`libc/src/aio.c`) with `aio_read`, `aio_write`, `aio_fsync`, `aio_cancel`,
+  `lio_listio`, `SIGEV_SIGNAL`, async-signal-safe `aio_error`/`aio_return`/
+  `aio_suspend`, QEMU `tests/aiotest`, and CTest header/safety coverage.
 - POSIX.1-2024 Base `fork`, `execve`, `pipe2`, `dup3`, `fcntl`, `poll`, `ppoll`,
   and `sigpending` (`TSK_0007`, `SWR_PROC_0004`, `SWR_IPC_0004`): syscalls
   `SYS_PROC_FORK` (`42`), `SYS_PROC_EXECVE` (`43`), `SYS_PROC_GETPID` (`44`),

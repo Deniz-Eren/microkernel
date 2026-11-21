@@ -60,6 +60,9 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "timer_gettime",
     "timer_settime",
     "sem_post",
+    "aio_error",
+    "aio_return",
+    "aio_suspend",
     "__errno_location",
 )
 

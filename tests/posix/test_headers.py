@@ -10,7 +10,8 @@
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
 # need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002
-# need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_IPC_0003
+# need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
+# need:: VER_IPC_0003 VER_IPC_0004
 
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 
 POSIX_HEADERS: tuple[str, ...] = (
+    "aio.h",
     "errno.h",
     "fcntl.h",
     "poll.h",
@@ -357,6 +359,46 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"fcntl/poll/unistd failed:\n{err}")
+
+    def test_aio_header_and_optional_msg_gate(self) -> None:
+        src = "\n".join(
+            (
+                "#include <aio.h>",
+                "#include <fcntl.h>",
+                "#include <unistd.h>",
+                "#ifdef SYS_FUTEX",
+                '#error "aio.h leaked SYS_FUTEX"',
+                "#endif",
+                "#ifdef _POSIX_MESSAGE_PASSING",
+                '#error "_POSIX_MESSAGE_PASSING must stay gated until MSG"',
+                "#endif",
+                "static int __check_aio_api(void) {",
+                "    struct aiocb cb = {0};",
+                "    const struct aiocb *cl[1] = {&cb};",
+                "    struct aiocb *ml[1] = {&cb};",
+                "    struct timespec ts = {0, 0};",
+                "    struct sigevent sev = {SIGEV_NONE, 0, {0}};",
+                "    cb.aio_lio_opcode = LIO_NOP;",
+                "    (void)aio_read(&cb);",
+                "    (void)aio_write(&cb);",
+                "    (void)aio_fsync(O_SYNC, &cb);",
+                "    (void)aio_fsync(O_DSYNC, &cb);",
+                "    (void)aio_error(&cb);",
+                "    (void)aio_return(&cb);",
+                "    (void)aio_cancel(0, &cb);",
+                "    (void)aio_suspend(cl, 1, &ts);",
+                "    return lio_listio(LIO_WAIT, ml, 1, &sev) + AIO_ALLDONE +",
+                "           AIO_CANCELED + AIO_NOTCANCELED + LIO_READ +",
+                "           LIO_WRITE + LIO_NOWAIT;",
+                "}",
+                "int (*__aio_fn_ref)(void) = __check_aio_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"aio.h check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

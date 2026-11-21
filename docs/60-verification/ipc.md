@@ -39,3 +39,16 @@ EOF/`POLLHUP`, and `ppoll` timeout and `sigmask` `EINTR`. CTest `posix.headers`
 and `posix.async_signal_safe` check `<fcntl.h>` and `<poll.h>`
 ({need}`SWR_IPC_0004`).
 ```
+
+```{ver} Verify POSIX.1-2024 Base <aio.h> operations and optional MSG gating
+:id: VER_IPC_0004
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0005
+
+The headless QEMU harness `tests/test_runner.py` runs `aiotest`. It checks
+`aio_read`, `aio_write`, `SIGEV_SIGNAL`, `aio_cancel`, `aio_suspend` `EAGAIN`
+timeout, `aio_fsync`, and `lio_listio`. CTest `posix.headers` and
+`posix.async_signal_safe` check `<aio.h>`, `_POSIX_MESSAGE_PASSING` gating, and
+async-signal-safety ({need}`SWR_IPC_0005`).
+```

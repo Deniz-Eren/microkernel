@@ -55,10 +55,10 @@ functions `pipe2` ([pipe2][fn-pipe2]), `dup3`, and `ppoll` ([ppoll][fn-ppoll],
 
 ```{swr} Supply POSIX.1-2024 Base AIO and option-gated message queues
 :id: SWR_IPC_0005
-:status: draft
+:status: active
 :posix: XBD/aio.h (BASE), XBD/mqueue.h (MSG)
 :derives: SYS_IPC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0012
 
 `<aio.h>` ([aio.h][hdr-aio]) must declare mandatory Issue 8 Base AIO functions
 (`aio_read`, `aio_write`, `aio_error`, `aio_return`, `aio_cancel`, `aio_fsync`,

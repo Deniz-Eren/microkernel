@@ -80,6 +80,9 @@ if ! "$ENV" test --timeout 120 \
     --expect 'fork COW isolated parent and child \(child=.* exit=33\)' \
     --expect 'pipe2, dup3 O_CLOEXEC, and execve argv/envp/pipe verified' \
     --expect 'ppoll finite timeout and atomic sigmask EINTR verified' \
+    --expect 'aio_read, aio_write, aio_suspend, and SIGEV_SIGNAL verified' \
+    --expect 'aio_cancel, aio_suspend EAGAIN timeout, and aio_fsync verified' \
+    --expect 'lio_listio LIO_WAIT and LIO_NOWAIT batch verified' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"
