@@ -104,10 +104,10 @@ discipline and `stdin` `read()` with `poll`/`ppoll` readiness
 
 ```{swr} Supply Ring 3 AF_UNIX local sockets and POSIX.1-2024 accept4
 :id: SWR_IPC_0009
-:status: draft
+:status: active
 :posix: XBD/sys/socket.h (BASE), XSH/accept4 (BASE)
 :derives: SYS_IPC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0020
 
 A Ring 3 socket server over kernel IPC must supply `<sys/socket.h>` `AF_UNIX`
 streams (`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4`,

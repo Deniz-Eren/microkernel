@@ -55,6 +55,17 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Ring 3 `AF_UNIX` local sockets server and POSIX.1-2024 `accept4`
+  (`SWR_IPC_0009`, `ADR_0020`, `ICD_IPC_0012`–`0013`, `COMP_IPC_0012`–`0013`,
+  `VER_IPC_0007`): added `servers/sockserv/main.c` (`/dev/sock`) serving
+  `AF_UNIX` `SOCK_STREAM` and `SOCK_DGRAM` sockets with deferred blocking
+  `accept`/`send`/`recv`/`ppoll` queues, `FD_KIND_SOCK` close-pulse support in
+  `kernel/core/proc.c`, standalone `<sys/socket.h>` and `<sys/un.h>`,
+  async-signal-safe `libc/src/socket.c` (`socket`, `socketpair`, `bind`,
+  `listen`, `accept`, `accept4` with atomic `SOCK_CLOEXEC`/`SOCK_NONBLOCK`,
+  `connect`, `send`, `recv`, `sendto`, `recvfrom`, `shutdown`, `getsockname`,
+  `getpeername`, `getsockopt`, `setsockopt`), multi-server `ppoll()` dispatch in
+  `libc/src/fd.c`, and QEMU `tests/socktest/test_sock.c`.
 - Buffered POSIX.1-2024 `<stdio.h>`, environment mutation, `execvp`, and core
   C17/POSIX headers (`SWR_LIBC_0007`, `ADR_0019`, `ICD_LIBC_0005`,
   `COMP_LIBC_0004`, `VER_LIBC_0006`): added standalone `<ctype.h>`,

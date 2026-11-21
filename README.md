@@ -43,8 +43,8 @@ define the system contract inside the Sphinx-Needs traceability model (`docs/`):
   copy-on-write memory management, 256-level priority scheduling, and
   synchronous or scatter-gather IPC. It also handles IOAPIC IRQ pulse routing,
   signals, clocks/timers, futexes, and `syscall`/`sysret`. System servers
-  (`sysproc`, `pipeserv`, `vfsserv`, `ttyserv`, `ipcserv`, `rtcdrv`) and POSIX
-  libraries run in isolated Ring 3 processes.
+  (`sysproc`, `pipeserv`, `vfsserv`, `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`)
+  and POSIX libraries run in isolated Ring 3 processes.
 - **Two-tier bidirectional traceability:** Business decisions (`BDR_`),
   architecture and workflow decisions (`ADR_`, `WDR_`), and requirements
   (`SYS_`, `SWR_`) in ASD-STE100 Issue 9 carry `:posix:` links to IEEE Std
@@ -156,8 +156,8 @@ W^X means: the system maps a page as writable or as code, but not the two
 together.
 
 The process `sysproc` is the first user process. It contains the name registry
-of the system. Servers (`pipeserv`, `vfsserv`, `ttyserv`, `ipcserv`, `rtcdrv`)
-register a name with `sysproc`, and clients resolve endpoints by name.
+of the system. Servers (`pipeserv`, `vfsserv`, `ttyserv`, `sockserv`, `ipcserv`,
+`rtcdrv`) register a name with `sysproc`, and clients resolve endpoints by name.
 
 ## User-space functionality (current support)
 
@@ -171,10 +171,16 @@ The headers below show all user-space functions available at this time:
   `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, `getcwd`, `access`, `isatty`,
   `_exit`, `sleep`, `environ`, and `STD*_FILENO`
 - **POSIX descriptors and polling (`<fcntl.h>`, `<poll.h>`):** `open`, `openat`,
-  `creat`, `fcntl` (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`,
-  `F_GETFL`, `F_SETFL`), `O_CLOEXEC`, `O_NONBLOCK`, `O_DIRECTORY`, `O_SYNC`,
-  `O_DSYNC`, `poll`, and multi-server `ppoll` backed by Ring 3 `pipeserv`
-  (`/dev/pipe`), `vfsserv` (`/dev/vfs`), and `ttyserv` (`/dev/tty`)
+  `creat`, and `fcntl` (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`,
+  `F_GETFL`, `F_SETFL`). Also `O_CLOEXEC`, `O_NONBLOCK`, `O_DIRECTORY`,
+  `O_SYNC`, `O_DSYNC`, `poll`, and multi-server `ppoll` backed by Ring 3
+  `pipeserv`, `vfsserv`, `ttyserv`, and `sockserv`
+- **POSIX local sockets (`<sys/socket.h>`, `<sys/un.h>`):** `AF_UNIX`
+  `SOCK_STREAM` and `SOCK_DGRAM` sockets (`socket`, `socketpair`, `bind`,
+  `listen`, `accept`, `accept4`, `connect`, `send`, `recv`). Also `sendto`,
+  `recvfrom`, `shutdown`, `getsockname`, `getpeername`, `getsockopt`, and
+  `setsockopt` with atomic `SOCK_CLOEXEC` and `SOCK_NONBLOCK` over `sockserv`
+  (`/dev/sock`)
 - **POSIX terminal I/O (`<termios.h>`):** `tcgetattr`, `tcsetattr`, `tcflush`,
   `tcdrain`, `tcflow`, `tcsendbreak`, `cfgetispeed`/`cfsetispeed`,
   `cfgetospeed`/`cfsetospeed`, canonical line editing (`ICANON`, `VERASE`,
@@ -266,8 +272,8 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): `AF_UNIX` sockets, POSIX `sh`, ACPI
-`MADT`/`SPCR` driver discovery, and `pselect` hardening. See
+Not available at this time (next tasks): POSIX `sh`, ACPI `MADT`/`SPCR` driver
+discovery, and `pselect` hardening. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
@@ -276,11 +282,11 @@ Not available at this time (next tasks): `AF_UNIX` sockets, POSIX `sh`, ACPI
 - `kernel/` — Ring 0 kernel: boot code, x86-64 architecture, and core subsystems
 - `libc/` — freestanding C17 and POSIX.1-2024 user-space C library
 - `servers/` — Ring 3 system servers (`sysproc`, `pipeserv`, `vfsserv`,
-  `ttyserv`, `ipcserv`, `rtcdrv`)
+  `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`)
 - `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,
   `proctest`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
   `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`, `vfstest`,
-  `shmtest`, `ttytest`, `stdiotest`), `posix/`, and `traceability/`
+  `shmtest`, `ttytest`, `stdiotest`, `socktest`), `posix/`, and `traceability/`
 - `config/sphinx/`, `tools/` — Sphinx-Needs traceability model, tag scanner,
   auditor, and repository STE gate
 - `scripts/` — container, build, format, hook, and `boot.tar` helper scripts
@@ -309,9 +315,9 @@ completed `<aio.h>`, cancellation points, `<stdio.h>` locking, and Issue 8 C17
 library functions. Recent milestones added the 4-gate POSIX harness,
 `mmap`-backed heap reclamation, Ring 3 VFS (`bootfs`/`tmpfs`), and option-gated
 `SHM`/`ML`/`MLR`. They also added Ring 3 COM1 TTY (`<termios.h>`), buffered
-`<stdio.h>`, `setenv`/`unsetenv`, `execvp`, and core C17/POSIX headers. Next
-tasks add `AF_UNIX` sockets, POSIX `sh`, ACPI `MADT`/`SPCR` discovery, and
-`pselect` hardening.
+`<stdio.h>`, `setenv`/`unsetenv`, `execvp`, core C17/POSIX headers, and Ring 3
+`AF_UNIX` local sockets (`accept4`). Next tasks add POSIX `sh`, ACPI
+`MADT`/`SPCR` discovery, and `pselect` hardening.
 
 ## Documentation
 

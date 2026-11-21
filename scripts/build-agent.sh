@@ -107,6 +107,10 @@ if ! "$ENV" test --timeout 120 \
     --expect 'buffered stdio fopen, fread/fwrite, fgets, ungetc, fseek, and' \
     --expect 'setenv/unsetenv and execvp PATH lookup with environ' \
     --expect 'ctype, strings, inttypes, limits, assert, strdup, strstr, and' \
+    --expect 'sockserv registered /dev/sock' \
+    --expect 'AF_UNIX socketpair, SOCK_CLOEXEC/SOCK_NONBLOCK, MSG_PEEK, and' \
+    --expect 'AF_UNIX bind, listen, connect, and accept4 atomic flags' \
+    --expect 'AF_UNIX SOCK_DGRAM sendto/recvfrom and multi-server ppoll' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

@@ -61,8 +61,10 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "uchar.h",
     "unistd.h",
     "sys/mman.h",
+    "sys/socket.h",
     "sys/stat.h",
     "sys/types.h",
+    "sys/un.h",
     "sys/wait.h",
 )
 

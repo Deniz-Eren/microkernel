@@ -77,3 +77,17 @@ It checks COM1 IRQ 4 pulses, `isatty`, `/dev/tty`, canonical line editing, raw
 mode, and multi-server `ppoll`. CTest POSIX gates check `<termios.h>` and
 `tcdrain` ({need}`SWR_IPC_0008`).
 ```
+
+```{ver} Verify Ring 3 sockserv, AF_UNIX sockets, accept4, and ppoll
+:id: VER_IPC_0007
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0009
+
+The headless QEMU harness `tests/test_runner.py` runs `sockserv` and `socktest`.
+It checks `socketpair`, `MSG_PEEK`, `shutdown`, `bind`/`listen`/`connect`, and
+`accept4` with atomic `SOCK_CLOEXEC` and `SOCK_NONBLOCK` across `fork()`. It
+also checks `SOCK_DGRAM` `sendto`/`recvfrom` and multi-server `ppoll()`. CTest
+POSIX gates check `<sys/socket.h>`, `<sys/un.h>`, async-signal-safety, and
+cancellation points ({need}`SWR_IPC_0009`).
+```

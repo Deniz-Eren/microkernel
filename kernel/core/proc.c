@@ -327,7 +327,7 @@ void proc_close_fds(pcb_t *p, int cloexec_only) {
             continue;
         }
         if ((p->fds[i].kind == FD_KIND_SERVER ||
-             p->fds[i].kind == FD_KIND_VFS) &&
+             p->fds[i].kind == FD_KIND_VFS || p->fds[i].kind == FD_KIND_SOCK) &&
             p->fds[i].srv_pid && p->fds[i].srv_chanid) {
             ipc_send_pulse_kernel(p->fds[i].srv_pid, p->fds[i].srv_chanid,
                                   PULSE_CODE_FD_CLOSE, p->fds[i].srv_handle);
@@ -840,6 +840,8 @@ void proc_spawn_init(void) {
     }
     /* Ring 3 POSIX pipe and poll server (/dev/pipe). */
     spawn_image(tar_phys, tar_size, "pipeserv", 100, 0);
+    /* Ring 3 POSIX AF_UNIX local sockets server (/dev/sock). */
+    spawn_image(tar_phys, tar_size, "sockserv", 100, 0);
     /* Ring 3 VFS server (/dev/vfs) with read-only bootfs mapping. */
     pcb_t *vfs = spawn_image(tar_phys, tar_size, "vfsserv", 100, 0);
     if (vfs) {
@@ -880,6 +882,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "ttytest", 100, 0);
     /* POSIX.1-2024 buffered stdio, env, execvp, and core C17 headers test. */
     spawn_image(tar_phys, tar_size, "stdiotest", 100, 0);
+    /* POSIX.1-2024 AF_UNIX local sockets and accept4 test. */
+    spawn_image(tar_phys, tar_size, "socktest", 100, 0);
 
     sched_activate();
 }

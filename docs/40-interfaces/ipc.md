@@ -134,3 +134,29 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 `tcsendbreak`, and `cf*speed` with no `<sys/microkernel.h>` leakage
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0008`).
 ```
+
+```{icd} Ring 3 /dev/sock IPC protocol
+:id: ICD_IPC_0012
+:status: active
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0009
+
+`libc/include/sys/sock.h` defines `SOCK_OP_*`, `sock_req_t`, `sock_rep_t`, and
+`sock_poll_*` structures within `IPC_MSG_MAX` for Ring 3 `/dev/sock` IPC
+({need}`ARC_IPC_0001`, {need}`SWR_IPC_0009`).
+```
+
+```{icd} POSIX.1-2024 <sys/socket.h> and <sys/un.h> public interfaces
+:id: ICD_IPC_0013
+:status: active
+:posix: XBD/sys/socket.h (BASE), XBD/sys/un.h (BASE), XSH/accept4 (BASE)
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0009
+
+`libc/include/sys/socket.h` and `libc/include/sys/un.h` declare `socklen_t`,
+`sa_family_t`, `struct sockaddr`, `struct sockaddr_un`, `SOCK_CLOEXEC`, and
+`SOCK_NONBLOCK`. They declare `socket`, `socketpair`, `bind`, `listen`,
+`accept`, `accept4`, `connect`, `send`, `recv`, `sendto`, `recvfrom`,
+`shutdown`, and option helpers with no `<sys/microkernel.h>` leakage
+({need}`ARC_IPC_0001`, {need}`SWR_IPC_0009`).
+```

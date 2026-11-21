@@ -26,9 +26,12 @@ from audit_lib import build_call_graph, reachable  # noqa: E402
 DEFAULT_LIBC = ROOT / "sysroot" / "usr" / "lib" / "libc.a"
 
 MANDATORY_CANCELLATION_POINTS: tuple[str, ...] = (
+    "accept",
+    "accept4",
     "aio_suspend",
     "clock_nanosleep",
     "close",
+    "connect",
     "creat",
     "nanosleep",
     "open",
@@ -41,9 +44,13 @@ MANDATORY_CANCELLATION_POINTS: tuple[str, ...] = (
     "pthread_join",
     "pthread_testcancel",
     "read",
+    "recv",
+    "recvfrom",
     "sem_clockwait",
     "sem_timedwait",
     "sem_wait",
+    "send",
+    "sendto",
     "sleep",
     "tcdrain",
     "wait",

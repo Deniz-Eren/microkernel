@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0018 — Build Ring 3 AF_UNIX local sockets server and accept4
+
+```{task} Build Ring 3 AF_UNIX local sockets server and accept4
+:id: TSK_0018
+:status: done
+:traces: ADR_0003, SWR_IPC_0009
+
+Implement Ring 3 `sockserv` (`/dev/sock`), `<sys/socket.h>`, and `<sys/un.h>`
+(`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4` with
+`SOCK_CLOEXEC` and `SOCK_NONBLOCK`, `connect`, `send`, `recv`) reusing
+multi-server `ppoll()` ({need}`SWR_IPC_0009`).
+```
+
 ### TSK_0019 — Add POSIX buffered stdio, env, execvp, and core C17 headers
 
 ```{task} Add POSIX buffered stdio, env, execvp, and core C17 headers

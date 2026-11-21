@@ -140,3 +140,30 @@ discipline and serves deferred blocking `read` and `ppoll` requests
 `/dev/tty` `read`/`ppoll` helpers ({need}`ICD_IPC_0010`, {need}`ICD_IPC_0011`,
 {need}`SWR_IPC_0008`).
 ```
+
+```{comp} Ring 3 AF_UNIX local sockets server
+:id: COMP_IPC_0012
+:status: active
+:posix: XBD/sys/socket.h (BASE), XSH/accept4 (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0003, ICD_IPC_0012
+:satisfies: SWR_IPC_0009
+
+`servers/sockserv/main.c` registers `/dev/sock` in Ring 3 and serves `AF_UNIX`
+`SOCK_STREAM` and `SOCK_DGRAM` sockets. It manages 4 KiB receive rings, accept
+queues, deferred blocking `accept`/`send`/`recv`/`ppoll` requests, and
+`PULSE_CODE_FD_CLOSE` cleanup ({need}`ICD_IPC_0012`, {need}`SWR_IPC_0009`).
+```
+
+```{comp} POSIX.1-2024 libc AF_UNIX socket and accept4 wrappers
+:id: COMP_IPC_0013
+:status: active
+:posix: XBD/sys/socket.h (BASE), XBD/sys/un.h (BASE), XSH/accept4 (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0012, ICD_IPC_0013
+:satisfies: SWR_IPC_0009
+
+`libc/src/socket.c` implements async-signal-safe `socket`, `socketpair`, `bind`,
+`listen`, `accept`, `accept4`, `connect`, `send`, `recv`, `sendto`, and
+`recvfrom`. It also implements `shutdown`, `getsockname`, `getpeername`,
+`getsockopt`, and `setsockopt` over `/dev/sock` IPC with cancellation checks
+({need}`ICD_IPC_0012`, {need}`ICD_IPC_0013`, {need}`SWR_IPC_0009`).
+```

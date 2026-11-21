@@ -12,7 +12,7 @@
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_SIG_0003
 # need:: VER_MEM_0002 VER_MEM_0004 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
 # need:: VER_PROC_0005 VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006
-# need:: VER_DOCS_0004
+# need:: VER_IPC_0007 VER_DOCS_0004
 
 from __future__ import annotations
 
@@ -50,8 +50,10 @@ POSIX_HEADERS: tuple[str, ...] = (
     "uchar.h",
     "unistd.h",
     "sys/mman.h",
+    "sys/socket.h",
     "sys/stat.h",
     "sys/types.h",
+    "sys/un.h",
     "sys/wait.h",
 )
 
@@ -634,6 +636,55 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"core/stdio check failed:\n{err}")
+
+    def test_socket_and_un_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <sys/socket.h>",
+                "#include <sys/un.h>",
+                "#ifdef SOCK_OP_CREATE",
+                '#error "sys/socket.h leaked SOCK_OP_CREATE"',
+                "#endif",
+                "#ifdef SYS_FD_OP",
+                '#error "sys/socket.h leaked SYS_FD_OP"',
+                "#endif",
+                "static int __check_sock_api(void) {",
+                "    struct sockaddr_un un = {0};",
+                "    un.sun_family = AF_UNIX;",
+                "    socklen_t len = (socklen_t)sizeof(un);",
+                "    int sv[2] = {-1, -1};",
+                "    int s = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);",
+                "    (void)socketpair(AF_UNIX,",
+                "                     SOCK_DGRAM | SOCK_NONBLOCK, 0, sv);",
+                "    (void)bind(s, (const struct sockaddr *)&un, len);",
+                "    (void)listen(s, SOMAXCONN);",
+                "    (void)accept(s, (struct sockaddr *)&un, &len);",
+                "    (void)accept4(s, (struct sockaddr *)&un, &len,",
+                "                  SOCK_CLOEXEC | SOCK_NONBLOCK);",
+                "    (void)connect(s, (const struct sockaddr *)&un, len);",
+                "    (void)send(s, \"a\", 1, MSG_NOSIGNAL);",
+                "    (void)recv(s, &un, 1, MSG_PEEK);",
+                "    (void)sendto(s, \"a\", 1, 0,",
+                "                 (const struct sockaddr *)&un, len);",
+                "    (void)recvfrom(s, &un, 1, 0,",
+                "                   (struct sockaddr *)&un, &len);",
+                "    (void)shutdown(s, SHUT_RDWR);",
+                "    (void)getsockname(s, (struct sockaddr *)&un, &len);",
+                "    (void)getpeername(s, (struct sockaddr *)&un, &len);",
+                "    int v = 1;",
+                "    socklen_t vl = (socklen_t)sizeof(v);",
+                "    (void)setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &v, vl);",
+                "    (void)getsockopt(s, SOL_SOCKET, SO_TYPE, &v, &vl);",
+                "    return s;",
+                "}",
+                "int (*__sock_fn_ref)(void) = __check_sock_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"socket headers check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

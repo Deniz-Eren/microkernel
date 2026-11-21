@@ -22,6 +22,7 @@
 #define FD_KIND_VFS 3u
 #define FD_KIND_SHM 4u
 #define FD_KIND_TTY 5u
+#define FD_KIND_SOCK 6u
 
 #define FD_FLAG_CLOEXEC 0x01u
 
@@ -41,6 +42,7 @@
 /* Internal timer tick pulses for finite ppoll deadlines. */
 #define PULSE_CODE_PIPE_TICK 0x5054u
 #define PULSE_CODE_TTY_TICK 0x5454u
+#define PULSE_CODE_SOCK_TICK 0x5354u
 
 struct __k_fd_entry {
     uint8_t kind;
