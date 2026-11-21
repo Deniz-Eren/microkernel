@@ -107,7 +107,14 @@ set(CMAKE_C_LINK_EXECUTABLE
     "${CMAKE_LINKER} <LINK_FLAGS> <OBJECTS> <LINK_LIBRARIES> -o <TARGET>")
 
 function(microkernel_add_user_executable name)
-    add_executable(${name} ${ARGN})
+    set(boot_name "${name}")
+    set(srcs ${ARGN})
+    list(GET srcs 0 first_arg)
+    if(first_arg STREQUAL "BOOT_NAME")
+        list(GET srcs 1 boot_name)
+        list(SUBLIST srcs 2 -1 srcs)
+    endif()
+    add_executable(${name} ${srcs})
     target_compile_options(${name} PRIVATE ${USER_CFLAGS})
     target_include_directories(${name} SYSTEM PRIVATE
         ${SYSROOT_DIR}/usr/include
@@ -126,7 +133,7 @@ function(microkernel_add_user_executable name)
     target_link_libraries(${name} PRIVATE c)
     add_dependencies(${name} c)
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
-        "${name}=$<TARGET_FILE:${name}>")
+        "${boot_name}=$<TARGET_FILE:${name}>")
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})
 endfunction()
 
@@ -137,6 +144,7 @@ add_subdirectory(servers/ttyserv)
 add_subdirectory(servers/sockserv)
 add_subdirectory(servers/ipcserv)
 add_subdirectory(servers/rtcdrv)
+add_subdirectory(bin)
 add_subdirectory(tests/ipccli)
 add_subdirectory(tests/sigtest)
 add_subdirectory(tests/proctest)
@@ -153,6 +161,7 @@ add_subdirectory(tests/shmtest)
 add_subdirectory(tests/ttytest)
 add_subdirectory(tests/stdiotest)
 add_subdirectory(tests/socktest)
+add_subdirectory(tests/shtest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

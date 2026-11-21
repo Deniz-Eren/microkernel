@@ -78,3 +78,15 @@ buffered `fopen`, `fdopen`, `fread`, `fwrite`, `fgets`, `ungetc`, `fseeko`, and
 `posix.symbol_diff`, and `posix.async_signal_safe` check header hygiene and
 `execv` safety ({need}`SWR_LIBC_0007`).
 ```
+
+```{ver} Verify Ring 3 POSIX.1-2024 XCU shell and core utilities in QEMU
+:id: VER_LIBC_0007
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0006
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`. It invokes
+`/boot/sh -c` to verify pipelines, redirections, `echo`, `cat`, `ls`, `true`,
+`false`, `test`, `$'...'` quoting, `set -o pipefail`, built-ins, and `read -d`
+with custom and NUL delimiters ({need}`SWR_LIBC_0006`).
+```

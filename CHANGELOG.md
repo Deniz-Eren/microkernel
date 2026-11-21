@@ -61,6 +61,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Ring 3 POSIX.1-2024 XCU shell (`sh`) and core utilities (`SWR_LIBC_0006`,
+  `ADR_0021`, `COMP_LIBC_0005`, `VER_LIBC_0007`): added `bin/sh/main.c` (`-c`,
+  script files, interactive `isatty()` prompt, pipelines over `pipe2`/`fork`/
+  `dup2`/`execvp`, redirections `<`/`>`/`>>`/`2>`/`2>&1`, `&&`/`||`/`;`, `$VAR`/
+  `$?`, Issue 8 `$'...'` ANSI-C quoting, `set -o pipefail`, `read -d` custom and
+  NUL delimiters, built-ins `cd`/`pwd`/`export`/`unset`/`exit`), standalone
+  `bin/utils/{echo,cat,ls,true,false,test}.c`, `bin` scanning in formatter and
+  lint scripts, and QEMU `tests/shtest/test_sh.c`.
 - Ring 3 `AF_UNIX` local sockets server and POSIX.1-2024 `accept4`
   (`SWR_IPC_0009`, `ADR_0020`, `ICD_IPC_0012`–`0013`, `COMP_IPC_0012`–`0013`,
   `VER_IPC_0007`): added `servers/sockserv/main.c` (`/dev/sock`) serving

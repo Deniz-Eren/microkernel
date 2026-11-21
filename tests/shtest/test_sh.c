@@ -1,0 +1,237 @@
+/**
+ * @file     test_sh.c
+ * @brief    QEMU test for Ring 3 POSIX.1-2024 XCU sh and core utilities
+ *
+ * @copyright
+ * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+ * SPDX-License-Identifier: MIT
+ *
+ */
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+
+/* need:: VER_LIBC_0007 */
+
+static void wait_for_vfs(void) {
+    struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
+    for (int i = 0; i < 100; i++) {
+        if (access("/tmp", F_OK) == 0 && access("/boot", F_OK) == 0) {
+            return;
+        }
+        (void)nanosleep(&ts, NULL);
+    }
+}
+
+static int run_sh_capture(const char *script, const void *stdin_data,
+                          size_t stdin_len, char *out, size_t out_cap,
+                          ssize_t *out_len) {
+    int out_pfd[2] = {-1, -1};
+    int in_pfd[2] = {-1, -1};
+    if (pipe2(out_pfd, O_CLOEXEC) != 0) {
+        return -1;
+    }
+    if (stdin_data && pipe2(in_pfd, O_CLOEXEC) != 0) {
+        (void)close(out_pfd[0]);
+        (void)close(out_pfd[1]);
+        return -1;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        (void)close(out_pfd[0]);
+        (void)close(out_pfd[1]);
+        if (stdin_data) {
+            (void)close(in_pfd[0]);
+            (void)close(in_pfd[1]);
+        }
+        return -1;
+    }
+    if (pid == 0) {
+        (void)dup2(out_pfd[1], STDOUT_FILENO);
+        (void)close(out_pfd[0]);
+        (void)close(out_pfd[1]);
+        if (stdin_data) {
+            (void)dup2(in_pfd[0], STDIN_FILENO);
+            (void)close(in_pfd[0]);
+            (void)close(in_pfd[1]);
+        }
+        char *const argv[] = {"sh", "-c", (char *)script, NULL};
+        (void)execv("/boot/sh", argv);
+        _exit(127);
+    }
+
+    (void)close(out_pfd[1]);
+    if (stdin_data) {
+        (void)close(in_pfd[0]);
+        size_t off = 0;
+        while (off < stdin_len) {
+            ssize_t w = write(in_pfd[1], (const char *)stdin_data + off,
+                              stdin_len - off);
+            if (w <= 0) {
+                break;
+            }
+            off += (size_t)w;
+        }
+        (void)close(in_pfd[1]);
+    }
+
+    size_t got = 0;
+    while (got + 1u < out_cap) {
+        ssize_t n = read(out_pfd[0], out + got, out_cap - 1u - got);
+        if (n <= 0) {
+            break;
+        }
+        got += (size_t)n;
+    }
+    out[got] = '\0';
+    (void)close(out_pfd[0]);
+    if (out_len) {
+        *out_len = (ssize_t)got;
+    }
+
+    int st = 0;
+    while (waitpid(pid, &st, 0) < 0 && errno == EINTR) {
+    }
+    if (!WIFEXITED(st)) {
+        return -1;
+    }
+    return WEXITSTATUS(st);
+}
+
+static int test_pipelines_redirs_and_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    /* Pipeline + redirection (> and >>) + external /boot/echo and /boot/cat. */
+    int rc = run_sh_capture(
+        "/boot/echo alpha | /boot/cat > /tmp/sh_p.txt && "
+        "/boot/echo beta >> /tmp/sh_p.txt && /boot/cat < /tmp/sh_p.txt",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "alpha\nbeta\n") != 0) {
+        printf("[FAIL] shtest pipeline/redir rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* External /boot/ls and /boot/test utility checks. */
+    rc = run_sh_capture("/boot/ls /boot | /boot/cat", NULL, 0, out, sizeof(out),
+                        &len);
+    if (rc != 0 || !strstr(out, "sh\n") || !strstr(out, "echo\n") ||
+        !strstr(out, "cat\n") || !strstr(out, "ls\n")) {
+        printf("[FAIL] shtest ls /boot rc=%d\n", rc);
+        return -1;
+    }
+
+    rc = run_sh_capture(
+        "/boot/test -f /tmp/sh_p.txt && /boot/test -d /tmp && "
+        "! /boot/test -f /tmp/no_such_sh_file && /boot/test 7 -gt 3",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0) {
+        printf("[FAIL] shtest test utility rc=%d\n", rc);
+        return -1;
+    }
+
+    (void)unlink("/tmp/sh_p.txt");
+    printf("[OK] sh pipelines, redirections, and core utilities (echo, cat, "
+           "ls, test) verified\n");
+    return 0;
+}
+
+static int test_quoting_pipefail_and_builtins(void) {
+    char out[256];
+    ssize_t len = 0;
+
+    /* POSIX.1-2024 Issue 8 ANSI-C $'...' quoting. */
+    int rc = run_sh_capture("/boot/echo -n $'A\\tB\\nC\\x44'", NULL, 0, out,
+                            sizeof(out), &len);
+    if (rc != 0 || len != 6 || memcmp(out, "A\tB\nCD", 6) != 0) {
+        printf("[FAIL] shtest $'...' quoting rc=%d len=%ld\n", rc, (long)len);
+        return -1;
+    }
+
+    /* Built-ins: cd, pwd, export, variable expansion, $?. */
+    rc = run_sh_capture(
+        "cd /tmp && export GREET=posix24 && echo \"$GREET:$?:\" && pwd", NULL,
+        0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "posix24:0:\n/tmp\n") != 0) {
+        printf("[FAIL] shtest builtins rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* POSIX.1-2024 Issue 8 set -o pipefail vs default +o pipefail. */
+    rc = run_sh_capture("/boot/false | /boot/true", NULL, 0, out, sizeof(out),
+                        &len);
+    if (rc != 0) {
+        printf("[FAIL] shtest default pipeline expected 0 got %d\n", rc);
+        return -1;
+    }
+    rc = run_sh_capture("set -o pipefail; /boot/false | /boot/true", NULL, 0,
+                        out, sizeof(out), &len);
+    if (rc != 1) {
+        printf("[FAIL] shtest pipefail false|true expected 1 got %d\n", rc);
+        return -1;
+    }
+    rc =
+        run_sh_capture("set -o pipefail; /boot/true | /boot/false | /boot/true",
+                       NULL, 0, out, sizeof(out), &len);
+    if (rc != 1) {
+        printf("[FAIL] shtest pipefail 3-stage expected 1 got %d\n", rc);
+        return -1;
+    }
+    rc = run_sh_capture("set -o pipefail; /boot/true | /boot/true", NULL, 0,
+                        out, sizeof(out), &len);
+    if (rc != 0) {
+        printf("[FAIL] shtest pipefail all-true expected 0 got %d\n", rc);
+        return -1;
+    }
+
+    printf("[OK] sh Issue 8 ANSI-C quoting, set -o pipefail, and built-ins "
+           "verified\n");
+    return 0;
+}
+
+static int test_read_delim(void) {
+    char out[256];
+    ssize_t len = 0;
+
+    /* POSIX.1-2024 Issue 8 read -d ':' custom delimiter. */
+    const char *colon_in = "alpha:beta:gamma:";
+    int rc = run_sh_capture(
+        "read -d : a && read -d : b && read -d : c && echo \"$a|$b|$c\"",
+        colon_in, strlen(colon_in), out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "alpha|beta|gamma\n") != 0) {
+        printf("[FAIL] shtest read -d ':' rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* POSIX.1-2024 Issue 8 read -d '' NUL-byte delimiter. */
+    const char nul_in[] = "foo\0bar\0";
+    rc = run_sh_capture("read -r -d '' x && read -r -d '' y && echo \"$x+$y\"",
+                        nul_in, sizeof(nul_in) - 1u, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "foo+bar\n") != 0) {
+        printf("[FAIL] shtest read -d '' NUL rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] sh Issue 8 read -d custom and NUL delimiters verified\n");
+    return 0;
+}
+
+int main(void) {
+    wait_for_vfs();
+    if (test_pipelines_redirs_and_utils() != 0) {
+        return 1;
+    }
+    if (test_quoting_pipefail_and_builtins() != 0) {
+        return 1;
+    }
+    if (test_read_delim() != 0) {
+        return 1;
+    }
+    return 0;
+}

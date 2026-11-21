@@ -161,8 +161,11 @@ of the system. Servers (`pipeserv`, `vfsserv`, `ttyserv`, `sockserv`, `ipcserv`,
 
 ```mermaid
 flowchart TD
-    subgraph R3_APP["Ring 3: User Applications"]
-        APP["User Programs & POSIX Utilities (libc.a + crt0.o)"]
+    subgraph R3_APP["Ring 3: Userland Shell & Applications"]
+        direction TB
+        SH["bin/ POSIX Shell (sh) & Core Utilities (echo, cat, ls, test)"]
+        APP["User Programs & Tests (linked with libc.a + crt0.o)"]
+        SH ~~~ APP
     end
 
     subgraph R3_SRV["Ring 3: Isolated System Servers & Drivers"]
@@ -184,7 +187,7 @@ flowchart TD
         K["Scheduler | IPC & Pulses | W^X & COW VMM | Signals | IOAPIC IRQs"]
     end
 
-    APP -->|"syscall / SendMsg"| K
+    R3_APP -->|"syscall / SendMsg"| K
     K <-->|"IPC Channels & Replies"| R3_SRV
 ```
 
@@ -281,6 +284,12 @@ The headers below show all user-space functions available at this time:
 - **Hardware IRQs and port I/O (`<sys/intr.h>`):** `AttachIntrEvent` (IOAPIC
   IRQ-to-IPC pulses), `IntrUnmask`, `IOPLSet` (`CAP_SYS_INTR` guarded), and Ring
   3 `port_in*`/`port_out*` helpers
+- **POSIX XCU shell and core utilities (`bin/`):** Ring 3 `/boot/sh` (`-c`,
+  script files, interactive `isatty()` input, pipelines, redirections `<`/`>`/
+  `>>`/`2>&1`, `&&`/`||`/`;`, `$VAR`/`$?`, `$'...'` ANSI-C quoting, `set -o
+  pipefail`, `read -d` custom/NUL delimiters, and built-ins `cd`/`pwd`/`export`/
+  `unset`/`exit`). Standalone `/boot/` utilities: `echo`, `cat`, `ls`, `true`,
+  `false`, and `test`
 - **Native processes and VM (`<sys/proc.h>`, `<sys/vm.h>`):** `ProcCreate` (from
   `boot.tar`), `ProcWait`, `VMMap`, `VMUnmap`, `VMProtect`, and `VMCloneCow`
   (copy-on-write page sharing between parent and child)
@@ -301,9 +310,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): POSIX `sh`, ACPI `MADT`/`SPCR` driver
-discovery, and `pselect` hardening. See
-[docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (next tasks): ACPI `MADT`/`SPCR` driver discovery and
+`OPOST` TX routing, plus `<sys/select.h>` (`pselect`) and cross-subsystem leak
+hardening. See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -312,10 +321,13 @@ discovery, and `pselect` hardening. See
 - `libc/` — freestanding C17 and POSIX.1-2024 user-space C library
 - `servers/` — Ring 3 system servers (`sysproc`, `pipeserv`, `vfsserv`,
   `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`)
+- `bin/` — Ring 3 POSIX.1-2024 XCU shell (`sh`) and core utilities (`echo`,
+  `cat`, `ls`, `true`, `false`, `test`)
 - `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,
   `proctest`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
   `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`, `vfstest`,
-  `shmtest`, `ttytest`, `stdiotest`, `socktest`), `posix/`, and `traceability/`
+  `shmtest`, `ttytest`, `stdiotest`, `socktest`, `shtest`), `posix/`, and
+  `traceability/`
 - `config/sphinx/`, `tools/` — Sphinx-Needs traceability model, tag scanner,
   auditor, and repository STE gate
 - `scripts/` — container, build, format, hook, and `boot.tar` helper scripts
@@ -344,9 +356,11 @@ completed `<aio.h>`, cancellation points, `<stdio.h>` locking, and Issue 8 C17
 library functions. Recent milestones added the 4-gate POSIX harness,
 `mmap`-backed heap reclamation, Ring 3 VFS (`bootfs`/`tmpfs`), and option-gated
 `SHM`/`ML`/`MLR`. They also added Ring 3 COM1 TTY (`<termios.h>`), buffered
-`<stdio.h>`, `setenv`/`unsetenv`, `execvp`, core C17/POSIX headers, and Ring 3
-`AF_UNIX` local sockets (`accept4`). Next tasks add POSIX `sh`, ACPI
-`MADT`/`SPCR` discovery, and `pselect` hardening.
+`<stdio.h>`, `setenv`/`unsetenv`, `execvp`, and core C17/POSIX headers.
+
+Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`) and Ring 3
+POSIX `sh` with core utilities. Next tasks add ACPI `MADT`/`SPCR` discovery and
+`<sys/select.h>` hardening.
 
 ## Documentation
 

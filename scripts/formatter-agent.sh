@@ -18,9 +18,9 @@ FIX=0
 [ "${1:-}" = "--fix" ] && FIX=1
 
 MODE="$( [ "$FIX" -eq 1 ] && echo fix || echo check )"
-echo "==> format ($MODE): kernel libc servers tests"
+echo "==> format ($MODE): kernel libc servers bin tests"
 
-FIND_CMD="find kernel libc servers tests \( -name '*.c' -o -name '*.h' \)"
+FIND_CMD="find kernel libc servers bin tests \( -name '*.c' -o -name '*.h' \)"
 if [ "$FIX" -eq 1 ]; then
     exec "$ENV" bash -c \
         "$FIND_CMD -print0 | xargs -0 -r clang-format --style=file -i"

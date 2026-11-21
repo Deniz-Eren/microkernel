@@ -39,7 +39,7 @@ module with page permissions. It must map a read-only `boot_info_t` page for PID
 :traces: ADR_0003
 
 The system must parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides
-(ISOs) plus `SPCR` serial settings. Ring 3 drivers (`ttyserv`, `rtcdrv`) must
-accept discovered port and IRQ arguments and own user `OPOST` TX output
-({need}`SYS_BOOT_0001`).
+(ISOs) and `SPCR` when present (falling back to COM1). Ring 3 drivers
+(`ttyserv`, `rtcdrv`) must accept discovered `argv` port and IRQ arguments and
+own user `OPOST` TX with early boot fallback ({need}`SYS_BOOT_0001`).
 ```

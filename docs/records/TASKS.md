@@ -21,18 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0017 — Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
-
-```{task} Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
-:id: TSK_0017
-:status: open
-:traces: ADR_0003, SWR_LIBC_0006
-
-Implement Ring 3 POSIX `sh` and minimal core utilities (`echo`, `cat`, `ls`,
-`true`, `false`, `test`) supporting pipelines, file redirections, `$'...'`
-quoting, `set -o pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
-```
-
 ### TSK_0021 — Add ACPI MADT/SPCR discovery and parameterized Ring 3 drivers
 
 ```{task} Add ACPI MADT/SPCR discovery and parameterized Ring 3 drivers
@@ -40,10 +28,11 @@ quoting, `set -o pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
 :status: open
 :traces: ADR_0003, SWR_BOOT_0003, SWR_IPC_0008
 
-Parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides (ISOs) plus `SPCR`
-serial configuration. Parameterize `ttyserv` (`-p`/`-i`) and `rtcdrv` instead of
-hardcoded ISA addresses, and route user `stdout`/`stderr` TX (`OPOST`/`ONLCR`)
-through `ttyserv` ({need}`SWR_BOOT_0003`).
+Parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides (ISOs), plus
+`SPCR` when present (falling back to COM1 `0x3F8`/IRQ 4). Pass discovered `argv`
+(`-p`/`-i`) to `ttyserv` and `rtcdrv`, and route user `stdout`/`stderr` TX
+(`OPOST`/`ONLCR`) through `ttyserv` with safe early-boot fallback
+({need}`SWR_BOOT_0003`).
 ```
 
 ### TSK_0020 — Add pselect and end-to-end cross-subsystem POSIX hardening
@@ -53,7 +42,7 @@ through `ttyserv` ({need}`SWR_BOOT_0003`).
 :status: open
 :traces: ADR_0003, WDR_0002, SWR_DOCS_0004
 
-Add `<sys/select.h>` (`select`, `pselect`) over multi-server `ppoll()`. Run an
-integrated QEMU stress and leak suite across `sh`, VFS, pipes, TTY, `AF_UNIX`
-sockets, `SHM`, signals, and pthreads ({need}`SWR_DOCS_0004`).
+Add `<sys/select.h>` (`select`, `pselect`) over multi-server `ppoll()`. Verify
+zero PMM frame, descriptor, and server handle leaks across `sh`, VFS, pipes,
+TTY, `AF_UNIX` sockets, `SHM`, signals, and pthreads ({need}`SWR_DOCS_0004`).
 ```

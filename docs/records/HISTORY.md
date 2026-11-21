@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0017 — Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
+
+```{task} Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
+:id: TSK_0017
+:status: done
+:traces: ADR_0003, SWR_LIBC_0006
+
+Implement Ring 3 POSIX `sh` and minimal core utilities (`echo`, `cat`, `ls`,
+`true`, `false`, `test`) supporting pipelines, file redirections, `$'...'`
+quoting, `set -o pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
+```
+
 ### TSK_0018 — Build Ring 3 AF_UNIX local sockets server and accept4
 
 ```{task} Build Ring 3 AF_UNIX local sockets server and accept4

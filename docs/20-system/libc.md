@@ -80,10 +80,10 @@ and `secure_getenv`. It must also supply `<stdatomic.h>`, `<stdalign.h>`, and
 
 ```{swr} Supply Ring 3 POSIX.1-2024 XCU shell utility
 :id: SWR_LIBC_0006
-:status: draft
+:status: active
 :posix: XCU/2 (BASE), XCU/read (BASE), XCU/set (BASE)
 :derives: SYS_LIBC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0021
 
 A Ring 3 POSIX shell (`sh`) and minimal core utilities must execute pipelines
 and redirections over `fork`/`execvp`/`pipe2`/`dup2`. The shell must support

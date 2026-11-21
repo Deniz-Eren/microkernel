@@ -884,6 +884,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "stdiotest", 100, 0);
     /* POSIX.1-2024 AF_UNIX local sockets and accept4 test. */
     spawn_image(tar_phys, tar_size, "socktest", 100, 0);
+    /* POSIX.1-2024 XCU shell (sh) and core utilities test. */
+    spawn_image(tar_phys, tar_size, "shtest", 100, 0);
 
     sched_activate();
 }

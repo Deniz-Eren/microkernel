@@ -23,10 +23,12 @@ Ring 3 device drivers, the Ring 0 kernel, and x86-64 hardware connect.
 
 ```mermaid
 flowchart TD
-    subgraph RING3_APP["Ring 3: User Applications and Test Binaries"]
+    subgraph RING3_APP["Ring 3: Userland Shell, Utilities & Test Binaries"]
         direction TB
-        APPS["User Binaries (linked with crt0.o + libc.a)"]
+        SH["bin/ POSIX.1-2024 sh & Core Utilities (echo, cat, ls, test)"]
+        APPS["User & Test Binaries (linked with crt0.o + libc.a)"]
         LIBC["POSIX.1-2024 libc (stdio, pthreads, VFS, sockets, termios)"]
+        SH --> LIBC
         APPS --> LIBC
     end
 
@@ -104,6 +106,7 @@ flowchart TD
 ├── kernel/                     <- Ring 0 kernel (arch, core, include, lib)
 ├── libc/                       <- Freestanding C17 / POSIX.1-2024 user library
 ├── servers/                    <- Ring 3 system servers and device drivers
+├── bin/                        <- Ring 3 POSIX.1-2024 sh and core utilities
 ├── tests/                      <- QEMU harness, Ring 3, POSIX, and doc tests
 ├── config/sphinx/              <- Sphinx-Needs model, config, and tag scanner
 ├── tools/                      <- Traceability audit, POSIX audit, STE gate
@@ -154,12 +157,14 @@ flowchart TD
 - `servers/ipcserv/`: Ring 3 reference echo server registered at `/dev/echo`.
 - `servers/rtcdrv/`: Privileged Ring 3 MC146818 CMOS RTC driver registered at
   `/dev/rtc`, using `CAP_SYS_INTR` port I/O and IOAPIC IRQ 8 pulses.
+- `bin/`: Ring 3 POSIX.1-2024 XCU shell (`sh`) and standalone core utilities
+  (`echo`, `cat`, `ls`, `true`, `false`, `test`) packed into `boot.tar`.
 - `tests/`: `test_runner.py` (headless QEMU serial assertion harness), Ring 3
   test binaries (`ipccli`, `sigtest`, `proctest`, `procchild`, `drvtest`,
   `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`,
   `canceltest`, `libctest`, `heaptest`, `vfstest`, `shmtest`, `ttytest`,
-  `stdiotest`, `socktest`), `posix/` conformance gates, and `traceability/` unit
-  tests.
+  `stdiotest`, `socktest`, `shtest`), `posix/` conformance gates, and
+  `traceability/` unit tests.
 - `config/sphinx/`, `tools/`: Sphinx-Needs model (`needs_model.py`), code tag
   checker (`need_tag_check.py`), `check_needs_audit.py`, `audit_lib.py`, and
   `check_ste.py`.

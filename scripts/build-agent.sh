@@ -111,6 +111,9 @@ if ! "$ENV" test --timeout 120 \
     --expect 'AF_UNIX socketpair, SOCK_CLOEXEC/SOCK_NONBLOCK, MSG_PEEK, and' \
     --expect 'AF_UNIX bind, listen, connect, and accept4 atomic flags' \
     --expect 'AF_UNIX SOCK_DGRAM sendto/recvfrom and multi-server ppoll' \
+    --expect 'sh pipelines, redirections, and core utilities' \
+    --expect 'sh Issue 8 ANSI-C quoting, set -o pipefail, and built-ins' \
+    --expect 'sh Issue 8 read -d custom and NUL delimiters verified' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"
@@ -121,7 +124,7 @@ echo "tests: $TESTS [OK] expectations matched"
 
 echo "==> lint"
 LINT_LOG="$(mktemp)"
-TIDY_CMD="run-clang-tidy -p build -quiet \$(find kernel libc servers tests"
+TIDY_CMD="run-clang-tidy -p build -quiet \$(find kernel libc servers bin tests"
 TIDY_CMD="$TIDY_CMD \( -name '*.c' -o -name '*.h' \))"
 "$ENV" bash -c "$TIDY_CMD" > "$LINT_LOG" 2>&1
 if grep -qE 'warning:|error:' "$LINT_LOG"; then

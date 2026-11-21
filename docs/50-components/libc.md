@@ -53,3 +53,16 @@ with mutex-protected stream flushing. `ctype.c`, `stdlib.c`, `string.c`, and
 `__assert_fail`, `setenv`, `unsetenv`, `execv`, `execvp`, `strdup`, `strstr`,
 and `strerror` ({need}`ICD_LIBC_0005`, {need}`SWR_LIBC_0007`).
 ```
+
+```{comp} Ring 3 POSIX.1-2024 XCU shell and core utilities
+:id: COMP_LIBC_0005
+:status: active
+:posix: XCU/2 (BASE), XCU/read (BASE), XCU/set (BASE)
+:refines: ARC_LIBC_0001, ICD_LIBC_0005
+:satisfies: SWR_LIBC_0006
+
+`bin/sh/main.c` provides a Ring 3 POSIX shell (`sh`) with `-c`, script files,
+interactive `isatty()` input, pipelines, redirections, `$'...'` quoting, `set -o
+pipefail`, and `read -d`. `bin/utils/` provides `echo`, `cat`, `ls`, `true`,
+`false`, and `test` ({need}`ICD_LIBC_0005`, {need}`SWR_LIBC_0006`).
+```

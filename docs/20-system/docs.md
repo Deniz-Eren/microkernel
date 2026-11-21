@@ -55,7 +55,7 @@ cancellation call-graph checks, and runtime POSIX test suites
 :traces: BDR_0003, ADR_0003
 
 The system must supply `<sys/select.h>` (`select`, `pselect`) over multi-server
-`ppoll`. An integrated QEMU stress suite must verify zero descriptor, handle, or
-page leaks across `sh`, VFS, pipes, TTY, sockets, and `SHM`
+`ppoll`. An integrated QEMU stress suite must verify zero PMM frame, descriptor,
+or server handle leaks across `sh`, VFS, pipes, TTY, sockets, and `SHM`
 ({need}`SYS_DOCS_0001`).
 ```
