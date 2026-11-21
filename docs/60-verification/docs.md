@@ -35,3 +35,14 @@ tag extraction and repository scanning. It also checks bidirectional detection
 of active `ICD_`, `COMP_`, and `VER_` items with no code tags
 ({need}`SWR_DOCS_0002`).
 ```
+
+```{ver} Verify 4-gate POSIX.1-2024 conformance harness in CTest
+:id: VER_DOCS_0004
+:status: active
+:tags: integration
+:verifies: SWR_DOCS_0003
+
+Verified by CTest `posix.headers`, `posix.symbol_diff`,
+`posix.async_signal_safe`, and `posix.cancellation` across `sysroot` and
+`libc.a`, paired with headless QEMU tests ({need}`SWR_DOCS_0003`).
+```

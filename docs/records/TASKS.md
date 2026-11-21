@@ -21,18 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0013 — Enforce full 4-gate POSIX.1-2024 conformance harness
-
-```{task} Enforce full 4-gate POSIX.1-2024 conformance harness
-:id: TSK_0013
-:status: open
-:traces: WDR_0002, SWR_DOCS_0003
-
-Wire automated `issue8-manifest.tsv` symbol diff reporting and cancellation
-call-graph checks into CTest alongside `posix.headers` and
-`posix.async_signal_safe` ({need}`SWR_DOCS_0003`).
-```
-
 ### TSK_0014 — Implement mmap-backed thread-safe malloc and free allocator
 
 ```{task} Implement mmap-backed thread-safe malloc and free allocator

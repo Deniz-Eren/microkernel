@@ -30,8 +30,9 @@ skill](docs/skills/git/SKILL.md) defines each mode and its workflow.
    - 4-stage build + Sphinx `-W`
    - headless QEMU test suite
    - `clang-tidy` static analysis
-   - full CTest suite (`posix.headers`, `posix.async_signal_safe`,
-     `traceability.unit`, `docs.html`, `docs.needs`, `docs.audit`)
+   - full CTest suite (`posix.headers`, `posix.symbol_diff`,
+     `posix.async_signal_safe`, `posix.cancellation`, `traceability.unit`,
+     `docs.html`, `docs.needs`, `docs.audit`)
 
 If verification fails, go back to Act, repair every failure, and re-run
 `./scripts/build-agent.sh` until it prints `BUILD: PASS`. Never run `git commit`

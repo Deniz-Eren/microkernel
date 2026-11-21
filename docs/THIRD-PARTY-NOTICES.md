@@ -120,6 +120,13 @@ SOFTWARE.
 * **Source:** [mermaid.js.org](https://mermaid.js.org)
 * **License:** MIT License.
 
+### posix-issue8-os-dev manifest
+* **Component(s) Used:** `tests/posix/issue8-manifest.tsv` (factual index of
+  IEEE Std 1003.1-2024 identifier names, option tags, and canonical URLs with no
+  specification prose).
+* **Source:** `posix-issue8-os-dev` skill (`references/issue8-manifest.tsv`).
+* **License:** MIT License. Copyright (c) 2026 Deniz Eren.
+
 [cc-src]: https://www.conventionalcommits.org/en/v1.0.0/
 [agentskills-src]:
   https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx

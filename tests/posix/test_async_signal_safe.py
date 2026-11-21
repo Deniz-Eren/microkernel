@@ -9,19 +9,20 @@
 
 """Verify POSIX async-signal-safe libc functions avoid unsafe callees."""
 
-# need:: VER_SIG_0003
+# need:: VER_SIG_0003 VER_DOCS_0004
 
 from __future__ import annotations
 
 import argparse
-import re
-import subprocess
 import sys
 import unittest
-from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools" / "posix"))
+
+from audit_lib import build_call_graph, reachable  # noqa: E402
+
 DEFAULT_LIBC = ROOT / "sysroot" / "usr" / "lib" / "libc.a"
 
 ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
@@ -73,72 +74,35 @@ FORBIDDEN_CALLEES: frozenset[str] = frozenset(
         "malloc",
         "free",
         "calloc",
+        "realloc",
+        "reallocarray",
         "printf",
+        "fprintf",
         "snprintf",
         "puts",
+        "fputs",
         "putchar",
+        "fputc",
+        "fflush",
+        "flockfile",
+        "ftrylockfile",
+        "funlockfile",
+        "pthread_mutex_lock",
+        "pthread_mutex_unlock",
         "exit",
     }
 )
-
-FUNC_HDR_RE = re.compile(r"^[0-9a-fA-F]+\s+<([^>]+)>:\s*$")
-CALL_RE = re.compile(r"\b(?:callq?|jmpq?)\s+.*<([^+>]+)(?:\+0x[0-9a-fA-F]+)?>")
-RELOC_RE = re.compile(r"\bR_X86_64_\w+\s+([A-Za-z_][A-Za-z0-9_.$]*)")
 
 _OBJDUMP = "llvm-objdump"
 _LIBC_PATH = DEFAULT_LIBC
 
 
-def _build_call_graph(libc_a: Path) -> tuple[set[str], dict[str, set[str]]]:
-    proc = subprocess.run(
-        [_OBJDUMP, "-dr", str(libc_a)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    defined: set[str] = set()
-    edges: dict[str, set[str]] = defaultdict(set)
-    current: str | None = None
-    for line in proc.stdout.splitlines():
-        m_fn = FUNC_HDR_RE.match(line)
-        if m_fn:
-            current = m_fn.group(1)
-            defined.add(current)
-            continue
-        if current is None:
-            continue
-        m_reloc = RELOC_RE.search(line)
-        if m_reloc:
-            sym = m_reloc.group(1)
-            if sym != current and not sym.startswith("."):
-                edges[current].add(sym)
-            continue
-        m_call = CALL_RE.search(line)
-        if m_call:
-            callee = m_call.group(1)
-            if callee != current:
-                edges[current].add(callee)
-    return defined, edges
-
-
-def _reachable(start: str, edges: dict[str, set[str]]) -> set[str]:
-    seen: set[str] = set()
-    stack = [start]
-    while stack:
-        fn = stack.pop()
-        for nxt in edges.get(fn, ()):
-            if nxt not in seen:
-                seen.add(nxt)
-                stack.append(nxt)
-    return seen
-
-
 class AsyncSignalSafetyTests(unittest.TestCase):
-    """Gate 3: verify async-signal-safe functions never reach unsafe calls."""
+    """Gate 3a: verify async-signal-safe functions never reach unsafe calls."""
 
     def test_async_signal_safe_call_graph(self) -> None:
         self.assertTrue(_LIBC_PATH.is_file(), f"missing {_LIBC_PATH}")
-        defined, edges = _build_call_graph(_LIBC_PATH)
+        defined, edges = build_call_graph(_OBJDUMP, _LIBC_PATH)
         self.assertIn(
             "__errno_location",
             edges.get("sigaction", set()),
@@ -147,7 +111,7 @@ class AsyncSignalSafetyTests(unittest.TestCase):
         for fn in ASYNC_SIGNAL_SAFE_FNS:
             with self.subTest(function=fn):
                 self.assertIn(fn, defined, f"missing symbol '{fn}' in libc.a")
-                reach = _reachable(fn, edges)
+                reach = reachable(fn, edges)
                 bad = sorted(reach & FORBIDDEN_CALLEES)
                 self.assertEqual(
                     bad,

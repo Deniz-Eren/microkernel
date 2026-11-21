@@ -25,7 +25,7 @@ flowchart TD
     BLUEPRINT["1. Blueprint & Traceability (POSIX.1-2024 + Sphinx-Needs)"]
     FABRICATOR["2. Fabricator (Podman + LLVM/Clang + CMake/Ninja + GRUB ISO)"]
     TESTBED["3. Testbed (Headless QEMU x86-64 q35 + COM1 serial)"]
-    GATES["4. Quality Gates (format, text, STE, clang-tidy, CTest 6/6)"]
+    GATES["4. Quality Gates (format, text, STE, clang-tidy, CTest 8/8)"]
 
     AGENT -->|"1. Predict and update specs, headers, and code"| BLUEPRINT
     BLUEPRINT -->|"2. Cross-compile 4-stage OS and Sphinx -W"| FABRICATOR
@@ -106,10 +106,12 @@ gates:
 5. **Hardware testbed:** Headless QEMU serial suite (`54 [OK]` assertions).
 6. **Static analysis:** `clang-tidy` across all C sources and headers using
    `build/compile_commands.json`.
-7. **CTest (`6/6`):** `posix.headers` (standalone C17 matrix under
-   `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800`), `posix.async_signal_safe`
-   (`llvm-objdump -dr` call-graph audit on `libc.a`), `traceability.unit`,
-   `docs.html`, `docs.needs`, and `docs.audit`.
+7. **CTest (`8/8`):** `posix.headers` (standalone C17 matrix under
+   `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800`), `posix.symbol_diff`
+   (Clang AST and `llvm-nm` diff against `issue8-manifest.tsv`),
+   `posix.async_signal_safe` and `posix.cancellation` (`llvm-objdump -dr`
+   call-graph audits on `libc.a`), `traceability.unit`, `docs.html`,
+   `docs.needs`, and `docs.audit`.
 
 ## Containerized workflow and commands
 
@@ -238,10 +240,10 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): 4-gate Issue 8 symbol diff, `mmap` heap
-reclamation, Ring 3 VFS/`tmpfs`, option-gated `SHM`/`ML`, TTY `stdin`, POSIX
-`sh`, and `AF_UNIX` sockets. See [docs/records/TASKS.md](docs/records/TASKS.md)
-and [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
+Not available at this time (next tasks): `mmap` heap reclamation, Ring 3
+VFS/`tmpfs`, option-gated `SHM`/`ML`, TTY `stdin`, POSIX `sh`, and `AF_UNIX`
+sockets. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+[docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
 
@@ -277,9 +279,10 @@ See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/HISTORY.md](docs/records/HISTORY.md) for the milestone plan and
 task records. The build completed milestones 1 to 6, POSIX clocks/timers,
 pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. It also
-completed `<aio.h>`, cancellation points, `<stdio.h>` locking, and Issue 8 C17
-library functions. Next tasks add the 4-gate POSIX harness, `mmap` heap
-reclamation, Ring 3 VFS, `SHM`/`ML`, TTY, POSIX `sh`, and `AF_UNIX` sockets.
+completed `<aio.h>`, cancellation points, `<stdio.h>` locking, Issue 8 C17
+library functions, and the 4-gate POSIX conformance harness. Next tasks add
+`mmap` heap reclamation, Ring 3 VFS, `SHM`/`ML`, TTY, POSIX `sh`, and `AF_UNIX`
+sockets.
 
 ## Documentation
 

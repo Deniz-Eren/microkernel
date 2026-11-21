@@ -43,6 +43,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Complete 4-gate POSIX.1-2024 conformance harness (`SWR_DOCS_0003`,
+  `COMP_DOCS_0003`, `VER_DOCS_0004`): added CTest Gate 2 `posix.symbol_diff`
+  (`tests/posix/test_symbol_diff.py` comparing Clang JSON AST declarations and
+  `llvm-nm` `libc.a` exports against `tests/posix/issue8-manifest.tsv` with diff
+  report generation) and Gate 3b `posix.cancellation`
+  (`tests/posix/test_cancellation.py` auditing XSH 2.9.5 cancellation call-graph
+  reachability), expanded `posix.async_signal_safe` forbidden callees to include
+  `realloc*`, `<stdio.h>` stream locks, and mutex locks, and centralized
+  call-graph and manifest helpers in `tools/posix/audit_lib.py`.
 - POSIX.1-2024 Base library functions and C17 headers (`SWR_LIBC_0005`,
   `ADR_0014`): kernel `SYS_GETENTROPY` (`48`) mixer (`kernel/core/entropy.c`),
   `getentropy` (`GETENTROPY_MAX = 256`), `strlcpy`, `strlcat`, `realloc`,

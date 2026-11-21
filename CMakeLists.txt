@@ -250,6 +250,25 @@ set_tests_properties(
 )
 
 add_test(
+    NAME posix.symbol_diff
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/posix/test_symbol_diff.py"
+        --cc "${CMAKE_C_COMPILER}"
+        --clang-include "${CLANG_RESOURCE_DIR}/include"
+        --sysroot "${SYSROOT_DIR}/usr/include"
+        --nm "${CMAKE_NM}"
+        --libc "${SYSROOT_DIR}/usr/lib/libc.a"
+        --manifest "${CMAKE_SOURCE_DIR}/tests/posix/issue8-manifest.tsv"
+        --report "${CMAKE_BINARY_DIR}/posix-symbol-diff.txt"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_tests_properties(
+    posix.symbol_diff
+    PROPERTIES LABELS "posix;libc"
+)
+
+add_test(
     NAME posix.async_signal_safe
     COMMAND
         "${Python3_EXECUTABLE}"
@@ -261,4 +280,18 @@ add_test(
 set_tests_properties(
     posix.async_signal_safe
     PROPERTIES LABELS "posix;sig"
+)
+
+add_test(
+    NAME posix.cancellation
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/posix/test_cancellation.py"
+        --objdump "${CMAKE_OBJDUMP}"
+        --libc "${SYSROOT_DIR}/usr/lib/libc.a"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_tests_properties(
+    posix.cancellation
+    PROPERTIES LABELS "posix;libc"
 )

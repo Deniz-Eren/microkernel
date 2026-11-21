@@ -36,7 +36,7 @@ tag ({need}`SYS_DOCS_0001`).
 
 ```{swr} Run POSIX.1-2024 header, symbol, safety, and runtime gates
 :id: SWR_DOCS_0003
-:status: draft
+:status: active
 :posix: XBD/2 (BASE), XBD/13-14 (BASE), XSH/2 (BASE)
 :derives: SYS_DOCS_0001
 :traces: BDR_0003, ADR_0003, WDR_0002
