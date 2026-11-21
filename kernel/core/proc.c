@@ -288,6 +288,24 @@ static pcb_t *proc_spawn_from_bootfs(pcb_t *parent, uint64_t tar_phys,
     return p;
 }
 
+static void map_bootfs_readonly(pcb_t *p, uint64_t tar_phys,
+                                uint64_t tar_size) {
+    if (!p || !tar_phys || !tar_size) {
+        return;
+    }
+    uint64_t base_phys = tar_phys & ~0xFFFULL;
+    uint64_t end_phys = (tar_phys + tar_size + 0xFFFULL) & ~0xFFFULL;
+    uint64_t va = BOOTFS_USER_VA;
+    for (uint64_t pa = base_phys; pa < end_phys; pa += 4096ULL, va += 4096ULL) {
+        pmm_frame_inc(pa);
+        if (vmm_map_page_to(p->pml4_phys, va, pa,
+                            VMM_USER | VMM_PRESENT | VMM_NX) != 0) {
+            pmm_free_frame(pa);
+            return;
+        }
+    }
+}
+
 static pcb_t *spawn_image(uint64_t tar_phys, uint64_t tar_size,
                           const char *name, uint8_t prio, int precreate_chan) {
     return proc_spawn_from_bootfs(NULL, tar_phys, tar_size, name, prio,
@@ -305,8 +323,9 @@ void proc_close_fds(pcb_t *p, int cloexec_only) {
         if (cloexec_only && !(p->fds[i].fd_flags & FD_FLAG_CLOEXEC)) {
             continue;
         }
-        if (p->fds[i].kind == FD_KIND_SERVER && p->fds[i].srv_pid &&
-            p->fds[i].srv_chanid) {
+        if ((p->fds[i].kind == FD_KIND_SERVER ||
+             p->fds[i].kind == FD_KIND_VFS) &&
+            p->fds[i].srv_pid && p->fds[i].srv_chanid) {
             ipc_send_pulse_kernel(p->fds[i].srv_pid, p->fds[i].srv_chanid,
                                   PULSE_CODE_FD_CLOSE, p->fds[i].srv_handle);
         }
@@ -792,6 +811,11 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "pipeserv", 100, 0);
     /* Demo processes for the IPC milestone: an echo server that registers
      * itself with sysproc, and a client that resolves and exercises it. */
+    /* Ring 3 VFS server (/dev/vfs) with read-only bootfs mapping. */
+    pcb_t *vfs = spawn_image(tar_phys, tar_size, "vfsserv", 110, 0);
+    if (vfs) {
+        map_bootfs_readonly(vfs, tar_phys, tar_size);
+    }
     spawn_image(tar_phys, tar_size, "ipcserv", 100, 0);
     spawn_image(tar_phys, tar_size, "ipccli", 100, 0);
     /* Milestone 4 demo: threads + signal delivery (worker thread, caught
@@ -819,6 +843,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "libctest", 100, 0);
     /* POSIX.1-2024 mmap-backed thread-safe heap allocator test. */
     spawn_image(tar_phys, tar_size, "heaptest", 100, 0);
+    /* POSIX.1-2024 Ring 3 VFS (bootfs/tmpfs, stat, dirent) test. */
+    spawn_image(tar_phys, tar_size, "vfstest", 100, 0);
 
     sched_activate();
 }

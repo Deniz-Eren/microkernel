@@ -46,6 +46,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Ring 3 POSIX VFS server (`SWR_IPC_0007`, `ADR_0016`, `ICD_IPC_0007`–`0009`,
+  `COMP_IPC_0008`–`0009`, `VER_IPC_0005`): added `servers/vfsserv/main.c`
+  (`/dev/vfs`) serving read-only `boot.tar` at `/boot` and writable dynamic
+  `tmpfs` at `/` and `/tmp`, read-only `BOOTFS_USER_VA` mapping and
+  `FD_KIND_VFS` close-pulse support in `kernel/core/proc.c`, `<sys/stat.h>`,
+  `<dirent.h>`, `libc/src/vfs.c` (`open`, `openat`, `creat`, `lseek`,
+  `ftruncate`, `stat`, `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`,
+  `unlink`, `unlinkat`, `rmdir`, `chdir`, `fchdir`, `getcwd`, `umask`, `access`,
+  `opendir`, `fdopendir`, `readdir`, `rewinddir`, `closedir`, `dirfd`), and QEMU
+  `tests/vfstest/test_vfs.c`.
 - Thread-safe `mmap`/`munmap`-backed heap allocator (`SWR_MEM_0006`, `ADR_0015`,
   `COMP_MEM_0004`, `VER_MEM_0003`): replaced the static 1 MiB bump arena in
   `libc/src/stdlib.c` with `libc/src/malloc.c` featuring a `SYS_FUTEX` lock, 64

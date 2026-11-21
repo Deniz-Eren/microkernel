@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0015 — Build Ring 3 VFS server with bootfs, tmpfs, stat, and dirent
+
+```{task} Build Ring 3 VFS server with bootfs, tmpfs, stat, and dirent
+:id: TSK_0015
+:status: done
+:traces: ADR_0003, SWR_IPC_0007
+
+Implement Ring 3 `vfsserv` (`/dev/vfs`) serving read-only `bootfs` and writable
+`tmpfs`. Add `<sys/stat.h>`, `<dirent.h>`, `open`/`openat`, `lseek`,
+`ftruncate`, `stat`/`fstat`, `mkdir`, `unlink`, `chdir`, and `getcwd`
+({need}`SWR_IPC_0007`).
+```
+
 ### TSK_0014 — Implement mmap-backed thread-safe malloc and free allocator
 
 ```{task} Implement mmap-backed thread-safe malloc and free allocator

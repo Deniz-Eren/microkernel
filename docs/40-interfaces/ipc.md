@@ -75,3 +75,38 @@ and Ring 3 port I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`).
 `aio_suspend`, and `lio_listio` with no `<sys/microkernel.h>` leakage
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0005`).
 ```
+
+```{icd} Ring 3 /dev/vfs IPC protocol
+:id: ICD_IPC_0007
+:status: active
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0007
+
+`libc/include/sys/vfs.h` defines `VFS_OP_*`, `vfs_stat_t`, `vfs_req_t`, and
+`vfs_rep_t` message structures within `IPC_MSG_MAX` for Ring 3 `/dev/vfs` IPC
+({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
+```
+
+```{icd} POSIX.1-2024 <sys/stat.h> public interface
+:id: ICD_IPC_0008
+:status: active
+:posix: XBD/sys/stat.h (BASE)
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0007
+
+`libc/include/sys/stat.h` declares `struct stat`, `S_IF*`, `S_IS*`, permission
+bits, `stat`, `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, and `umask` with
+no `<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
+```
+
+```{icd} POSIX.1-2024 <dirent.h> public interface
+:id: ICD_IPC_0009
+:status: active
+:posix: XBD/dirent.h (BASE)
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0007
+
+`libc/include/dirent.h` declares `DIR`, `struct dirent`, `opendir`, `fdopendir`,
+`readdir`, `rewinddir`, `closedir`, and `dirfd` with no `<sys/microkernel.h>`
+leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
+```

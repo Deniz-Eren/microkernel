@@ -29,7 +29,10 @@ MANDATORY_CANCELLATION_POINTS: tuple[str, ...] = (
     "aio_suspend",
     "clock_nanosleep",
     "close",
+    "creat",
     "nanosleep",
+    "open",
+    "openat",
     "poll",
     "ppoll",
     "pthread_cond_clockwait",
@@ -61,6 +64,14 @@ NON_CANCELLATION_POINTS: tuple[str, ...] = (
     "getpid",
     "getppid",
     "clock_gettime",
+    "lseek",
+    "ftruncate",
+    "stat",
+    "fstat",
+    "mkdir",
+    "unlink",
+    "rmdir",
+    "chdir",
 )
 
 CANCEL_CHECK_TARGETS: frozenset[str] = frozenset(

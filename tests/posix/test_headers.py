@@ -11,7 +11,7 @@
 
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_SIG_0003 VER_MEM_0002
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005
-# need:: VER_IPC_0003 VER_IPC_0004 VER_DOCS_0004
+# need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_DOCS_0004
 
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 
 POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
+    "dirent.h",
     "errno.h",
     "fcntl.h",
     "poll.h",
@@ -42,6 +43,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "uchar.h",
     "unistd.h",
     "sys/mman.h",
+    "sys/stat.h",
     "sys/types.h",
     "sys/wait.h",
 )
@@ -479,6 +481,58 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"issue8 libc check failed:\n{err}")
+
+    def test_vfs_stat_and_dirent_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <dirent.h>",
+                "#include <fcntl.h>",
+                "#include <sys/stat.h>",
+                "#include <unistd.h>",
+                "#ifdef VFS_OP_OPEN",
+                '#error "VFS headers leaked VFS_OP_OPEN"',
+                "#endif",
+                "#ifdef SYS_FD_OP",
+                '#error "VFS headers leaked SYS_FD_OP"',
+                "#endif",
+                "static int __check_vfs_api(void) {",
+                "    struct stat st = {0};",
+                "    char cwd[32] = {0};",
+                "    int fd = open(\"/tmp/a\", O_CREAT | O_RDWR, 0644u);",
+                "    (void)openat(AT_FDCWD, \"a\", O_RDONLY | O_DIRECTORY);",
+                "    (void)creat(\"/tmp/b\", 0600u);",
+                "    (void)lseek(fd, (off_t)0, SEEK_SET);",
+                "    (void)ftruncate(fd, (off_t)0);",
+                "    (void)stat(\"/tmp\", &st);",
+                "    (void)lstat(\"/tmp\", &st);",
+                "    (void)fstat(fd, &st);",
+                "    (void)fstatat(AT_FDCWD, \"/tmp\", &st, 0);",
+                "    (void)mkdir(\"/tmp/d\", 0755u);",
+                "    (void)mkdirat(AT_FDCWD, \"/tmp/d\", 0755u);",
+                "    (void)unlink(\"/tmp/a\");",
+                "    (void)unlinkat(AT_FDCWD, \"/tmp/d\", AT_REMOVEDIR);",
+                "    (void)rmdir(\"/tmp/d\");",
+                "    (void)chdir(\"/tmp\");",
+                "    (void)fchdir(fd);",
+                "    (void)getcwd(cwd, sizeof(cwd));",
+                "    (void)umask(0022u);",
+                "    (void)access(\"/tmp\", F_OK | R_OK | W_OK | X_OK);",
+                "    DIR *d = opendir(\"/tmp\");",
+                "    (void)fdopendir(fd);",
+                "    (void)readdir(d);",
+                "    rewinddir(d);",
+                "    (void)dirfd(d);",
+                "    (void)closedir(d);",
+                "    return S_ISREG(st.st_mode) + S_ISDIR(st.st_mode);",
+                "}",
+                "int (*__vfs_fn_ref)(void) = __check_vfs_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"vfs headers check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

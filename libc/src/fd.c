@@ -117,12 +117,16 @@ int __libc_fd_prefork(void) {
         return (int)n;
     }
     for (long i = 0; i < n; i++) {
-        if (fds[i].kind == FD_KIND_SERVER) {
-            long r = pipe_dup_handle(fds[i].srv_handle);
+        if (fds[i].kind == FD_KIND_SERVER || fds[i].kind == FD_KIND_VFS) {
+            long r = (fds[i].kind == FD_KIND_VFS)
+                         ? __libc_vfs_dup_handle(fds[i].srv_handle)
+                         : pipe_dup_handle(fds[i].srv_handle);
             if (r < 0) {
                 for (long j = 0; j < i; j++) {
                     if (fds[j].kind == FD_KIND_SERVER) {
                         pipe_close_handle(fds[j].srv_handle);
+                    } else if (fds[j].kind == FD_KIND_VFS) {
+                        __libc_vfs_close_handle(fds[j].srv_handle);
                     }
                 }
                 return (int)r;
@@ -143,6 +147,8 @@ void __libc_fd_postfork_rollback(void) {
     for (long i = 0; i < n; i++) {
         if (fds[i].kind == FD_KIND_SERVER) {
             pipe_close_handle(fds[i].srv_handle);
+        } else if (fds[i].kind == FD_KIND_VFS) {
+            __libc_vfs_close_handle(fds[i].srv_handle);
         }
     }
 }
@@ -162,6 +168,9 @@ ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
     if (e.kind == FD_KIND_CONSOLE) {
         errno = ENOSYS;
         return -1;
+    }
+    if (e.kind == FD_KIND_VFS) {
+        return __libc_vfs_read(e.srv_handle, buf, n);
     }
     if (e.kind != FD_KIND_SERVER) {
         errno = EBADF;
@@ -213,6 +222,9 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
         }
         return (ssize_t)r;
     }
+    if (e.kind == FD_KIND_VFS) {
+        return __libc_vfs_write(e.srv_handle, buf, n, e.status_flags);
+    }
     if (e.kind != FD_KIND_SERVER) {
         errno = EBADF;
         return -1;
@@ -258,6 +270,8 @@ int close(int fd) {
     }
     if (old.kind == FD_KIND_SERVER) {
         pipe_close_handle(old.srv_handle);
+    } else if (old.kind == FD_KIND_VFS) {
+        __libc_vfs_close_handle(old.srv_handle);
     }
     return 0;
 }
@@ -336,8 +350,9 @@ static int dup_min(int oldfd, int min_fd, int cloexec) {
         errno = (int)(-gr);
         return -1;
     }
-    if (e.kind == FD_KIND_SERVER) {
-        long dr = pipe_dup_handle(e.srv_handle);
+    if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_VFS) {
+        long dr = (e.kind == FD_KIND_VFS) ? __libc_vfs_dup_handle(e.srv_handle)
+                                          : pipe_dup_handle(e.srv_handle);
         if (dr < 0) {
             errno = (int)(-dr);
             return -1;
@@ -348,6 +363,8 @@ static int dup_min(int oldfd, int min_fd, int cloexec) {
     if (nf < 0) {
         if (e.kind == FD_KIND_SERVER) {
             pipe_close_handle(e.srv_handle);
+        } else if (e.kind == FD_KIND_VFS) {
+            __libc_vfs_close_handle(e.srv_handle);
         }
         errno = (int)(-nf);
         return -1;
@@ -378,8 +395,9 @@ int dup3(int oldfd, int newfd, int flags) {
         errno = (int)(-gr);
         return -1;
     }
-    if (e.kind == FD_KIND_SERVER) {
-        long dr = pipe_dup_handle(e.srv_handle);
+    if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_VFS) {
+        long dr = (e.kind == FD_KIND_VFS) ? __libc_vfs_dup_handle(e.srv_handle)
+                                          : pipe_dup_handle(e.srv_handle);
         if (dr < 0) {
             errno = (int)(-dr);
             return -1;
@@ -392,12 +410,16 @@ int dup3(int oldfd, int newfd, int flags) {
     if (nf < 0) {
         if (e.kind == FD_KIND_SERVER) {
             pipe_close_handle(e.srv_handle);
+        } else if (e.kind == FD_KIND_VFS) {
+            __libc_vfs_close_handle(e.srv_handle);
         }
         errno = (int)(-nf);
         return -1;
     }
     if (replaced.kind == FD_KIND_SERVER) {
         pipe_close_handle(replaced.srv_handle);
+    } else if (replaced.kind == FD_KIND_VFS) {
+        __libc_vfs_close_handle(replaced.srv_handle);
     }
     return (int)nf;
 }
@@ -556,6 +578,15 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
             short out = (short)(fds[i].events & (POLLOUT | POLLWRNORM));
             if (out) {
                 fds[i].revents = out;
+                local_ready++;
+            }
+            continue;
+        }
+        if (e.kind == FD_KIND_VFS) {
+            short rev = (short)(fds[i].events &
+                                (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM));
+            if (rev) {
+                fds[i].revents = rev;
                 local_ready++;
             }
             continue;

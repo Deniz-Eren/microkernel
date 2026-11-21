@@ -19,6 +19,7 @@
 
 #define BOOTINFO_MAGIC 0x3130304954424B4DULL /* "MKBTI001" */
 #define BOOTINFO_VA 0x10000000ULL
+#define BOOTFS_USER_VA 0x11000000ULL
 
 typedef struct boot_info {
     uint64_t magic;

@@ -80,10 +80,10 @@ and move multi-buffer payloads with `ReadMsgV` and `WriteMsgV`
 
 ```{swr} Supply Ring 3 VFS, bootfs, and tmpfs file operations
 :id: SWR_IPC_0007
-:status: draft
+:status: active
 :posix: XSH/open (BASE), XBD/sys/stat.h (BASE), XBD/dirent.h (BASE)
 :derives: SYS_IPC_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0016
 
 A Ring 3 VFS server over kernel IPC must supply `bootfs` and writable `tmpfs`
 files. It must support `open`, `openat`, `lseek`, `ftruncate`, `stat`, `fstat`,

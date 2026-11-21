@@ -87,3 +87,30 @@ and signal mask rules ({need}`ICD_IPC_0004`, {need}`ICD_IPC_0005`,
 keeps `aio_error`, `aio_return`, and `aio_suspend` async-signal-safe
 ({need}`ICD_IPC_0006`, {need}`SWR_IPC_0005`).
 ```
+
+```{comp} Ring 3 VFS server for bootfs and tmpfs
+:id: COMP_IPC_0008
+:status: active
+:posix: XSH/open (BASE), XBD/sys/stat.h (BASE), XBD/dirent.h (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0003, ICD_IPC_0007
+:satisfies: SWR_IPC_0007
+
+`servers/vfsserv/main.c` registers `/dev/vfs`, serves read-only `boot.tar`
+entries at `/boot`, and manages writable `tmpfs` files, directories, open file
+offsets, and `PULSE_CODE_FD_CLOSE` handle cleanup ({need}`ICD_IPC_0007`,
+{need}`SWR_IPC_0007`).
+```
+
+```{comp} POSIX.1-2024 libc VFS, stat, dirent, and cwd wrappers
+:id: COMP_IPC_0009
+:status: active
+:posix: XSH/open (BASE), XBD/sys/stat.h (BASE), XBD/dirent.h (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0004, ICD_IPC_0007, ICD_IPC_0008, ICD_IPC_0009
+:satisfies: SWR_IPC_0007
+
+`libc/src/vfs.c` implements `open`, `openat`, `creat`, `lseek`, `ftruncate`,
+`stat`, `fstat`, `lstat`, `fstatat`, `mkdir`, `unlink`, `rmdir`, `chdir`,
+`fchdir`, `getcwd`, `umask`, `access`, and `<dirent.h>` over `/dev/vfs` IPC
+({need}`ICD_IPC_0007`, {need}`ICD_IPC_0008`, {need}`ICD_IPC_0009`,
+{need}`SWR_IPC_0007`).
+```

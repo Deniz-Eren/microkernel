@@ -132,6 +132,7 @@ endfunction()
 
 add_subdirectory(servers/sysproc)
 add_subdirectory(servers/pipeserv)
+add_subdirectory(servers/vfsserv)
 add_subdirectory(servers/ipcserv)
 add_subdirectory(servers/rtcdrv)
 add_subdirectory(tests/ipccli)
@@ -145,6 +146,7 @@ add_subdirectory(tests/aiotest)
 add_subdirectory(tests/canceltest)
 add_subdirectory(tests/libctest)
 add_subdirectory(tests/heaptest)
+add_subdirectory(tests/vfstest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

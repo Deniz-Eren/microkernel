@@ -39,6 +39,7 @@ DEFAULT_MANIFEST = ROOT / "tests" / "posix" / "issue8-manifest.tsv"
 
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
+    "dirent.h",
     "errno.h",
     "fcntl.h",
     "poll.h",
@@ -54,6 +55,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "uchar.h",
     "unistd.h",
     "sys/mman.h",
+    "sys/stat.h",
     "sys/types.h",
     "sys/wait.h",
 )

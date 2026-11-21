@@ -93,6 +93,10 @@ if ! "$ENV" test --timeout 120 \
     --expect 'mmap slab coalescing, alignment, and 20 MiB churn verified' \
     --expect 'large munmap reclamation, free errno, and realloc boundaries' \
     --expect '4-thread concurrent mmap malloc/calloc/realloc/free stress' \
+    --expect 'vfsserv registered /dev/vfs' \
+    --expect 'bootfs /boot readdir, ELF read, fstat, and EROFS verified' \
+    --expect 'tmpfs mkdir, chdir, getcwd, openat, lseek, ftruncate, and stat' \
+    --expect 'VFS shared dup/fork offsets, unlinked open persistence' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

@@ -28,8 +28,15 @@
 #define O_APPEND 0x0400
 #define O_NONBLOCK 0x0800
 #define O_DSYNC 0x1000
+#define O_DIRECTORY 0x10000
+#define O_NOFOLLOW 0x20000
 #define O_CLOEXEC 0x80000
 #define O_SYNC 0x101000
+
+/* *at() special directory descriptor and flags. */
+#define AT_FDCWD (-100)
+#define AT_SYMLINK_NOFOLLOW 0x100
+#define AT_REMOVEDIR 0x200
 
 /* File descriptor flags (F_GETFD / F_SETFD). */
 #define FD_CLOEXEC 1
@@ -42,6 +49,9 @@
 #define F_SETFL 4
 #define F_DUPFD_CLOEXEC 1030
 
+int open(const char *path, int oflag, ...);
+int openat(int fd, const char *path, int oflag, ...);
+int creat(const char *path, mode_t mode);
 int fcntl(int fd, int cmd, ...);
 
 #endif /* _FCNTL_H */

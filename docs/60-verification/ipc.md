@@ -52,3 +52,16 @@ timeout, `aio_fsync`, and `lio_listio`. CTest `posix.headers` and
 `posix.async_signal_safe` check `<aio.h>`, `_POSIX_MESSAGE_PASSING` gating, and
 async-signal-safety ({need}`SWR_IPC_0005`).
 ```
+
+```{ver} Verify Ring 3 VFS bootfs, tmpfs, stat, dirent, and cwd operations
+:id: VER_IPC_0005
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0007
+
+The headless QEMU harness `tests/test_runner.py` runs `vfsserv` and `vfstest`.
+It checks `/boot` read-only `bootfs`, `/tmp` `tmpfs` I/O, `openat`, `lseek`,
+`ftruncate`, `stat`, `readdir`, `chdir`, `getcwd`, shared `dup`/`fork` offsets,
+and `rmdir`. CTest POSIX gates check `<sys/stat.h>` and `<dirent.h>`
+({need}`SWR_IPC_0007`).
+```
