@@ -46,3 +46,16 @@ compilation, `issue8-manifest.tsv` symbol diff, async-signal-safety and
 cancellation call-graph checks, and runtime POSIX test suites
 ({need}`SYS_DOCS_0001`).
 ```
+
+```{swr} Verify cross-subsystem POSIX integration, pselect, and leak freedom
+:id: SWR_DOCS_0004
+:status: draft
+:posix: XBD/sys/select.h (BASE), XSH/pselect (BASE)
+:derives: SYS_DOCS_0001
+:traces: BDR_0003, ADR_0003
+
+The system must supply `<sys/select.h>` (`select`, `pselect`) over multi-server
+`ppoll`. An integrated QEMU stress suite must verify zero descriptor, handle, or
+page leaks across `sh`, VFS, pipes, TTY, sockets, and `SHM`
+({need}`SYS_DOCS_0001`).
+```

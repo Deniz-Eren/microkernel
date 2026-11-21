@@ -85,9 +85,24 @@ and `secure_getenv`. It must also supply `<stdatomic.h>`, `<stdalign.h>`, and
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003
 
-A Ring 3 POSIX shell (`sh`) must execute pipelines and redirections over
-`fork`/`execve`/`pipe2`/`dup2`. It must support Issue 8 `$'...'` quoting, `set
--o pipefail`, and `read -d` ({need}`SYS_LIBC_0001`).
+A Ring 3 POSIX shell (`sh`) and minimal core utilities must execute pipelines
+and redirections over `fork`/`execvp`/`pipe2`/`dup2`. The shell must support
+Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d`
+({need}`SYS_LIBC_0001`).
+```
+
+```{swr} Supply POSIX.1-2024 buffered stdio, env, execvp, and core headers
+:id: SWR_LIBC_0007
+:status: draft
+:posix: XBD/ctype.h (CX), XSH/fopen (CX), XSH/setenv (BASE), XSH/exec (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, ADR_0003
+
+`libc` must supply `<ctype.h>`, `<assert.h>`, `<inttypes.h>`, `<strings.h>`, and
+`<limits.h>` with POSIX limits. It must also supply buffered `<stdio.h>`
+(`fopen`, `fdopen`, `fclose`, `fread`, `fwrite`, `fgets`, `fseek`, `fileno`),
+`setenv`, `unsetenv`, `execv`, `execvp`, `strdup`, `strstr`, and `strerror`
+({need}`SYS_LIBC_0001`).
 ```
 
 [xbd-13]:

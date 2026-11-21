@@ -248,8 +248,8 @@ What you can build today:
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
 Not available at this time (next tasks): option-gated `SHM`/`ML`, TTY `stdin`,
-POSIX `sh`, and `AF_UNIX` sockets. See
-[docs/records/TASKS.md](docs/records/TASKS.md) and
+buffered `fopen` and `execvp`, `AF_UNIX` sockets, POSIX `sh`, and `pselect`
+hardening. See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -288,8 +288,8 @@ task records. The build completed milestones 1 to 6, POSIX clocks/timers,
 pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. It also
 completed `<aio.h>`, cancellation points, `<stdio.h>` locking, Issue 8 C17
 library functions, the 4-gate POSIX harness, `mmap`-backed heap reclamation, and
-Ring 3 VFS (`bootfs`/`tmpfs`). Next tasks add `SHM`/`ML`, TTY, POSIX `sh`, and
-`AF_UNIX` sockets.
+Ring 3 VFS (`bootfs`/`tmpfs`). Next tasks add `SHM`/`ML`, TTY, buffered `stdio`
+and `execvp`, `AF_UNIX` sockets, POSIX `sh`, and `pselect` hardening.
 
 ## Documentation
 

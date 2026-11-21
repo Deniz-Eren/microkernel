@@ -28,33 +28,35 @@ into the normative model through `:traces:`.
 :status: open
 :traces: ADR_0003, SWR_MEM_0005
 
-Expose `shm_open`/`shm_unlink` (`SHM`, reusing `ftruncate` and `MAP_SHARED`) and
-`mlock`/`munlock`/`mlockall`/`munlockall` (`ML`/`MLR`) behind standard
-`_POSIX_*` feature macros with automated tests ({need}`SWR_MEM_0005`).
+Add kernel shared-frame `MAP_SHARED` backing for `shm_open`/`shm_unlink`
+(`SHM`). Implement `mlock`, `munlock`, `mlockall`, and `munlockall` (`ML`/`MLR`)
+behind standard `_POSIX_*` macros with QEMU and Gate 2 tests
+({need}`SWR_MEM_0005`).
 ```
 
-### TSK_0016 — Build Ring 3 serial TTY server and termios line discipline
+### TSK_0016 — Build Ring 3 serial TTY server, termios, and multi-server ppoll
 
-```{task} Build Ring 3 serial TTY server and termios line discipline
+```{task} Build Ring 3 serial TTY server, termios, and multi-server ppoll
 :id: TSK_0016
 :status: open
 :traces: ADR_0003, SWR_IPC_0008
 
-Implement Ring 3 `ttyserv` (`/dev/tty`) driven by COM1 IRQ 4 pulses and
-`<termios.h>`, enabling blocking and pollable `stdin` `read()` with canonical
-line editing ({need}`SWR_IPC_0008`).
+Implement Ring 3 `ttyserv` (`/dev/tty`) with COM1 IRQ 4 pulses, `<termios.h>`,
+`isatty`, and blocking `stdin` `read()`. Add multi-server `ppoll()` routing
+across pipes, VFS, and TTY descriptors ({need}`SWR_IPC_0008`).
 ```
 
-### TSK_0017 — Build Ring 3 POSIX.1-2024 XCU shell (sh)
+### TSK_0019 — Add POSIX buffered stdio, env, execvp, and core C17 headers
 
-```{task} Build Ring 3 POSIX.1-2024 XCU shell (sh)
-:id: TSK_0017
+```{task} Add POSIX buffered stdio, env, execvp, and core C17 headers
+:id: TSK_0019
 :status: open
-:traces: ADR_0003, SWR_LIBC_0006
+:traces: ADR_0003, SWR_LIBC_0007
 
-Implement a Ring 3 POSIX shell (`sh`) supporting pipelines (`pipe2`, `fork`,
-`execve`), file redirections (`open`, `dup2`), `$'...'` quoting, `set -o
-pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
+Add `<ctype.h>`, `<assert.h>`, `<inttypes.h>`, `<strings.h>`, and `<limits.h>`
+POSIX limits. Implement buffered `FILE` I/O (`fopen`, `fdopen`, `fclose`,
+`fread`, `fwrite`, `fgets`, `fseek`, `fileno`), `setenv`, `unsetenv`, `execv`,
+`execvp`, `strdup`, `strstr`, and `strerror` ({need}`SWR_LIBC_0007`).
 ```
 
 ### TSK_0018 — Build Ring 3 AF_UNIX local sockets server and accept4
@@ -64,7 +66,32 @@ pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
 :status: open
 :traces: ADR_0003, SWR_IPC_0009
 
-Implement Ring 3 `sockserv` (`/dev/sock`) and `<sys/socket.h>` (`socket`,
-`socketpair`, `bind`, `listen`, `accept`, `accept4` with `SOCK_CLOEXEC` and
-`SOCK_NONBLOCK`, `connect`, `send`, `recv`) ({need}`SWR_IPC_0009`).
+Implement Ring 3 `sockserv` (`/dev/sock`), `<sys/socket.h>`, and `<sys/un.h>`
+(`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4` with
+`SOCK_CLOEXEC` and `SOCK_NONBLOCK`, `connect`, `send`, `recv`) reusing
+multi-server `ppoll()` ({need}`SWR_IPC_0009`).
+```
+
+### TSK_0017 — Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
+
+```{task} Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
+:id: TSK_0017
+:status: open
+:traces: ADR_0003, SWR_LIBC_0006
+
+Implement Ring 3 POSIX `sh` and minimal core utilities (`echo`, `cat`, `ls`,
+`true`, `false`, `test`) supporting pipelines, file redirections, `$'...'`
+quoting, `set -o pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
+```
+
+### TSK_0020 — Add pselect and end-to-end cross-subsystem POSIX hardening
+
+```{task} Add pselect and end-to-end cross-subsystem POSIX hardening
+:id: TSK_0020
+:status: open
+:traces: ADR_0003, WDR_0002, SWR_DOCS_0004
+
+Add `<sys/select.h>` (`select`, `pselect`) over multi-server `ppoll()`. Run an
+integrated QEMU stress and leak suite across `sh`, VFS, pipes, TTY, `AF_UNIX`
+sockets, `SHM`, signals, and pthreads ({need}`SWR_DOCS_0004`).
 ```

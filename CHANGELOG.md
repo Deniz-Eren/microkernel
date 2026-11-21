@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Refined and dependency-ordered the remaining backlog in
+  `docs/records/TASKS.md` (`TSK_0012` -> `TSK_0016` -> `TSK_0019` -> `TSK_0018`
+  -> `TSK_0017` -> `TSK_0020`), adding draft requirements `SWR_LIBC_0007`
+  (buffered `<stdio.h>`, `setenv`/`unsetenv`, `execvp`, core headers) and
+  `SWR_DOCS_0004` (`<sys/select.h>` and cross-subsystem stress hardening).
 - Removed volatile test and assertion counts from the `README.md` Mermaid
   architecture diagram and workflow overview so the diagram stays focused on
   tools and technologies.
