@@ -21,6 +21,10 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Extended and dependency-ordered the task backlog in `docs/records/TASKS.md`
+  (`TSK_0013`, `TSK_0014`, `TSK_0015`, `TSK_0012`, `TSK_0016`, `TSK_0017`,
+  `TSK_0018`) with matching draft requirements (`SWR_MEM_0006`, `SWR_IPC_0007`–
+  `SWR_IPC_0009`, `SWR_LIBC_0006`).
 - Consolidated all legacy `agent-scaffolding` documents (`docs/TASKS.md`,
   `docs/DECISIONS.md`, `docs/CONVENTIONS.md`, `docs/VISION.md`, and
   `docs/ARCHITECTURE.md`) into the Sphinx-Needs traceability model (`WDR_0003`–

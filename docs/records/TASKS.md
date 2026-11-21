@@ -6,8 +6,8 @@ Track active, temporary engineering tasks (`task`) for `microkernel`.
 
 ## Structure
 
-Tasks are ordered with the highest priority first and link into the normative
-model through `:traces:`.
+Tasks are ordered by optimal execution order (highest priority first) and link
+into the normative model through `:traces:`.
 
 ## Formatting Rules
 
@@ -21,6 +21,43 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0013 — Enforce full 4-gate POSIX.1-2024 conformance harness
+
+```{task} Enforce full 4-gate POSIX.1-2024 conformance harness
+:id: TSK_0013
+:status: open
+:traces: WDR_0002, SWR_DOCS_0003
+
+Wire automated `issue8-manifest.tsv` symbol diff reporting and cancellation
+call-graph checks into CTest alongside `posix.headers` and
+`posix.async_signal_safe` ({need}`SWR_DOCS_0003`).
+```
+
+### TSK_0014 — Implement mmap-backed thread-safe malloc and free allocator
+
+```{task} Implement mmap-backed thread-safe malloc and free allocator
+:id: TSK_0014
+:status: open
+:traces: ADR_0003, SWR_MEM_0006
+
+Replace the static 1 MiB bump arena in `libc/src/stdlib.c` with a thread-safe
+`mmap`/`munmap` free-list allocator. Reclaim memory on `free`, `realloc`, and
+`reallocarray` ({need}`SWR_MEM_0006`).
+```
+
+### TSK_0015 — Build Ring 3 VFS server with bootfs, tmpfs, stat, and dirent
+
+```{task} Build Ring 3 VFS server with bootfs, tmpfs, stat, and dirent
+:id: TSK_0015
+:status: open
+:traces: ADR_0003, SWR_IPC_0007
+
+Implement Ring 3 `vfsserv` (`/dev/vfs`) serving read-only `bootfs` and writable
+`tmpfs`. Add `<sys/stat.h>`, `<dirent.h>`, `open`/`openat`, `lseek`,
+`ftruncate`, `stat`/`fstat`, `mkdir`, `unlink`, `chdir`, and `getcwd`
+({need}`SWR_IPC_0007`).
+```
+
 ### TSK_0012 — Implement option-gated POSIX memory extensions (SHM, ML, MLR)
 
 ```{task} Implement option-gated POSIX memory extensions (SHM, ML, MLR)
@@ -28,19 +65,43 @@ model through `:traces:`.
 :status: open
 :traces: ADR_0003, SWR_MEM_0005
 
-Expose `shm_open`/`shm_unlink` (`SHM`) and `mlock`/`munlock`/`mlockall`
-(`ML`/`MLR`) behind standard `_POSIX_*` feature macros with automated tests
-({need}`SWR_MEM_0005`).
+Expose `shm_open`/`shm_unlink` (`SHM`, reusing `ftruncate` and `MAP_SHARED`) and
+`mlock`/`munlock`/`mlockall`/`munlockall` (`ML`/`MLR`) behind standard
+`_POSIX_*` feature macros with automated tests ({need}`SWR_MEM_0005`).
 ```
 
-### TSK_0013 — Enforce full issue8-manifest.tsv Tier-2 POSIX symbol gate
+### TSK_0016 — Build Ring 3 serial TTY server and termios line discipline
 
-```{task} Enforce full issue8-manifest.tsv Tier-2 POSIX symbol gate
-:id: TSK_0013
+```{task} Build Ring 3 serial TTY server and termios line discipline
+:id: TSK_0016
 :status: open
-:traces: WDR_0002, SWR_DOCS_0003
+:traces: ADR_0003, SWR_IPC_0008
 
-Wire automated `issue8-manifest.tsv` symbol and header verification into CTest
-alongside the existing standalone header and async-signal-safety gates
-({need}`SWR_DOCS_0003`).
+Implement Ring 3 `ttyserv` (`/dev/tty`) driven by COM1 IRQ 4 pulses and
+`<termios.h>`, enabling blocking and pollable `stdin` `read()` with canonical
+line editing ({need}`SWR_IPC_0008`).
+```
+
+### TSK_0017 — Build Ring 3 POSIX.1-2024 XCU shell (sh)
+
+```{task} Build Ring 3 POSIX.1-2024 XCU shell (sh)
+:id: TSK_0017
+:status: open
+:traces: ADR_0003, SWR_LIBC_0006
+
+Implement a Ring 3 POSIX shell (`sh`) supporting pipelines (`pipe2`, `fork`,
+`execve`), file redirections (`open`, `dup2`), `$'...'` quoting, `set -o
+pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
+```
+
+### TSK_0018 — Build Ring 3 AF_UNIX local sockets server and accept4
+
+```{task} Build Ring 3 AF_UNIX local sockets server and accept4
+:id: TSK_0018
+:status: open
+:traces: ADR_0003, SWR_IPC_0009
+
+Implement Ring 3 `sockserv` (`/dev/sock`) and `<sys/socket.h>` (`socket`,
+`socketpair`, `bind`, `listen`, `accept`, `accept4` with `SOCK_CLOEXEC` and
+`SOCK_NONBLOCK`, `connect`, `send`, `recv`) ({need}`SWR_IPC_0009`).
 ```

@@ -78,6 +78,43 @@ and move multi-buffer payloads with `ReadMsgV` and `WriteMsgV`
 ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply Ring 3 VFS, bootfs, and tmpfs file operations
+:id: SWR_IPC_0007
+:status: draft
+:posix: XSH/open (BASE), XBD/sys/stat.h (BASE), XBD/dirent.h (BASE)
+:derives: SYS_IPC_0001
+:traces: BDR_0003, ADR_0003
+
+A Ring 3 VFS server over kernel IPC must supply `bootfs` and writable `tmpfs`
+files. It must support `open`, `openat`, `lseek`, `ftruncate`, `stat`, `fstat`,
+`readdir`, `mkdir`, `unlink`, `chdir`, and `getcwd` ({need}`SYS_IPC_0001`).
+```
+
+```{swr} Supply Ring 3 serial TTY server and termios line discipline
+:id: SWR_IPC_0008
+:status: draft
+:posix: XBD/termios.h (BASE), XSH/tcgetattr (BASE)
+:derives: SYS_IPC_0001
+:traces: BDR_0003, ADR_0003
+
+A Ring 3 TTY server using COM1 IRQ 4 pulses must supply `<termios.h>` line
+discipline and `stdin` `read()` with `poll`/`ppoll` readiness
+({need}`SYS_IPC_0001`).
+```
+
+```{swr} Supply Ring 3 AF_UNIX local sockets and POSIX.1-2024 accept4
+:id: SWR_IPC_0009
+:status: draft
+:posix: XBD/sys/socket.h (BASE), XSH/accept4 (BASE)
+:derives: SYS_IPC_0001
+:traces: BDR_0003, ADR_0003
+
+A Ring 3 socket server over kernel IPC must supply `<sys/socket.h>` `AF_UNIX`
+streams (`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4`,
+`connect`, `send`, `recv`) with atomic `SOCK_CLOEXEC` and `SOCK_NONBLOCK`
+({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:

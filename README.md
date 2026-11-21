@@ -131,10 +131,10 @@ What you can build today:
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): option-gated `SHM`/`ML`/`MLR` memory
-extensions, full Tier-2 symbol manifest gate, file systems, and sockets. See
-[docs/records/TASKS.md](docs/records/TASKS.md) and
-[docs/records/ROADMAP.md](docs/records/ROADMAP.md).
+Not available at this time (next tasks): 4-gate Issue 8 symbol diff, `mmap` heap
+reclamation, Ring 3 VFS/`tmpfs`, option-gated `SHM`/`ML`, TTY `stdin`, POSIX
+`sh`, and `AF_UNIX` sockets. See [docs/records/TASKS.md](docs/records/TASKS.md)
+and [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## POSIX.1-2024 compliance and bidirectional traceability
 
@@ -231,7 +231,8 @@ See [docs/records/TASKS.md](docs/records/TASKS.md) and
 task records. The build completed milestones 1 to 6, POSIX clocks/timers,
 pthreads/semaphores, and `fork`/`execve`/`pipe2`/`dup3`/`ppoll`. It also
 completed `<aio.h>`, cancellation points, `<stdio.h>` locking, and Issue 8 C17
-library functions. The next task adds option-gated `SHM`/`ML`/`MLR` extensions.
+library functions. Next tasks add the 4-gate POSIX harness, `mmap` heap
+reclamation, Ring 3 VFS, `SHM`/`ML`, TTY, POSIX `sh`, and `AF_UNIX` sockets.
 
 ## Documentation
 

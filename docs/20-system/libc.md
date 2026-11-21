@@ -78,6 +78,18 @@ and `secure_getenv`. It must also supply `<stdatomic.h>`, `<stdalign.h>`, and
 `<uchar.h>` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply Ring 3 POSIX.1-2024 XCU shell utility
+:id: SWR_LIBC_0006
+:status: draft
+:posix: XCU/2 (BASE), XCU/read (BASE), XCU/set (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, ADR_0003
+
+A Ring 3 POSIX shell (`sh`) must execute pipelines and redirections over
+`fork`/`execve`/`pipe2`/`dup2`. It must support Issue 8 `$'...'` quoting, `set
+-o pipefail`, and `read -d` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:
