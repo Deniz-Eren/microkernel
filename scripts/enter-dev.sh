@@ -9,7 +9,8 @@
 #
 
 # Opens an interactive shell in the development container. Builds the image
-# first if needed. Delegates to scripts/env.sh (see docs/DECISIONS.md ADR-4).
+# first if needed. Delegates to scripts/env.sh (see
+# docs/00-overview/wdr/WDR_0005.md).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 exec scripts/env.sh shell

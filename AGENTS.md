@@ -123,9 +123,12 @@ skip gates, never check only a hand-picked subset of files, and never pass
   `need::` tags (`ICD_`, `COMP_`, `VER_`)
 - [ ] `README.md` user-space support breakdown is updated whenever user-space
   headers, functions, syscalls, or Ring 3 services change
-- [ ] `docs/TASKS.md` updated (`[x] COMPLETE YYYY-MM-DD`)
+- [ ] `docs/records/TASKS.md` and `docs/records/HISTORY.md` updated (move
+  completed `TSK_` items verbatim to `HISTORY.md` with `:status: done`)
 - [ ] `CHANGELOG.md` has an entry in `## [Unreleased]`
-- [ ] `docs/DECISIONS.md` has an ADR for each new decision
+- [ ] `docs/30-architecture/adr/`, `docs/10-product/bdr/`, or
+  `docs/00-overview/wdr/` has a decision record (`ADR_`, `BDR_`, or `WDR_`) for
+  each new decision
 - [ ] `docs/THIRD-PARTY-NOTICES.md` attributes each new third-party component
 - [ ] All new and changed source files have the copyright header
 - [ ] No IMMUTABLE document was changed
@@ -154,7 +157,6 @@ Rules that apply only to this project. Each rule links to its skill or document.
   use the `asd-ste100` skill to write and check requirements, use `must` (not
   `shall`) as the modal verb (`authoring.modal_verb: must`), and keep project
   terms in `technical_terms.txt` and `allowed_phrases.txt`. See
-  [docs/CONVENTIONS.md](docs/CONVENTIONS.md) and
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0002`).
 - **Two-tier bidirectional code and POSIX traceability
   (`posix-issue8-os-dev`):** Keep Sphinx-Needs items at the contract, header, or
@@ -172,7 +174,8 @@ Rules that apply only to this project. Each rule links to its skill or document.
   accurate current capabilities.
 - **Milestone discipline:** Make one milestone at a time and commit after each
   complete milestone. A milestone is complete only when its test gives exit code
-  0. See [docs/TASKS.md](docs/TASKS.md).
+  0. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+  [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0006`).
 - **Freestanding C17:** The kernel and C library are freestanding C17 with
   warnings as errors. The kernel runs with no C runtime. See
   [docs/skills/cmake/SKILL.md](docs/skills/cmake/SKILL.md).

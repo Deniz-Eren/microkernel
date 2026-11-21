@@ -44,9 +44,10 @@ positives.
   NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)`, with a short
   comment that names the filling system call.
 - Do not disable a whole check in `.clang-tidy` because of one finding. Record a
-  check change as an ADR in [docs/DECISIONS.md](../../DECISIONS.md).
+  check change as a workflow decision in
+  [docs/00-overview/wdr/index.md](../../00-overview/wdr/index.md).
 
 ## Known deviations from the defaults
 
 - `bugprone-reserved-identifier` is off. The linker symbols `__bss_start`,
-  `__text_start`, and similar names are intentionally reserved (see ADR-6).
+  `__text_start`, and similar names are intentionally reserved (see `WDR_0007`).

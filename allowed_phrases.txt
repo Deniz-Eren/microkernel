@@ -1,5 +1,5 @@
 # allowed_phrases.txt — multi-word technical terms for the Microkernel project
-# documents (README.md, TASKS.md).
+# documents (README.md, docs/).
 # Format: one phrase on each line. Everything after '#' is a comment.
 
 page tables

@@ -43,7 +43,7 @@ NEED_DIRECTIVES = frozenset(
         "adr",
         "task",
         "roadmap",
-        "cnv",
+        "con",
     }
 )
 

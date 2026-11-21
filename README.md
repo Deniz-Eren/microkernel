@@ -115,8 +115,8 @@ What you can build today:
 
 Not available at this time (next tasks): POSIX `fork`/`execve`,
 `pipe2`/`dup3`/`ppoll`, file systems, and sockets. See
-[docs/TASKS.md](docs/TASKS.md) and
-[docs/records/TASKS.md](docs/records/TASKS.md).
+[docs/records/TASKS.md](docs/records/TASKS.md) and
+[docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## POSIX.1-2024 compliance and bidirectional traceability
 
@@ -203,25 +203,34 @@ pages are not code pages. The same policy applies to user programs.
 The kernel does not write through user pointers directly. It moves the data
 through the physical memory map. It examines the page permissions before each
 copy. The file naming, the document formatting, and the copyright header rules
-are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
+are in [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
 
 ## Status
 
-See [docs/TASKS.md](docs/TASKS.md) for the milestone plan. The build completed
-milestones 1 to 6, POSIX clocks and timers, and pthreads/semaphores. The next
-task adds `fork`, `execve`, and `pipe2`/`dup3`/`ppoll`.
+See [docs/records/TASKS.md](docs/records/TASKS.md) and
+[docs/records/HISTORY.md](docs/records/HISTORY.md) for the milestone plan and
+task records. The build completed milestones 1 to 6, POSIX clocks and timers,
+and pthreads/semaphores. The next task adds `fork`, `execve`, and
+`pipe2`/`dup3`/`ppoll`.
 
 ## Documentation
 
 - [AGENTS.md](AGENTS.md): governance for AI agents (commit mode, workflow,
   pre-commit checklist)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): overview of the system and the
-  directory structure
-- [docs/CONVENTIONS.md](docs/CONVENTIONS.md): file names, document formatting,
-  and copyright rules
-- [docs/DECISIONS.md](docs/DECISIONS.md): the decision records (ADRs)
 - [docs/index.md](docs/index.md): the Sphinx-Needs requirements, architecture,
   and POSIX.1-2024 traceability model
+- [docs/00-overview/context.md](docs/00-overview/context.md): system overview,
+  directory structure, and integration points
+- [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md): file names, source
+  text, ASD-STE100, traceability, and copyright rules
+- [docs/30-architecture/adr/index.md](docs/30-architecture/adr/index.md),
+  [docs/10-product/bdr/index.md](docs/10-product/bdr/index.md), and
+  [docs/00-overview/wdr/index.md](docs/00-overview/wdr/index.md): architecture,
+  business, and workflow decision records
+- [docs/records/TASKS.md](docs/records/TASKS.md),
+  [docs/records/ROADMAP.md](docs/records/ROADMAP.md), and
+  [docs/records/HISTORY.md](docs/records/HISTORY.md): active tasks, roadmap, and
+  completed milestones
 - Skills:
   - [cmake](docs/skills/cmake/SKILL.md) — build, test, and user programs
   - [clang-format](docs/skills/clang-format/SKILL.md) — code formatting
@@ -229,8 +238,8 @@ task adds `fork`, `execve`, and `pipe2`/`dup3`/`ppoll`.
   - [dev-environment](docs/skills/dev-environment/SKILL.md) — the container
     environment
   - [git](docs/skills/git/SKILL.md) — commits and branches
-  - [state-management](docs/skills/state-management/SKILL.md) — TASKS,
-    DECISIONS, notices
+  - [state-management](docs/skills/state-management/SKILL.md) — tasks, history,
+    decisions, notices
   - [keepachangelog](docs/skills/keepachangelog/SKILL.md) — the changelog format
   - [create-skill](docs/skills/create-skill/SKILL.md) — new agent skills
 

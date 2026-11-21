@@ -57,7 +57,7 @@ matched before the timeout:
 - Give each milestone expectation with one `--expect` option.
 - A kernel panic or a missing pattern gives exit code 1.
 - A milestone is complete only when its test gives exit code 0 (see
-  [docs/TASKS.md](../../TASKS.md)).
+  [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md), `CNV_0006`).
 
 ## Add a user program
 
@@ -67,7 +67,7 @@ matched before the timeout:
    `microkernel_add_user_executable` function adds the program to `boot.tar`
    automatically.
 3. Add the copyright header to each new file (see
-   [docs/CONVENTIONS.md](../../CONVENTIONS.md)).
+   [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md), `CNV_0003`).
 4. Run the build agent.
 
 ## Static analysis

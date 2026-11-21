@@ -38,5 +38,5 @@ One file by hand:
   (`*.c`, `*.h`). It does not examine `build/`, `sysroot/`, or `docs/`.
 - Run the check before each commit that touches C code (see the
   [format-validator agent](../../agents/format-validator.md)).
-- Do not change `.clang-format` parameters without an ADR in
-  [docs/DECISIONS.md](../../DECISIONS.md).
+- Do not change `.clang-format` parameters without a decision record in
+  [docs/00-overview/wdr/index.md](../../00-overview/wdr/index.md).

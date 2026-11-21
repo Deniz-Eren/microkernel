@@ -19,6 +19,17 @@ Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Consolidated all legacy `agent-scaffolding` documents (`docs/TASKS.md`,
+  `docs/DECISIONS.md`, `docs/CONVENTIONS.md`, `docs/VISION.md`, and
+  `docs/ARCHITECTURE.md`) into the Sphinx-Needs traceability model (`WDR_0003`–
+  `WDR_0009`, `ADR_0004`–`ADR_0010`, `CNV_0005`–`CNV_0006`, `RDM_0004`–
+  `RDM_0007`, `docs/00-overview/context.md`, and `docs/10-product/vision.md`),
+  redirected `AGENTS.md`, `README.md`, and `docs/skills/` to the traceability
+  records, retained `docs/THIRD-PARTY-NOTICES.md`, and removed the five legacy
+  files (`TSK_0008`, `WDR_0009`).
+
 ### Added
 
 - POSIX.1-2024 Base `<pthread.h>` and `<semaphore.h>` plus hardware x86-64

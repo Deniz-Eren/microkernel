@@ -1,5 +1,5 @@
 # technical_terms.txt — technical nouns (TN) and technical verbs (TV) for
-# the Microkernel project documents (README.md, TASKS.md).
+# the Microkernel project documents (README.md, docs/).
 # Format: one term on each line. Everything after '#' is a comment.
 
 # --- operating system concepts (TN category 19 — computer science) --------

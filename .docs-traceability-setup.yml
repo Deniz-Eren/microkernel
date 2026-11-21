@@ -37,13 +37,8 @@ model:
     - "*_test.*"
     - "check_*"
   code_tag_exclude:
-    # Pre-existing governance documents and agent skills. They are not part of
-    # the traceability model; the Sphinx build and the tag scan skip them.
-    - ARCHITECTURE.md
-    - CONVENTIONS.md
-    - DECISIONS.md
-    - TASKS.md
-    - VISION.md
+    # Legal attribution notice and agent runtime definitions/skills. They are
+    # not Sphinx-Needs pages; the Sphinx build and the tag scan skip them.
     - THIRD-PARTY-NOTICES.md
     - agents
     - skills

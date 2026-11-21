@@ -55,6 +55,6 @@ exclude_paths: [sysroot, build]   # paths that verify.sh does not examine (gener
 pre_existing_documents:
   - label: Task plan
     source: TASKS.md
-    destination: docs/TASKS.md
+    destination: docs/records/TASKS.md
     policy: editable
-    notes: "Milestone plan moved from the repository root into docs/."
+    notes: "Milestone and task records migrated to docs/records/TASKS.md and docs/records/HISTORY.md (WDR_0009)."

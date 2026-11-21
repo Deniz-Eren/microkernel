@@ -42,9 +42,10 @@ description: >-
 5. **Validate:** the name is the same as the directory name, the frontmatter is
    correct YAML, and the description obeys the length limit. If `skills-ref` is
    installed, run `skills-ref validate docs/skills/<name>`.
-6. **Add the skill to the project:** add the skill to `docs/ARCHITECTURE.md` and
-   to the skill index in `README.md`. Add an entry to `CHANGELOG.md` in `##
-   [Unreleased]`. Then commit (see the [git skill](../git/SKILL.md)).
+6. **Add the skill to the project:** add the skill to
+   `docs/00-overview/context.md` and to the skill index in `README.md`. Add an
+   entry to `CHANGELOG.md` in `## [Unreleased]`. Then commit (see the [git
+   skill](../git/SKILL.md)).
 
 ## Reference
 
