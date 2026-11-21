@@ -160,18 +160,24 @@ of the system. Servers (`pipeserv`, `vfsserv`, `ttyserv`, `sockserv`, `ipcserv`,
 `rtcdrv`) register a name with `sysproc`, and clients resolve endpoints by name.
 
 ```mermaid
-flowchart TB
+flowchart TD
     subgraph R3_APP["Ring 3: User Applications"]
         APP["User Programs & POSIX Utilities (libc.a + crt0.o)"]
     end
 
-    subgraph R3_SRV["Ring 3: Isolated System Servers & Device Drivers"]
+    subgraph R3_SRV["Ring 3: Isolated System Servers & Drivers"]
+        direction TB
         SYSPROC["sysproc (/dev/* name registry)"]
         VFS["vfsserv (/dev/vfs: bootfs + tmpfs)"]
         PIPE["pipeserv (/dev/pipe: pipes + ppoll)"]
         SOCK["sockserv (/dev/sock: AF_UNIX + accept4)"]
         TTY["ttyserv (/dev/tty: COM1 IRQ 4 + termios)"]
         RTC["rtcdrv (/dev/rtc: CMOS RTC IRQ 8)"]
+        SYSPROC ~~~ VFS
+        SYSPROC ~~~ PIPE
+        VFS ~~~ SOCK
+        PIPE ~~~ TTY
+        SOCK ~~~ RTC
     end
 
     subgraph R0["Ring 0: Minimal x86-64 Microkernel"]
@@ -179,12 +185,7 @@ flowchart TB
     end
 
     APP -->|"syscall / SendMsg"| K
-    K <-->|"IPC Channels & Replies"| SYSPROC
-    K <-->|"IPC Channels & Replies"| VFS
-    K <-->|"IPC Channels & Replies"| PIPE
-    K <-->|"IPC Channels & Replies"| SOCK
-    K <-->|"IPC & IRQ 4 Pulses"| TTY
-    K <-->|"IPC & IRQ 8 Pulses"| RTC
+    K <-->|"IPC Channels & Replies"| R3_SRV
 ```
 
 ## User-space functionality (current support)

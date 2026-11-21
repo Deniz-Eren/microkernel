@@ -20,7 +20,7 @@ The boot path transitions from GRUB Multiboot2 32-bit entry through 64-bit
 higher-half paging into prioritized Ring 3 server startup.
 
 ```mermaid
-flowchart LR
+flowchart TD
     GRUB["GRUB Multiboot2 (32-bit Protected Mode)"]
     BOOTS["boot.S (4-Level Page Tables + Long Mode)"]
     KMAIN["kmain (GDT, IDT, COM1, PMM, VMM, HHDM, KHeap)"]

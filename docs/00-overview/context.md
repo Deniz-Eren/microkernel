@@ -22,60 +22,65 @@ The diagram below shows how user applications, Ring 3 system servers, privileged
 Ring 3 device drivers, the Ring 0 kernel, and x86-64 hardware connect.
 
 ```mermaid
-flowchart TB
+flowchart TD
     subgraph RING3_APP["Ring 3: User Applications and Test Binaries"]
+        direction TB
         APPS["User Binaries (linked with crt0.o + libc.a)"]
         LIBC["POSIX.1-2024 libc (stdio, pthreads, VFS, sockets, termios)"]
         APPS --> LIBC
     end
 
     subgraph RING3_SRV["Ring 3: Isolated System Servers and Drivers"]
-        SYSPROC["sysproc (PID 1, Chan 1: /dev/* name registry)"]
-        VFS["vfsserv (/dev/vfs: bootfs + tmpfs)"]
-        PIPE["pipeserv (/dev/pipe: pipes + ppoll)"]
-        SOCK["sockserv (/dev/sock: AF_UNIX + accept4)"]
-        TTY["ttyserv (/dev/tty: CAP_SYS_INTR, COM1 IRQ 4)"]
-        RTC["rtcdrv (/dev/rtc: CAP_SYS_INTR, IOPL=3, IRQ 8)"]
-        ECHO["ipcserv (/dev/echo: reference service)"]
+        direction TB
+        subgraph CORE_SRV["Core POSIX & IPC Servers"]
+            direction TB
+            SYSPROC["sysproc (PID 1, Chan 1: /dev/* name registry)"]
+            VFS["vfsserv (/dev/vfs: bootfs + tmpfs)"]
+            PIPE["pipeserv (/dev/pipe: pipes + ppoll)"]
+            SOCK["sockserv (/dev/sock: AF_UNIX + accept4)"]
+            ECHO["ipcserv (/dev/echo: reference service)"]
+            SYSPROC ~~~ VFS
+            VFS ~~~ PIPE
+            PIPE ~~~ SOCK
+            SOCK ~~~ ECHO
+        end
+        subgraph DRV_SRV["CAP_SYS_INTR Hardware Drivers (IOPL=3)"]
+            direction TB
+            TTY["ttyserv (/dev/tty: COM1 IRQ 4 + termios)"]
+            RTC["rtcdrv (/dev/rtc: CMOS RTC IRQ 8)"]
+            TTY ~~~ RTC
+        end
     end
 
     subgraph RING0["Ring 0: Minimal Microkernel (0xFFFFFFFF80000000)"]
+        direction TB
         SYSCALL["syscall / sysret Dispatch & FD Table"]
         IPC["Synchronous IPC Channels, MsgV & Pulses"]
         SCHED["256-Priority Scheduler, Threads & Futexes"]
         MM["PMM / VMM (W^X, COW, SHM, HHDM, SMAP)"]
         SIGTIME["Signals & Monotonic / Realtime Clocks"]
         IRQ["IOAPIC IRQ-to-Pulse Router & CAP_SYS_INTR"]
+        SYSCALL --> IPC
+        SYSCALL --> SCHED
+        IPC ~~~ MM
+        SCHED ~~~ SIGTIME
+        MM ~~~ IRQ
     end
 
     subgraph HW["Hardware / QEMU x86-64 q35 Platform"]
-        CPU["x86-64 CPU (MMU, LAPIC Timer)"]
+        direction TB
+        CPU["x86-64 CPU (MMU, LAPIC Timer) & GRUB Multiboot2"]
         IOAPIC["IOAPIC Interrupt Controller"]
         DEV["COM1 16550A UART (IRQ 4) & CMOS RTC (IRQ 8)"]
-        ISO["GRUB Multiboot2 + boot.tar"]
+        DEV -->|"Hardware IRQs"| IOAPIC
     end
 
     LIBC -->|"syscall / SendMsg"| SYSCALL
-    SYSCALL --> IPC
-    SYSCALL --> SCHED
-    SYSCALL --> MM
-    SYSCALL --> SIGTIME
-
-    IPC <-->|"Channels & Replies"| SYSPROC
-    IPC <-->|"Channels & Replies"| VFS
-    IPC <-->|"Channels & Replies"| PIPE
-    IPC <-->|"Channels & Replies"| SOCK
-    IPC <-->|"Channels & Replies"| TTY
-    IPC <-->|"Channels & Replies"| RTC
-    IPC <-->|"Channels & Replies"| ECHO
-
-    DEV -->|"Hardware IRQs"| IOAPIC
+    IPC <-->|"Channels & Replies"| CORE_SRV
+    IPC <-->|"Channels & Replies"| DRV_SRV
     IOAPIC --> IRQ
-    IRQ -->|"PULSE_CODE_IRQ"| TTY
-    IRQ -->|"PULSE_CODE_IRQ"| RTC
-    TTY -.->|"Port I/O (IOPL=3)"| DEV
-    RTC -.->|"Port I/O (IOPL=3)"| DEV
-    ISO -->|"Multiboot2 Boot"| MM
+    IRQ -->|"PULSE_CODE_IRQ"| DRV_SRV
+    DRV_SRV -.->|"Port I/O (IOPL=3)"| DEV
     CPU --> SCHED
 ```
 

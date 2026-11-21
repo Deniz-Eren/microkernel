@@ -81,25 +81,28 @@ Ring 3 server and coordinates multi-server `ppoll()`. The kernel sends
 `PULSE_CODE_FD_CLOSE` automatically on `O_CLOEXEC` `execve` or process exit.
 
 ```mermaid
-flowchart LR
+flowchart TD
     APP["User Program (open, read, write, accept4, ppoll, close)"]
     LIBC["libc Descriptor Router (fd.c, vfs.c, tty.c, socket.c)"]
     KFD["Kernel SYS_FD_OP Table (FD_KIND_*)"]
 
-    PIPE["pipeserv (/dev/pipe) - FD_KIND_SERVER"]
-    VFS["vfsserv (/dev/vfs) - FD_KIND_VFS"]
-    TTY["ttyserv (/dev/tty) - FD_KIND_TTY"]
-    SOCK["sockserv (/dev/sock) - FD_KIND_SOCK"]
-    SHM["Kernel SHM / Console - FD_KIND_SHM / CONSOLE"]
+    subgraph SRVS["Ring 3 Descriptor Servers & Kernel Backends"]
+        direction TB
+        PIPE["pipeserv (/dev/pipe) - FD_KIND_SERVER"]
+        VFS["vfsserv (/dev/vfs) - FD_KIND_VFS"]
+        TTY["ttyserv (/dev/tty) - FD_KIND_TTY"]
+        SOCK["sockserv (/dev/sock) - FD_KIND_SOCK"]
+        SHM["Kernel SHM / Console - FD_KIND_SHM / CONSOLE"]
+    end
 
     APP --> LIBC
-    LIBC -->|"Lookup/Alloc FD"| KFD
+    LIBC -->|"Lookup / Alloc FD"| KFD
     LIBC -->|"SendMsg RPC"| PIPE
     LIBC -->|"SendMsg RPC"| VFS
     LIBC -->|"SendMsg RPC"| TTY
     LIBC -->|"SendMsg RPC"| SOCK
     LIBC -->|"Direct Syscall"| SHM
-    KFD -.->|"PULSE_CODE_FD_CLOSE on exit / O_CLOEXEC"| PIPE
-    KFD -.->|"PULSE_CODE_FD_CLOSE on exit / O_CLOEXEC"| VFS
-    KFD -.->|"PULSE_CODE_FD_CLOSE on exit / O_CLOEXEC"| SOCK
+    KFD -.->|"PULSE_CODE_FD_CLOSE"| PIPE
+    KFD -.->|"PULSE_CODE_FD_CLOSE"| VFS
+    KFD -.->|"PULSE_CODE_FD_CLOSE"| SOCK
 ```

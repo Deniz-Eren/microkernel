@@ -20,7 +20,7 @@ without per-function boilerplate (`WDR_0002`). Sphinx `-W` and CTest enforce
 both traceability integrity and POSIX.1-2024 conformance on every commit.
 
 ```mermaid
-flowchart LR
+flowchart TD
     BDR["BDR_ (Business Decisions)"]
     DEC["ADR_ / WDR_ (Architecture & Workflow Decisions)"]
     SYS["SYS_ (System Requirements)"]

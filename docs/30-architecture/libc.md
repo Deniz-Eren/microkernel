@@ -22,27 +22,30 @@ between POSIX semantics, raw negative-`RAX` kernel syscalls, and Ring 3 servers.
 ```mermaid
 flowchart TD
     subgraph L1["Layer 1: Standalone POSIX.1-2024 Headers"]
+        direction TB
         HDR["unistd.h, stdio.h, pthread.h, sys/socket.h, termios.h, limits.h"]
         OPT["Option Gates (_POSIX_SHARED_MEMORY_OBJECTS, _POSIX_MEMLOCK)"]
-        HDR --- OPT
+        HDR --> OPT
     end
 
     subgraph L2["Layer 2: Freestanding Ring 3 libc.a + crt0.o"]
+        direction TB
         TLS["FS.base TLS: thread-local errno & pthread state"]
         STDIO["Buffered FILE streams, recursive flockfile, mmap heap"]
         CANCEL["Deferred cancellation & async-signal-safe wrappers"]
         ROUTER["Descriptor router (fd.c, vfs.c, tty.c, socket.c, aio.c)"]
+        TLS --> CANCEL
+        STDIO --> ROUTER
     end
 
     subgraph L3["Layer 3: Execution Backends"]
+        direction TB
         RAW["Ring 0 Raw Syscalls (negative errno in RAX)"]
         SRVS["Ring 3 Servers (sysproc, vfsserv, pipeserv, ttyserv, sockserv)"]
     end
 
-    L1 --> L2
-    TLS --> RAW
-    STDIO --> RAW
-    STDIO --> ROUTER
+    OPT --> TLS
+    OPT --> STDIO
     CANCEL --> RAW
     ROUTER -->|"SendMsg / ReceiveMsg / ReplyMsg"| SRVS
     SRVS -->|"Kernel Channels & Pulses"| RAW
