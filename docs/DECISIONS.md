@@ -22,6 +22,47 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-16 (2026-11-21): IOAPIC IRQ pulses, CAP_SYS_INTR IOPL, and MsgV IPC
+
+### Context
+
+Milestone 6 (`TSK_0004`) moves hardware device drivers into isolated Ring 3
+servers by routing hardware interrupts into IPC pulses (`AttachIntrEvent` /
+`IntrUnmask`), granting Ring 3 port I/O only to authorized processes
+(`IOPLSet`), and adding scatter-gather `ReadMsgV`/`WriteMsgV` IPC. Delivering
+interrupts from IDT context cannot allocate kernel heap memory, and QEMU `q35`
+must run a real hardware driver test with zero extra command-line flags.
+
+### Decision
+
+- Map the IOAPIC at `0xFEC00000` inside `kernel/core/intr.c`, mask all 24 lines
+  at boot, and keep one static pre-allocated `chan_msg_t` pulse node per IRQ
+  (`is_static = 1`) so `intr_dispatch_irq()` masks the line, sends LAPIC EOI,
+  and delivers an IPC pulse without calling `kmalloc()` or `kfree()`.
+- Gate `AttachIntrEvent`, `IntrUnmask`, and `IOPLSet(3)` with `CAP_SYS_INTR` on
+  `pcb_t.caps` (granted only to `sysproc` and `rtcdrv` in `proc_spawn_init()`),
+  store `tcb_t.iopl`, and preserve IOPL bits across signal delivery.
+- Implement `ipc_msg_readv` and `ipc_msg_writev` (up to `IPC_IOV_MAX = 16`
+  segments) with `reply_written` tracking so servers can populate multi-buffer
+  replies via `WriteMsgV` and complete with `ReplyMsg(msgid, NULL, 0)`.
+- Ship a Ring 3 MC146818 CMOS RTC driver (`servers/rtcdrv`, `/dev/rtc`) driving
+  real ports `0x70`/`0x71` and IOAPIC IRQ 8, verified by unprivileged
+  `tests/drvtest`.
+
+### Alternatives
+
+- Allocate IRQ pulse nodes with `kmalloc()` inside the interrupt handler (unsafe
+  in IRQ context and vulnerable to heap re-entrancy)
+- Use COM2 (`0x2F8`) loopback (requires extra `-serial` flags in QEMU `q35`)
+
+### Consequences
+
+- Hardware IRQs, Ring 3 port I/O privilege checks (`-EPERM`), and scatter-gather
+  `ReadMsgV`/`WriteMsgV` are all verified end-to-end in headless QEMU alongside
+  Milestones 1–5.
+- `SWR_IPC_0006` is active and traced down to `kernel/core/intr.c`,
+  `servers/rtcdrv/main.c`, and `tests/test_runner.py`.
+
 ## ADR-15 (2026-11-21): Dynamic PMM refcounts, VMM_COW, and Milestone 5 ABI
 
 ### Context

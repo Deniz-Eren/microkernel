@@ -12,6 +12,7 @@
 #include <kernel/printk.h>
 #include "../arch/x86_64/serial.h"
 #include <kernel/sched.h>
+#include <kernel/intr.h>
 #include <kernel/ipc.h>
 #include <kernel/signal.h>
 #include <kernel/string.h>
@@ -136,9 +137,21 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_MSG_REPLYV:
         ret = ipc_msg_reply((int)tf->rdi, tf->rsi, tf->rdx);
         break;
+    case SYS_MSG_READV:
+        ret = ipc_msg_readv((int)tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
+    case SYS_MSG_WRITEV:
+        ret = ipc_msg_writev((int)tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
     case SYS_MSG_SEND_PULSE:
         ret = ipc_msg_send_pulse((int)tf->rdi, (uint32_t)tf->rsi,
                                  (uint32_t)tf->rdx);
+        break;
+    case SYS_INTR_ATTACH_EVENT:
+        ret = sys_intr_attach_event(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        break;
+    case SYS_INTR_UNMASK:
+        ret = sys_intr_unmask(tf->rdi);
         break;
     case SYS_PROC_CREATE:
         ret = sys_proc_create(tf->rdi, tf->rsi, tf->rdx);
@@ -172,6 +185,9 @@ void syscall_handler(trapframe_t *tf) {
         }
         break;
     }
+    case SYS_IOPL_SET:
+        ret = sys_iopl_set(tf, tf->rdi);
+        break;
     case SYS_THREAD_CREATE:
         ret = sys_thread_create(tf->rdi);
         break;

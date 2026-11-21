@@ -21,6 +21,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Milestone 6 (`TSK_0004`) hardware interrupt, port I/O, and scatter-gather IPC
+  syscalls: `SYS_INTR_ATTACH_EVENT` (`11`), `SYS_INTR_UNMASK` (`12`),
+  `SYS_IOPL_SET` (`25`, `CAP_SYS_INTR`-guarded), `SYS_MSG_READV` (`8`), and
+  `SYS_MSG_WRITEV` (`9`), backed by IOAPIC routing (`kernel/core/intr.c`) and
+  pre-allocated IRQ IPC pulses.
+- Public `<sys/intr.h>` header (`AttachIntrEvent`, `IntrUnmask`, `IOPLSet`,
+  `port_in*`/`port_out*`), `ReadMsgV`/`WriteMsgV`/`ipc_iov_t` in `<sys/ipc.h>`,
+  Ring 3 MC146818 CMOS RTC driver (`servers/rtcdrv`, `/dev/rtc`), and
+  unprivileged client test (`tests/drvtest`).
 - Milestone 5 (`TSK_0002`) process and memory syscalls: `SYS_PROC_CREATE`,
   `SYS_PROC_WAIT` (`28`), `SYS_VM_MAP`, `SYS_VM_UNMAP`, `SYS_VM_CLONE_COW`, and
   `SYS_VM_PROTECT` (`29`), backed by per-frame PMM reference counts, Ring 3

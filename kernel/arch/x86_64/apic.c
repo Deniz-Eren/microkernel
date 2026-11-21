@@ -11,6 +11,7 @@
 #include "apic.h"
 #include "io.h"
 #include <stddef.h>
+#include <kernel/intr.h>
 #include <kernel/printk.h>
 #include <kernel/vmm.h>
 
@@ -115,6 +116,8 @@ void apic_init(void) {
     lapic_write(LAPIC_TMR_DIV, 0x3);
     lapic_write(LAPIC_TMR_ICR, g_timer_period);
 
+    ioapic_init();
+
     __asm__ volatile("sti");
     printk("[apic] LAPIC @ %llx, timer period %u ticks/ms\n",
            (unsigned long long)base, g_timer_period);
@@ -133,6 +136,9 @@ void apic_irq_dispatch(uint64_t vec) {
         if (!(lapic_read(LAPIC_SPUR) & (1 << 12))) {
             apic_eoi();
         }
+        return;
+    }
+    if (intr_dispatch_irq(vec)) {
         return;
     }
     if (vec >= 32) {

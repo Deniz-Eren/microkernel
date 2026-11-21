@@ -219,7 +219,7 @@ void signal_deliver_check(trapframe_t *tf) {
         tf->rip = handler;
         tf->rdi = sig; /* handler(int sig) */
         tf->rax = 0;
-        tf->rflags = 0x202; /* clean flags, IF=1 */
+        tf->rflags = 0x202ULL | (((uint64_t)t->iopl & 3ULL) << 12);
         return;
     }
 }

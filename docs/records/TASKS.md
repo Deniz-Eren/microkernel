@@ -21,18 +21,6 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0004 — Implement Milestone 6 interrupts, port I/O, and Ring 3 driver
-
-```{task} Implement Milestone 6 interrupts, port I/O, and Ring 3 driver
-:id: TSK_0004
-:status: open
-:traces: SYS_IPC_0001, SWR_IPC_0004
-
-Implement `AttachIntrEvent`, `IntrUnmask`, `IOPLSet`, and multi-buffer
-`ReadMsgV`/`WriteMsgV`, and verify a Ring 3 QEMU device driver in headless QEMU
-({need}`SYS_IPC_0001`, {need}`SWR_IPC_0004`).
-```
-
 ### TSK_0005 — Implement POSIX.1-2024 monotonic clocks and timers
 
 ```{task} Implement POSIX.1-2024 monotonic clocks and timers

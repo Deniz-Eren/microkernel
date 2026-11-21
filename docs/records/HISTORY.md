@@ -20,6 +20,30 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### RDM_0002 — Milestone 6: Interrupts and user-space drivers
+
+```{roadmap} Milestone 6: Interrupts and user-space drivers
+:id: RDM_0002
+:status: done
+:traces: SYS_IPC_0001, SWR_IPC_0004, SWR_IPC_0005
+
+Deliver hardware interrupt events as IPC messages (`AttachIntrEvent`), support
+`IOPLSet` and multi-buffer `ReadMsgV`/`WriteMsgV`, and run a Ring 3 QEMU device
+driver ({need}`SYS_IPC_0001`).
+```
+
+### TSK_0004 — Implement Milestone 6 interrupts, port I/O, and Ring 3 driver
+
+```{task} Implement Milestone 6 interrupts, port I/O, and Ring 3 driver
+:id: TSK_0004
+:status: done
+:traces: SYS_IPC_0001, SWR_IPC_0004
+
+Implement `AttachIntrEvent`, `IntrUnmask`, `IOPLSet`, and multi-buffer
+`ReadMsgV`/`WriteMsgV`, and verify a Ring 3 QEMU device driver in headless QEMU
+({need}`SYS_IPC_0001`, {need}`SWR_IPC_0004`).
+```
+
 ### RDM_0001 — Milestone 5: Processes and memory system calls
 
 ```{roadmap} Milestone 5: Processes and memory system calls

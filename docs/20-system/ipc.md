@@ -67,6 +67,17 @@ functions `pipe2` ([pipe2][fn-pipe2]), `dup3`, and `ppoll` ([ppoll][fn-ppoll],
 ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Deliver IRQ pulses, grant Ring 3 IOPL, and run scatter-gather IPC
+:id: SWR_IPC_0006
+:status: active
+:derives: SYS_IPC_0001
+
+The kernel must route hardware IRQs through the IOAPIC into IPC pulses with
+`AttachIntrEvent` and `IntrUnmask`. It must guard `IOPLSet` with `CAP_SYS_INTR`
+and move multi-buffer payloads with `ReadMsgV` and `WriteMsgV`
+({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:

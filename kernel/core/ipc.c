@@ -151,8 +151,10 @@ static long complete_receive(tcb_t *srv, chan_msg_t *m) {
             srv->effective_priority = client->effective_priority;
         }
         inflight_push(m);
+    } else if (m->is_static) {
+        m->in_use = 0; /* pre-allocated IRQ pulse node: recycle without kfree */
     } else {
-        kfree(m); /* pulse: no reply, nothing to track */
+        kfree(m); /* heap pulse: no reply, nothing to track */
     }
 
     srv->ipc_result = msgid;
@@ -277,7 +279,10 @@ long ipc_msg_reply(int msgid, uint64_t rmsg, uint64_t rbytes) {
     srv->effective_priority = srv->base_priority; /* drop inheritance */
 
     if (client) {
-        client->ipc_result = err < 0 ? err : (long)rbytes;
+        long final_len = (rbytes == 0 && m->reply_written > 0)
+                             ? (long)m->reply_written
+                             : (long)rbytes;
+        client->ipc_result = err < 0 ? err : final_len;
         client->blocked_on_chan = NULL;
         /* sched_unblock marks the client READY and preempts us if it
          * outranks us. It must not be pre-marked READY here. */
@@ -287,6 +292,125 @@ long ipc_msg_reply(int msgid, uint64_t rmsg, uint64_t rbytes) {
     inflight_remove(m);
     kfree(m);
     return 0;
+}
+
+long ipc_msg_readv(int msgid, uint64_t offset, uint64_t iov_va,
+                   uint64_t iovcnt) {
+    tcb_t *srv = sched_current();
+    if (msgid <= 0 || iovcnt > IPC_IOV_MAX) {
+        return -EINVAL;
+    }
+    chan_msg_t *m = inflight_find((uint32_t)msgid);
+    if (!m) {
+        return -ESRCH;
+    }
+    if (m->receiver != srv) {
+        return -EPERM;
+    }
+    if (iovcnt == 0 || offset >= m->len) {
+        return 0;
+    }
+    ipc_iov_t iov[IPC_IOV_MAX];
+    if (copy_from_user(iov, iov_va, iovcnt * sizeof(ipc_iov_t)) < 0) {
+        return -EFAULT;
+    }
+    uint64_t cur = offset;
+    uint64_t total = 0;
+    for (uint64_t i = 0; i < iovcnt && cur < m->len; i++) {
+        size_t chunk = iov[i].len;
+        if (chunk == 0) {
+            continue;
+        }
+        if (chunk > (size_t)(m->len - cur)) {
+            chunk = (size_t)(m->len - cur);
+        }
+        if (copy_to_user((uint64_t)(uintptr_t)iov[i].base, m->data + cur,
+                         chunk) < 0) {
+            return -EFAULT;
+        }
+        cur += chunk;
+        total += chunk;
+    }
+    return (long)total;
+}
+
+long ipc_msg_writev(int msgid, uint64_t offset, uint64_t iov_va,
+                    uint64_t iovcnt) {
+    tcb_t *srv = sched_current();
+    if (msgid <= 0 || iovcnt > IPC_IOV_MAX) {
+        return -EINVAL;
+    }
+    chan_msg_t *m = inflight_find((uint32_t)msgid);
+    if (!m) {
+        return -ESRCH;
+    }
+    if (m->receiver != srv) {
+        return -EPERM;
+    }
+    if (iovcnt == 0 || offset >= m->reply_max) {
+        return 0;
+    }
+    ipc_iov_t iov[IPC_IOV_MAX];
+    if (copy_from_user(iov, iov_va, iovcnt * sizeof(ipc_iov_t)) < 0) {
+        return -EFAULT;
+    }
+    uint8_t stage[256];
+    uint64_t cur = offset;
+    uint64_t total = 0;
+    for (uint64_t i = 0; i < iovcnt && cur < m->reply_max; i++) {
+        uint64_t seg_off = 0;
+        uint64_t seg_len = iov[i].len;
+        if (seg_len > m->reply_max - cur) {
+            seg_len = m->reply_max - cur;
+        }
+        while (seg_off < seg_len) {
+            size_t n = (size_t)(seg_len - seg_off);
+            if (n > sizeof(stage)) {
+                n = sizeof(stage);
+            }
+            if (copy_from_user(
+                    stage, (uint64_t)(uintptr_t)iov[i].base + seg_off, n) < 0) {
+                return -EFAULT;
+            }
+            if (copy_to_user_pml4(m->sender_pml4, m->reply_dst + cur, stage,
+                                  n) < 0) {
+                return -EFAULT;
+            }
+            seg_off += n;
+            cur += n;
+            total += n;
+        }
+    }
+    if (cur > m->reply_written) {
+        m->reply_written = cur;
+    }
+    return (long)total;
+}
+
+void ipc_deliver_irq_pulse(int chanid, chan_msg_t *node, uint32_t code,
+                           uint32_t value) {
+    channel_t *ch = channel_get(chanid);
+    if (!ch || !node || node->in_use) {
+        return;
+    }
+    node->next = NULL;
+    node->sender = NULL;
+    node->receiver = NULL;
+    node->msgid = 0;
+    node->is_static = 1;
+    node->in_use = 1;
+    node->len = sizeof(ipc_pulse_t);
+    ipc_pulse_t p = {.code = code, .value = value};
+    memcpy(node->data, &p, sizeof(p));
+
+    channel_pulse_enqueue(ch, node);
+
+    tcb_t *w = channel_recv_dequeue(ch);
+    if (w) {
+        w->blocked_on_chan = NULL;
+        w->ipc_result = 1;
+        sched_unblock(w);
+    }
 }
 
 long ipc_msg_send_pulse(int connid, uint32_t code, uint32_t value) {

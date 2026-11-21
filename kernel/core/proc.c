@@ -21,6 +21,7 @@
 #include <kernel/pmm.h>
 #include <kernel/uaccess.h>
 #include <sys/errno.h>
+#include <sys/intr.h>
 #include <sys/proc.h>
 #include "channel.h"
 
@@ -360,6 +361,7 @@ void proc_spawn_init(void) {
     if (!p1) {
         panic("proc: failed to spawn sysproc");
     }
+    p1->caps |= CAP_SYS_INTR;
     /* Demo processes for the IPC milestone: an echo server that registers
      * itself with sysproc, and a client that resolves and exercises it. */
     spawn_image(tar_phys, tar_size, "ipcserv", 100, 0);
@@ -369,6 +371,12 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "sigtest", 100, 0);
     /* Milestone 5 demo: ProcCreate, VMMap/VMUnmap, VMCloneCow, and waitpid. */
     spawn_image(tar_phys, tar_size, "proctest", 100, 0);
+    /* Milestone 6 demo: privileged Ring 3 RTC driver + unprivileged client. */
+    pcb_t *drv = spawn_image(tar_phys, tar_size, "rtcdrv", 100, 0);
+    if (drv) {
+        drv->caps |= CAP_SYS_INTR;
+    }
+    spawn_image(tar_phys, tar_size, "drvtest", 100, 0);
 
     sched_activate();
 }

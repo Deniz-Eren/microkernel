@@ -21,18 +21,6 @@ Order roadmap items by priority and link them to affected specifications through
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### RDM_0002 — Milestone 6: Interrupts and user-space drivers
-
-```{roadmap} Milestone 6: Interrupts and user-space drivers
-:id: RDM_0002
-:status: open
-:traces: SYS_IPC_0001, SWR_IPC_0004, SWR_IPC_0005
-
-Deliver hardware interrupt events as IPC messages (`AttachIntrEvent`), support
-`IOPLSet` and multi-buffer `ReadMsgV`/`WriteMsgV`, and run a Ring 3 QEMU device
-driver ({need}`SYS_IPC_0001`).
-```
-
 ### RDM_0003 — POSIX.1-2024 (Issue 8) Base conformance
 
 ```{roadmap} POSIX.1-2024 (Issue 8) Base conformance

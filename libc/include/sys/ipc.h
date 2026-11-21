@@ -55,6 +55,13 @@ typedef struct {
     uint32_t value;
 } ipc_pulse_t;
 
+typedef struct {
+    void *base;
+    size_t len;
+} ipc_iov_t;
+
+#define IPC_IOV_MAX 16
+
 static inline long CreateChannel(void) {
     return __sys0(SYS_CHANNEL_CREATE);
 }
@@ -89,6 +96,20 @@ static inline long ReceiveMsg(int chanid, void *buf, size_t bytes,
 /* Reply to msgid with rbytes from rmsg. Returns 0 or negative errno. */
 static inline long ReplyMsg(int msgid, const void *rmsg, size_t rbytes) {
     return __sys3(SYS_MSG_REPLYV, msgid, (long)rmsg, (long)rbytes);
+}
+
+/* Read into scatter buffers from an in-flight client message at byte offset. */
+static inline long ReadMsgV(int msgid, size_t offset, const ipc_iov_t *iov,
+                            size_t iovcnt) {
+    return __sys4(SYS_MSG_READV, msgid, (long)offset, (long)(uintptr_t)iov,
+                  (long)iovcnt);
+}
+
+/* Write from gather buffers into an in-flight client's reply buffer. */
+static inline long WriteMsgV(int msgid, size_t offset, const ipc_iov_t *iov,
+                             size_t iovcnt) {
+    return __sys4(SYS_MSG_WRITEV, msgid, (long)offset, (long)(uintptr_t)iov,
+                  (long)iovcnt);
 }
 
 /* Fire-and-forget 8-byte pulse to the receiver on connid. */

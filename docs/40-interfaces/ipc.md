@@ -1,17 +1,28 @@
 # Interfaces — IPC
 
-Domain `IPC`: Synchronous message-passing and name-service protocol contracts.
+Domain `IPC`: synchronous message passing, scatter-gather IPC, interrupt events,
+and name-service contracts.
 
-```{icd} Channel IPC and name-service protocol
+```{icd} Channel IPC, scatter-gather MsgV, and name-service protocol
 :id: ICD_IPC_0001
 :status: active
 :refines: ARC_IPC_0001
-:satisfies: SWR_IPC_0001, SWR_IPC_0002, SWR_IPC_0003
+:satisfies: SWR_IPC_0001, SWR_IPC_0002, SWR_IPC_0003, SWR_IPC_0006
 
-`libc/include/sys/ipc.h` defines `CreateChannel`, `DestroyChannel`,
+`libc/include/sys/ipc.h` gives `CreateChannel`, `DestroyChannel`,
 `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
-`SendPulse`, `ipc_recv_info_t`, `ipc_pulse_t`, and the `sysproc`
-`NAME_MSG_ATTACH`/`NAME_MSG_QUERY` protocol for the IPC subsystem
-({need}`ARC_IPC_0001`), satisfying channel management ({need}`SWR_IPC_0001`),
-message transfer ({need}`SWR_IPC_0002`), and name lookup ({need}`SWR_IPC_0003`).
+`ReadMsgV`, `WriteMsgV`, `SendPulse`, `ipc_iov_t`, and the `sysproc` name
+protocol ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0001`, {need}`SWR_IPC_0002`,
+{need}`SWR_IPC_0003`, {need}`SWR_IPC_0006`).
+```
+
+```{icd} Interrupt event, IOPL, and Ring 3 port I/O interface
+:id: ICD_IPC_0002
+:status: active
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0006
+
+`libc/include/sys/intr.h` and `kernel/include/kernel/intr.h` specify
+`CAP_SYS_INTR`, `PULSE_CODE_IRQ`, `AttachIntrEvent`, `IntrUnmask`, `IOPLSet`,
+and Ring 3 port I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`).
 ```

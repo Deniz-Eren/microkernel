@@ -57,6 +57,7 @@ typedef struct tcb {
     uint64_t start_rip;
     uint64_t start_arg;
     uint64_t start_rsp;
+    uint8_t iopl; /* Ring 3 port I/O privilege level (0 or 3) */
 } tcb_t;
 
 /* switch.S reads these fields at fixed offsets. */
@@ -71,6 +72,7 @@ struct pcb {
     proc_state_t state;
     int exit_code;
     int exit_signal;
+    uint32_t caps; /* privilege capability mask (e.g. CAP_SYS_INTR) */
 
     uint64_t pml4_phys;
     uint64_t brk;          /* program break (user VA) */

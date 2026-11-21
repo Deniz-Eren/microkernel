@@ -76,12 +76,19 @@ with its status and date.
 - verified: `proctest` and `procchild` pass in headless QEMU alongside CTest
   `posix.headers` and `posix.async_signal_safe`
 
-## Milestone 6 — interrupts and drivers (next)
+## Milestone 6 — interrupts and drivers (completed)
 
-- [ ] feat(ipc,drivers): TSK_0004 — add `AttachIntrEvent`, `IntrUnmask`,
-  `IOPLSet`, and `ReadMsgV`/`WriteMsgV`. Run a Ring 3 QEMU device driver test.
+- `AttachIntrEvent` and `IntrUnmask`: IOAPIC hardware interrupts delivered as
+  pre-allocated IPC pulses to Ring 3 drivers
+- `IOPLSet`: `CAP_SYS_INTR`-gated Ring 3 port I/O privilege (`-EPERM` for
+  unprivileged processes)
+- `ReadMsgV` and `WriteMsgV`: scatter-gather multi-buffer IPC reads and replies
+- `rtcdrv` and `drvtest`: Ring 3 MC146818 CMOS RTC driver handling hardware IRQ
+  8 pulses and `/dev/rtc` scatter-gather client queries
+- verified: `rtcdrv` and `drvtest` pass in headless QEMU alongside Milestones 1
+  to 5
 
-## Near-term POSIX.1-2024 tasks (planned)
+## Near-term POSIX.1-2024 tasks (next)
 
 - [ ] feat(proc,time): TSK_0005 — add kernel monotonic/realtime clocks and
   POSIX.1-2024 `<time.h>` (`clock_gettime`, `clock_settime`, `clock_nanosleep`,
@@ -146,3 +153,6 @@ For the full traceability backlog and longer-term roadmap, see
 - [x] COMPLETE 2026-11-21 docs(glossary): explain Ring 0, Ring 3, x86-64 memory
   protection, COW, IPC, and microkernel build terms in
   docs/00-overview/glossary.md
+- [x] COMPLETE 2026-11-21 feat(ipc,drivers): complete TSK_0004 / Milestone 6
+  (IOAPIC AttachIntrEvent/IntrUnmask IRQ pulses, CAP_SYS_INTR IOPLSet,
+  ReadMsgV/WriteMsgV scatter-gather IPC, Ring 3 rtcdrv + drvtest QEMU gate)

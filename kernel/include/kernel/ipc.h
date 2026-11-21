@@ -30,15 +30,25 @@
 /* Kernel-side message node: one per in-flight send or pulse. */
 typedef struct chan_msg {
     struct chan_msg *next;
-    tcb_t *sender;        /* blocked client (NULL for pulses) */
-    tcb_t *receiver;      /* server tcb that accepted it */
-    uint64_t sender_pml4; /* client address space for the reply copy */
-    uint64_t reply_dst;   /* client reply buffer (user VA) */
-    uint64_t reply_max;   /* client reply buffer capacity */
-    uint32_t msgid;       /* 0 for pulses */
-    uint32_t len;         /* staged payload length */
+    tcb_t *sender;          /* blocked client (NULL for pulses) */
+    tcb_t *receiver;        /* server tcb that accepted it */
+    uint64_t sender_pml4;   /* client address space for the reply copy */
+    uint64_t reply_dst;     /* client reply buffer (user VA) */
+    uint64_t reply_max;     /* client reply buffer capacity */
+    uint64_t reply_written; /* high-water bytes written via WriteMsgV */
+    uint32_t msgid;         /* 0 for pulses */
+    uint32_t len;           /* staged payload length */
+    uint8_t is_static;      /* 1 = pre-allocated IRQ node (do not kfree) */
+    uint8_t in_use;         /* 1 = static IRQ node currently queued */
     uint8_t data[IPC_MSG_MAX];
 } chan_msg_t;
+
+typedef struct {
+    void *base;
+    size_t len;
+} ipc_iov_t;
+
+#define IPC_IOV_MAX 16
 
 typedef struct {
     uint32_t msgid; /* 0 = pulse */
@@ -59,7 +69,13 @@ long ipc_msg_send(int connid, uint64_t smsg, uint64_t sbytes, uint64_t rmsg,
                   uint64_t rbytes);
 long ipc_msg_receive(int chanid, uint64_t buf, uint64_t bytes, uint64_t info);
 long ipc_msg_reply(int msgid, uint64_t rmsg, uint64_t rbytes);
+long ipc_msg_readv(int msgid, uint64_t offset, uint64_t iov_va,
+                   uint64_t iovcnt);
+long ipc_msg_writev(int msgid, uint64_t offset, uint64_t iov_va,
+                    uint64_t iovcnt);
 long ipc_msg_send_pulse(int connid, uint32_t code, uint32_t value);
+void ipc_deliver_irq_pulse(int chanid, chan_msg_t *node, uint32_t code,
+                           uint32_t value);
 
 /* Reclaim a dying thread's queue slots and in-flight messages. */
 void ipc_detach_thread(tcb_t *t);
