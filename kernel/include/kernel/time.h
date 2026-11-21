@@ -14,6 +14,7 @@
 
 void time_tick(void);
 uint64_t time_monotonic_ns(void);
+uint64_t time_clock_now_ns(int clock_id);
 void time_cleanup_proc(uint32_t pid);
 
 long sys_clock_gettime(uint64_t clock_id, uint64_t tp_va);

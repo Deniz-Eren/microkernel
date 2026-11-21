@@ -72,6 +72,10 @@ uint64_t time_monotonic_ns(void) {
     return g_mono_ns;
 }
 
+uint64_t time_clock_now_ns(int clock_id) {
+    return clock_now_ns((clockid_t)clock_id);
+}
+
 void time_cleanup_proc(uint32_t pid) {
     for (int i = 0; i < MAX_POSIX_TIMERS; i++) {
         if (g_timers[i].used && g_timers[i].owner_pid == pid) {
@@ -94,6 +98,14 @@ void time_tick(void) {
             if (t->state == THREAD_SLEEP_BLOCKED) {
                 uint64_t now = clock_now_ns((clockid_t)t->sleep_clock_id);
                 if (now >= t->sleep_deadline_ns) {
+                    sched_ready(t);
+                }
+            } else if (t->state == THREAD_FUTEX_BLOCKED &&
+                       t->futex_has_timeout) {
+                uint64_t now = clock_now_ns((clockid_t)t->sleep_clock_id);
+                if (now >= t->sleep_deadline_ns) {
+                    t->futex_addr = 0;
+                    t->futex_has_timeout = 0;
                     sched_ready(t);
                 }
             }

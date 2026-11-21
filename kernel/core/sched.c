@@ -21,7 +21,12 @@
 #include <kernel/vmm.h>
 #include <kernel/kheap.h>
 #include <kernel/string.h>
+#include <sys/microkernel.h>
+#include <time.h>
 #include "../arch/x86_64/gdt.h"
+#include "../arch/x86_64/msr.h"
+
+#define MSR_FS_BASE 0xC0000100U
 
 /* need:: COMP_PROC_0001 */
 
@@ -163,6 +168,7 @@ static void apply_switch(tcb_t *next) {
     }
     tss_set_rsp0(next->kstack_top);
     g_syscall_kstack = next->kstack_top;
+    wrmsr(MSR_FS_BASE, next->fs_base);
     next->state = THREAD_RUNNING;
     next->slice_ticks = 0;
     g_current = next;
@@ -431,6 +437,11 @@ long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
         if (!stack_top) {
             return -ENOMEM;
         }
+        /* Pre-point FS.base at the zeroed stack bottom so %fs:0 reads NULL
+         * safely even for raw ThreadSpawn workers before TLS init. */
+        if (!t->fs_base) {
+            t->fs_base = stack_top - 0x10000ULL;
+        }
     }
     /* Entry point and stack must live in the user region. */
     if (entry < 0x400000ULL || entry >= 0x80000000ULL ||
@@ -467,4 +478,97 @@ long sys_thread_get_ctx(uint64_t tid, uint64_t ubuf) {
         .stack_top = t->start_rsp,
     };
     return copy_to_user(ubuf, &ti, sizeof(ti)) < 0 ? -EFAULT : 0;
+}
+
+long sys_thread_set_fsbase(uint64_t base) {
+    tcb_t *t = sched_current();
+    if (!t) {
+        return -EPERM;
+    }
+    if (base >= 0x0000800000000000ULL) {
+        return -EINVAL;
+    }
+    t->fs_base = base;
+    wrmsr(MSR_FS_BASE, base);
+    return 0;
+}
+
+long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
+               uint64_t clock_id) {
+    tcb_t *cur = sched_current();
+    pcb_t *p = cur ? cur->proc : NULL;
+    if (!cur || !p) {
+        return -EPERM;
+    }
+    if ((uaddr & 3ULL) != 0 || uaddr >= 0x00007FFFFFFFE000ULL) {
+        return -EINVAL;
+    }
+
+    if (op == FUTEX_WAIT) {
+        uint32_t cur_val = 0;
+        if (copy_from_user(&cur_val, uaddr, sizeof(cur_val)) < 0) {
+            return -EFAULT;
+        }
+        if (cur_val != (uint32_t)val) {
+            return -EAGAIN;
+        }
+        if (timeout_va != 0) {
+            if (clock_id != CLOCK_REALTIME && clock_id != CLOCK_MONOTONIC) {
+                return -EINVAL;
+            }
+            struct timespec ts = {0};
+            if (copy_from_user(&ts, timeout_va, sizeof(ts)) < 0) {
+                return -EFAULT;
+            }
+            if (ts.tv_sec < 0 || ts.tv_nsec < 0 || ts.tv_nsec >= 1000000000L) {
+                return -EINVAL;
+            }
+            uint64_t deadline =
+                (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+            if (time_clock_now_ns((int)clock_id) >= deadline) {
+                return -ETIMEDOUT;
+            }
+            cur->futex_has_timeout = 1;
+            cur->sleep_clock_id = (uint8_t)clock_id;
+            cur->sleep_deadline_ns = deadline;
+        } else {
+            cur->futex_has_timeout = 0;
+        }
+
+        cur->futex_addr = uaddr;
+        cur->futex_woken = 0;
+        sched_block_current(THREAD_FUTEX_BLOCKED);
+        cur->futex_addr = 0;
+        cur->futex_has_timeout = 0;
+        if (cur->futex_woken) {
+            return 0;
+        }
+        if (cur->pending_signals & ~cur->blocked_signals) {
+            return -EINTR;
+        }
+        return -ETIMEDOUT;
+    }
+
+    if (op == FUTEX_WAKE) {
+        uint64_t woken = 0;
+        int need_preempt = 0;
+        for (tcb_t *t = p->threads; t && woken < val; t = t->proc_next) {
+            if (t->state == THREAD_FUTEX_BLOCKED && t->futex_addr == uaddr) {
+                t->futex_addr = 0;
+                t->futex_has_timeout = 0;
+                t->futex_woken = 1;
+                sched_ready(t);
+                if (t->effective_priority > cur->effective_priority) {
+                    need_preempt = 1;
+                }
+                woken++;
+            }
+        }
+        if (need_preempt) {
+            schedule();
+        }
+        return (long)woken;
+    }
+
+    return -EINVAL;
 }

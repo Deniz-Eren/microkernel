@@ -21,6 +21,7 @@ typedef enum {
     THREAD_RECEIVE_BLOCKED,
     THREAD_WAIT_BLOCKED,
     THREAD_SLEEP_BLOCKED,
+    THREAD_FUTEX_BLOCKED,
     THREAD_ZOMBIE,
 } thread_state_t;
 
@@ -60,7 +61,11 @@ typedef struct tcb {
     uint64_t start_rsp;
     uint8_t iopl;           /* Ring 3 port I/O privilege level (0 or 3) */
     uint8_t sleep_clock_id; /* CLOCK_REALTIME or CLOCK_MONOTONIC */
+    uint8_t futex_has_timeout;
+    uint8_t futex_woken;
     uint64_t sleep_deadline_ns;
+    uint64_t fs_base;    /* x86-64 IA32_FS_BASE per-thread TLS pointer */
+    uint64_t futex_addr; /* user VA this thread is FUTEX_WAIT-blocked on */
 } tcb_t;
 
 /* switch.S reads these fields at fixed offsets. */
@@ -144,6 +149,9 @@ long sys_thread_create(uint64_t prio);
 long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
                       uint64_t stack_top);
 long sys_thread_get_ctx(uint64_t tid, uint64_t ubuf);
+long sys_thread_set_fsbase(uint64_t base);
+long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
+               uint64_t clock_id);
 long sys_proc_create(uint64_t name_va, uint64_t prio, uint64_t flags);
 long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options);
 void thread_exit_current(int status) __attribute__((noreturn));

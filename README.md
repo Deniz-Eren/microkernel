@@ -58,8 +58,8 @@ The headers below show all user-space functions available at this time:
 - **POSIX core (`<unistd.h>`):** `_POSIX_VERSION` and `_POSIX2_VERSION`
   (`202405L`), `write` and `read` (serial console), `_exit`, `sleep`, `environ`,
   `STDIN_FILENO`, `STDOUT_FILENO`, `STDERR_FILENO`
-- **Thread-local errors (`<errno.h>`):** thread-local `errno`
-  (`__errno_location`) and the POSIX.1-2024 `E*` error constants
+- **Thread-local errors (`<errno.h>`):** O(1) `FS.base` TLS `errno`
+  (`__errno_location`, with lock-free fallback) and POSIX.1-2024 `E*` constants
 - **POSIX signals (`<signal.h>`):** async-signal-safe `sigaction`,
   `sigprocmask`, `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`,
   `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`, `sigismember`,
@@ -74,6 +74,11 @@ The headers below show all user-space functions available at this time:
   `TIMER_ABSTIME`, `clock_getres`, `clock_gettime`, `clock_settime`,
   `clock_nanosleep`, `nanosleep`, `timer_create`, `timer_settime`,
   `timer_gettime`, `timer_getoverrun`, and `timer_delete`
+- **POSIX threads and semaphores (`<pthread.h>`, `<semaphore.h>`):**
+  `pthread_create`, `pthread_join`, `pthread_detach`, `pthread_exit`,
+  `pthread_once`, TSD keys, mutexes (`NORMAL`/`ERRORCHECK`/`RECURSIVE`),
+  `pthread_cond_*`, `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, and
+  `sem_*` (with async-signal-safe `sem_post`)
 - **Formatted I/O (`<stdio.h>`):** `printf`, `snprintf`, `puts`, `putchar`
 - **Heap and exit (`<stdlib.h>`):** `malloc`, `free`, `calloc`, `exit`, `abort`,
   `strtol`, `atoi`
@@ -108,8 +113,8 @@ What you can build today:
   priority scheduling, and POSIX signal handlers and masks
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next tasks): `pthread_*` locks and `sem_*`, POSIX
-`fork`/`execve`, `pipe2`/`dup3`/`ppoll`, file systems, and sockets. See
+Not available at this time (next tasks): POSIX `fork`/`execve`,
+`pipe2`/`dup3`/`ppoll`, file systems, and sockets. See
 [docs/TASKS.md](docs/TASKS.md) and
 [docs/records/TASKS.md](docs/records/TASKS.md).
 
@@ -155,7 +160,7 @@ POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
 - `libc/` — a small C library for user processes
 - `servers/` — the system servers (`sysproc`, `ipcserv`, `rtcdrv`)
 - `tests/` — the test harness (`test_runner.py`) and the test programs
-  (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`)
+  (`ipccli`, `sigtest`, `proctest`, `drvtest`, `timetest`, `pthreadtest`)
 - `scripts/` — helper scripts for the environment, the build, and the agents
 - `docs/` — the project documents and the agent skills
 - `iso/` — the boot configuration for the GRUB boot loader
@@ -203,8 +208,8 @@ are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 ## Status
 
 See [docs/TASKS.md](docs/TASKS.md) for the milestone plan. The build completed
-milestones 1 to 6 and POSIX.1-2024 clocks and timers. The next tasks add
-`pthread_*` and `sem_*`, and `fork`/`execve`/pipes.
+milestones 1 to 6, POSIX clocks and timers, and pthreads/semaphores. The next
+task adds `fork`, `execve`, and `pipe2`/`dup3`/`ppoll`.
 
 ## Documentation
 

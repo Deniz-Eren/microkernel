@@ -202,6 +202,15 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_TIMER_GETOVERRUN:
         ret = sys_timer_getoverrun(tf->rdi);
         break;
+    case SYS_THREAD_SET_FSBASE:
+        ret = sys_thread_set_fsbase(tf->rdi);
+        break;
+    case SYS_THREAD_EXIT:
+        thread_exit_current((int)tf->rdi);
+        break; /* noreturn */
+    case SYS_FUTEX:
+        ret = sys_futex(tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (tf->rdi > 255) {

@@ -9,7 +9,8 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002 VER_PROC_0002 VER_PROC_0003
+# need:: VER_LIBC_0002 VER_SIG_0003 VER_MEM_0002
+# need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
 
 from __future__ import annotations
 
@@ -25,6 +26,8 @@ SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 
 POSIX_HEADERS: tuple[str, ...] = (
     "errno.h",
+    "pthread.h",
+    "semaphore.h",
     "signal.h",
     "stdio.h",
     "stdlib.h",
@@ -259,6 +262,51 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"time.h check failed:\n{err}")
+
+    def test_pthread_and_semaphore_headers_and_namespace_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <pthread.h>",
+                "#include <semaphore.h>",
+                "#ifdef SYS_FUTEX",
+                '#error "pthread.h/semaphore.h leaked SYS_FUTEX"',
+                "#endif",
+                "#ifdef SYS_THREAD_SET_FSBASE",
+                '#error "pthread.h leaked SYS_THREAD_SET_FSBASE"',
+                "#endif",
+                "static int __check_pthread_sem_api(void) {",
+                "    pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;",
+                "    pthread_cond_t c = PTHREAD_COND_INITIALIZER;",
+                "    pthread_rwlock_t rw = PTHREAD_RWLOCK_INITIALIZER;",
+                "    pthread_once_t o = PTHREAD_ONCE_INIT;",
+                "    pthread_barrier_t b;",
+                "    pthread_spinlock_t sp;",
+                "    sem_t s;",
+                "    struct timespec ts = {0, 0};",
+                "    (void)pthread_mutex_lock(&m);",
+                "    (void)pthread_mutex_unlock(&m);",
+                "    (void)pthread_cond_clockwait(&c, &m,",
+                "                                 CLOCK_MONOTONIC, &ts);",
+                "    (void)pthread_cond_broadcast(&c);",
+                "    (void)pthread_barrier_init(&b,",
+                "        (pthread_barrierattr_t *)0, 1);",
+                "    (void)pthread_barrier_wait(&b);",
+                "    (void)pthread_spin_init(&sp, PTHREAD_PROCESS_PRIVATE);",
+                "    (void)pthread_rwlock_rdlock(&rw);",
+                "    (void)pthread_rwlock_unlock(&rw);",
+                "    (void)sem_init(&s, 0, 1u);",
+                "    (void)sem_clockwait(&s, CLOCK_MONOTONIC, &ts);",
+                "    (void)sem_post(&s);",
+                "    return (int)o;",
+                "}",
+                "int (*__ps_fn_ref)(void) = __check_pthread_sem_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"pthread/sem check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

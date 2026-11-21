@@ -155,7 +155,10 @@ long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig) {
         target->state <= THREAD_RECEIVE_BLOCKED) {
         ipc_unblock_thread(target, -EINTR);
     } else if (target->state == THREAD_WAIT_BLOCKED ||
-               target->state == THREAD_SLEEP_BLOCKED) {
+               target->state == THREAD_SLEEP_BLOCKED ||
+               target->state == THREAD_FUTEX_BLOCKED) {
+        target->futex_addr = 0;
+        target->futex_has_timeout = 0;
         sched_unblock(target);
     }
     return 0;
@@ -185,7 +188,10 @@ void signal_post_to_proc(uint32_t pid, int sig) {
     }
     target->pending_signals |= (1u << (unsigned)sig);
     if (target->state == THREAD_WAIT_BLOCKED ||
-        target->state == THREAD_SLEEP_BLOCKED) {
+        target->state == THREAD_SLEEP_BLOCKED ||
+        target->state == THREAD_FUTEX_BLOCKED) {
+        target->futex_addr = 0;
+        target->futex_has_timeout = 0;
         sched_ready(target);
     }
 }

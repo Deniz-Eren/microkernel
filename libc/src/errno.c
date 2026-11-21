@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <sys/thread.h>
+#include "tls_internal.h"
 
 /* need:: COMP_LIBC_0002 */
 
@@ -31,11 +32,16 @@ static int claim_slot(unsigned int *p, unsigned int tid) {
 }
 
 /*
- * Return a thread-local pointer to errno. Uses atomic slot acquisition over a
- * fixed table keyed by the calling thread's TID so concurrent Ring 3 threads
- * stay isolated without heap allocation or locks (async-signal-safe).
+ * Return a thread-local pointer to errno. Fast path reads O(1) x86-64 FS.base
+ * TLS (%fs:0) with zero syscalls; raw ThreadSpawn threads without TLS fall back
+ * to a lock-free TID-indexed atomic table (both paths are async-signal-safe).
  */
 int *__errno_location(void) {
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (tls) {
+        return &tls->errno_val;
+    }
+
     thread_info_t ti = {0};
     long r = ThreadGetCtx(0, &ti);
     if (r < 0 || ti.tid == 0) {

@@ -50,3 +50,28 @@ with no heap allocation or locks ({need}`ICD_PROC_0003`, {need}`ICD_PROC_0004`,
 gives async-signal-safe clock and timer wrappers ({need}`ICD_PROC_0005`,
 {need}`SWR_PROC_0006`).
 ```
+
+```{comp} POSIX.1-2024 pthreads, FS.base TLS, and futex synchronization
+:id: COMP_PROC_0005
+:status: active
+:posix: XBD/pthread.h (BASE), XSH/2.9
+:refines: ARC_PROC_0001, ICD_PROC_0006
+:satisfies: SWR_PROC_0005
+
+`libc/src/pthread.c` builds `pthread_*` threads, `FS.base` TLS, TSD keys,
+mutexes, condvars, barriers, spinlocks, and rwlocks on `SYS_FUTEX` and
+`SYS_THREAD_SET_FSBASE` ({need}`ICD_PROC_0006`, {need}`SWR_PROC_0005`).
+```
+
+```{comp} POSIX.1-2024 unnamed semaphore library
+:id: COMP_PROC_0006
+:status: active
+:posix: XBD/semaphore.h (BASE), XSH/2.9
+:refines: ARC_PROC_0001, ICD_PROC_0007
+:satisfies: SWR_PROC_0005
+
+`libc/src/semaphore.c` builds `sem_init`, `sem_destroy`, `sem_wait`,
+`sem_trywait`, `sem_timedwait`, `sem_clockwait`, async-signal-safe `sem_post`,
+and `sem_getvalue` on `SYS_FUTEX` ({need}`ICD_PROC_0007`,
+{need}`SWR_PROC_0005`).
+```

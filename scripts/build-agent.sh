@@ -74,6 +74,8 @@ if ! "$ENV" test --timeout 120 \
     --expect 'drvtest ReadMsgV/WriteMsgV /dev/rtc round trip succeeded' \
     --expect 'CLOCK_MONOTONIC, CLOCK_REALTIME, and clock_nanosleep verified' \
     --expect 'POSIX timer_create/timer_settime fired .* SIGUSR1 ticks' \
+    --expect 'pthreads FS\.base TLS, mutex, spinlock, barrier, rwlock' \
+    --expect 'pthread_cond_clockwait and sem_wait/sem_clockwait verified' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

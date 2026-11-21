@@ -45,6 +45,7 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "timer_getoverrun",
     "timer_gettime",
     "timer_settime",
+    "sem_post",
     "__errno_location",
 )
 

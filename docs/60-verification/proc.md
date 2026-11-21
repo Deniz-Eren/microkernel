@@ -39,3 +39,15 @@ The headless QEMU harness `tests/test_runner.py` runs `timetest`. It checks
 `timer_create`/`timer_settime` signals. CTest `posix.headers` and
 `posix.async_signal_safe` check `<time.h>` ({need}`SWR_PROC_0006`).
 ```
+
+```{ver} Verify POSIX.1-2024 pthreads, semaphores, and FS.base TLS
+:id: VER_PROC_0004
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0005
+
+The headless QEMU harness `tests/test_runner.py` runs `pthreadtest`. It checks
+`FS.base` TLS, mutexes, `pthread_cond_clockwait`, barriers, spinlocks, rwlocks,
+and `sem_*`. CTest `posix.headers` and `posix.async_signal_safe` check headers
+and `sem_post` ({need}`SWR_PROC_0005`).
+```

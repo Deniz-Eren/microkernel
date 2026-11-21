@@ -21,18 +21,6 @@ model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0006 — Implement POSIX.1-2024 pthreads, semaphores, and FS.base TLS
-
-```{task} Implement POSIX.1-2024 pthreads, semaphores, and FS.base TLS
-:id: TSK_0006
-:status: open
-:traces: ADR_0003, SWR_PROC_0005
-
-Add per-thread `FS.base` TLS, `<pthread.h>` (`pthread_create`, `pthread_join`,
-mutexes, `pthread_cond_*`, `pthread_cond_clockwait`), and `<semaphore.h>`
-(`sem_*`) on top of kernel wait queues ({need}`SWR_PROC_0005`).
-```
-
 ### TSK_0007 — Implement POSIX.1-2024 fork, execve, and pipe2/dup3/ppoll
 
 ```{task} Implement POSIX.1-2024 fork, execve, and pipe2/dup3/ppoll

@@ -21,6 +21,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- POSIX.1-2024 Base `<pthread.h>` and `<semaphore.h>` plus hardware x86-64
+  `FS.base` TLS (`TSK_0006`, `SWR_PROC_0005`): syscalls `SYS_THREAD_SET_FSBASE`
+  (`39`), `SYS_THREAD_EXIT` (`40`), and `SYS_FUTEX` (`41`), O(1) TLS `errno`,
+  mutexes, `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, TSD keys,
+  async-signal-safe `sem_post`, QEMU `tests/pthreadtest`, and CTest coverage
+  (ADR-19).
 - POSIX.1-2024 Base monotonic/realtime clocks and interval timers (`TSK_0005`,
   `SWR_PROC_0006`): syscalls `30`–`38`, `kernel/core/time.c`, `<time.h>`,
   async-signal-safe `libc/src/time.c`, `sleep()` backed by `clock_nanosleep`,

@@ -205,7 +205,10 @@ static pcb_t *proc_spawn_from_bootfs(pcb_t *parent, uint64_t tar_phys,
     if (precreate_chan) {
         channel_create(p->pid);
     }
-    thread_create(p, entry, user_rsp, prio);
+    tcb_t *main_t = thread_create(p, entry, user_rsp, prio);
+    /* Pre-point FS.base at the zeroed bottom of the main stack so %fs:0 reads
+     * NULL safely before __libc_start_main installs the TLS block. */
+    main_t->fs_base = 0x700000000000ULL - 64ULL * 1024ULL;
     printk("[proc] spawned '%s' pid=%u ppid=%u entry=%llx rsp=%llx prio=%u\n",
            name, p->pid, p->parent_pid, (unsigned long long)entry,
            (unsigned long long)user_rsp, prio);
@@ -379,6 +382,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "drvtest", 100, 0);
     /* TSK_0005: POSIX.1-2024 CLOCK_MONOTONIC/CLOCK_REALTIME and timers test. */
     spawn_image(tar_phys, tar_size, "timetest", 100, 0);
+    /* TSK_0006: POSIX.1-2024 pthreads, semaphores, and FS.base TLS test. */
+    spawn_image(tar_phys, tar_size, "pthreadtest", 100, 0);
 
     sched_activate();
 }

@@ -48,7 +48,7 @@ static inline long ThreadGetCtx(unsigned tid, thread_info_t *ti) {
 
 /* Caller's thread id. */
 static inline long ThreadGetTid(void) {
-    thread_info_t ti;
+    thread_info_t ti = {0};
     long r = ThreadGetCtx(0, &ti);
     return r < 0 ? r : (long)ti.tid;
 }

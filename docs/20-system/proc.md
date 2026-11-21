@@ -56,7 +56,7 @@ load, `waitpid` ([sys/wait.h][hdr-wait]), and `_Exit` on `ProcCreate` and
 
 ```{swr} Supply POSIX.1-2024 Base pthreads and semaphores
 :id: SWR_PROC_0005
-:status: draft
+:status: active
 :posix: XBD/pthread.h (BASE), XBD/semaphore.h (BASE), XSH/2.9
 :derives: SYS_PROC_0001
 :traces: BDR_0003, ADR_0003

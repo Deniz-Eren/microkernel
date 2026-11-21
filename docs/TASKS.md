@@ -94,9 +94,9 @@ with its status and date.
   monotonic/realtime clocks and POSIX.1-2024 `<time.h>` (`clock_gettime`,
   `clock_settime`, `clock_nanosleep`, `timer_create`, `timer_settime`) for
   `CLOCK_MONOTONIC` and `CLOCK_REALTIME`
-- [ ] feat(proc,pthread): TSK_0006 — add per-thread `FS.base` TLS, `<pthread.h>`
-  (`pthread_create`, `pthread_join`, mutexes, `pthread_cond_*`,
-  `pthread_cond_clockwait`), and `<semaphore.h>` (`sem_*`)
+- [x] COMPLETE 2026-11-21 feat(proc,pthread): TSK_0006 — add per-thread
+  `FS.base` TLS, `<pthread.h>` (`pthread_create`, `pthread_join`, mutexes,
+  `pthread_cond_*`, `pthread_cond_clockwait`), and `<semaphore.h>` (`sem_*`)
 - [ ] feat(proc,ipc): TSK_0007 — add `fork` (on full `VMCloneCow`), `execve`
   (from `boot.tar`), per-process file descriptors, and `pipe2`/`dup3`/`ppoll`
 

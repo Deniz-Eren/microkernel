@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/bootinfo.h>
+#include "tls_internal.h"
 
 /* need:: COMP_LIBC_0001 */
 
@@ -55,6 +56,7 @@ void __libc_start_main(long *stack) {
     }
     __auxv = p + 1;
 
+    __libc_init_main_tls();
     __libc_init_array();
     exit(main(argc, argv, envp));
 }

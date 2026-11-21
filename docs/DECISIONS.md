@@ -22,6 +22,40 @@ in groups by category. The ADRs are newest first (git log order).
 
 <!-- [CAT] Tooling -->
 
+## ADR-19 (2026-11-21): Per-thread FS.base TLS and minimal SYS_FUTEX kernel ABI
+
+### Context
+
+`SWR_PROC_0005` (`TSK_0006`) requires POSIX.1-2024 Base `<pthread.h>` and
+`<semaphore.h>` plus hardware per-thread TLS. Putting mutexes, condvars,
+barriers, rwlocks, and semaphores into Ring 0 inflates the microkernel.
+
+### Decision
+
+- Add three minimal syscalls (`39`–`41`): `SYS_THREAD_SET_FSBASE` (writes
+  `IA32_FS_BASE` and saves `tcb_t.fs_base`), `SYS_THREAD_EXIT`, and `SYS_FUTEX`
+  (`FUTEX_WAIT` with optional `CLOCK_MONOTONIC`/`CLOCK_REALTIME` deadline, and
+  `FUTEX_WAKE`).
+- Pre-point `tcb_t.fs_base` at the zeroed user stack bottom so `%fs:0` never
+  faults in raw `ThreadSpawn` threads. Upgrade `__errno_location()` to O(1)
+  `%fs:0` TLS with TID-table fallback.
+- Build all `<pthread.h>` and `<semaphore.h>` primitives in Ring 3
+  (`libc/src/pthread.c`, `libc/src/semaphore.c`) with acquire/release atomics
+  and `SYS_FUTEX`, keeping `sem_post` async-signal-safe.
+
+### Alternatives
+
+- Add separate kernel syscalls for mutexes, condvars, barriers, and semaphores
+  (bloats Ring 0 and duplicates wait-queue code)
+- Keep TID-table `errno` only (requires a syscall on each `errno` access)
+
+### Consequences
+
+- `pthreadtest` verifies `FS.base` TLS, mutexes, `pthread_cond_clockwait`,
+  barriers, spinlocks, rwlocks, TSD keys, and `sem_*` in QEMU.
+- `SWR_PROC_0005` is active and checked by `posix.headers` and
+  `posix.async_signal_safe`.
+
 ## ADR-18 (2026-11-21): Kernel 1 ms LAPIC clocks and static POSIX timer pool
 
 ### Context
