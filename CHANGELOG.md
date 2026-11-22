@@ -21,6 +21,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 `<fenv.h>` (`libc/arch/x86-64/fenv.c`: `MXCSR` and x87
+  rounding modes and exception flags) and `<math.h>`
+  (`libc/src/math_{basic,round,exp,trig}.c`: IEEE-754 classification/comparison
+  macros and the full Base/CX `float`, `double`, and `long double` math library
+  using `x86-64-v3` hardware `FMA`, `vsqrtsd`/`vsqrtss`, and
+  `vroundsd`/`vroundss`), registered both headers in Gates 1 and 2, and added
+  the Ring 3 QEMU suite `tests/mathtest/` (`SWR_LIBC_0009`, `ICD_LIBC_0007`,
+  `COMP_LIBC_0007`, `VER_LIBC_0009`, `TSK_0030`).
 - Enforced the `x86-64-v3` minimum CPU baseline at early boot (`CPUID` gate
   halting legacy CPUs cleanly before `x86-64-v3` instructions run), upgraded
   `switch.S` and `sched.c` to dynamically sized 64-byte-aligned `XSAVE`/`XRSTOR`

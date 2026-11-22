@@ -10,9 +10,10 @@
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_LIBC_0008
-# need:: VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002 VER_PROC_0003
-# need:: VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0003 VER_IPC_0004
-# need:: VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004 VER_BOOT_0003
+# need:: VER_LIBC_0009 VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002
+# need:: VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0003
+# need:: VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004
+# need:: VER_BOOT_0003
 
 from __future__ import annotations
 
@@ -34,11 +35,13 @@ POSIX_HEADERS: tuple[str, ...] = (
     "endian.h",
     "errno.h",
     "fcntl.h",
+    "fenv.h",
     "float.h",
     "fnmatch.h",
     "inttypes.h",
     "iso646.h",
     "limits.h",
+    "math.h",
     "poll.h",
     "pthread.h",
     "sched.h",
@@ -814,6 +817,66 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"base utils check failed:\n{err}")
+
+    def test_fenv_and_math_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <fenv.h>",
+                "#include <math.h>",
+                "#if !defined(_XOPEN_SOURCE) && defined(M_PI)",
+                '#error "math.h leaked XSI M_PI under Base profile"',
+                "#endif",
+                "#ifdef SYS_DEBUG_LOG",
+                '#error "fenv.h/math.h leaked SYS_DEBUG_LOG"',
+                "#endif",
+                "static double __check_fenv_math(double x, float xf) {",
+                "    fenv_t env;",
+                "    fexcept_t flg = 0u;",
+                "    int e = 0;",
+                "    double ip = 0.0;",
+                "    (void)fegetenv(&env);",
+                "    (void)feholdexcept(&env);",
+                "    (void)fesetround(FE_TONEAREST);",
+                "    (void)fegetround();",
+                "    (void)feclearexcept(FE_ALL_EXCEPT);",
+                "    (void)feraiseexcept(FE_INEXACT);",
+                "    (void)fetestexcept(FE_INEXACT);",
+                "    (void)fegetexceptflag(&flg, FE_ALL_EXCEPT);",
+                "    (void)fesetexceptflag(&flg, FE_ALL_EXCEPT);",
+                "    (void)feupdateenv(&env);",
+                "    (void)fesetenv(FE_DFL_ENV);",
+                "    double r = fma(x, x, 1.0) + sqrt(x) + cbrt(x) +",
+                "               hypot(x, 1.0) + sin(x) + cos(x) + tan(x) +",
+                "               asin(x) + acos(x) + atan(x) + atan2(x, 1.0) +",
+                "               sinh(x) + cosh(x) + tanh(x) + asinh(x) +",
+                "               acosh(x) + atanh(x) + exp(x) + exp2(x) +",
+                "               expm1(x) + log(x) + log2(x) + log10(x) +",
+                "               log1p(x) + pow(x, 2.0) + erf(x) + erfc(x) +",
+                "               tgamma(x) + floor(x) + ceil(x) + trunc(x) +",
+                "               round(x) + rint(x) + nearbyint(x) +",
+                "               fmod(x, 2.0) + remainder(x, 2.0) +",
+                "               remquo(x, 2.0, &e) + modf(x, &ip) +",
+                "               frexp(x, &e) + ldexp(x, e) + scalbn(x, 1) +",
+                "               scalbln(x, 1L) + logb(x) + nextafter(x, 2.0) +",
+                "               nexttoward(x, 2.0L) + fdim(x, 1.0) +",
+                "               fmax(x, 1.0) + fmin(x, 1.0) +",
+                "               copysign(x, -1.0) + (double)acosf(xf);",
+                "    int c = fpclassify(x) + isfinite(x) + isinf(x) +",
+                "            isnan(x) + isnormal(x) + signbit(x) +",
+                "            isgreater(x, 0.0) + isgreaterequal(x, 0.0) +",
+                "            isless(x, 0.0) + islessequal(x, 0.0) +",
+                "            islessgreater(x, 0.0) + isunordered(x, 0.0) +",
+                "            ilogb(x);",
+                "    return r + (double)c;",
+                "}",
+                "double (*__fm_fn_ref)(double, float) = __check_fenv_math;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"fenv/math check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

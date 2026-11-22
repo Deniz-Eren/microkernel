@@ -80,3 +80,17 @@ supply `uname`, byte-order conversions, `sched_yield`, `setjmp`/`sigsetjmp`,
 `times`, `fnmatch`, `atexit`, `qsort`, `bsearch`, `getopt`, `alarm`, `rename`,
 `renameat`, and `realpath` ({need}`ICD_LIBC_0006`, {need}`SWR_LIBC_0008`).
 ```
+
+```{comp} POSIX.1-2024 floating-point environment and x86-64-v3 math library
+:id: COMP_LIBC_0007
+:status: active
+:posix: XBD/fenv.h (CX), XBD/math.h (CX)
+:refines: ARC_LIBC_0001, ICD_LIBC_0007
+:satisfies: SWR_LIBC_0009
+
+`libc/arch/x86-64/fenv.c` implements `<fenv.h>` rounding and exception flags
+through `MXCSR` and x87 control words. `libc/src/math_{basic,round,exp,trig}.c`
+implements `<math.h>` classification, hardware `FMA`/`sqrt`/`vround`,
+exponential, logarithmic, power, error, gamma, trigonometric, and hyperbolic
+functions ({need}`ICD_LIBC_0007`, {need}`SWR_LIBC_0009`).
+```

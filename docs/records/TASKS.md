@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0030 — Add POSIX.1-2024 <math.h> and <fenv.h> with AVX2/FMA support
-
-```{task} Add POSIX.1-2024 <math.h> and <fenv.h> with AVX2/FMA support
-:id: TSK_0030
-:status: open
-:traces: ADR_0003, ADR_0026, SWR_LIBC_0009
-
-Add `<fenv.h>` (`fegetround`, `fesetround`, exception flags) and `<math.h>`
-(`sqrt`, `fma`, rounding, classification, `exp`/`log`/`pow`, and trigonometric
-functions including `sin`/`cos`/`tan`/`asin`/`acos`/`atan`) using `x86-64-v3`
-hardware `FMA` with Gates 1 to 3 and QEMU verification ({need}`SWR_LIBC_0009`).
-```
-
 ### TSK_0024 — Add MMIO/DMA syscalls and Ring 3 PCI virtio-blk driver
 
 ```{task} Add MMIO/DMA syscalls and Ring 3 PCI virtio-blk driver

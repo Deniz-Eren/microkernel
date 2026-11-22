@@ -77,3 +77,17 @@ declare `atexit`, `qsort`, `bsearch`, `realpath`, `getopt`, `alarm`, `rename`,
 and `renameat` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
 {need}`SWR_LIBC_0008`).
 ```
+
+```{icd} POSIX.1-2024 <fenv.h> and <math.h> floating-point interfaces
+:id: ICD_LIBC_0007
+:status: active
+:posix: XBD/fenv.h (CX), XBD/math.h (CX)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0009
+
+`libc/include/fenv.h` declares `fenv_t`, `fexcept_t`, `FE_*` macros, and
+floating-point control functions. `libc/include/math.h` declares IEEE-754
+classification and comparison macros plus the Base/CX `float`, `double`, and
+`long double` math functions ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
+{need}`SWR_LIBC_0009`).
+```

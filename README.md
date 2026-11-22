@@ -325,6 +325,15 @@ subset available at this time:
   `uname`, `htobe*`/`be*toh`/`htole*`/`le*toh`, `sched_yield`,
   `setjmp`/`longjmp`, `sigsetjmp`/`siglongjmp`, `times`, and `fnmatch`
   (`FNM_PATHNAME`, `FNM_PERIOD`, `FNM_NOESCAPE`, `FNM_IGNORECASE`)
+- **Floating-point environment and math (`<fenv.h>`, `<math.h>`):** `MXCSR`
+  rounding and exception control (`fegetround`, `fesetround`, `feclearexcept`,
+  `feraiseexcept`, `fetestexcept`, `fegetenv`, `feholdexcept`, `fesetenv`,
+  `feupdateenv`). IEEE-754 classification and comparison macros plus Base/CX
+  `float`, `double`, and `long double` math functions compile with `x86-64-v3`
+  hardware `FMA` (`fma`, `sqrt`, `cbrt`, `hypot`, `floor`/`ceil`/`trunc`,
+  `round`/`rint`/`nearbyint`, `fmod`/`remquo`, `exp`/`log`/`pow`, `erf`/`erfc`,
+  `tgamma`, `sin`/`cos`/`tan`, `asin`/`acos`/`atan`/`atan2`, and hyperbolic
+  functions)
 - **Memory, strings, and character classes (`<string.h>`, `<strings.h>`,
   `<ctype.h>`):** `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`, `strlen`,
   `strnlen`, `strcmp`, `strncmp`, `strcasecmp`, `strncasecmp`, `strcpy`,
@@ -372,10 +381,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): `<math.h>` and `<fenv.h>` with `FMA`,
-`CAP_SYS_INTR` MMIO/DMA syscalls and Ring 3 `virtio-blk` driver, writable
-on-disk file system mount in `vfsserv`, and ACPI `MADT` SMP bring-up. See
-[docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (planned next): `CAP_SYS_INTR` MMIO/DMA syscalls and
+Ring 3 `virtio-blk` driver, writable on-disk file system mount in `vfsserv`, and
+ACPI `MADT` SMP bring-up. See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -425,8 +433,8 @@ Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`), the Ring 3
 command shell (`sh`) with job control, and `<sys/select.h>` leak-freedom stress
 tests. They also added ACPI `MADT`/`SPCR` driver discovery, `x86-64` HAL
 isolation, and opt-in LLVM coverage (`./scripts/env.sh coverage`). The newest
-milestone enforces the `x86-64-v3` boot gate with `XSAVE`/`XRSTOR` and optional
-`AVX-512`.
+milestones enforce the `x86-64-v3` boot gate with `XSAVE`/`XRSTOR` and optional
+`AVX-512` and add `<fenv.h>` and `<math.h>` with hardware `FMA`.
 
 ## Documentation
 

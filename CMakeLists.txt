@@ -205,6 +205,7 @@ add_subdirectory(tests/shtest)
 add_subdirectory(tests/utilstest)
 add_subdirectory(tests/jobtest)
 add_subdirectory(tests/simdtest)
+add_subdirectory(tests/mathtest)
 add_subdirectory(tests/stresstest)
 
 #------------------------------------------------------------------------------

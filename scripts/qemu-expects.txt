@@ -72,6 +72,10 @@ TTY ISIG Ctrl-C SIGINT and tcgetpgrp/tcsetpgrp verified
 Ring 3 core utilities \(mkdir, rm, cp, mv, uname, env, wc, head\) verified
 x86-64-v3 AVX2, FMA, BMI1/BMI2, and bootinfo flags verified
 preemptive XSAVE/XRSTOR YMM and MXCSR thread isolation verified
+<fenv\.h> MXCSR rounding, exceptions, and math rounding verified
+<math\.h> classification, hardware FMA, sqrt, cbrt, and hypot verified
+<math\.h> exp, log, pow, erf/erfc, and tgamma verified
+<math\.h> trig, inverse trig \(acos/asin/atan2\), and hyperbolic verified
 <sys/select\.h> select, pselect, multi-server FDs, and sigmask
 cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,
 zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks

@@ -1124,6 +1124,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "jobtest", 90, 0);
     /* x86-64-v3 AVX2/FMA/BMI and preemptive XSAVE/XRSTOR isolation test. */
     spawn_image(tar_phys, tar_size, "simdtest", 100, 0);
+    /* POSIX.1-2024 <fenv.h> and <math.h> (FMA/trig/exp/log/pow) test. */
+    spawn_image(tar_phys, tar_size, "mathtest", 100, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

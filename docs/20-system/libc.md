@@ -120,7 +120,7 @@ follow Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d`
 
 ```{swr} Supply POSIX.1-2024 <math.h> and <fenv.h> with x86-64-v3 FMA support
 :id: SWR_LIBC_0009
-:status: draft
+:status: active
 :posix: XBD/math.h (CX), XBD/fenv.h (CX)
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003, ADR_0026

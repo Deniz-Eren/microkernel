@@ -104,3 +104,18 @@ The headless QEMU harness `tests/test_runner.py` runs `utilstest`
 and `realpath`. CTest Gates 1 to 3 verify all 42 Base headers and
 async-signal-safety ({need}`SWR_LIBC_0008`).
 ```
+
+```{ver} Verify POSIX.1-2024 <fenv.h> and <math.h> with FMA in QEMU
+:id: VER_LIBC_0009
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0009
+
+The headless QEMU harness `tests/test_runner.py` runs `mathtest`
+(`tests/mathtest/test_math.c`). It checks `MXCSR` rounding modes, exception
+flags, IEEE-754 classification, and exact hardware `FMA` (`sqrt`, `cbrt`,
+`hypot`). It also checks `exp`/`log`/`pow`, `erf`/`erfc`, `tgamma`,
+trigonometric, inverse trigonometric, and hyperbolic functions. CTest Gates 1
+and 2 check standalone compilation and Base/CX symbol export
+({need}`SWR_LIBC_0009`).
+```
