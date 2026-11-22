@@ -190,7 +190,6 @@ def build_llvm_commands(
     common_cov = [
         *obj_args,
         f"-instr-profile={profdata}",
-        "-ignore-filename-regex=(^|/)tests/",
     ]
 
     report_cmd = [cov_bin, "report", *common_cov, "--show-branch-summary"]

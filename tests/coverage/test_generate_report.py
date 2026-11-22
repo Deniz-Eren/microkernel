@@ -164,6 +164,7 @@ class CoveragePipelineTests(unittest.TestCase):
             cmds["merge"][:3], ["llvm-profdata", "merge", "-sparse"]
         )
         self.assertIn("-object", cmds["report"])
+        self.assertNotIn("-ignore-filename-regex=(^|/)tests/", cmds["report"])
         self.assertIn("-format=html", cmds["html"])
         self.assertIn("-show-branches=count", cmds["html"])
         self.assertIn("-format=lcov", cmds["lcov"])

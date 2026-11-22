@@ -154,11 +154,7 @@ function(microkernel_add_user_executable name)
     add_executable(${name} ${srcs})
     target_compile_options(${name} PRIVATE ${USER_CFLAGS})
     if(MICROKERNEL_COVERAGE)
-        if(CMAKE_CURRENT_SOURCE_DIR MATCHES "/(servers|bin)(/|$)")
-            target_compile_options(${name} PRIVATE ${COV_INSTR_FLAGS})
-        else()
-            target_compile_options(${name} PRIVATE -DMICROKERNEL_COVERAGE=1)
-        endif()
+        target_compile_options(${name} PRIVATE ${COV_INSTR_FLAGS})
     endif()
     target_include_directories(${name} SYSTEM PRIVATE
         ${SYSROOT_DIR}/usr/include

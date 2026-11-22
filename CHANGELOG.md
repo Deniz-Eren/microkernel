@@ -91,13 +91,20 @@ Changelog](https://keepachangelog.com).
   records, retained `docs/THIRD-PARTY-NOTICES.md`, and removed the five legacy
   files (`TSK_0008`, `WDR_0009`).
 
+### Fixed
+
+- Fixed strict priority enforcement in `kernel/core/sched.c` (`schedule()`) so a
+  running higher-priority thread (such as `sysproc` at priority 110 during boot)
+  is never preempted by a lower-priority ready thread when its round-robin time
+  slice expires.
+
 ### Added
 
 - Opt-in automated LLVM source-based code coverage pipeline (`TSK_0027`,
   `SWR_DOCS_0005`, `ADR_0025`, `ICD_DOCS_0002`, `COMP_DOCS_0004`,
   `VER_DOCS_0006`): added `-DMICROKERNEL_COVERAGE=ON` instrumentation for Ring 0
-  and Ring 3 (`kernel/`, `libc/`, `servers/`, `bin/`), linker `__llvm_prf_*`
-  section anchors, freestanding Raw Profile v8 streaming over
+  and Ring 3 (`kernel/`, `libc/`, `servers/`, `bin/`, `tests/`), linker
+  `__llvm_prf_*` section anchors, freestanding Raw Profile v8 streaming over
   `arch_console_write()` (`SYS_COV_WRITE`), `tests/test_runner.py --cov-out
   --wait-cov`, `tools/coverage/generate_report.py`, CTest `coverage.unit`,
   `./scripts/env.sh coverage` (generating `build-cov/coverage/html/index.html`,

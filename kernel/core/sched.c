@@ -181,6 +181,14 @@ void schedule(void) {
         next = pick_next();
     }
 
+    /* Strict priority scheduling: never preempt a RUNNING thread for a
+     * lower-priority ready thread on a round-robin tick. */
+    if (g_current && g_current->state == THREAD_RUNNING &&
+        next->effective_priority < g_current->effective_priority) {
+        g_current->slice_ticks = 0;
+        return;
+    }
+
     /* Pop `next` from its level queue. */
     unsigned p = next->effective_priority;
     g_ready_head[p] = next->queue_next;
