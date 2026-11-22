@@ -17,7 +17,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0007 VER_PROC_0008 */
+/* need:: VER_LIBC_0007 VER_PROC_0008 VER_PROC_0009 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -364,6 +364,63 @@ static int test_ps_getconf_tty_stty(void) {
     return 0;
 }
 
+static int test_id_logname_nice_umask_ulimit(void) {
+    char out[2048];
+    ssize_t len = 0;
+
+    /* 1. id and logname utilities. */
+    int rc = run_sh_capture("/boot/id", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 ||
+        strcmp(out, "uid=0(root) gid=0(root) groups=0(root)\n") != 0) {
+        printf("[FAIL] shtest id rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture(
+        "/boot/id -un && /boot/id -gn && /boot/id -u nobody && /boot/logname",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "root\nroot\n65534\nroot\n") != 0) {
+        printf("[FAIL] shtest id flags/logname rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 2. nice and renice utilities. */
+    rc = run_sh_capture("/boot/nice -n 5 /boot/nice", NULL, 0, out, sizeof(out),
+                        &len);
+    if (rc != 0 || strcmp(out, "5\n") != 0) {
+        printf("[FAIL] shtest nice -n 5 rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/renice -n 4 -p 1 && /boot/ps -p 1 -o nice= && "
+                        "/boot/renice -n -4 -p 1",
+                        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "4")) {
+        printf("[FAIL] shtest renice rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 3. sh built-ins umask and ulimit. */
+    rc = run_sh_capture("umask 0077 && umask && umask -S", NULL, 0, out,
+                        sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "0077\nu=rwx,g=,o=\n") != 0) {
+        printf("[FAIL] shtest umask builtin rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("ulimit -n && ulimit -S -n 16 && ulimit -n", NULL, 0,
+                        out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "32\n16\n") != 0) {
+        printf("[FAIL] shtest ulimit -n builtin rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("ulimit -a", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "open files") || !strstr(out, "stack size")) {
+        printf("[FAIL] shtest ulimit -a rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU id, logname, nice, renice, umask, and ulimit verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -379,6 +436,9 @@ int main(void) {
         return 1;
     }
     if (test_ps_getconf_tty_stty() != 0) {
+        return 1;
+    }
+    if (test_id_logname_nice_umask_ulimit() != 0) {
         return 1;
     }
     return 0;

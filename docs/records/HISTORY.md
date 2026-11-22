@@ -20,6 +20,21 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0032 — Add credentials, <pwd.h>, <grp.h>, and <sys/resource.h>
+
+```{task} Add credentials, <pwd.h>, <grp.h>, and <sys/resource.h>
+:id: TSK_0032
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0029, SWR_PROC_0011
+
+Add process user, group, supplementary group, `nice`, and `rlimit` fields to
+`pcb_t` with kernel syscalls. Supply `<pwd.h>`, `<grp.h>`, `<sys/resource.h>`
+(`getrlimit`, `setrlimit`), `getuid`/`setuid`/`geteuid`/`seteuid`,
+`getgid`/`setgid`/`getegid`/`setegid`, `getgroups`, and `getlogin`/`getlogin_r`.
+Add `id`, `logname`, `nice`, `renice`, and `sh` built-ins `umask` and `ulimit`
+({need}`BDR_0004`, {need}`SWR_PROC_0011`).
+```
+
 ### TSK_0031 — Add POSIX.1-2024 ps, sysconf/confstr/pathconf, and getconf
 
 ```{task} Add POSIX.1-2024 ps, sysconf/confstr/pathconf, and getconf

@@ -135,6 +135,21 @@ and `tcsetwinsize` with no non-POSIX names. Ring 3 must supply `ps`, `getconf`,
 `tty`, and `stty` ({need}`SYS_PROC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 credentials, pwd/grp, rlimits, and nice/ulimit
+:id: SWR_PROC_0011
+:status: active
+:posix: XBD/pwd.h (BASE), XBD/grp.h (BASE), XBD/sys/resource.h (BASE)
+:derives: SYS_PROC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0029
+
+The kernel must track real, effective, and saved UIDs/GIDs, supplementary
+groups, `nice`, and `rlimit` bounds on `pcb_t`. `libc` must supply Base
+`<pwd.h>` ([pwd.h][hdr-pwd]), `<grp.h>` ([grp.h][hdr-grp]), `<sys/resource.h>`
+([sys/resource.h][hdr-rlim]), UID/GID/group calls, and `getlogin`/`getlogin_r`.
+Ring 3 must supply `id`, `logname`, `nice`, `renice`, `umask`, and `ulimit`
+({need}`SYS_PROC_0001`).
+```
+
 [hdr-wait]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_wait.h.html
 [fn-waitpid]:
@@ -143,6 +158,12 @@ and `tcsetwinsize` with no non-POSIX names. Ring 3 must supply `ps`, `getconf`,
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/sysconf.html
 [xcu-ps]:
   https://pubs.opengroup.org/onlinepubs/9799919799/utilities/ps.html
+[hdr-pwd]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/pwd.h.html
+[hdr-grp]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/grp.h.html
+[hdr-rlim]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_resource.h.html
 [hdr-spawn]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/spawn.h.html
 [hdr-pth]:

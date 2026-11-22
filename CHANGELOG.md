@@ -28,6 +28,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Implemented POSIX.1-2024 Base process credentials, `<pwd.h>`, `<grp.h>`, and
+  `<sys/resource.h>` (`TSK_0032`, `SWR_PROC_0011`, `ADR_0029`, `ICD_PROC_0010`,
+  `COMP_PROC_0010`, `VER_PROC_0009`): added `uid`/`euid`/`suid`,
+  `gid`/`egid`/`sgid`, supplementary groups, `nice`, and `rlimit` tables on
+  `pcb_t` with `SYS_PROC_CRED` (`62`), `SYS_PROC_RLIMIT` (`63`), and kernel
+  `RLIMIT_NOFILE` enforcement, added `libc/src/cred.c` (21 Base functions with
+  zero `XSI` leakage), added Ring 3 XCU utilities `id`, `logname`, `nice`, and
+  `renice` plus `sh` built-ins `umask` and `ulimit`, updated `ps` to resolve
+  real UIDs/GIDs and nice values, and verified in `utilstest`, `shtest`, and
+  Gates 1 to 3.
 - Extended Gate 2 (`posix.symbol_diff`, `tools/posix/audit_lib.py`,
   `tests/posix/test_symbol_diff.py`, `CMakeLists.txt`) to index POSIX.1-2024
   `XCU` Base utilities, verify every binary in `bin/CMakeLists.txt` is packed in

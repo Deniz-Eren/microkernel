@@ -13,7 +13,7 @@
 # need:: VER_LIBC_0009 VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002
 # need:: VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0003
 # need:: VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004
-# need:: VER_BOOT_0003 VER_PROC_0008
+# need:: VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009
 
 from __future__ import annotations
 
@@ -38,12 +38,14 @@ POSIX_HEADERS: tuple[str, ...] = (
     "fenv.h",
     "float.h",
     "fnmatch.h",
+    "grp.h",
     "inttypes.h",
     "iso646.h",
     "limits.h",
     "math.h",
     "poll.h",
     "pthread.h",
+    "pwd.h",
     "sched.h",
     "semaphore.h",
     "setjmp.h",
@@ -64,6 +66,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "uchar.h",
     "unistd.h",
     "sys/mman.h",
+    "sys/resource.h",
     "sys/select.h",
     "sys/socket.h",
     "sys/stat.h",
@@ -914,6 +917,50 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"sysconf/tty check failed:\n{err}")
+
+    def test_pwd_grp_resource_and_cred_declarations(self) -> None:
+        src = "\n".join(
+            (
+                "#include <grp.h>",
+                "#include <pwd.h>",
+                "#include <sys/resource.h>",
+                "#include <unistd.h>",
+                "#ifdef SYS_DEBUG_LOG",
+                '#error "pwd/grp/resource leaked SYS_DEBUG_LOG"',
+                "#endif",
+                "static int __check_cred_rlimit(void) {",
+                "    struct passwd pw, *pwp = 0;",
+                "    struct group gr, *grp = 0;",
+                "    struct rlimit rl = {0, RLIM_INFINITY};",
+                "    char buf[64];",
+                "    gid_t gids[4];",
+                "    (void)getpwuid(getuid());",
+                "    (void)getpwnam(\"root\");",
+                "    (void)getpwuid_r(geteuid(), &pw, buf, sizeof(buf), &pwp);",
+                "    (void)getpwnam_r(\"root\", &pw, buf, sizeof(buf), &pwp);",
+                "    (void)getgrgid(getgid());",
+                "    (void)getgrnam(\"root\");",
+                "    (void)getgrgid_r(getegid(), &gr, buf, sizeof(buf), &grp);",
+                "    (void)getgrnam_r(\"root\", &gr, buf, sizeof(buf), &grp);",
+                "    (void)setuid(0);",
+                "    (void)seteuid(0);",
+                "    (void)setgid(0);",
+                "    (void)setegid(0);",
+                "    (void)getgroups(4, gids);",
+                "    (void)getlogin();",
+                "    (void)getlogin_r(buf, sizeof(buf));",
+                "    (void)getrlimit(RLIMIT_NOFILE, &rl);",
+                "    (void)setrlimit(RLIMIT_NOFILE, &rl);",
+                "    return (int)RLIMIT_AS;",
+                "}",
+                "int (*__cred_fn_ref)(void) = __check_cred_rlimit;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"cred/rlimit check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

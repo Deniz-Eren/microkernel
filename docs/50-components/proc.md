@@ -119,3 +119,17 @@ keep per-CPU `GS.base` state and idle threads. SMP-hardened `sched.c`, `pmm.c`,
 `tcgetwinsize`/`tcsetwinsize`. `bin/utils/` supplies `ps`, `getconf`, `tty`, and
 `stty` ({need}`ICD_PROC_0009`, {need}`SWR_PROC_0010`).
 ```
+
+```{comp} Kernel credentials, rlimits, pwd/grp databases, and identity utilities
+:id: COMP_PROC_0010
+:status: active
+:posix: XBD/pwd.h (BASE), XBD/grp.h (BASE), XBD/sys/resource.h (BASE)
+:refines: ARC_PROC_0001, ICD_PROC_0010
+:satisfies: SWR_PROC_0011
+
+`kernel/core/proc.c` and `kernel/core/sched.c` implement `SYS_PROC_CRED`,
+`SYS_PROC_RLIMIT`, and `RLIMIT_NOFILE` checks. `libc/src/cred.c` supplies Base
+`pwd.h`, `grp.h`, `sys/resource.h`, and `unistd.h` identity calls. `bin/utils/`
+and `bin/sh/` supply `id`, `logname`, `nice`, `renice`, `umask`, and `ulimit`
+({need}`ICD_PROC_0010`, {need}`SWR_PROC_0011`).
+```

@@ -13,8 +13,10 @@
 #include <fcntl.h>
 #include <float.h>
 #include <fnmatch.h>
+#include <grp.h>
 #include <iso646.h>
 #include <limits.h>
+#include <pwd.h>
 #include <sched.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -27,6 +29,7 @@
 #include <stdnoreturn.h>
 #include <string.h>
 #include <sys/proc.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
@@ -35,7 +38,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0008 VER_PROC_0008 */
+/* need:: VER_LIBC_0008 VER_PROC_0008 VER_PROC_0009 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -661,6 +664,136 @@ static int test_sysconf_tty_and_proclist(void) {
     return 0;
 }
 
+static int test_cred_pwd_grp_rlimit(void) {
+    /* 1. Initial root credentials, groups, and getlogin/getlogin_r. */
+    gid_t grps[8] = {99u};
+    int ng = getgroups(8, grps);
+    if (getuid() != 0u || geteuid() != 0u || getgid() != 0u ||
+        getegid() != 0u || ng != 1 || grps[0] != 0u ||
+        getgroups(0, NULL) != 1) {
+        printf("[FAIL] initial credentials mismatch\n");
+        return -1;
+    }
+    char lbuf[32];
+    if (strcmp(getlogin(), "root") != 0 || getlogin_r(lbuf, 2u) != ERANGE ||
+        getlogin_r(lbuf, sizeof(lbuf)) != 0 || strcmp(lbuf, "root") != 0) {
+        printf("[FAIL] getlogin/getlogin_r failed\n");
+        return -1;
+    }
+
+    /* 2. <pwd.h> and <grp.h> lookups and reentrant _r variants. */
+    struct passwd *pw = getpwuid(0u);
+    struct passwd *pwn = getpwnam("nobody");
+    if (!pw || strcmp(pw->pw_name, "root") != 0 || pw->pw_uid != 0u || !pwn ||
+        pwn->pw_uid != 65534u || getpwuid(12345u) != NULL) {
+        printf("[FAIL] getpwuid/getpwnam failed\n");
+        return -1;
+    }
+    struct passwd pwr;
+    struct passwd *pw_res = NULL;
+    char pbuf[128];
+    if (getpwuid_r(0u, &pwr, pbuf, 4u, &pw_res) != ERANGE ||
+        getpwuid_r(0u, &pwr, pbuf, sizeof(pbuf), &pw_res) != 0 ||
+        pw_res != &pwr || strcmp(pwr.pw_name, "root") != 0 ||
+        getpwnam_r("no_such_user", &pwr, pbuf, sizeof(pbuf), &pw_res) != 0 ||
+        pw_res != NULL) {
+        printf("[FAIL] getpwuid_r/getpwnam_r failed\n");
+        return -1;
+    }
+
+    struct group *gr = getgrgid(0u);
+    struct group *grw = getgrnam("wheel");
+    if (!gr || strcmp(gr->gr_name, "root") != 0 || !grw || grw->gr_gid != 10u ||
+        getgrgid(12345u) != NULL) {
+        printf("[FAIL] getgrgid/getgrnam failed\n");
+        return -1;
+    }
+    struct group grr;
+    struct group *gr_res = NULL;
+    char gbuf[128];
+    if (getgrgid_r(0u, &grr, gbuf, 4u, &gr_res) != ERANGE ||
+        getgrgid_r(0u, &grr, gbuf, sizeof(gbuf), &gr_res) != 0 ||
+        gr_res != &grr || !grr.gr_mem || !grr.gr_mem[0] ||
+        strcmp(grr.gr_mem[0], "root") != 0) {
+        printf("[FAIL] getgrgid_r failed\n");
+        return -1;
+    }
+
+    /* 3. Fork child to test RLIMIT_NOFILE, credential drop, EPERM, and nice. */
+    pid_t child = fork();
+    if (child < 0) {
+        printf("[FAIL] cred fork failed\n");
+        return -1;
+    }
+    if (child == 0) {
+        struct rlimit rl = {0, 0};
+        if (getrlimit(RLIMIT_NOFILE, &rl) != 0 || rl.rlim_cur != OPEN_MAX) {
+            _exit(10);
+        }
+        struct rlimit bad = {20UL, 10UL};
+        errno = 0;
+        if (setrlimit(RLIMIT_NOFILE, &bad) != -1 || errno != EINVAL) {
+            _exit(11);
+        }
+        struct rlimit tight = {5UL, 5UL};
+        if (setrlimit(RLIMIT_NOFILE, &tight) != 0) {
+            _exit(12);
+        }
+        int p1[2] = {-1, -1};
+        int p2[2] = {-1, -1};
+        if (pipe2(p1, O_CLOEXEC) != 0) {
+            _exit(13);
+        }
+        errno = 0;
+        if (pipe2(p2, O_CLOEXEC) != -1 || errno != EMFILE) {
+            _exit(14);
+        }
+        close(p1[0]);
+        close(p1[1]);
+
+        /* seteuid drop + restore via saved UID, then permanent setuid drop. */
+        if (seteuid(65534u) != 0 || geteuid() != 65534u || getuid() != 0u) {
+            _exit(15);
+        }
+        if (seteuid(0u) != 0 || geteuid() != 0u) {
+            _exit(16);
+        }
+        if (setgid(65534u) != 0 || getgid() != 65534u || getegid() != 65534u) {
+            _exit(17);
+        }
+        if (setuid(65534u) != 0 || getuid() != 65534u || geteuid() != 65534u) {
+            _exit(18);
+        }
+        errno = 0;
+        if (setuid(0u) != -1 || errno != EPERM) {
+            _exit(19);
+        }
+        struct rlimit raise = {5UL, 10UL};
+        errno = 0;
+        if (setrlimit(RLIMIT_NOFILE, &raise) != -1 || errno != EPERM) {
+            _exit(20);
+        }
+        if (ProcSetNice(0, 5, 1) != 25L || ProcGetNice(0) != 25L) {
+            _exit(21);
+        }
+        if (ProcSetNice(0, -1, 1) != -EPERM) {
+            _exit(22);
+        }
+        _exit(0);
+    }
+
+    int st = 0;
+    if (waitpid(child, &st, 0) != child || !WIFEXITED(st) ||
+        WEXITSTATUS(st) != 0) {
+        printf("[FAIL] cred/rlimit child exited status=%d\n",
+               WIFEXITED(st) ? WEXITSTATUS(st) : -1);
+        return -1;
+    }
+
+    printf("[OK] credentials, pwd/grp, getlogin, rlimit, and nice verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -678,6 +811,9 @@ int main(void) {
         return 1;
     }
     if (test_sysconf_tty_and_proclist() != 0) {
+        return 1;
+    }
+    if (test_cred_pwd_grp_rlimit() != 0) {
         return 1;
     }
     return 0;

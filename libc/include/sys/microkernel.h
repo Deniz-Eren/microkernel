@@ -79,9 +79,33 @@
 #define SYS_VM_MAP_MMIO 59
 #define SYS_DMA_ALLOC 60
 #define SYS_PCI_CFG 61
+#define SYS_PROC_CRED 62
+#define SYS_PROC_RLIMIT 63
 
 #define PCI_CFG_OP_READ32 0u
 #define PCI_CFG_OP_WRITE32 1u
+
+#define CRED_OP_GETUID 1u
+#define CRED_OP_GETEUID 2u
+#define CRED_OP_SETUID 3u
+#define CRED_OP_SETEUID 4u
+#define CRED_OP_GETGID 5u
+#define CRED_OP_GETEGID 6u
+#define CRED_OP_SETGID 7u
+#define CRED_OP_SETEGID 8u
+#define CRED_OP_GETGROUPS 9u
+#define CRED_OP_SETGROUPS 10u
+#define CRED_OP_GETNICE 11u
+#define CRED_OP_SETNICE 12u
+
+#define PROC_NGROUPS_MAX 8u
+#define PROC_RLIMIT_COUNT 7u
+#define PROC_RLIM_INFINITY (~(uint64_t)0ULL)
+
+struct __k_rlimit {
+    uint64_t rlim_cur;
+    uint64_t rlim_max;
+};
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1

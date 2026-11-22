@@ -291,6 +291,12 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_PCI_CFG:
         ret = sys_pci_cfg(a0, a1, a2, a3);
         break;
+    case SYS_PROC_CRED:
+        ret = sys_proc_cred(a0, a1, a2, a3);
+        break;
+    case SYS_PROC_RLIMIT:
+        ret = sys_proc_rlimit(a0, a1, a2);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (a0 > 255) {

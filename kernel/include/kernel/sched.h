@@ -131,6 +131,18 @@ struct pcb {
     char comm[PROC_COMM_MAX];
     char args[PROC_ARGS_MAX];
 
+    /* POSIX.1-2024 process credentials, nice value, and resource limits. */
+    uint32_t uid;
+    uint32_t euid;
+    uint32_t suid;
+    uint32_t gid;
+    uint32_t egid;
+    uint32_t sgid;
+    uint32_t ngroups;
+    uint32_t groups[PROC_NGROUPS_MAX];
+    int32_t nice;
+    struct __k_rlimit rlimits[PROC_RLIMIT_COUNT];
+
     /* Process CPU tick accounting and alarm(2) deadline (monotonic ns). */
     uint64_t utime_ticks;
     uint64_t stime_ticks;
@@ -226,6 +238,8 @@ long sys_sys_stats(uint64_t ubuf);
 long sys_sched_yield(void);
 long sys_proc_times(uint64_t ubuf);
 long sys_proc_pgid(uint64_t op, int64_t pid, int64_t pgid);
+long sys_proc_cred(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3);
+long sys_proc_rlimit(uint64_t resource, uint64_t new_va, uint64_t old_va);
 void thread_exit_current(int status) __attribute__((noreturn));
 void proc_exit_current(int status) __attribute__((noreturn));
 void proc_exit_signal(int sig) __attribute__((noreturn));

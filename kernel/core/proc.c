@@ -36,7 +36,7 @@
 #include <sys/vm.h>
 #include "channel.h"
 
-/* need:: COMP_BOOT_0002 COMP_PROC_0002 COMP_PROC_0009 */
+/* need:: COMP_BOOT_0002 COMP_PROC_0002 COMP_PROC_0009 COMP_PROC_0010 */
 
 #define MAIN_STACK_TOP 0x700000000000ULL
 #define MAIN_STACK_SIZE (64ULL * 1024ULL)
@@ -478,7 +478,11 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
             return -EINVAL;
         }
         uint64_t pf = spin_lock_irqsave(&g_proc_lock);
-        for (int i = (int)min_fd; i < PROC_MAX_FDS; i++) {
+        int fd_limit = PROC_MAX_FDS;
+        if (p->rlimits[4].rlim_cur < (uint64_t)fd_limit) {
+            fd_limit = (int)p->rlimits[4].rlim_cur;
+        }
+        for (int i = (int)min_fd; i < fd_limit; i++) {
             if (p->fds[i].kind == FD_KIND_NONE) {
                 p->fds[i] = e;
                 spin_unlock_irqrestore(&g_proc_lock, pf);
@@ -536,7 +540,11 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
             spin_unlock_irqrestore(&g_proc_lock, pf);
             return -EBADF;
         }
-        for (int i = (int)a2; i < PROC_MAX_FDS; i++) {
+        int fd_limit = PROC_MAX_FDS;
+        if (p->rlimits[4].rlim_cur < (uint64_t)fd_limit) {
+            fd_limit = (int)p->rlimits[4].rlim_cur;
+        }
+        for (int i = (int)a2; i < fd_limit; i++) {
             if (p->fds[i].kind == FD_KIND_NONE) {
                 p->fds[i] = p->fds[a1];
                 p->fds[i].fd_flags = (uint8_t)(a3 & FD_FLAG_CLOEXEC);
@@ -557,7 +565,7 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
             return -EBADF;
         }
         uint64_t pf = spin_lock_irqsave(&g_proc_lock);
-        if (p->fds[a1].kind == FD_KIND_NONE) {
+        if (p->fds[a1].kind == FD_KIND_NONE || a2 >= p->rlimits[4].rlim_cur) {
             spin_unlock_irqrestore(&g_proc_lock, pf);
             return -EBADF;
         }
@@ -721,6 +729,9 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
             dst->ppid = c->parent_pid;
             dst->pgid = c->pgid;
             dst->sid = c->sid;
+            dst->uid = c->uid;
+            dst->gid = c->gid;
+            dst->nice = c->nice;
             dst->state =
                 (c->state == PROC_ZOMBIE) ? PROC_INFO_ZOMBIE : PROC_INFO_ALIVE;
             dst->nthreads = c->nthreads;
@@ -755,6 +766,235 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
     default:
         return -EINVAL;
     }
+}
+
+long sys_proc_cred(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3) {
+    pcb_t *p = proc_current();
+    if (!p) {
+        return -EPERM;
+    }
+
+    switch (op) {
+    case CRED_OP_GETUID: {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        uint32_t v = p->uid;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return (long)v;
+    }
+    case CRED_OP_GETEUID: {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        uint32_t v = p->euid;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return (long)v;
+    }
+    case CRED_OP_SETUID: {
+        uint32_t nu = (uint32_t)a1;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->euid == 0u) {
+            p->uid = nu;
+            p->euid = nu;
+            p->suid = nu;
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return 0;
+        }
+        if (nu == p->uid || nu == p->suid) {
+            p->euid = nu;
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return 0;
+        }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return -EPERM;
+    }
+    case CRED_OP_SETEUID: {
+        uint32_t nu = (uint32_t)a1;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->euid == 0u || nu == p->uid || nu == p->suid) {
+            p->euid = nu;
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return 0;
+        }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return -EPERM;
+    }
+    case CRED_OP_GETGID: {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        uint32_t v = p->gid;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return (long)v;
+    }
+    case CRED_OP_GETEGID: {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        uint32_t v = p->egid;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return (long)v;
+    }
+    case CRED_OP_SETGID: {
+        uint32_t ng = (uint32_t)a1;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->euid == 0u) {
+            p->gid = ng;
+            p->egid = ng;
+            p->sgid = ng;
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return 0;
+        }
+        if (ng == p->gid || ng == p->sgid) {
+            p->egid = ng;
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return 0;
+        }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return -EPERM;
+    }
+    case CRED_OP_SETEGID: {
+        uint32_t ng = (uint32_t)a1;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->euid == 0u || ng == p->gid || ng == p->sgid) {
+            p->egid = ng;
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return 0;
+        }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return -EPERM;
+    }
+    case CRED_OP_GETGROUPS: {
+        int64_t sz = (int64_t)a1;
+        if (sz < 0) {
+            return -EINVAL;
+        }
+        uint32_t kgrps[PROC_NGROUPS_MAX];
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        uint32_t n = p->ngroups;
+        if (n > PROC_NGROUPS_MAX) {
+            n = PROC_NGROUPS_MAX;
+        }
+        memcpy(kgrps, p->groups, (size_t)n * sizeof(uint32_t));
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        if (sz == 0) {
+            return (long)n;
+        }
+        if ((uint64_t)sz < (uint64_t)n) {
+            return -EINVAL;
+        }
+        if (a2 == 0u) {
+            return -EFAULT;
+        }
+        if (n > 0u &&
+            copy_to_user(a2, kgrps, (size_t)n * sizeof(uint32_t)) < 0) {
+            return -EFAULT;
+        }
+        return (long)n;
+    }
+    case CRED_OP_SETGROUPS: {
+        if (a1 > PROC_NGROUPS_MAX) {
+            return -EINVAL;
+        }
+        uint32_t kgrps[PROC_NGROUPS_MAX];
+        memset(kgrps, 0, sizeof(kgrps));
+        if (a1 > 0u) {
+            if (a2 == 0u) {
+                return -EFAULT;
+            }
+            if (copy_from_user(kgrps, a2, (size_t)a1 * sizeof(uint32_t)) < 0) {
+                return -EFAULT;
+            }
+        }
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->euid != 0u) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -EPERM;
+        }
+        p->ngroups = (uint32_t)a1;
+        memcpy(p->groups, kgrps, sizeof(p->groups));
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return 0;
+    }
+    case CRED_OP_GETNICE: {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        pcb_t *t = (a1 == 0u) ? p : proc_find_locked((uint32_t)a1);
+        if (!t) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -ESRCH;
+        }
+        int32_t nv = t->nice;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return (long)(nv + 20);
+    }
+    case CRED_OP_SETNICE: {
+        int64_t arg = (int64_t)a2;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        pcb_t *t = (a1 == 0u) ? p : proc_find_locked((uint32_t)a1);
+        if (!t) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -ESRCH;
+        }
+        if (p->euid != 0u && t->uid != p->uid && t->uid != p->euid) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -EPERM;
+        }
+        int64_t next = (a3 != 0u) ? ((int64_t)t->nice + arg) : arg;
+        if (next < -20) {
+            next = -20;
+        } else if (next > 19) {
+            next = 19;
+        }
+        if (next < (int64_t)t->nice && p->euid != 0u) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -EPERM;
+        }
+        t->nice = (int32_t)next;
+        uint8_t new_prio = (uint8_t)(100 - t->nice);
+        uint64_t sf = spin_lock_irqsave(&g_sched_lock);
+        for (tcb_t *th = t->threads; th; th = th->proc_next) {
+            if (!th->is_idle && th->state != THREAD_ZOMBIE) {
+                th->base_priority = new_prio;
+                if (th->effective_priority < new_prio) {
+                    th->effective_priority = new_prio;
+                }
+            }
+        }
+        spin_unlock_irqrestore(&g_sched_lock, sf);
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        return (long)(next + 20);
+    }
+    default:
+        return -EINVAL;
+    }
+}
+
+long sys_proc_rlimit(uint64_t resource, uint64_t new_va, uint64_t old_va) {
+    pcb_t *p = proc_current();
+    if (!p) {
+        return -EPERM;
+    }
+    if (resource >= PROC_RLIMIT_COUNT) {
+        return -EINVAL;
+    }
+    struct __k_rlimit nr = {0, 0};
+    if (new_va != 0u) {
+        if (copy_from_user(&nr, new_va, sizeof(nr)) < 0) {
+            return -EFAULT;
+        }
+        if (nr.rlim_cur > nr.rlim_max) {
+            return -EINVAL;
+        }
+    }
+
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    struct __k_rlimit old_lim = p->rlimits[resource];
+    if (new_va != 0u) {
+        if (nr.rlim_max > old_lim.rlim_max && p->euid != 0u) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -EPERM;
+        }
+        p->rlimits[resource] = nr;
+    }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
+    if (old_va != 0u && copy_to_user(old_va, &old_lim, sizeof(old_lim)) < 0) {
+        return -EFAULT;
+    }
+    return 0;
 }
 
 long sys_proc_fork(const trapframe_t *tf) {

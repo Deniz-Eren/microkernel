@@ -36,7 +36,7 @@ long sysconf(int name) {
     case _SC_JOB_CONTROL:
         return 1L;
     case _SC_SAVED_IDS:
-        return -1L;
+        return 1L;
     case _SC_VERSION:
         return _POSIX_VERSION;
     case _SC_PAGESIZE:

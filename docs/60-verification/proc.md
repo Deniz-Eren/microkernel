@@ -104,3 +104,16 @@ The headless QEMU harness runs `utilstest` (`tests/utilstest/test_utils.c`) and
 CTest Gates 1 to 3 verify header hygiene, non-POSIX exclusion, and
 async-signal-safety ({need}`SWR_PROC_0010`).
 ```
+
+```{ver} Verify credentials, pwd/grp, rlimits, and id/nice/ulimit in QEMU
+:id: VER_PROC_0009
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0011
+
+The headless QEMU harness runs `utilstest` (`tests/utilstest/test_utils.c`) and
+`shtest` (`tests/shtest/test_sh.c`). They verify UID/GID/group drops, `EPERM`
+checks, `getlogin*`, `<pwd.h>`, `<grp.h>`, `RLIMIT_NOFILE`, `id`, `logname`,
+`nice`, `renice`, `umask`, and `ulimit`. CTest Gates 1 to 3 verify the new
+headers, XCU utilities, and async-signal-safety ({need}`SWR_PROC_0011`).
+```

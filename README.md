@@ -258,29 +258,30 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
 
 - **Run scripts and command pipelines:** Chain commands with pipes, redirections
   (`<`, `>`, `>>`, `2>&1`), `&&`/`||`/`;`, environment variables, and built-ins
-  (`cd`, `pwd`, `export`, `unset`, `read`, `set`, `exit`). The shell also
-  targets Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d` with custom
-  or NUL delimiters.
+  (`cd`, `pwd`, `export`, `unset`, `read`, `set`, `umask`, `ulimit`, `exit`).
+  The shell also targets Issue 8 `$'...'` quoting, `set -o pipefail`, and `read
+  -d` with custom or NUL delimiters.
 - **Work with read-only, temporary, and persistent files:** List, inspect, copy,
   move, create, and remove files across `/boot` (`bootfs`), `/tmp` (`tmpfs`),
   and persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Available
   tools: `ls`, `cat`, `echo`, `mkdir`, `rm`, `cp`, `mv`, `wc`, `head`, `test`,
   `true`, and `false`.
-- **Inspect processes, system limits, and terminal settings:** View live
-  processes with `ps`, query POSIX limits with `getconf`, and check system
-  identity with `uname` and `env`. Read or change serial terminal modes and
-  window size with `tty` and `stty`.
+- **Inspect processes, credentials, limits, and terminal settings:** View live
+  processes with `ps`, check identity with `id` and `logname`, adjust priority
+  with `nice` and `renice`, and query POSIX limits with `getconf`. Check system
+  details with `uname` and `env`, and adjust terminal modes with `tty` and
+  `stty`.
 
 ### For C17 application programmers
 
 You can write portable, standalone C17 programs packed into `boot.tar` and run
 them in isolated Ring 3 address spaces across multiple CPU cores:
 
-- **Processes, threads, and timing:** Fork copy-on-write child processes, launch
-  programs through `PATH`, and reap children with `waitpid`. Run multithreaded
-  code across SMP cores with pthreads, semaphores, deferred cancellation, and
-  thread-local `errno`. Use POSIX signals and monotonic or realtime clocks and
-  timers.
+- **Processes, credentials, threads, and timing:** Fork copy-on-write child
+  processes, manage UIDs/GIDs, query `<pwd.h>`/`<grp.h>`, and enforce
+  `<sys/resource.h>` limits. Run multithreaded code across SMP cores with
+  pthreads, semaphores, deferred cancellation, and thread-local `errno`. Use
+  POSIX signals and monotonic or realtime clocks and timers.
 - **Files, IPC, terminals, and event loops:** Use buffered `<stdio.h>` streams,
   directory traversal, pipes, `AF_UNIX` sockets, `<aio.h>`, and `<termios.h>`
   terminal controls. Multiplex descriptors across all Ring 3 servers in one
@@ -311,10 +312,10 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** User and group credentials, file
-  permissions, links, FIFOs, locales, wide characters, regular expressions, and
-  `<dlfcn.h>`. Ring 3 TCP/IP networking and remaining shell grammar and XCU
-  utilities follow. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** File permissions, hard and symbolic
+  links, FIFOs, locales, wide characters, regular expressions, and `<dlfcn.h>`.
+  Ring 3 TCP/IP networking and remaining shell grammar and XCU utilities follow.
+  See [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree

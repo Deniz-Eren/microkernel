@@ -527,6 +527,16 @@ pcb_t *proc_create(pcb_t *parent) {
         uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         memcpy(p->cwd, parent->cwd, sizeof(p->cwd));
         p->umask = parent->umask;
+        p->uid = parent->uid;
+        p->euid = parent->euid;
+        p->suid = parent->suid;
+        p->gid = parent->gid;
+        p->egid = parent->egid;
+        p->sgid = parent->sgid;
+        p->ngroups = parent->ngroups;
+        memcpy(p->groups, parent->groups, sizeof(p->groups));
+        p->nice = parent->nice;
+        memcpy(p->rlimits, parent->rlimits, sizeof(p->rlimits));
         p->next = g_proc_list;
         g_proc_list = p;
         spin_unlock_irqrestore(&g_proc_lock, pf);
@@ -534,6 +544,24 @@ pcb_t *proc_create(pcb_t *parent) {
         p->cwd[0] = '/';
         p->cwd[1] = '\0';
         p->umask = 0022u;
+        p->uid = 0u;
+        p->euid = 0u;
+        p->suid = 0u;
+        p->gid = 0u;
+        p->egid = 0u;
+        p->sgid = 0u;
+        p->ngroups = 1u;
+        p->groups[0] = 0u;
+        p->nice = 0;
+        for (uint32_t i = 0; i < PROC_RLIMIT_COUNT; i++) {
+            p->rlimits[i].rlim_cur = PROC_RLIM_INFINITY;
+            p->rlimits[i].rlim_max = PROC_RLIM_INFINITY;
+        }
+        p->rlimits[0].rlim_cur = 0ULL;         /* RLIMIT_CORE */
+        p->rlimits[4].rlim_cur = PROC_MAX_FDS; /* RLIMIT_NOFILE */
+        p->rlimits[4].rlim_max = PROC_MAX_FDS;
+        p->rlimits[5].rlim_cur = 65536ULL; /* RLIMIT_STACK */
+        p->rlimits[5].rlim_max = 65536ULL;
         uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         p->next = g_proc_list;
         g_proc_list = p;

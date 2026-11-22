@@ -114,3 +114,17 @@ ABI ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0008`).
 `ttyname`, `ttyname_r`, `struct winsize`, `tcgetsid`, `tcgetwinsize`, and
 `tcsetwinsize` ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0010`).
 ```
+
+```{icd} POSIX.1-2024 <pwd.h>, <grp.h>, <sys/resource.h>, and credential ABI
+:id: ICD_PROC_0010
+:status: active
+:posix: XBD/pwd.h (BASE), XBD/grp.h (BASE), XBD/sys/resource.h (BASE)
+:refines: ARC_PROC_0001
+:satisfies: SWR_PROC_0011
+
+`<pwd.h>`, `<grp.h>`, `<sys/resource.h>`, and `<unistd.h>` declare Base
+`getpw*`, `getgr*`, `getrlimit`/`setrlimit`, `getuid`/`setuid`/`geteuid`/
+`seteuid`, `getgid`/`setgid`/`getegid`/`setegid`, `getgroups`, and `getlogin*`.
+`SYS_PROC_CRED`, `SYS_PROC_RLIMIT`, and `ProcGetNice`/`ProcSetNice` define the
+kernel ABI ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0011`).
+```

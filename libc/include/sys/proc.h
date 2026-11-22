@@ -10,7 +10,7 @@
 
 #pragma once
 
-/* need:: ICD_PROC_0003 ICD_PROC_0009 */
+/* need:: ICD_PROC_0003 ICD_PROC_0009 ICD_PROC_0010 */
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/fd.h>
@@ -30,6 +30,9 @@ struct __k_proc_info {
     uint32_t ppid;
     uint32_t pgid;
     uint32_t sid;
+    uint32_t uid;
+    uint32_t gid;
+    int32_t nice;
     uint32_t state;
     uint32_t nthreads;
     uint32_t prio;
@@ -59,4 +62,18 @@ static inline long ProcWait(long pid, int *status, unsigned options) {
 static inline long ProcList(struct __k_proc_info *buf, size_t max_entries) {
     return __sys5(SYS_FD_OP, FD_OP_PROC_LIST, (long)(uintptr_t)buf,
                   (long)max_entries, 0, 0);
+}
+
+/* Query nice value (-20..19) for pid (0 = current process). Returns nice + 20
+ * (>= 0) on success or negative errno on failure. */
+static inline long ProcGetNice(int pid) {
+    return __sys4(SYS_PROC_CRED, CRED_OP_GETNICE, (long)pid, 0, 0);
+}
+
+/* Set or adjust nice value (-20..19) for pid (0 = current process). When
+ * is_delta != 0, val is added to current nice; otherwise nice is set to val.
+ * Returns new nice + 20 (>= 0) on success or negative errno on failure. */
+static inline long ProcSetNice(int pid, int val, int is_delta) {
+    return __sys4(SYS_PROC_CRED, CRED_OP_SETNICE, (long)pid, (long)val,
+                  (long)is_delta);
 }

@@ -16,11 +16,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-/* need:: COMP_LIBC_0005 */
+/* need:: COMP_LIBC_0005 COMP_PROC_0010 */
 
 #define SH_MAX_TOKENS 128
 #define SH_MAX_WORD 512
@@ -716,6 +717,193 @@ static int builtin_set(int argc, char **argv) {
     return 0;
 }
 
+static int builtin_umask(int argc, char **argv) {
+    int symbolic = 0;
+    int idx = 1;
+    if (idx < argc && strcmp(argv[idx], "-S") == 0) {
+        symbolic = 1;
+        idx++;
+    }
+    if (idx < argc && strcmp(argv[idx], "--") == 0) {
+        idx++;
+    }
+    if (idx >= argc) {
+        mode_t m = umask(0u);
+        (void)umask(m);
+        if (symbolic) {
+            mode_t allow = (~m) & 0777u;
+            const char *who[3] = {"u", "g", "o"};
+            int shifts[3] = {6, 3, 0};
+            for (int i = 0; i < 3; i++) {
+                unsigned bits = (allow >> shifts[i]) & 7u;
+                if (i > 0) {
+                    (void)putchar(',');
+                }
+                (void)printf("%s=", who[i]);
+                if (bits & 4u) {
+                    (void)putchar('r');
+                }
+                if (bits & 2u) {
+                    (void)putchar('w');
+                }
+                if (bits & 1u) {
+                    (void)putchar('x');
+                }
+            }
+            (void)putchar('\n');
+        } else {
+            (void)printf("%04o\n", (unsigned)(m & 0777u));
+        }
+        (void)fflush(stdout);
+        return 0;
+    }
+    char *end = NULL;
+    unsigned long val = strtoul(argv[idx], &end, 8);
+    if (end == argv[idx] || *end != '\0' || val > 0777UL) {
+        (void)fprintf(stderr, "umask: invalid mode: %s\n", argv[idx]);
+        return 1;
+    }
+    (void)umask((mode_t)val);
+    return 0;
+}
+
+static void print_rlim_val(rlim_t val, rlim_t scale) {
+    if (val == RLIM_INFINITY) {
+        (void)puts("unlimited");
+    } else {
+        (void)printf("%lu\n", (unsigned long)(val / scale));
+    }
+}
+
+static int builtin_ulimit(int argc, char **argv) {
+    int hard = 0;
+    int soft = 0;
+    int res = RLIMIT_FSIZE;
+    rlim_t scale = 512UL;
+    int show_all = 0;
+    int idx = 1;
+
+    while (idx < argc && argv[idx][0] == '-' && argv[idx][1] != '\0') {
+        if (strcmp(argv[idx], "--") == 0) {
+            idx++;
+            break;
+        }
+        for (const char *p = argv[idx] + 1; *p; p++) {
+            switch (*p) {
+            case 'H':
+                hard = 1;
+                break;
+            case 'S':
+                soft = 1;
+                break;
+            case 'a':
+                show_all = 1;
+                break;
+            case 'c':
+                res = RLIMIT_CORE;
+                scale = 512UL;
+                break;
+            case 'd':
+                res = RLIMIT_DATA;
+                scale = 1024UL;
+                break;
+            case 'f':
+                res = RLIMIT_FSIZE;
+                scale = 512UL;
+                break;
+            case 'n':
+                res = RLIMIT_NOFILE;
+                scale = 1UL;
+                break;
+            case 's':
+                res = RLIMIT_STACK;
+                scale = 1024UL;
+                break;
+            case 't':
+                res = RLIMIT_CPU;
+                scale = 1UL;
+                break;
+            case 'v':
+                res = RLIMIT_AS;
+                scale = 1024UL;
+                break;
+            default:
+                (void)fprintf(stderr, "ulimit: invalid option -%c\n", *p);
+                return 1;
+            }
+        }
+        idx++;
+    }
+
+    if (show_all) {
+        static const struct {
+            const char *label;
+            int id;
+            rlim_t unit;
+        } items[] = {
+            {"core file size (blocks, -c) ", RLIMIT_CORE, 512UL},
+            {"cpu time (seconds, -t)      ", RLIMIT_CPU, 1UL},
+            {"data seg size (kbytes, -d)  ", RLIMIT_DATA, 1024UL},
+            {"file size (blocks, -f)      ", RLIMIT_FSIZE, 512UL},
+            {"open files (-n)             ", RLIMIT_NOFILE, 1UL},
+            {"stack size (kbytes, -s)     ", RLIMIT_STACK, 1024UL},
+            {"virtual memory (kbytes, -v) ", RLIMIT_AS, 1024UL},
+        };
+        for (size_t i = 0; i < sizeof(items) / sizeof(items[0]); i++) {
+            struct rlimit rl;
+            if (getrlimit(items[i].id, &rl) == 0) {
+                (void)fputs(items[i].label, stdout);
+                print_rlim_val(hard && !soft ? rl.rlim_max : rl.rlim_cur,
+                               items[i].unit);
+            }
+        }
+        (void)fflush(stdout);
+        return 0;
+    }
+
+    struct rlimit rl;
+    if (getrlimit(res, &rl) != 0) {
+        perror("ulimit");
+        return 1;
+    }
+    if (idx >= argc) {
+        print_rlim_val(hard && !soft ? rl.rlim_max : rl.rlim_cur, scale);
+        (void)fflush(stdout);
+        return 0;
+    }
+
+    rlim_t nv = 0UL;
+    if (strcmp(argv[idx], "unlimited") == 0) {
+        nv = RLIM_INFINITY;
+    } else {
+        char *end = NULL;
+        errno = 0;
+        unsigned long parsed = strtoul(argv[idx], &end, 10);
+        if (errno != 0 || end == argv[idx] || *end != '\0') {
+            (void)fprintf(stderr, "ulimit: invalid limit: %s\n", argv[idx]);
+            return 1;
+        }
+        nv = (rlim_t)parsed * scale;
+    }
+
+    if (!hard && !soft) {
+        rl.rlim_cur = nv;
+        rl.rlim_max = nv;
+    } else {
+        if (hard) {
+            rl.rlim_max = nv;
+        }
+        if (soft) {
+            rl.rlim_cur = nv;
+        }
+    }
+    if (setrlimit(res, &rl) != 0) {
+        perror("ulimit");
+        return 1;
+    }
+    return 0;
+}
+
 static int is_builtin_name(const char *cmd) {
     if (!cmd) {
         return 0;
@@ -724,7 +912,8 @@ static int is_builtin_name(const char *cmd) {
            strcmp(cmd, "export") == 0 || strcmp(cmd, "unset") == 0 ||
            strcmp(cmd, "set") == 0 || strcmp(cmd, "read") == 0 ||
            strcmp(cmd, "exit") == 0 || strcmp(cmd, "true") == 0 ||
-           strcmp(cmd, "false") == 0 || strcmp(cmd, "echo") == 0;
+           strcmp(cmd, "false") == 0 || strcmp(cmd, "echo") == 0 ||
+           strcmp(cmd, "umask") == 0 || strcmp(cmd, "ulimit") == 0;
 }
 
 static int run_builtin(int argc, char **argv) {
@@ -804,6 +993,12 @@ static int run_builtin(int argc, char **argv) {
     }
     if (strcmp(cmd, "read") == 0) {
         return builtin_read(argc, argv);
+    }
+    if (strcmp(cmd, "umask") == 0) {
+        return builtin_umask(argc, argv);
+    }
+    if (strcmp(cmd, "ulimit") == 0) {
+        return builtin_ulimit(argc, argv);
     }
     if (strcmp(cmd, "exit") == 0) {
         g_should_exit = 1;

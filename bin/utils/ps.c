@@ -10,6 +10,8 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <grp.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +19,7 @@
 #include <sys/proc.h>
 #include <unistd.h>
 
-/* need:: COMP_PROC_0009 */
+/* need:: COMP_PROC_0009 COMP_PROC_0010 */
 
 #define PS_MAX_FILTERS 32u
 #define PS_MAX_COLS 16u
@@ -223,14 +225,32 @@ static void format_col_value(const struct __k_proc_info *pi, ps_col_id_t id,
         (void)snprintf(buf, cap, "%u", pi->pgid);
         break;
     case COL_RUSER:
-    case COL_USER:
-    case COL_RGROUP:
-    case COL_GROUP:
-        (void)strlcpy(buf, "root", cap);
+    case COL_USER: {
+        struct passwd *pw = getpwuid(pi->uid);
+        if (pw) {
+            (void)strlcpy(buf, pw->pw_name, cap);
+        } else {
+            (void)snprintf(buf, cap, "%u", pi->uid);
+        }
         break;
+    }
+    case COL_RGROUP:
+    case COL_GROUP: {
+        struct group *gr = getgrgid(pi->gid);
+        if (gr) {
+            (void)strlcpy(buf, gr->gr_name, cap);
+        } else {
+            (void)snprintf(buf, cap, "%u", pi->gid);
+        }
+        break;
+    }
     case COL_UID_NUM:
-    case COL_C:
+        (void)snprintf(buf, cap, "%u", pi->uid);
+        break;
     case COL_NICE:
+        (void)snprintf(buf, cap, "%d", pi->nice);
+        break;
+    case COL_C:
     case COL_F:
         (void)strlcpy(buf, "0", cap);
         break;
