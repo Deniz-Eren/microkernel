@@ -115,6 +115,17 @@ streams (`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4`,
 ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply Ring 3 virtio-blk storage driver and disk file system mount
+:id: SWR_IPC_0010
+:status: draft
+:derives: SYS_IPC_0001
+:traces: ADR_0003, ADR_0008, ADR_0016
+
+A `CAP_SYS_INTR` Ring 3 PCI `virtio-blk` driver must do block I/O with
+contiguous DMA frames and IOAPIC IRQ pulses. `vfsserv` must mount a writable
+disk file system that keeps files across QEMU restarts ({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:

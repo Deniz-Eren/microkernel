@@ -105,6 +105,19 @@ follow Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d`
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply additional POSIX.1-2024 Base headers and standard C utilities
+:id: SWR_LIBC_0008
+:status: draft
+:posix: XBD/sys/utsname.h (BASE), XBD/endian.h (BASE), XBD/sched.h (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, ADR_0003
+
+`libc` must register compiler freestanding headers in Gate 2 and supply
+`<sys/utsname.h>`, `<endian.h>`, `<sched.h>`, `<setjmp.h>`, `<sys/times.h>`, and
+`<fnmatch.h>`. It must also add `atexit`, `qsort`, `bsearch`, `strtol`,
+`strtoul`, `getopt`, `alarm`, `rename`, and `realpath` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

@@ -94,6 +94,31 @@ declare async-signal-safe `wait` and `waitpid` ([waitpid][fn-waitpid])
 ({need}`SYS_PROC_0001`).
 ```
 
+```{swr} Supply process groups, TTY signal control, and core utilities
+:id: SWR_PROC_0008
+:status: draft
+:posix: XSH/setpgid (BASE), XSH/tcsetpgrp (BASE), XBD/termios.h (BASE)
+:derives: SYS_PROC_0001
+:traces: BDR_0003, ADR_0003
+
+The kernel and `ttyserv` must supply process groups (`setpgid`, `getpgid`,
+`setsid`, `tcgetpgrp`, `tcsetpgrp`), `ISIG` (`SIGINT` on `Ctrl-C`), and
+`waitpid(-1)`. Ring 3 user space must add core utilities (`mkdir`, `rm`, `cp`,
+`mv`, `uname`, `env`, `wc`, `head`) ({need}`SYS_PROC_0001`).
+```
+
+```{swr} Boot secondary CPUs via ACPI MADT and run SMP scheduling
+:id: SWR_PROC_0009
+:status: draft
+:derives: SYS_PROC_0001
+:traces: ADR_0003, ADR_0022
+
+The kernel must start secondary CPUs with LAPIC `INIT`/`SIPI` from ACPI `MADT`
+entries and hold per-CPU state in `GS.base`. Kernel locks for `pmm`, `vmm`,
+`sched`, `ipc`, and `futex` must run safely across multiple cores
+({need}`SYS_PROC_0001`).
+```
+
 [hdr-wait]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_wait.h.html
 [fn-waitpid]:

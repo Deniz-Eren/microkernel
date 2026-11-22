@@ -21,6 +21,13 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Refined `TSK_0020` (`SWR_DOCS_0004`) in `docs/records/TASKS.md` with Gate 1–3
+  `<sys/select.h>` coverage and quantitative PMM/server-handle leak checks, and
+  queued the next development phase (`TSK_0022` TTY job control/`ISIG`/core
+  utilities, `TSK_0023` high-leverage `libc` Base headers, `TSK_0024` Ring 3
+  `virtio-blk` persistent storage, and `TSK_0025` ACPI `MADT` SMP bring-up) with
+  matching draft requirements (`SWR_PROC_0008`–`0009`, `SWR_LIBC_0008`,
+  `SWR_IPC_0010`).
 - Audited and updated all `POSIX` references across documentation, headers, code
   comments, and audit scripts to use work-in-progress, goal-oriented wording
   targeting `POSIX.1-2024` (`IEEE Std 1003.1-2024` / `ISO/IEC/IEEE 9945:2026`),

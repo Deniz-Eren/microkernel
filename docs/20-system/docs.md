@@ -47,7 +47,7 @@ cancellation call-graph checks, and runtime compatibility test suites
 ({need}`SYS_DOCS_0001`).
 ```
 
-```{swr} Verify cross-subsystem POSIX integration, pselect, and leak freedom
+```{swr} Verify cross-subsystem integration, pselect, and leak freedom
 :id: SWR_DOCS_0004
 :status: draft
 :posix: XBD/sys/select.h (BASE), XSH/pselect (BASE)
@@ -55,7 +55,8 @@ cancellation call-graph checks, and runtime compatibility test suites
 :traces: BDR_0003, ADR_0003
 
 The system must supply `<sys/select.h>` (`select`, `pselect`) over multi-server
-`ppoll`. An integrated QEMU stress suite must verify zero PMM frame, descriptor,
-or server handle leaks across `sh`, VFS, pipes, TTY, sockets, and `SHM`
-({need}`SYS_DOCS_0001`).
+`ppoll` with Gate 1 to Gate 3 checks. An integrated QEMU stress suite must
+verify zero PMM frame, descriptor, or server handle leaks across `sh`, VFS,
+pipes, TTY, sockets, and `SHM`. It must check exact kernel frame counts and Ring
+3 server handle counts before and after stress loops ({need}`SYS_DOCS_0001`).
 ```
