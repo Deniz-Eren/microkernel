@@ -246,155 +246,76 @@ flowchart TD
 
 ## User-space functionality (current support)
 
-Developers can build Ring 3 C17 servers and applications packed into `boot.tar`.
-User-space libraries and utilities are an ongoing effort working toward
-POSIX.1-2024 (IEEE Std 1003.1-2024) compatibility. The headers below list the
-subset available at this time:
+User space is an ongoing effort working toward POSIX.1-2024 (`IEEE Std
+1003.1-2024`) compatibility under [BDR_0003](docs/10-product/bdr/BDR_0003.md)
+and [BDR_0004](docs/10-product/bdr/BDR_0004.md). The summary below describes
+what interactive users and C17 programmers can do today.
 
-- **Core process and descriptor calls (`<unistd.h>`):** `_POSIX_VERSION` and
-  `_POSIX2_VERSION` (`202405L`), `fork` (COW), `execve`/`execv`/`execvp` (`PATH`
-  lookup and bootfs `argv`/`envp`), `getpid`, `getppid`, and `getentropy`. Also
-  `pipe`/`pipe2`, `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`,
-  `ftruncate`, `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, and `getcwd`.
-  Also `setpgid`, `getpgid`, `getpgrp`, `setsid`, `getsid`, `tcgetpgrp`,
-  `tcsetpgrp`, `access`, `isatty`, `ttyname`, `ttyname_r`, `sysconf`, `confstr`,
-  `pathconf`, `fpathconf`, `gethostname`, `getopt`, `alarm`, `_exit`, `sleep`,
-  `environ`, and `STD*_FILENO`
-- **Descriptor control and multiplexing (`<fcntl.h>`, `<poll.h>`,
-  `<sys/select.h>`):** `open`, `openat`, `creat`, and `fcntl` (`F_DUPFD`,
-  `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`). Also
-  `O_CLOEXEC`, `O_NONBLOCK`, `O_DIRECTORY`, `O_SYNC`, `O_DSYNC`, `poll`,
-  multi-server `ppoll`, `select`, `pselect`, `fd_set`, and `FD_*` backed by Ring
-  3 `pipeserv`, `vfsserv`, `ttyserv`, and `sockserv`
-- **Local sockets (`<sys/socket.h>`, `<sys/un.h>`):** `AF_UNIX` `SOCK_STREAM`
-  and `SOCK_DGRAM` sockets (`socket`, `socketpair`, `bind`, `listen`, `accept`,
-  `accept4`, `connect`, `send`, `recv`). Also `sendto`, `recvfrom`, `shutdown`,
-  `getsockname`, `getpeername`, `getsockopt`, and `setsockopt` with atomic
-  `SOCK_CLOEXEC` and `SOCK_NONBLOCK` over `sockserv` (`/dev/sock`)
-- **Terminal I/O (`<termios.h>`):** `tcgetattr`, `tcsetattr`, `tcflush`,
-  `tcdrain`, `tcflow`, `tcsendbreak`, `tcgetsid`, `tcgetwinsize`,
-  `tcsetwinsize`, and `cf*speed` helpers. Canonical line editing (`ICANON`,
-  `VERASE`, `VKILL`, `ICRNL`, `VEOF`), `ISIG`, and raw mode run on COM1 IRQ 4
-  `ttyserv`
-- **Filesystem and directories (`<sys/stat.h>`, `<dirent.h>`):** `stat`,
-  `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, `umask`, `opendir`,
-  `fdopendir`, `readdir`, `rewinddir`, `closedir`, and `dirfd` backed by Ring 3
-  `vfsserv` (`/boot` read-only `bootfs`, `/tmp` writable `tmpfs`, and `/mnt`
-  writable persistent `ext2` over `/dev/blk`)
-- **Asynchronous I/O (`<aio.h>`):** `aio_read`, `aio_write`, `aio_fsync`,
-  `aio_cancel`, `lio_listio` (`LIO_WAIT`/`LIO_NOWAIT`, `SIGEV_SIGNAL`), and
-  async-signal-safe `aio_error`, `aio_return`, and `aio_suspend` backed by a
-  Ring 3 worker thread over `SYS_FUTEX`
-- **Thread-local errors (`<errno.h>`):** O(1) `FS.base` TLS `errno`
-  (`__errno_location`, with lock-free fallback) and POSIX.1-2024 `E*` constants
-- **Signals (`<signal.h>`):** async-signal-safe `sigaction`, `sigprocmask`,
-  `sigpending`, `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`,
-  `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`, `sigismember`,
-  `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across `SYS_SIGRETURN`
-- **Memory mapping (`<sys/mman.h>`):** W^X-enforced `mmap` (`MAP_PRIVATE`,
-  `MAP_SHARED`, `MAP_ANONYMOUS`, `MAP_FIXED`), `mprotect`, `msync`, `munmap`,
-  option-gated `shm_open`/`shm_unlink` (`SHM`), and
-  `mlock`/`munlock`/`mlockall`/`munlockall` (`ML`/`MLR`, `MCL_CURRENT`,
-  `MCL_FUTURE`)
-- **Process wait (`<sys/wait.h>`):** async-signal-safe `wait`, `waitpid`
-  (`WNOHANG`), and exit/signal status macros (`WIFEXITED`, `WEXITSTATUS`,
-  `WIFSIGNALED`, `WTERMSIG`)
-- **Clocks and timers (`<time.h>`):** `CLOCK_MONOTONIC`, `CLOCK_REALTIME`,
-  `TIMER_ABSTIME`, `clock_getres`, `clock_gettime`, `clock_settime`,
-  `clock_nanosleep`, `nanosleep`, `timer_create`, `timer_settime`,
-  `timer_gettime`, `timer_getoverrun`, and `timer_delete`
-- **Threads and semaphores (`<pthread.h>`, `<semaphore.h>`):** `pthread_create`,
-  `pthread_join`, `pthread_detach`, `pthread_exit`, `pthread_once`, TSD keys,
-  deferred cancellation (`pthread_cancel`, `pthread_setcancelstate`,
-  `pthread_setcanceltype`, `pthread_testcancel`, `pthread_cleanup_push`/`pop`),
-  mutexes (`NORMAL`/`ERRORCHECK`/`RECURSIVE`), `pthread_cond_*`,
-  `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, and `sem_*` (with
-  async-signal-safe `sem_post`)
-- **Buffered and formatted I/O (`<stdio.h>`):** `FILE`
-  (`stdin`/`stdout`/`stderr`), `fopen`, `fdopen`, `fclose`, `fread`, `fwrite`,
-  `fgets`, `fgetc`, `getc`/`getc_unlocked`, `getchar`/`getchar_unlocked`, and
-  `ungetc`. Also `fseek`/`fseeko`, `ftell`/`ftello`, `rewind`, `feof`, `ferror`,
-  `clearerr`, `fileno`, `setvbuf`, `setbuf`, `fflush`, and recursive stream
-  locks (`flockfile`, `ftrylockfile`, `funlockfile`). Formatted output covers
-  `printf`/`vprintf`, `fprintf`/`vfprintf`, `snprintf`/`vsnprintf`,
-  `sprintf`/`vsprintf`, `puts`, `fputs`, `putchar`/`putchar_unlocked`, `fputc`,
-  `putc`/`putc_unlocked`, `perror`, `ctermid`, `rename`, and `renameat`
-- **Heap, sorting, paths, environment, and exit (`<stdlib.h>`):**
-  `mmap`/`munmap`-backed thread-safe coalescing `malloc`, `free`, `calloc`,
-  `realloc`, and `reallocarray`. Also `atexit`, `qsort`, `bsearch`, `realpath`,
-  `getenv`, `secure_getenv`, `setenv`, `unsetenv`, `exit`, `_Exit`, `abort`,
-  `strtol`/`strtoul`/`strtoll`/`strtoull`, `atoi`/`atol`/`atoll`, and
-  `abs`/`labs`/`llabs`
-- **System info, jumps, scheduling, byte order, and matching (`<sys/utsname.h>`,
-  `<endian.h>`, `<sched.h>`, `<setjmp.h>`, `<sys/times.h>`, `<fnmatch.h>`):**
-  `uname`, `htobe*`/`be*toh`/`htole*`/`le*toh`, `sched_yield`,
-  `setjmp`/`longjmp`, `sigsetjmp`/`siglongjmp`, `times`, and `fnmatch`
-  (`FNM_PATHNAME`, `FNM_PERIOD`, `FNM_NOESCAPE`, `FNM_IGNORECASE`)
-- **Floating-point environment and math (`<fenv.h>`, `<math.h>`):** `MXCSR`
-  rounding and exception control (`fegetround`, `fesetround`, `feclearexcept`,
-  `feraiseexcept`, `fetestexcept`, `fegetenv`, `feholdexcept`, `fesetenv`,
-  `feupdateenv`). IEEE-754 classification and comparison macros plus Base/CX
-  `float`, `double`, and `long double` math functions compile with `x86-64-v3`
-  hardware `FMA` (`fma`, `sqrt`, `cbrt`, `hypot`, `floor`/`ceil`/`trunc`,
-  `round`/`rint`/`nearbyint`, `fmod`/`remquo`, `exp`/`log`/`pow`, `erf`/`erfc`,
-  `tgamma`, `sin`/`cos`/`tan`, `asin`/`acos`/`atan`/`atan2`, and hyperbolic
-  functions)
-- **Memory, strings, and character classes (`<string.h>`, `<strings.h>`,
-  `<ctype.h>`):** `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`, `strlen`,
-  `strnlen`, `strcmp`, `strncmp`, `strcasecmp`, `strncasecmp`, `strcpy`,
-  `strncpy`, `strcat`, and `strncat`. Also `strlcpy`, `strlcat`, `strchr`,
-  `strrchr`, `strstr`, `strspn`, `strcspn`, `strpbrk`, `strtok`, `strtok_r`,
-  `strdup`, `strndup`, `strerror`, and C locale `<ctype.h>` helpers
-- **Freestanding C17, limits, and Unicode headers:** `<stdint.h>`, `<stddef.h>`,
-  `<stdbool.h>`, `<stdarg.h>`, `<stdnoreturn.h>`, `<float.h>`, `<iso646.h>`,
-  `<assert.h>`, `<inttypes.h>` (`PRI*`/`SCN*`, `imaxabs`, `imaxdiv`,
-  `strtoimax`, `strtoumax`), `<limits.h>` (C17 and POSIX `PATH_MAX`, `NAME_MAX`,
-  `OPEN_MAX`, `PIPE_BUF`, `ARG_MAX`, `SSIZE_MAX`), `<stdatomic.h>`,
-  `<stdalign.h>`, and `<uchar.h>` (`mbrtoc16`, `c16rtomb`, `mbrtoc32`,
-  `c32rtomb`)
-- **Synchronous IPC (`<sys/ipc.h>`):** `CreateChannel`, `DestroyChannel`,
-  `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
-  `ReadMsgV`, `WriteMsgV`, `SendPulse`, and `sysproc` name registry
-  (`NAME_MSG_ATTACH`, `NAME_MSG_QUERY`)
-- **Hardware IRQs, MMIO, DMA, PCI, and block I/O (`<sys/intr.h>`,
-  `<sys/blk.h>`):** `AttachIntrEvent` (IOAPIC IRQ-to-IPC pulses), `IntrUnmask`,
-  `IOPLSet`, `VMMapMMIO`, `DMAAlloc`, `PCIConfigRead32`/`PCIConfigWrite32`
-  (`CAP_SYS_INTR` guarded), Ring 3 `port_in*`/`port_out*` helpers, and Ring 3
-  PCI `virtio-blk` sector I/O over `/dev/blk` (`blkdrv`)
-- **Command shell and core utilities (`bin/`):** Ring 3 `/boot/sh` targeting
-  POSIX.1-2024 XCU features (`-c`, script files, interactive `isatty()` input
-  with foreground job control, pipelines, redirections `<`/`>`/`>>`/`2>&1`,
-  `&&`/`||`/`;`, `$VAR`/`$?`, `$'...'` ANSI-C quoting, `set -o pipefail`, `read
-  -d` custom/NUL delimiters, and built-ins `cd`/`pwd`/`export`/`unset`/`exit`).
-  Standalone `/boot/` utilities: `echo`, `cat`, `ls`, `true`, `false`, `test`,
-  `mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, `head`, `ps`, `getconf`,
-  `tty`, and `stty`
-- **Native processes and VM (`<sys/proc.h>`, `<sys/vm.h>`):** `ProcCreate` (from
-  `boot.tar`), `ProcWait`, `ProcList`, `VMMap`, `VMUnmap`, `VMProtect`, and
-  `VMCloneCow` (copy-on-write page sharing between parent and child)
-- **Native threads (`<sys/thread.h>`):** `NewThread`, `ThreadReset`,
-  `ThreadSpawn`, `ThreadGetCtx`, `ThreadGetTid` (256 priority levels with IPC
-  priority inheritance)
+### For interactive shell users
 
-What you can build today:
+Booting with `./scripts/env.sh run` drops you into `/boot/sh` over the serial
+terminal (`ttyserv`) with foreground `Ctrl-C` job control:
 
-- isolated Ring 3 client and server processes that find each other by name
-  through `sysproc` and send synchronous or scatter-gather messages and pulses
-- privileged Ring 3 hardware device drivers (for example `rtcdrv` at `/dev/rtc`)
-  using port I/O and IOAPIC IRQ-to-IPC pulse delivery
-- parent and child Ring 3 processes (`fork`/`execve`, `ProcCreate`) with COW
-  memory, Ring 3 pipes (`pipe2`/`ppoll`), and `waitpid`
-- multithreaded Ring 3 applications with `FS.base` TLS `errno`, pthreads,
-  deferred cancellation, `<aio.h>`, recursive `<stdio.h>` locks, and POSIX
-  clocks/timers and signals
-- freestanding C17 console tools and protocol services packed into `boot.tar`
+- **Run scripts and command pipelines:** Chain commands with pipes, redirections
+  (`<`, `>`, `>>`, `2>&1`), `&&`/`||`/`;`, environment variables, and built-ins
+  (`cd`, `pwd`, `export`, `unset`, `read`, `set`, `exit`). The shell also
+  targets Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d` with custom
+  or NUL delimiters.
+- **Work with read-only, temporary, and persistent files:** List, inspect, copy,
+  move, create, and remove files across `/boot` (`bootfs`), `/tmp` (`tmpfs`),
+  and persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Available
+  tools: `ls`, `cat`, `echo`, `mkdir`, `rm`, `cp`, `mv`, `wc`, `head`, `test`,
+  `true`, and `false`.
+- **Inspect processes, system limits, and terminal settings:** View live
+  processes with `ps`, query POSIX limits with `getconf`, and check system
+  identity with `uname` and `env`. Read or change serial terminal modes and
+  window size with `tty` and `stty`.
 
-Not available at this time (planned next): POSIX.1-2024 Base credentials and
-`<pwd.h>`/`<grp.h>`/`<sys/resource.h>`, VFS links and FIFOs, full C17 headers,
-Ring 3 TCP/IP networking, and remaining XCU utilities under
-[BDR_0004](docs/10-product/bdr/BDR_0004.md). See
-[docs/records/TASKS.md](docs/records/TASKS.md) and
-[docs/records/ROADMAP.md](docs/records/ROADMAP.md).
+### For C17 application programmers
+
+You can write portable, standalone C17 programs packed into `boot.tar` and run
+them in isolated Ring 3 address spaces across multiple CPU cores:
+
+- **Processes, threads, and timing:** Fork copy-on-write child processes, launch
+  programs through `PATH`, and reap children with `waitpid`. Run multithreaded
+  code across SMP cores with pthreads, semaphores, deferred cancellation, and
+  thread-local `errno`. Use POSIX signals and monotonic or realtime clocks and
+  timers.
+- **Files, IPC, terminals, and event loops:** Use buffered `<stdio.h>` streams,
+  directory traversal, pipes, `AF_UNIX` sockets, `<aio.h>`, and `<termios.h>`
+  terminal controls. Multiplex descriptors across all Ring 3 servers in one
+  event loop with `poll`, `ppoll`, `select`, or `pselect`.
+- **Memory, math, and standard C utilities:** Allocate memory from an
+  `mmap`-backed coalescing heap, map shared memory (`shm_open`), enforce W^X
+  page protections, or lock pages in RAM (`mlock`). Compute with `<fenv.h>` and
+  `<math.h>` compiled for `x86-64-v3` with hardware `FMA`, plus strings,
+  sorting, `getopt`, `fnmatch`, `setjmp`, `realpath`, `<stdatomic.h>`, and
+  `<uchar.h>`.
+
+### For system server and driver authors
+
+Native microkernel headers (`<sys/ipc.h>`, `<sys/intr.h>`, `<sys/proc.h>`,
+`<sys/thread.h>`, `<sys/vm.h>`, `<sys/blk.h>`) let you build isolated Ring 3 OS
+services outside the kernel:
+
+- Register named services with `sysproc` and handle synchronous or
+  scatter-gather client messages and pulses across 256 priority levels with
+  priority inheritance.
+- Build privileged hardware drivers (`CAP_SYS_INTR`) with IOAPIC IRQ-to-IPC
+  pulses, port I/O, MMIO mapping, DMA buffers, and PCI configuration access (as
+  used by `rtcdrv`, `ttyserv`, and `blkdrv`).
+
+### Exact inventory and what is next
+
+- **Exact symbol and utility inventory:** Run `./scripts/env.sh ctest -R
+  posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
+  POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
+  [traceability matrix](docs/60-verification/traceability.md).
+- **Not available yet (planned next):** User and group credentials, file
+  permissions, links, FIFOs, locales, wide characters, regular expressions, and
+  `<dlfcn.h>`. Ring 3 TCP/IP networking and remaining shell grammar and XCU
+  utilities follow. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+  [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
 

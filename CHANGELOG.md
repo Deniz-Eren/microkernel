@@ -19,6 +19,13 @@ Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Rewrote the `User-space functionality (current support)` section of
+  `README.md` from a shell-user, C17-programmer, and Ring 3 server/driver
+  perspective instead of an exhaustive symbol dump, linking to
+  `build/posix-symbol-diff.txt` for the full machine-generated inventory.
+
 ### Added
 
 - Extended Gate 2 (`posix.symbol_diff`, `tools/posix/audit_lib.py`,
