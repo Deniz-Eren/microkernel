@@ -86,6 +86,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "sys/select.h",
     "sys/socket.h",
     "sys/stat.h",
+    "sys/statvfs.h",
     "sys/times.h",
     "sys/types.h",
     "sys/un.h",

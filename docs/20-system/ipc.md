@@ -137,6 +137,21 @@ sector read and write I/O over IOAPIC IRQ pulses ({need}`SYS_IPC_0001`).
 ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 Base VFS links, permissions, FIFOs, and statvfs
+:id: SWR_IPC_0012
+:status: active
+:posix: XBD/sys/statvfs.h (BASE), XSH/posix_getdents (BASE), XSH/mkfifo (BASE)
+:derives: SYS_IPC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0030
+
+`vfsserv` and `libc` must supply POSIX.1-2024 Base permissions (`chmod*`,
+`chown*`, `faccessat`), hard and symbolic links (`link*`, `symlink*`,
+`readlink*`), FIFOs (`mkfifo*`), and positional I/O (`pread`, `pwrite`,
+`truncate`, `posix_close`). They must also supply `posix_getdents`, `scandir`,
+`alphasort`, `readdir_r`, [sys/statvfs.h][hdr-statvfs], `remove`, temp-file
+helpers, and the 15 XCU Base file utilities ({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:
@@ -147,3 +162,5 @@ sector read and write I/O over IOAPIC IRQ pulses ({need}`SYS_IPC_0001`).
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/aio.h.html
 [hdr-mq]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/mqueue.h.html
+[hdr-statvfs]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_statvfs.h.html

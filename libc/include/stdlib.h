@@ -11,7 +11,7 @@
 #ifndef _STDLIB_H
 #define _STDLIB_H
 
-/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0006 */
+/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0006 ICD_IPC_0016 */
 
 #include <stddef.h>
 
@@ -32,6 +32,9 @@ void qsort(void *base, size_t nel, size_t width,
 void *bsearch(const void *key, const void *base, size_t nel, size_t width,
               int (*compar)(const void *, const void *));
 char *realpath(const char *restrict file_name, char *restrict resolved_name);
+int mkstemp(char *template);
+int mkostemp(char *template, int flags);
+char *mkdtemp(char *template);
 char *getenv(const char *name);
 char *secure_getenv(const char *name);
 int setenv(const char *envname, const char *envval, int overwrite);

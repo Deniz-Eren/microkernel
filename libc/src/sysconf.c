@@ -191,7 +191,7 @@ static long pathconf_value(int name) {
     case _PC_SYMLINK_MAX:
         return _POSIX_SYMLINK_MAX;
     case _PC_2_SYMLINKS:
-        return -1L;
+        return 1L;
     default:
         errno = EINVAL;
         return -1L;

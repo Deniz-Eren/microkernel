@@ -184,3 +184,17 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 `BLK_OP_INFO`, `BLK_OP_READ`, `BLK_OP_WRITE`, `blk_req_t`, and `blk_rep_t` for
 Ring 3 `/dev/blk` IPC ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0010`).
 ```
+
+```{icd} POSIX.1-2024 Base VFS metadata, link, FIFO, dirent, and statvfs headers
+:id: ICD_IPC_0016
+:status: active
+:posix: XBD/sys/statvfs.h (BASE), XSH/posix_getdents (BASE), XSH/mkfifo (BASE)
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0012
+
+`libc/include/sys/vfs.h` adds `VFS_OP_CHMOD` through `VFS_OP_STATVFS` and
+`vfs_statvfs_t`. `libc/include/sys/statvfs.h`, `sys/stat.h`, `unistd.h`,
+`dirent.h`, `stdio.h`, and `stdlib.h` declare strict Base permissions, links,
+FIFOs, positional I/O, `posix_getdents`, `statvfs`, and temp-file APIs
+({need}`ARC_IPC_0001`, {need}`SWR_IPC_0012`).
+```

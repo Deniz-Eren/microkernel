@@ -8,6 +8,7 @@
  *
  */
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -19,15 +20,19 @@
 #include <sys/ipc.h>
 #include <sys/microkernel.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/vfs.h>
 #include <time.h>
 #include <unistd.h>
 #include "ext2.h"
 
-/* need:: COMP_IPC_0008 COMP_IPC_0016 */
+/* need:: COMP_IPC_0008 COMP_IPC_0016 COMP_IPC_0017 */
 
 #define VFS_NAME_MAX 128u
 #define VFS_MAX_HANDLES 128u
+#define VFS_FIFO_CAP 4096u
+#define VFS_FIFO_WAIT_MAX 16u
+#define VFS_SYMLOOP_MAX 8
 #define VFS_DEV_TMPFS 1ULL
 #define VFS_DEV_BOOTFS 2ULL
 #define VFS_DEV_EXT2 3ULL
@@ -45,12 +50,19 @@ struct vfs_node {
     uint32_t ext2_ino;
     uint32_t mode;
     uint32_t nlink;
+    uint32_t uid;
+    uint32_t gid;
     uint8_t readonly;
     uint32_t open_refs;
     size_t size;
     size_t cap;
     uint8_t *data;
     const uint8_t *ro_data;
+    uint8_t *fifo_buf;
+    size_t fifo_head;
+    size_t fifo_len;
+    uint32_t fifo_readers;
+    uint32_t fifo_writers;
     int64_t mtime_sec;
     int64_t mtime_nsec;
     vfs_node_t *parent;
@@ -64,13 +76,26 @@ typedef struct {
     uint32_t refs;
     uint32_t flags;
     size_t offset;
+    uint32_t dir_idx;
     vfs_node_t *node;
 } vfs_file_t;
 
+typedef struct {
+    uint8_t used;
+    uint8_t kind; /* 1 = open, 2 = read */
+    uint32_t msgid;
+    uint32_t handle;
+    uint32_t flags;
+    uint32_t want;
+    vfs_node_t *node;
+} vfs_fifo_wait_t;
+
 static vfs_node_t *g_root;
 static vfs_node_t *g_mnt;
+static uint32_t g_ext2_blocks;
 static uint64_t g_next_ino = 1ULL;
 static vfs_file_t g_files[VFS_MAX_HANDLES];
+static vfs_fifo_wait_t g_fifo_wait[VFS_FIFO_WAIT_MAX];
 
 static void get_now(int64_t *sec, int64_t *nsec) {
     struct timespec ts = {0};
@@ -104,6 +129,7 @@ static void node_destroy(vfs_node_t *n) {
         return;
     }
     free(n->data);
+    free(n->fifo_buf);
     free(n->children);
     free(n);
 }
@@ -233,6 +259,7 @@ static int alloc_file(vfs_node_t *node, uint32_t flags, uint32_t *out_handle) {
             g_files[i].refs = 1u;
             g_files[i].flags = flags;
             g_files[i].offset = 0u;
+            g_files[i].dir_idx = 0u;
             g_files[i].node = node;
             node->open_refs++;
             *out_handle = i;
@@ -240,6 +267,64 @@ static int alloc_file(vfs_node_t *node, uint32_t flags, uint32_t *out_handle) {
         }
     }
     return -ENFILE;
+}
+
+static void fill_stat(const vfs_node_t *n, vfs_stat_t *st);
+
+static size_t fifo_pop(vfs_node_t *n, uint8_t *dst, size_t max_n) {
+    size_t take = n->fifo_len < max_n ? n->fifo_len : max_n;
+    for (size_t i = 0; i < take; i++) {
+        dst[i] = n->fifo_buf[(n->fifo_head + i) % VFS_FIFO_CAP];
+    }
+    n->fifo_head = (n->fifo_head + take) % VFS_FIFO_CAP;
+    n->fifo_len -= take;
+    return take;
+}
+
+static void fifo_wake_waiters(vfs_node_t *n) {
+    for (uint32_t i = 0; i < VFS_FIFO_WAIT_MAX; i++) {
+        if (!g_fifo_wait[i].used || g_fifo_wait[i].node != n) {
+            continue;
+        }
+        if (g_fifo_wait[i].kind == 1u) {
+            uint32_t acc = g_fifo_wait[i].flags & (uint32_t)O_ACCMODE;
+            int ready = (acc == (uint32_t)O_RDONLY && n->fifo_writers > 0u) ||
+                        (acc == (uint32_t)O_WRONLY && n->fifo_readers > 0u);
+            if (!ready) {
+                continue;
+            }
+            vfs_rep_t rep = {0};
+            uint32_t h = 0u;
+            int hr = alloc_file(n, g_fifo_wait[i].flags, &h);
+            if (hr < 0) {
+                rep.err = hr;
+            } else {
+                rep.err = 0;
+                rep.handle = h;
+                fill_stat(n, &rep.u.st);
+            }
+            uint32_t msgid = g_fifo_wait[i].msgid;
+            g_fifo_wait[i].used = 0u;
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+        } else if (g_fifo_wait[i].kind == 2u) {
+            if (n->fifo_len == 0u && n->fifo_writers > 0u) {
+                continue;
+            }
+            vfs_rep_t rep = {0};
+            if (n->fifo_len > 0u) {
+                size_t want = g_fifo_wait[i].want > VFS_DATA_MAX
+                                  ? VFS_DATA_MAX
+                                  : g_fifo_wait[i].want;
+                rep.len = (uint32_t)fifo_pop(n, rep.u.data, want);
+            } else {
+                rep.len = 0u;
+            }
+            rep.err = 0;
+            uint32_t msgid = g_fifo_wait[i].msgid;
+            g_fifo_wait[i].used = 0u;
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+        }
+    }
 }
 
 static void release_handle(uint32_t handle) {
@@ -252,7 +337,20 @@ static void release_handle(uint32_t handle) {
         return;
     }
     vfs_node_t *n = f->node;
+    uint32_t fflags = f->flags;
     memset(f, 0, sizeof(*f));
+    if (n && S_ISFIFO(n->mode)) {
+        uint32_t acc = fflags & (uint32_t)O_ACCMODE;
+        if ((acc == (uint32_t)O_RDONLY || acc == (uint32_t)O_RDWR) &&
+            n->fifo_readers > 0u) {
+            n->fifo_readers--;
+        }
+        if ((acc == (uint32_t)O_WRONLY || acc == (uint32_t)O_RDWR) &&
+            n->fifo_writers > 0u) {
+            n->fifo_writers--;
+        }
+        fifo_wake_waiters(n);
+    }
     if (n && n->open_refs > 0u) {
         n->open_refs--;
         if (n->nlink == 0u && n->open_refs == 0u && !n->readonly) {
@@ -264,12 +362,16 @@ static void release_handle(uint32_t handle) {
     }
 }
 
-/* Resolve `path` starting from `start` into `(parent, leaf, target)`. */
-static int resolve_path(vfs_node_t *start, const char *path,
-                        vfs_node_t **out_parent, char *out_leaf,
-                        size_t leaf_cap, vfs_node_t **out_node) {
+/* Resolve `path` starting from `start` into `(parent, leaf, target)` with
+ * optional symlink traversal. */
+static int resolve_path_ex(vfs_node_t *start, const char *path, int follow_last,
+                           int depth, vfs_node_t **out_parent, char *out_leaf,
+                           size_t leaf_cap, vfs_node_t **out_node) {
     if (!path || path[0] == '\0') {
         return -ENOENT;
+    }
+    if (depth > VFS_SYMLOOP_MAX) {
+        return -ELOOP;
     }
     vfs_node_t *cur = (path[0] == '/') ? g_root : start;
     if (!cur || !S_ISDIR(cur->mode)) {
@@ -305,6 +407,7 @@ static int resolve_path(vfs_node_t *start, const char *path,
         }
         comp[len] = '\0';
         p += len;
+        int had_slash = (*p == '/');
         while (*p == '/') {
             p++;
         }
@@ -326,6 +429,31 @@ static int resolve_path(vfs_node_t *start, const char *path,
             }
         }
 
+        if (next && S_ISLNK(next->mode) &&
+            (!last || follow_last || had_slash)) {
+            char target[VFS_PATH_MAX];
+            size_t tlen = next->size;
+            if (tlen >= sizeof(target)) {
+                return -ENAMETOOLONG;
+            }
+            if (tlen > 0u && next->data) {
+                memcpy(target, next->data, tlen);
+            }
+            target[tlen] = '\0';
+            if (last) {
+                return resolve_path_ex(cur, target, follow_last, depth + 1,
+                                       out_parent, out_leaf, leaf_cap,
+                                       out_node);
+            }
+            vfs_node_t *resolved = NULL;
+            int sr = resolve_path_ex(cur, target, 1, depth + 1, NULL, NULL, 0u,
+                                     &resolved);
+            if (sr < 0 || !resolved) {
+                return sr < 0 ? sr : -ENOENT;
+            }
+            next = resolved;
+        }
+
         if (last) {
             if (out_parent) {
                 *out_parent = cur;
@@ -345,14 +473,21 @@ static int resolve_path(vfs_node_t *start, const char *path,
     }
 }
 
+static int resolve_path(vfs_node_t *start, const char *path,
+                        vfs_node_t **out_parent, char *out_leaf,
+                        size_t leaf_cap, vfs_node_t **out_node) {
+    return resolve_path_ex(start, path, 1, 0, out_parent, out_leaf, leaf_cap,
+                           out_node);
+}
+
 static void fill_stat(const vfs_node_t *n, vfs_stat_t *st) {
     memset(st, 0, sizeof(*st));
     st->st_dev = n->dev;
     st->st_ino = n->ino;
     st->st_mode = n->mode;
     st->st_nlink = n->nlink;
-    st->st_uid = 0u;
-    st->st_gid = 0u;
+    st->st_uid = n->uid;
+    st->st_gid = n->gid;
     st->st_size = (uint64_t)n->size;
     st->st_mtime_sec = n->mtime_sec;
     st->st_mtime_nsec = n->mtime_nsec;
@@ -418,38 +553,80 @@ static vfs_node_t *resolve_start_dir(uint32_t dir_handle, int *err_out) {
     return df->node;
 }
 
-static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
+static int handle_open(uint32_t msgid, const vfs_req_t *req, vfs_rep_t *rep) {
     int err = 0;
     vfs_node_t *start = resolve_start_dir(req->handle, &err);
     if (!start) {
         rep->err = err;
-        return;
+        return 0;
     }
     vfs_node_t *parent = NULL;
     vfs_node_t *node = NULL;
     char leaf[VFS_NAME_MAX] = {0};
-    int r =
-        resolve_path(start, req->u.path, &parent, leaf, sizeof(leaf), &node);
+    int follow = (req->flags & (uint32_t)O_NOFOLLOW) == 0u;
+    int r = resolve_path_ex(start, req->u.path, follow, 0, &parent, leaf,
+                            sizeof(leaf), &node);
     uint32_t acc = req->flags & (uint32_t)O_ACCMODE;
 
     if (r == 0 && node) {
         if ((req->flags & (uint32_t)(O_CREAT | O_EXCL)) ==
             (uint32_t)(O_CREAT | O_EXCL)) {
             rep->err = -EEXIST;
-            return;
+            return 0;
+        }
+        if (S_ISLNK(node->mode)) {
+            rep->err = -ELOOP;
+            return 0;
         }
         if ((req->flags & (uint32_t)O_DIRECTORY) && !S_ISDIR(node->mode)) {
             rep->err = -ENOTDIR;
-            return;
+            return 0;
         }
         if (S_ISDIR(node->mode) && acc != (uint32_t)O_RDONLY) {
             rep->err = -EISDIR;
-            return;
+            return 0;
         }
         if (node->readonly &&
             (acc != (uint32_t)O_RDONLY || (req->flags & (uint32_t)O_TRUNC))) {
             rep->err = -EROFS;
-            return;
+            return 0;
+        }
+        if (S_ISFIFO(node->mode)) {
+            int nonblock = (req->flags & (uint32_t)O_NONBLOCK) != 0u;
+            if (acc == (uint32_t)O_WRONLY && nonblock &&
+                node->fifo_readers == 0u) {
+                rep->err = -ENXIO;
+                return 0;
+            }
+            if (acc == (uint32_t)O_RDONLY || acc == (uint32_t)O_RDWR) {
+                node->fifo_readers++;
+            }
+            if (acc == (uint32_t)O_WRONLY || acc == (uint32_t)O_RDWR) {
+                node->fifo_writers++;
+            }
+            fifo_wake_waiters(node);
+            if (!nonblock &&
+                ((acc == (uint32_t)O_RDONLY && node->fifo_writers == 0u) ||
+                 (acc == (uint32_t)O_WRONLY && node->fifo_readers == 0u))) {
+                for (uint32_t i = 0; i < VFS_FIFO_WAIT_MAX; i++) {
+                    if (!g_fifo_wait[i].used) {
+                        g_fifo_wait[i].used = 1u;
+                        g_fifo_wait[i].kind = 1u;
+                        g_fifo_wait[i].msgid = msgid;
+                        g_fifo_wait[i].flags = req->flags;
+                        g_fifo_wait[i].node = node;
+                        return 1; /* deferred reply */
+                    }
+                }
+                if (acc == (uint32_t)O_RDONLY && node->fifo_readers > 0u) {
+                    node->fifo_readers--;
+                }
+                if (acc == (uint32_t)O_WRONLY && node->fifo_writers > 0u) {
+                    node->fifo_writers--;
+                }
+                rep->err = -EAGAIN;
+                return 0;
+            }
         }
         if ((req->flags & (uint32_t)O_TRUNC) && S_ISREG(node->mode)) {
             int64_t sec = 0;
@@ -459,7 +636,7 @@ static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
                 int tr = ext2_truncate_inode(node->ext2_ino, 0u, (uint32_t)sec);
                 if (tr < 0) {
                     rep->err = tr;
-                    return;
+                    return 0;
                 }
                 node->size = 0u;
             } else {
@@ -475,11 +652,11 @@ static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
                leaf[0] != '\0') {
         if (parent->readonly) {
             rep->err = -EROFS;
-            return;
+            return 0;
         }
         if (strcmp(leaf, ".") == 0 || strcmp(leaf, "..") == 0) {
             rep->err = -EEXIST;
-            return;
+            return 0;
         }
         uint32_t fmode = S_IFREG | (req->mode & 0777u);
         uint32_t new_eino = 0u;
@@ -492,7 +669,7 @@ static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
                                       (uint32_t)sec, &new_eino);
             if (cr < 0) {
                 rep->err = cr;
-                return;
+                return 0;
             }
         }
         node = node_new(parent->dev, fmode, 0u, parent);
@@ -502,7 +679,7 @@ static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
                 (void)ext2_free_inode_and_blocks(new_eino);
             }
             rep->err = -ENOMEM;
-            return;
+            return 0;
         }
         node->ext2_ino = new_eino;
         int ar = dir_add_child(parent, leaf, node);
@@ -513,65 +690,114 @@ static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
             }
             node_destroy(node);
             rep->err = ar;
-            return;
+            return 0;
         }
     } else {
         rep->err = r < 0 ? r : -ENOENT;
-        return;
+        return 0;
     }
 
     uint32_t h = 0u;
     int hr = alloc_file(node, req->flags, &h);
     if (hr < 0) {
         rep->err = hr;
-        return;
+        return 0;
     }
     rep->err = 0;
     rep->handle = h;
     fill_stat(node, &rep->u.st);
+    return 0;
 }
 
-static void handle_read(const vfs_req_t *req, vfs_rep_t *rep) {
+static int handle_read(uint32_t msgid, const vfs_req_t *req, vfs_rep_t *rep,
+                       int positional) {
     vfs_file_t *f = get_file(req->handle);
     if (!f) {
         rep->err = -EBADF;
-        return;
+        return 0;
     }
     if ((f->flags & (uint32_t)O_ACCMODE) == (uint32_t)O_WRONLY) {
         rep->err = -EBADF;
-        return;
+        return 0;
     }
     if (S_ISDIR(f->node->mode)) {
         rep->err = -EISDIR;
-        return;
+        return 0;
     }
+    if (S_ISFIFO(f->node->mode)) {
+        if (positional) {
+            rep->err = -ESPIPE;
+            return 0;
+        }
+        uint32_t want = req->len > VFS_DATA_MAX ? VFS_DATA_MAX : req->len;
+        if (want == 0u) {
+            rep->err = 0;
+            rep->len = 0u;
+            return 0;
+        }
+        if (f->node->fifo_len > 0u) {
+            rep->err = 0;
+            rep->len = (uint32_t)fifo_pop(f->node, rep->u.data, want);
+            return 0;
+        }
+        if (f->node->fifo_writers == 0u) {
+            rep->err = 0;
+            rep->len = 0u;
+            return 0;
+        }
+        if ((f->flags & (uint32_t)O_NONBLOCK) != 0u) {
+            rep->err = -EAGAIN;
+            return 0;
+        }
+        for (uint32_t i = 0; i < VFS_FIFO_WAIT_MAX; i++) {
+            if (!g_fifo_wait[i].used) {
+                g_fifo_wait[i].used = 1u;
+                g_fifo_wait[i].kind = 2u;
+                g_fifo_wait[i].msgid = msgid;
+                g_fifo_wait[i].want = want;
+                g_fifo_wait[i].node = f->node;
+                return 1;
+            }
+        }
+        rep->err = -EAGAIN;
+        return 0;
+    }
+    if (positional && req->offset < 0) {
+        rep->err = -EINVAL;
+        return 0;
+    }
+    size_t off = positional ? (size_t)req->offset : f->offset;
     uint32_t want = req->len > VFS_DATA_MAX ? VFS_DATA_MAX : req->len;
-    if (f->offset >= f->node->size || want == 0u) {
+    if (off >= f->node->size || want == 0u) {
         rep->err = 0;
         rep->len = 0u;
-        return;
+        return 0;
     }
     if (f->node->dev == VFS_DEV_EXT2) {
-        long got =
-            ext2_read_data(f->node->ext2_ino, f->offset, rep->u.data, want);
+        long got = ext2_read_data(f->node->ext2_ino, off, rep->u.data, want);
         if (got < 0) {
             rep->err = (int32_t)got;
-            return;
+            return 0;
         }
-        f->offset += (size_t)got;
+        if (!positional) {
+            f->offset += (size_t)got;
+        }
         rep->err = 0;
         rep->len = (uint32_t)got;
-        return;
+        return 0;
     }
-    size_t avail = f->node->size - f->offset;
+    size_t avail = f->node->size - off;
     size_t take = want < avail ? want : avail;
     const uint8_t *src = f->node->readonly ? f->node->ro_data : f->node->data;
     if (src && take > 0u) {
-        memcpy(rep->u.data, src + f->offset, take);
+        memcpy(rep->u.data, src + off, take);
     }
-    f->offset += take;
+    if (!positional) {
+        f->offset += take;
+    }
     rep->err = 0;
     rep->len = (uint32_t)take;
+    return 0;
 }
 
 static int ensure_capacity(vfs_node_t *n, size_t need) {
@@ -596,7 +822,7 @@ static int ensure_capacity(vfs_node_t *n, size_t need) {
     return 0;
 }
 
-static void handle_write(const vfs_req_t *req, vfs_rep_t *rep) {
+static void handle_write(const vfs_req_t *req, vfs_rep_t *rep, int positional) {
     vfs_file_t *f = get_file(req->handle);
     if (!f) {
         rep->err = -EBADF;
@@ -615,24 +841,63 @@ static void handle_write(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->err = -EROFS;
         return;
     }
+    if (S_ISFIFO(f->node->mode)) {
+        if (positional) {
+            rep->err = -ESPIPE;
+            return;
+        }
+        if (f->node->fifo_readers == 0u) {
+            rep->err = -EPIPE;
+            return;
+        }
+        uint32_t take = req->len > VFS_DATA_MAX ? VFS_DATA_MAX : req->len;
+        size_t space = VFS_FIFO_CAP - f->node->fifo_len;
+        if (space == 0u && take > 0u) {
+            rep->err = -EAGAIN;
+            return;
+        }
+        if (take > space) {
+            take = (uint32_t)space;
+        }
+        for (uint32_t i = 0; i < take; i++) {
+            size_t tail =
+                (f->node->fifo_head + f->node->fifo_len) % VFS_FIFO_CAP;
+            f->node->fifo_buf[tail] = req->u.data[i];
+            f->node->fifo_len++;
+        }
+        fifo_wake_waiters(f->node);
+        rep->err = 0;
+        rep->len = take;
+        return;
+    }
+    if (positional && req->offset < 0) {
+        rep->err = -EINVAL;
+        return;
+    }
     uint32_t take = req->len > VFS_DATA_MAX ? VFS_DATA_MAX : req->len;
-    if ((f->flags & (uint32_t)O_APPEND) || (req->flags & (uint32_t)O_APPEND)) {
-        f->offset = f->node->size;
+    size_t off = positional ? (size_t)req->offset : f->offset;
+    if (!positional && ((f->flags & (uint32_t)O_APPEND) ||
+                        (req->flags & (uint32_t)O_APPEND))) {
+        off = f->node->size;
+        f->offset = off;
     }
     if (take > 0u) {
         if (f->node->dev == VFS_DEV_EXT2) {
             int64_t sec = 0;
             int64_t nsec = 0;
             get_now(&sec, &nsec);
-            long put = ext2_write_data(f->node->ext2_ino, f->offset,
-                                       req->u.data, take, (uint32_t)sec);
+            long put = ext2_write_data(f->node->ext2_ino, off, req->u.data,
+                                       take, (uint32_t)sec);
             if (put < 0) {
                 rep->err = (int32_t)put;
                 return;
             }
-            f->offset += (size_t)put;
-            if (f->offset > f->node->size) {
-                f->node->size = f->offset;
+            off += (size_t)put;
+            if (!positional) {
+                f->offset = off;
+            }
+            if (off > f->node->size) {
+                f->node->size = off;
             }
             f->node->mtime_sec = sec;
             f->node->mtime_nsec = nsec;
@@ -640,21 +905,23 @@ static void handle_write(const vfs_req_t *req, vfs_rep_t *rep) {
             rep->len = (uint32_t)put;
             return;
         }
-        if (f->offset > ((size_t)-1) - take) {
+        if (off > ((size_t)-1) - take) {
             rep->err = -EFBIG;
             return;
         }
-        size_t end = f->offset + take;
+        size_t end = off + take;
         int er = ensure_capacity(f->node, end);
         if (er < 0) {
             rep->err = er;
             return;
         }
-        if (f->offset > f->node->size) {
-            memset(f->node->data + f->node->size, 0, f->offset - f->node->size);
+        if (off > f->node->size) {
+            memset(f->node->data + f->node->size, 0, off - f->node->size);
         }
-        memcpy(f->node->data + f->offset, req->u.data, take);
-        f->offset = end;
+        memcpy(f->node->data + off, req->u.data, take);
+        if (!positional) {
+            f->offset = end;
+        }
         if (end > f->node->size) {
             f->node->size = end;
         }
@@ -668,6 +935,10 @@ static void handle_lseek(const vfs_req_t *req, vfs_rep_t *rep) {
     vfs_file_t *f = get_file(req->handle);
     if (!f) {
         rep->err = -EBADF;
+        return;
+    }
+    if (S_ISFIFO(f->node->mode)) {
+        rep->err = -ESPIPE;
         return;
     }
     int64_t base = 0;
@@ -687,6 +958,9 @@ static void handle_lseek(const vfs_req_t *req, vfs_rep_t *rep) {
         return;
     }
     f->offset = (size_t)target;
+    if (S_ISDIR(f->node->mode) && target == 0) {
+        f->dir_idx = 0u;
+    }
     rep->err = 0;
     rep->offset = target;
 }
@@ -758,7 +1032,9 @@ static void handle_stat(const vfs_req_t *req, vfs_rep_t *rep) {
         return;
     }
     vfs_node_t *node = NULL;
-    int r = resolve_path(start, req->u.path, NULL, NULL, 0u, &node);
+    int follow = (req->flags & (uint32_t)AT_SYMLINK_NOFOLLOW) == 0u;
+    int r =
+        resolve_path_ex(start, req->u.path, follow, 0, NULL, NULL, 0u, &node);
     if (r < 0 || !node) {
         rep->err = r < 0 ? r : -ENOENT;
         return;
@@ -838,8 +1114,8 @@ static void handle_unlink(const vfs_req_t *req, vfs_rep_t *rep) {
     vfs_node_t *parent = NULL;
     vfs_node_t *node = NULL;
     char leaf[VFS_NAME_MAX] = {0};
-    int r =
-        resolve_path(start, req->u.path, &parent, leaf, sizeof(leaf), &node);
+    int r = resolve_path_ex(start, req->u.path, 0, 0, &parent, leaf,
+                            sizeof(leaf), &node);
     if (r < 0 || !node) {
         rep->err = r < 0 ? r : -ENOENT;
         return;
@@ -891,14 +1167,44 @@ static void handle_unlink(const vfs_req_t *req, vfs_rep_t *rep) {
         parent->nlink--;
     }
     get_now(&parent->mtime_sec, &parent->mtime_nsec);
-    node->nlink = 0u;
-    if (node->open_refs == 0u) {
+    if (node->nlink > 0u) {
+        node->nlink--;
+    }
+    if (S_ISDIR(node->mode)) {
+        node->nlink = 0u;
+    }
+    if (node->nlink == 0u && node->open_refs == 0u) {
         if (node->dev == VFS_DEV_EXT2 && node->ext2_ino != 0u) {
             (void)ext2_free_inode_and_blocks(node->ext2_ino);
         }
         node_destroy(node);
     }
     rep->err = 0;
+}
+
+static uint32_t mode_to_dtype(uint32_t mode) {
+    if (S_ISREG(mode)) {
+        return DT_REG;
+    }
+    if (S_ISDIR(mode)) {
+        return DT_DIR;
+    }
+    if (S_ISLNK(mode)) {
+        return DT_LNK;
+    }
+    if (S_ISFIFO(mode)) {
+        return DT_FIFO;
+    }
+    if (S_ISCHR(mode)) {
+        return DT_CHR;
+    }
+    if (S_ISBLK(mode)) {
+        return DT_BLK;
+    }
+    if (S_ISSOCK(mode)) {
+        return DT_SOCK;
+    }
+    return DT_UNKNOWN;
 }
 
 static void handle_readdir(const vfs_req_t *req, vfs_rep_t *rep) {
@@ -911,17 +1217,25 @@ static void handle_readdir(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->err = -ENOTDIR;
         return;
     }
-    uint32_t idx = req->len;
+    uint32_t idx = (req->flags & VFS_READDIR_NEXT) ? f->dir_idx : req->len;
     if (idx == 0u) {
+        if (req->flags & VFS_READDIR_NEXT) {
+            f->dir_idx = 1u;
+        }
         rep->err = 0;
         rep->flags = 0u;
+        rep->len = DT_DIR;
         rep->u.dent.d_ino = f->node->ino;
         (void)strlcpy(rep->u.dent.d_name, ".", sizeof(rep->u.dent.d_name));
         return;
     }
     if (idx == 1u) {
+        if (req->flags & VFS_READDIR_NEXT) {
+            f->dir_idx = 2u;
+        }
         rep->err = 0;
         rep->flags = 0u;
+        rep->len = DT_DIR;
         rep->u.dent.d_ino = f->node->parent->ino;
         (void)strlcpy(rep->u.dent.d_name, "..", sizeof(rep->u.dent.d_name));
         return;
@@ -932,8 +1246,12 @@ static void handle_readdir(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->flags = 1u; /* EOF */
         return;
     }
+    if (req->flags & VFS_READDIR_NEXT) {
+        f->dir_idx = idx + 1u;
+    }
     rep->err = 0;
     rep->flags = 0u;
+    rep->len = mode_to_dtype(f->node->children[cidx].node->mode);
     rep->u.dent.d_ino = f->node->children[cidx].node->ino;
     (void)strlcpy(rep->u.dent.d_name, f->node->children[cidx].name,
                   sizeof(rep->u.dent.d_name));
@@ -990,8 +1308,8 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
     vfs_node_t *old_parent = NULL;
     vfs_node_t *old_node = NULL;
     char old_leaf[VFS_NAME_MAX] = {0};
-    int r1 = resolve_path(old_start, req->u.ren.old_path, &old_parent, old_leaf,
-                          sizeof(old_leaf), &old_node);
+    int r1 = resolve_path_ex(old_start, req->u.ren.old_path, 0, 0, &old_parent,
+                             old_leaf, sizeof(old_leaf), &old_node);
     if (r1 < 0 || !old_node) {
         rep->err = r1 < 0 ? r1 : -ENOENT;
         return;
@@ -1009,8 +1327,8 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
     vfs_node_t *new_parent = NULL;
     vfs_node_t *new_node = NULL;
     char new_leaf[VFS_NAME_MAX] = {0};
-    int r2 = resolve_path(new_start, req->u.ren.new_path, &new_parent, new_leaf,
-                          sizeof(new_leaf), &new_node);
+    int r2 = resolve_path_ex(new_start, req->u.ren.new_path, 0, 0, &new_parent,
+                             new_leaf, sizeof(new_leaf), &new_node);
     if ((r2 < 0 && r2 != -ENOENT) || !new_parent || new_leaf[0] == '\0') {
         rep->err = (r2 < 0 && r2 != -ENOENT) ? r2 : -ENOENT;
         return;
@@ -1110,8 +1428,13 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
         if (old_parent != new_parent) {
             get_now(&old_parent->mtime_sec, &old_parent->mtime_nsec);
         }
-        replaced->nlink = 0u;
-        if (replaced->open_refs == 0u) {
+        if (replaced->nlink > 0u) {
+            replaced->nlink--;
+        }
+        if (S_ISDIR(replaced->mode)) {
+            replaced->nlink = 0u;
+        }
+        if (replaced->nlink == 0u && replaced->open_refs == 0u) {
             if (replaced->dev == VFS_DEV_EXT2 && replaced->ext2_ino != 0u) {
                 (void)ext2_free_inode_and_blocks(replaced->ext2_ino);
             }
@@ -1141,6 +1464,316 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
         old_parent->nlink--;
     }
     get_now(&old_parent->mtime_sec, &old_parent->mtime_nsec);
+    rep->err = 0;
+}
+
+static vfs_node_t *resolve_node_or_fd(const vfs_req_t *req, int follow,
+                                      int *err_out) {
+    if (req->flags & VFS_FLAG_BY_FD) {
+        vfs_file_t *f = get_file(req->handle);
+        if (!f) {
+            *err_out = -EBADF;
+            return NULL;
+        }
+        return f->node;
+    }
+    vfs_node_t *start = resolve_start_dir(req->handle, err_out);
+    if (!start) {
+        return NULL;
+    }
+    vfs_node_t *node = NULL;
+    int r =
+        resolve_path_ex(start, req->u.path, follow, 0, NULL, NULL, 0u, &node);
+    if (r < 0 || !node) {
+        *err_out = r < 0 ? r : -ENOENT;
+        return NULL;
+    }
+    return node;
+}
+
+static void handle_chmod(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    int follow = (req->flags & (uint32_t)AT_SYMLINK_NOFOLLOW) == 0u;
+    vfs_node_t *node = resolve_node_or_fd(req, follow, &err);
+    if (!node) {
+        rep->err = err;
+        return;
+    }
+    if (node->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+    node->mode = (node->mode & S_IFMT) | (req->mode & 07777u);
+    get_now(&node->mtime_sec, &node->mtime_nsec);
+    rep->err = 0;
+}
+
+static void handle_chown(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    int follow = (req->flags & (uint32_t)AT_SYMLINK_NOFOLLOW) == 0u;
+    vfs_node_t *node = resolve_node_or_fd(req, follow, &err);
+    if (!node) {
+        rep->err = err;
+        return;
+    }
+    if (node->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+    if (req->mode != (uint32_t)-1) {
+        node->uid = req->mode;
+    }
+    if (req->whence != (uint32_t)-1) {
+        node->gid = req->whence;
+    }
+    get_now(&node->mtime_sec, &node->mtime_nsec);
+    rep->err = 0;
+}
+
+static void handle_link(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    vfs_node_t *old_start = resolve_start_dir(req->handle, &err);
+    if (!old_start) {
+        rep->err = err;
+        return;
+    }
+    vfs_node_t *new_start = resolve_start_dir(req->u.ren.new_handle, &err);
+    if (!new_start) {
+        rep->err = err;
+        return;
+    }
+    vfs_node_t *target = NULL;
+    int follow = (req->flags & (uint32_t)AT_SYMLINK_FOLLOW) != 0u;
+    int r1 = resolve_path_ex(old_start, req->u.ren.old_path, follow, 0, NULL,
+                             NULL, 0u, &target);
+    if (r1 < 0 || !target) {
+        rep->err = r1 < 0 ? r1 : -ENOENT;
+        return;
+    }
+    if (S_ISDIR(target->mode)) {
+        rep->err = -EPERM;
+        return;
+    }
+    vfs_node_t *new_parent = NULL;
+    vfs_node_t *existing = NULL;
+    char new_leaf[VFS_NAME_MAX] = {0};
+    int r2 = resolve_path_ex(new_start, req->u.ren.new_path, 0, 0, &new_parent,
+                             new_leaf, sizeof(new_leaf), &existing);
+    if (r2 == 0 && existing) {
+        rep->err = -EEXIST;
+        return;
+    }
+    if (r2 != -ENOENT || !new_parent || new_leaf[0] == '\0') {
+        rep->err = r2 < 0 ? r2 : -EINVAL;
+        return;
+    }
+    if (new_parent->readonly || target->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+    if (new_parent->dev != target->dev) {
+        rep->err = -EXDEV;
+        return;
+    }
+    int ar = dir_add_child(new_parent, new_leaf, target);
+    if (ar < 0) {
+        rep->err = ar;
+        return;
+    }
+    target->nlink++;
+    get_now(&target->mtime_sec, &target->mtime_nsec);
+    rep->err = 0;
+}
+
+static void handle_symlink(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    vfs_node_t *start = resolve_start_dir(req->handle, &err);
+    if (!start) {
+        rep->err = err;
+        return;
+    }
+    if (req->u.ren.old_path[0] == '\0') {
+        rep->err = -ENOENT;
+        return;
+    }
+    vfs_node_t *parent = NULL;
+    vfs_node_t *existing = NULL;
+    char leaf[VFS_NAME_MAX] = {0};
+    int r = resolve_path_ex(start, req->u.ren.new_path, 0, 0, &parent, leaf,
+                            sizeof(leaf), &existing);
+    if (r == 0 && existing) {
+        rep->err = -EEXIST;
+        return;
+    }
+    if (r != -ENOENT || !parent || leaf[0] == '\0') {
+        rep->err = r < 0 ? r : -EINVAL;
+        return;
+    }
+    if (parent->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+    size_t tlen = strlen(req->u.ren.old_path);
+    vfs_node_t *ln = node_new(parent->dev, S_IFLNK | 0777u, 0u, parent);
+    if (!ln) {
+        rep->err = -ENOMEM;
+        return;
+    }
+    ln->data = (uint8_t *)malloc(tlen + 1u);
+    if (!ln->data) {
+        node_destroy(ln);
+        rep->err = -ENOMEM;
+        return;
+    }
+    memcpy(ln->data, req->u.ren.old_path, tlen + 1u);
+    ln->size = tlen;
+    ln->cap = tlen + 1u;
+    int ar = dir_add_child(parent, leaf, ln);
+    if (ar < 0) {
+        node_destroy(ln);
+        rep->err = ar;
+        return;
+    }
+    rep->err = 0;
+}
+
+static void handle_readlink(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    vfs_node_t *start = resolve_start_dir(req->handle, &err);
+    if (!start) {
+        rep->err = err;
+        return;
+    }
+    vfs_node_t *node = NULL;
+    int r = resolve_path_ex(start, req->u.path, 0, 0, NULL, NULL, 0u, &node);
+    if (r < 0 || !node) {
+        rep->err = r < 0 ? r : -ENOENT;
+        return;
+    }
+    if (!S_ISLNK(node->mode)) {
+        rep->err = -EINVAL;
+        return;
+    }
+    size_t tlen = node->size;
+    if (tlen >= sizeof(rep->u.path)) {
+        tlen = sizeof(rep->u.path) - 1u;
+    }
+    if (tlen > 0u && node->data) {
+        memcpy(rep->u.path, node->data, tlen);
+    }
+    rep->u.path[tlen] = '\0';
+    rep->len = (uint32_t)tlen;
+    rep->err = 0;
+}
+
+static void handle_mkfifo(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    vfs_node_t *start = resolve_start_dir(req->handle, &err);
+    if (!start) {
+        rep->err = err;
+        return;
+    }
+    vfs_node_t *parent = NULL;
+    vfs_node_t *existing = NULL;
+    char leaf[VFS_NAME_MAX] = {0};
+    int r = resolve_path_ex(start, req->u.path, 0, 0, &parent, leaf,
+                            sizeof(leaf), &existing);
+    if (r == 0 && existing) {
+        rep->err = -EEXIST;
+        return;
+    }
+    if (r != -ENOENT || !parent || leaf[0] == '\0') {
+        rep->err = r < 0 ? r : -EINVAL;
+        return;
+    }
+    if (parent->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+    vfs_node_t *fn =
+        node_new(parent->dev, S_IFIFO | (req->mode & 0777u), 0u, parent);
+    if (!fn) {
+        rep->err = -ENOMEM;
+        return;
+    }
+    fn->fifo_buf = (uint8_t *)calloc(1u, VFS_FIFO_CAP);
+    if (!fn->fifo_buf) {
+        node_destroy(fn);
+        rep->err = -ENOMEM;
+        return;
+    }
+    int ar = dir_add_child(parent, leaf, fn);
+    if (ar < 0) {
+        node_destroy(fn);
+        rep->err = ar;
+        return;
+    }
+    rep->err = 0;
+}
+
+static void count_tree_usage(const vfs_node_t *n, uint64_t dev, uint64_t *files,
+                             uint64_t *bytes) {
+    if (!n || n->dev != dev) {
+        return;
+    }
+    (*files)++;
+    *bytes += (uint64_t)n->size;
+    if (S_ISDIR(n->mode)) {
+        for (size_t i = 0; i < n->child_count; i++) {
+            count_tree_usage(n->children[i].node, dev, files, bytes);
+        }
+    }
+}
+
+static void handle_statvfs(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    vfs_node_t *node = resolve_node_or_fd(req, 1, &err);
+    if (!node) {
+        rep->err = err;
+        return;
+    }
+    vfs_statvfs_t *sv = &rep->u.stvfs;
+    memset(sv, 0, sizeof(*sv));
+    sv->f_bsize = 4096ULL;
+    sv->f_frsize = 4096ULL;
+    sv->f_fsid = node->dev;
+    sv->f_namemax = 255ULL;
+    sv->f_flag = node->readonly ? ST_RDONLY : 0ULL;
+
+    uint64_t used_files = 0ULL;
+    uint64_t used_bytes = 0ULL;
+    const vfs_node_t *root_for_dev = g_root;
+    if (node->dev == VFS_DEV_EXT2 && g_mnt) {
+        root_for_dev = g_mnt;
+        sv->f_blocks = g_ext2_blocks > 0u ? (uint64_t)g_ext2_blocks : 1024ULL;
+        sv->f_files = 512ULL;
+    } else if (node->dev == VFS_DEV_BOOTFS) {
+        int idx = dir_find_idx(g_root, "boot");
+        if (idx >= 0) {
+            root_for_dev = g_root->children[idx].node;
+        }
+        count_tree_usage(root_for_dev, node->dev, &used_files, &used_bytes);
+        uint64_t used_blks = (used_bytes + 4095ULL) / 4096ULL;
+        sv->f_blocks = used_blks > 0ULL ? used_blks : 1ULL;
+        sv->f_bfree = 0ULL;
+        sv->f_bavail = 0ULL;
+        sv->f_files = used_files;
+        sv->f_ffree = 0ULL;
+        sv->f_favail = 0ULL;
+        rep->err = 0;
+        return;
+    } else {
+        sv->f_blocks = 4096ULL; /* 16 MiB tmpfs quota view */
+        sv->f_files = 1024ULL;
+    }
+    count_tree_usage(root_for_dev, node->dev, &used_files, &used_bytes);
+    uint64_t used_blks = (used_bytes + 4095ULL) / 4096ULL;
+    sv->f_bfree =
+        (sv->f_blocks > used_blks) ? (sv->f_blocks - used_blks) : 0ULL;
+    sv->f_bavail = sv->f_bfree;
+    sv->f_ffree =
+        (sv->f_files > used_files) ? (sv->f_files - used_files) : 0ULL;
+    sv->f_favail = sv->f_ffree;
     rep->err = 0;
 }
 
@@ -1196,6 +1829,7 @@ static void mount_ext2_on_mnt(void) {
     if (ext2_init(&formatted, &total_blocks) != 0) {
         return;
     }
+    g_ext2_blocks = total_blocks;
     vfs_node_t *mnt_dir = node_new(VFS_DEV_EXT2, S_IFDIR | 0755u, 0u, g_root);
     if (!mnt_dir || dir_add_child(g_root, "mnt", mnt_dir) != 0) {
         node_destroy(mnt_dir);
@@ -1267,9 +1901,10 @@ int main(void) {
             continue;
         }
 
+        int deferred = 0;
         switch (req.op) {
         case VFS_OP_OPEN:
-            handle_open(&req, &rep);
+            deferred = handle_open((uint32_t)msgid, &req, &rep);
             break;
         case VFS_OP_CLOSE:
             release_handle(req.handle);
@@ -1286,10 +1921,16 @@ int main(void) {
             break;
         }
         case VFS_OP_READ:
-            handle_read(&req, &rep);
+            deferred = handle_read((uint32_t)msgid, &req, &rep, 0);
             break;
         case VFS_OP_WRITE:
-            handle_write(&req, &rep);
+            handle_write(&req, &rep, 0);
+            break;
+        case VFS_OP_PREAD:
+            deferred = handle_read((uint32_t)msgid, &req, &rep, 1);
+            break;
+        case VFS_OP_PWRITE:
+            handle_write(&req, &rep, 1);
             break;
         case VFS_OP_LSEEK:
             handle_lseek(&req, &rep);
@@ -1325,6 +1966,27 @@ int main(void) {
         case VFS_OP_RENAME:
             handle_rename(&req, &rep);
             break;
+        case VFS_OP_CHMOD:
+            handle_chmod(&req, &rep);
+            break;
+        case VFS_OP_CHOWN:
+            handle_chown(&req, &rep);
+            break;
+        case VFS_OP_LINK:
+            handle_link(&req, &rep);
+            break;
+        case VFS_OP_SYMLINK:
+            handle_symlink(&req, &rep);
+            break;
+        case VFS_OP_READLINK:
+            handle_readlink(&req, &rep);
+            break;
+        case VFS_OP_MKFIFO:
+            handle_mkfifo(&req, &rep);
+            break;
+        case VFS_OP_STATVFS:
+            handle_statvfs(&req, &rep);
+            break;
         case VFS_OP_STATS: {
             uint32_t open_handles = 0;
             for (uint32_t i = 1; i < VFS_MAX_HANDLES; i++) {
@@ -1340,6 +2002,8 @@ int main(void) {
             rep.err = -ENOSYS;
             break;
         }
-        (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+        if (!deferred) {
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+        }
     }
 }

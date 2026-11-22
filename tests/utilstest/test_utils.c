@@ -8,6 +8,7 @@
  *
  */
 
+#include <dirent.h>
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -31,6 +32,7 @@
 #include <sys/proc.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
@@ -38,7 +40,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0008 VER_PROC_0008 VER_PROC_0009 */
+/* need:: VER_LIBC_0008 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -794,6 +796,211 @@ static int test_cred_pwd_grp_rlimit(void) {
     return 0;
 }
 
+static int test_vfs_links_fifo_statvfs_temp(void) {
+    /* 1. chmod/fchmod/chown/lchown/faccessat. */
+    int fd = open("/tmp/v33_f", O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0644u);
+    if (fd < 0) {
+        printf("[FAIL] v33 create file failed\n");
+        return -1;
+    }
+    if (pwrite(fd, "0123456789", 10u, 0) != 10 ||
+        pwrite(fd, "ABC", 3u, 4) != 3) {
+        printf("[FAIL] pwrite failed\n");
+        close(fd);
+        return -1;
+    }
+    char pbuf[16] = {0};
+    if (pread(fd, pbuf, 10u, 0) != 10 || strcmp(pbuf, "0123ABC789") != 0 ||
+        lseek(fd, 0, SEEK_CUR) != 0) {
+        printf("[FAIL] pread or offset preservation failed ('%s')\n", pbuf);
+        close(fd);
+        return -1;
+    }
+    if (fchmod(fd, 0750u) != 0 || fchown(fd, 1000u, 2000u) != 0) {
+        printf("[FAIL] fchmod/fchown failed\n");
+        close(fd);
+        return -1;
+    }
+    struct stat st = {0};
+    if (fstat(fd, &st) != 0 || (st.st_mode & 0777u) != 0750u ||
+        st.st_uid != 1000u || st.st_gid != 2000u) {
+        printf("[FAIL] fstat mode/uid/gid mismatch\n");
+        close(fd);
+        return -1;
+    }
+    if (posix_close(fd, POSIX_CLOSE_RESTART) != 0) {
+        printf("[FAIL] posix_close failed\n");
+        return -1;
+    }
+    if (truncate("/tmp/v33_f", 5) != 0 || stat("/tmp/v33_f", &st) != 0 ||
+        st.st_size != 5 ||
+        faccessat(AT_FDCWD, "/tmp/v33_f", R_OK | X_OK, 0) != 0) {
+        printf("[FAIL] truncate or faccessat failed\n");
+        return -1;
+    }
+
+    /* 2. Hard links and symbolic links (including ELOOP). */
+    if (link("/tmp/v33_f", "/tmp/v33_hl") != 0 ||
+        stat("/tmp/v33_hl", &st) != 0 || st.st_nlink != 2u) {
+        printf("[FAIL] hard link failed (nlink=%u)\n", (unsigned)st.st_nlink);
+        return -1;
+    }
+    if (symlink("/tmp/v33_f", "/tmp/v33_sl") != 0) {
+        printf("[FAIL] symlink failed\n");
+        return -1;
+    }
+    char lbuf[64] = {0};
+    ssize_t ln = readlink("/tmp/v33_sl", lbuf, sizeof(lbuf) - 1u);
+    struct stat lst = {0};
+    if (ln != 10 || strcmp(lbuf, "/tmp/v33_f") != 0 ||
+        lstat("/tmp/v33_sl", &lst) != 0 || !S_ISLNK(lst.st_mode) ||
+        stat("/tmp/v33_sl", &st) != 0 || !S_ISREG(st.st_mode) ||
+        st.st_size != 5) {
+        printf("[FAIL] readlink/lstat/stat symlink follow failed\n");
+        return -1;
+    }
+    (void)symlink("/tmp/v33_loop2", "/tmp/v33_loop1");
+    (void)symlink("/tmp/v33_loop1", "/tmp/v33_loop2");
+    errno = 0;
+    if (stat("/tmp/v33_loop1", &st) != -1 || errno != ELOOP) {
+        printf("[FAIL] symlink ELOOP check failed errno=%d\n", errno);
+        return -1;
+    }
+    (void)unlink("/tmp/v33_loop1");
+    (void)unlink("/tmp/v33_loop2");
+    (void)unlink("/tmp/v33_sl");
+    (void)unlink("/tmp/v33_f");
+    /* Hard link must survive unlink of original path. */
+    if (stat("/tmp/v33_hl", &st) != 0 || st.st_nlink != 1u || st.st_size != 5) {
+        printf("[FAIL] hard link did not survive unlink\n");
+        return -1;
+    }
+    if (remove("/tmp/v33_hl") != 0) {
+        printf("[FAIL] remove() file failed\n");
+        return -1;
+    }
+
+    /* 3. FIFO mkfifo + cross-process blocking open/write/read. */
+    if (mkfifo("/tmp/v33_fifo", 0660u) != 0 ||
+        stat("/tmp/v33_fifo", &st) != 0 || !S_ISFIFO(st.st_mode)) {
+        printf("[FAIL] mkfifo failed\n");
+        return -1;
+    }
+    pid_t pid = fork();
+    if (pid < 0) {
+        (void)unlink("/tmp/v33_fifo");
+        return -1;
+    }
+    if (pid == 0) {
+        int wf = open("/tmp/v33_fifo", O_WRONLY | O_CLOEXEC);
+        if (wf < 0) {
+            _exit(1);
+        }
+        (void)write(wf, "fifo_ok", 7u);
+        (void)close(wf);
+        _exit(0);
+    }
+    int rf = open("/tmp/v33_fifo", O_RDONLY | O_CLOEXEC);
+    char fbuf[16] = {0};
+    ssize_t fn = (rf >= 0) ? read(rf, fbuf, sizeof(fbuf) - 1u) : -1;
+    if (rf >= 0) {
+        (void)close(rf);
+    }
+    int wst = 0;
+    (void)waitpid(pid, &wst, 0);
+    (void)unlink("/tmp/v33_fifo");
+    if (fn != 7 || strcmp(fbuf, "fifo_ok") != 0) {
+        printf("[FAIL] FIFO read failed fn=%ld '%s'\n", (long)fn, fbuf);
+        return -1;
+    }
+
+    /* 4. posix_getdents, scandir/alphasort, readdir_r, statvfs/fstatvfs. */
+    int dfd = open("/boot", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (dfd < 0) {
+        return -1;
+    }
+    uint8_t dbuf[1024];
+    int saw_sh = 0;
+    for (;;) {
+        ssize_t got = posix_getdents(dfd, dbuf, sizeof(dbuf), 0);
+        if (got <= 0) {
+            break;
+        }
+        size_t off = 0u;
+        while (off < (size_t)got) {
+            struct posix_dent *pd = (struct posix_dent *)(dbuf + off);
+            if (strcmp(pd->d_name, "sh") == 0 && pd->d_type == DT_REG) {
+                saw_sh = 1;
+            }
+            off += pd->d_reclen;
+        }
+    }
+    struct statvfs sv = {0};
+    struct statvfs fsv = {0};
+    int sf_ok = (statvfs("/tmp", &sv) == 0 && fstatvfs(dfd, &fsv) == 0 &&
+                 sv.f_bsize == 4096UL && (fsv.f_flag & ST_RDONLY) != 0UL);
+    (void)close(dfd);
+    struct dirent **slist = NULL;
+    int sc = scandir("/boot", &slist, NULL, alphasort);
+    int sorted = (sc >= 3);
+    for (int i = 1; i < sc; i++) {
+        if (strcmp(slist[i - 1]->d_name, slist[i]->d_name) > 0) {
+            sorted = 0;
+        }
+    }
+    for (int i = 0; i < sc; i++) {
+        free(slist[i]);
+    }
+    free(slist);
+    DIR *dirp = opendir("/boot");
+    struct dirent rent;
+    struct dirent *rres = NULL;
+    int rr_ok = (dirp && readdir_r(dirp, &rent, &rres) == 0 && rres == &rent);
+    if (dirp) {
+        (void)closedir(dirp);
+    }
+    if (!saw_sh || !sf_ok || !sorted || !rr_ok) {
+        printf("[FAIL] getdents=%d statvfs=%d scandir=%d readdir_r=%d\n",
+               saw_sh, sf_ok, sorted, rr_ok);
+        return -1;
+    }
+
+    /* 5. mkstemp, mkostemp, mkdtemp, tmpfile, tmpnam. */
+    char t1[] = "/tmp/ut_mkXXXXXX";
+    int tfd = mkstemp(t1);
+    char t2[] = "/tmp/ut_mdXXXXXX";
+    char *td = mkdtemp(t2);
+    FILE *tfp = tmpfile();
+    char tn[L_tmpnam];
+    char *tnp = tmpnam(tn);
+    if (tfd < 0 || !td || !tfp || !tnp) {
+        printf("[FAIL] temp file helpers failed\n");
+        if (tfd >= 0) {
+            close(tfd);
+        }
+        if (tfp) {
+            fclose(tfp);
+        }
+        return -1;
+    }
+    (void)close(tfd);
+    (void)unlink(t1);
+    (void)remove(t2);
+    (void)fputs("tmp", tfp);
+    rewind(tfp);
+    char rtmp[8] = {0};
+    (void)fgets(rtmp, sizeof(rtmp), tfp);
+    (void)fclose(tfp);
+    if (strcmp(rtmp, "tmp") != 0) {
+        printf("[FAIL] tmpfile round-trip failed\n");
+        return -1;
+    }
+
+    printf("[OK] VFS chmod/chown, links, FIFO, pread/pwrite, getdents, "
+           "statvfs, and temp files verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -814,6 +1021,9 @@ int main(void) {
         return 1;
     }
     if (test_cred_pwd_grp_rlimit() != 0) {
+        return 1;
+    }
+    if (test_vfs_links_fifo_statvfs_temp() != 0) {
         return 1;
     }
     return 0;

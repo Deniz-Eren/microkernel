@@ -262,10 +262,10 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   The shell also targets Issue 8 `$'...'` quoting, `set -o pipefail`, and `read
   -d` with custom or NUL delimiters.
 - **Work with read-only, temporary, and persistent files:** List, inspect, copy,
-  move, create, and remove files across `/boot` (`bootfs`), `/tmp` (`tmpfs`),
-  and persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Available
-  tools: `ls`, `cat`, `echo`, `mkdir`, `rm`, `cp`, `mv`, `wc`, `head`, `test`,
-  `true`, and `false`.
+  move, link, and remove files across `/boot` (`bootfs`), `/tmp` (`tmpfs`), and
+  persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Manage file
+  modes, ownership, links, FIFOs, and disk usage with standard XCU utilities
+  (such as `ls`, `chmod`, `ln`, `mkfifo`, `df`, `du`, and `dd`).
 - **Inspect processes, credentials, limits, and terminal settings:** View live
   processes with `ps`, check identity with `id` and `logname`, adjust priority
   with `nice` and `renice`, and query POSIX limits with `getconf`. Check system
@@ -282,10 +282,12 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   `<sys/resource.h>` limits. Run multithreaded code across SMP cores with
   pthreads, semaphores, deferred cancellation, and thread-local `errno`. Use
   POSIX signals and monotonic or realtime clocks and timers.
-- **Files, IPC, terminals, and event loops:** Use buffered `<stdio.h>` streams,
-  directory traversal, pipes, `AF_UNIX` sockets, `<aio.h>`, and `<termios.h>`
-  terminal controls. Multiplex descriptors across all Ring 3 servers in one
-  event loop with `poll`, `ppoll`, `select`, or `pselect`.
+- **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered
+  `<stdio.h>` streams, permissions, hard and symbolic links, FIFOs, positional
+  I/O, directory traversal (`posix_getdents`, `scandir`), `<sys/statvfs.h>`, and
+  temp-file helpers. Communicate over pipes, `AF_UNIX` sockets, `<aio.h>`, and
+  `<termios.h>`, and multiplex descriptors across servers with `poll`, `ppoll`,
+  `select`, or `pselect`.
 - **Memory, math, and standard C utilities:** Allocate memory from an
   `mmap`-backed coalescing heap, map shared memory (`shm_open`), enforce W^X
   page protections, or lock pages in RAM (`mlock`). Compute with `<fenv.h>` and
@@ -312,10 +314,10 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** File permissions, hard and symbolic
-  links, FIFOs, locales, wide characters, regular expressions, and `<dlfcn.h>`.
-  Ring 3 TCP/IP networking and remaining shell grammar and XCU utilities follow.
-  See [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** Signal wait APIs, `<threads.h>`,
+  `popen`/`system`, locales, wide characters, regular expressions, and
+  `<dlfcn.h>`. Ring 3 TCP/IP networking and remaining shell grammar and XCU
+  utilities follow. See [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree

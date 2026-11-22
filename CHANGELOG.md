@@ -28,6 +28,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Implemented POSIX.1-2024 Base VFS links, permissions, FIFOs, positional I/O,
+  directory enumeration, `<sys/statvfs.h>`, temp-file helpers, and 15 XCU Base
+  file utilities (`TSK_0033`, `SWR_IPC_0012`, `ADR_0030`, `ICD_IPC_0016`,
+  `COMP_IPC_0017`, `VER_IPC_0010`): extended `vfsserv` (`VFS_OP` `16` to `24`,
+  symlink resolution with `ELOOP`, `nlink` reference counting, 4 KiB blocking
+  FIFO buffers, `pread`/`pwrite`, `VFS_READDIR_NEXT`, and `statvfs`), added 32
+  Base `libc` functions with zero `XSI` leakage, added Ring 3 utilities `chmod`,
+  `chown`, `chgrp`, `ln`, `mkfifo`, `readlink`, `realpath`, `touch`, `rmdir`,
+  `df`, `du`, `dd`, `basename`, `dirname`, and `pathchk`, and verified in
+  `utilstest`, `shtest`, and Gates 1 to 3.
 - Implemented POSIX.1-2024 Base process credentials, `<pwd.h>`, `<grp.h>`, and
   `<sys/resource.h>` (`TSK_0032`, `SWR_PROC_0011`, `ADR_0029`, `ICD_PROC_0010`,
   `COMP_PROC_0010`, `VER_PROC_0009`): added `uid`/`euid`/`suid`,

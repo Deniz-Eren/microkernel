@@ -21,22 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0033 — Add VFS links, permissions, FIFOs, and <sys/statvfs.h>
-
-```{task} Add VFS links, permissions, FIFOs, and <sys/statvfs.h>
-:id: TSK_0033
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_IPC_0001, SYS_LIBC_0001
-
-Add `chmod*`, `chown*`, `faccessat`, `link*`, `symlink*`, `readlink*`, and
-`mkfifo*` in `vfsserv` and `pipeserv`. Add `pread`, `pwrite`, `truncate`,
-`posix_close`, `posix_getdents`, `scandir`, `alphasort`, `readdir_r`,
-`<sys/statvfs.h>`, `remove`, and temp-file helpers. Add file utilities `chmod`,
-`chown`, `chgrp`, `ln`, `mkfifo`, `readlink`, `realpath`, and `touch`. Also add
-`rmdir`, `df`, `du`, `dd`, `basename`, `dirname`, and `pathchk`
-({need}`BDR_0004`, {need}`SYS_IPC_0001`).
-```
-
 ### TSK_0034 — Add Base signals, waitid, _Fork, popen/system, and <threads.h>
 
 ```{task} Add Base signals, waitid, _Fork, popen/system, and <threads.h>

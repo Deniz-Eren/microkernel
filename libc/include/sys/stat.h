@@ -11,7 +11,7 @@
 #ifndef _SYS_STAT_H
 #define _SYS_STAT_H
 
-/* need:: ICD_IPC_0008 */
+/* need:: ICD_IPC_0008 ICD_IPC_0016 */
 
 #include <sys/types.h>
 #include <time.h>
@@ -81,6 +81,11 @@ int fstatat(int fd, const char *restrict path, struct stat *restrict buf,
             int flag);
 int mkdir(const char *path, mode_t mode);
 int mkdirat(int fd, const char *path, mode_t mode);
+int mkfifo(const char *path, mode_t mode);
+int mkfifoat(int fd, const char *path, mode_t mode);
+int chmod(const char *path, mode_t mode);
+int fchmod(int fildes, mode_t mode);
+int fchmodat(int fd, const char *path, mode_t mode, int flag);
 mode_t umask(mode_t cmask);
 
 #endif /* _SYS_STAT_H */

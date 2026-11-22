@@ -12,7 +12,7 @@
 #define _UNISTD_H
 
 /* need:: ICD_LIBC_0002 ICD_LIBC_0005 ICD_LIBC_0006 ICD_PROC_0008 */
-/* need:: ICD_PROC_0009 ICD_PROC_0010 */
+/* need:: ICD_PROC_0009 ICD_PROC_0010 ICD_IPC_0016 */
 
 #include <stddef.h>
 #include <stdint.h>
@@ -39,6 +39,7 @@
 #define R_OK 4
 
 #define GETENTROPY_MAX 256
+#define POSIX_CLOSE_RESTART 0
 
 /* POSIX.1-2024 sysconf() names (strict Base/CX set per BDR_0004). */
 #define _SC_ARG_MAX 1
@@ -139,14 +140,29 @@ unsigned int alarm(unsigned int seconds);
 int getopt(int argc, char *const argv[], const char *optstring);
 ssize_t write(int fd, const void *buf, size_t n);
 ssize_t read(int fd, void *buf, size_t n);
+ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset);
+ssize_t pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
 off_t lseek(int fildes, off_t offset, int whence);
 int ftruncate(int fildes, off_t length);
+int truncate(const char *path, off_t length);
 int close(int fd);
+int posix_close(int fildes, int flag);
 int dup(int oldfd);
 int dup2(int oldfd, int newfd);
 int dup3(int oldfd, int newfd, int flags);
 int pipe(int fildes[2]);
 int pipe2(int fildes[2], int flags);
+int link(const char *path1, const char *path2);
+int linkat(int fd1, const char *path1, int fd2, const char *path2, int flag);
+int symlink(const char *path1, const char *path2);
+int symlinkat(const char *path1, int fd, const char *path2);
+ssize_t readlink(const char *restrict path, char *restrict buf, size_t bufsize);
+ssize_t readlinkat(int fd, const char *restrict path, char *restrict buf,
+                   size_t bufsize);
+int chown(const char *path, uid_t owner, gid_t group);
+int fchown(int fildes, uid_t owner, gid_t group);
+int lchown(const char *path, uid_t owner, gid_t group);
+int fchownat(int fd, const char *path, uid_t owner, gid_t group, int flag);
 int unlink(const char *path);
 int unlinkat(int fd, const char *path, int flag);
 int rmdir(const char *path);
@@ -154,6 +170,7 @@ int chdir(const char *path);
 int fchdir(int fildes);
 char *getcwd(char *buf, size_t size);
 int access(const char *path, int amode);
+int faccessat(int fd, const char *path, int amode, int flag);
 int isatty(int fildes);
 pid_t fork(void);
 pid_t getpid(void);

@@ -13,7 +13,7 @@
 # need:: VER_LIBC_0009 VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002
 # need:: VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0003
 # need:: VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004
-# need:: VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009
+# need:: VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
 
 from __future__ import annotations
 
@@ -70,6 +70,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "sys/select.h",
     "sys/socket.h",
     "sys/stat.h",
+    "sys/statvfs.h",
     "sys/times.h",
     "sys/types.h",
     "sys/un.h",
@@ -961,6 +962,67 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"cred/rlimit check failed:\n{err}")
+
+    def test_statvfs_links_fifo_getdents_declarations(self) -> None:
+        src = "\n".join(
+            (
+                "#include <dirent.h>",
+                "#include <fcntl.h>",
+                "#include <stdio.h>",
+                "#include <stdlib.h>",
+                "#include <sys/stat.h>",
+                "#include <sys/statvfs.h>",
+                "#include <unistd.h>",
+                "#ifdef SYS_DEBUG_LOG",
+                '#error "statvfs/dirent leaked SYS_DEBUG_LOG"',
+                "#endif",
+                "static long __check_vfs_ext(int fd) {",
+                "    struct statvfs sv;",
+                "    struct dirent ent, *res = 0;",
+                "    struct dirent **list = 0;",
+                "    char buf[64];",
+                "    (void)chmod(\"/tmp\", 0755);",
+                "    (void)fchmod(fd, 0644);",
+                "    (void)fchmodat(AT_FDCWD, \"/tmp\", 0755, 0);",
+                "    (void)chown(\"/tmp\", 0, 0);",
+                "    (void)fchown(fd, 0, 0);",
+                "    (void)lchown(\"/tmp\", 0, 0);",
+                "    (void)fchownat(AT_FDCWD, \"/tmp\", 0, 0, 0);",
+                "    (void)faccessat(AT_FDCWD, \"/tmp\", F_OK, AT_EACCESS);",
+                "    (void)link(\"/tmp/a\", \"/tmp/b\");",
+                "    (void)linkat(AT_FDCWD, \"/tmp/a\", AT_FDCWD, \"/tmp/b\",",
+                "                 AT_SYMLINK_FOLLOW);",
+                "    (void)symlink(\"/tmp/a\", \"/tmp/s\");",
+                "    (void)symlinkat(\"/tmp/a\", AT_FDCWD, \"/tmp/s\");",
+                "    (void)readlink(\"/tmp/s\", buf, sizeof(buf));",
+                "    (void)readlinkat(AT_FDCWD, \"/tmp/s\", buf, sizeof(buf));",
+                "    (void)mkfifo(\"/tmp/f\", 0600);",
+                "    (void)mkfifoat(AT_FDCWD, \"/tmp/f\", 0600);",
+                "    (void)pread(fd, buf, sizeof(buf), 0);",
+                "    (void)pwrite(fd, buf, sizeof(buf), 0);",
+                "    (void)truncate(\"/tmp/a\", 0);",
+                "    (void)posix_close(fd, POSIX_CLOSE_RESTART);",
+                "    (void)posix_getdents(fd, buf, sizeof(buf), 0);",
+                "    (void)scandir(\"/tmp\", &list, 0, alphasort);",
+                "    (void)readdir_r(0, &ent, &res);",
+                "    (void)statvfs(\"/tmp\", &sv);",
+                "    (void)fstatvfs(fd, &sv);",
+                "    (void)remove(\"/tmp/a\");",
+                "    (void)mkstemp(buf);",
+                "    (void)mkostemp(buf, O_CLOEXEC);",
+                "    (void)mkdtemp(buf);",
+                "    (void)tmpfile();",
+                "    (void)tmpnam(buf);",
+                "    return (long)sizeof(struct posix_dent);",
+                "}",
+                "long (*__vfs_ext_ref)(int) = __check_vfs_ext;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"vfs_ext check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -118,3 +118,17 @@ and `readdir`. CTest `ipc.vfs_persist` (`tests/boot/test_ext2_persist.py`)
 checks the on-disk `ext2` superblock and verifies file and directory persistence
 across two cold QEMU restarts ({need}`SWR_IPC_0011`).
 ```
+
+```{ver} Verify POSIX.1-2024 VFS links, permissions, FIFOs, and XCU tools
+:id: VER_IPC_0010
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0012
+
+`tests/utilstest/test_utils.c` tests `chmod*`, `chown*`, `faccessat`, hard and
+symbolic links with `ELOOP`, cross-process blocking FIFOs, `pread`/`pwrite`,
+`truncate`, `posix_getdents`, `scandir`, `readdir_r`, `statvfs`, and temp-file
+APIs. `tests/shtest/test_sh.c` exercises all 15 XCU file utilities through
+`/boot/sh`, and Gates 1 to 3 verify `<sys/statvfs.h>`, Base symbol hygiene, and
+async-signal-safety ({need}`SWR_IPC_0012`).
+```

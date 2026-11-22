@@ -10,7 +10,7 @@
 
 #pragma once
 
-/* need:: ICD_IPC_0007 */
+/* need:: ICD_IPC_0007 ICD_IPC_0016 */
 
 #include <stdint.h>
 
@@ -32,6 +32,18 @@
 #define VFS_OP_RESOLVE 13u
 #define VFS_OP_STATS 14u
 #define VFS_OP_RENAME 15u
+#define VFS_OP_CHMOD 16u
+#define VFS_OP_CHOWN 17u
+#define VFS_OP_LINK 18u
+#define VFS_OP_SYMLINK 19u
+#define VFS_OP_READLINK 20u
+#define VFS_OP_MKFIFO 21u
+#define VFS_OP_PREAD 22u
+#define VFS_OP_PWRITE 23u
+#define VFS_OP_STATVFS 24u
+
+#define VFS_FLAG_BY_FD 0x80000000u
+#define VFS_READDIR_NEXT 0x40000000u
 
 #define VFS_RENAME_PATH_MAX 188u
 
@@ -46,6 +58,20 @@ typedef struct {
     int64_t st_mtime_sec;
     int64_t st_mtime_nsec;
 } vfs_stat_t;
+
+typedef struct {
+    uint64_t f_bsize;
+    uint64_t f_frsize;
+    uint64_t f_blocks;
+    uint64_t f_bfree;
+    uint64_t f_bavail;
+    uint64_t f_files;
+    uint64_t f_ffree;
+    uint64_t f_favail;
+    uint64_t f_fsid;
+    uint64_t f_flag;
+    uint64_t f_namemax;
+} vfs_statvfs_t;
 
 typedef struct {
     uint32_t op;
@@ -74,6 +100,7 @@ typedef struct {
     int64_t offset;
     union {
         vfs_stat_t st;
+        vfs_statvfs_t stvfs;
         char path[VFS_PATH_MAX];
         uint8_t data[VFS_DATA_MAX];
         struct {

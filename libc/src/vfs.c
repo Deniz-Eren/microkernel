@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,6 +22,7 @@
 #include <sys/ipc.h>
 #include <sys/microkernel.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/vfs.h>
 #include <sys/vm.h>
 #include <time.h>
@@ -28,7 +30,7 @@
 #include "fd_internal.h"
 #include "tls_internal.h"
 
-/* need:: COMP_IPC_0009 COMP_LIBC_0006 */
+/* need:: COMP_IPC_0009 COMP_IPC_0017 COMP_LIBC_0006 */
 
 struct __dirstream {
     int fd;
@@ -215,6 +217,9 @@ ssize_t __libc_vfs_read(uint32_t handle, void *buf, size_t n) {
         req.len = (uint32_t)chunk;
         long r = vfs_rpc(&req, &rep);
         if (r < 0) {
+            if (r == -EPIPE) {
+                (void)raise(SIGPIPE);
+            }
             if (done > 0u) {
                 return (ssize_t)done;
             }
@@ -253,6 +258,9 @@ ssize_t __libc_vfs_write(uint32_t handle, const void *buf, size_t n,
         memcpy(req.u.data, src + done, chunk);
         long r = vfs_rpc(&req, &rep);
         if (r < 0) {
+            if (r == -EPIPE) {
+                (void)raise(SIGPIPE);
+            }
             if (done > 0u) {
                 return (ssize_t)done;
             }
@@ -844,4 +852,574 @@ char *realpath(const char *restrict file_name, char *restrict resolved_name) {
     }
     memcpy(dst, rep.u.path, len + 1u);
     return dst;
+}
+
+int fchmodat(int fd, const char *path, mode_t mode, int flag) {
+    if (flag & ~AT_SYMLINK_NOFOLLOW) {
+        errno = EINVAL;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_CHMOD;
+    req.mode = (uint32_t)(mode & 07777u);
+    req.flags = (uint32_t)flag;
+    int pr = build_req_path(fd, path, &req.handle, req.u.path);
+    if (pr < 0) {
+        errno = -pr;
+        return -1;
+    }
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int chmod(const char *path, mode_t mode) {
+    return fchmodat(AT_FDCWD, path, mode, 0);
+}
+
+int fchmod(int fildes, mode_t mode) {
+    if (fildes < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS) {
+        errno = EINVAL;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_CHMOD;
+    req.handle = e.srv_handle;
+    req.mode = (uint32_t)(mode & 07777u);
+    req.flags = VFS_FLAG_BY_FD;
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int fchownat(int fd, const char *path, uid_t owner, gid_t group, int flag) {
+    if (flag & ~AT_SYMLINK_NOFOLLOW) {
+        errno = EINVAL;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_CHOWN;
+    req.mode = (uint32_t)owner;
+    req.whence = (uint32_t)group;
+    req.flags = (uint32_t)flag;
+    int pr = build_req_path(fd, path, &req.handle, req.u.path);
+    if (pr < 0) {
+        errno = -pr;
+        return -1;
+    }
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int chown(const char *path, uid_t owner, gid_t group) {
+    return fchownat(AT_FDCWD, path, owner, group, 0);
+}
+
+int lchown(const char *path, uid_t owner, gid_t group) {
+    return fchownat(AT_FDCWD, path, owner, group, AT_SYMLINK_NOFOLLOW);
+}
+
+int fchown(int fildes, uid_t owner, gid_t group) {
+    if (fildes < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS) {
+        errno = EINVAL;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_CHOWN;
+    req.handle = e.srv_handle;
+    req.mode = (uint32_t)owner;
+    req.whence = (uint32_t)group;
+    req.flags = VFS_FLAG_BY_FD;
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int faccessat(int fd, const char *path, int amode, int flag) {
+    if (amode & ~(F_OK | R_OK | W_OK | X_OK)) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (flag & ~(AT_EACCESS | AT_SYMLINK_NOFOLLOW)) {
+        errno = EINVAL;
+        return -1;
+    }
+    struct stat st = {0};
+    int sf = (flag & AT_SYMLINK_NOFOLLOW) ? AT_SYMLINK_NOFOLLOW : 0;
+    if (fstatat(fd, path, &st, sf) != 0) {
+        return -1;
+    }
+    if ((amode & R_OK) && !(st.st_mode & (S_IRUSR | S_IRGRP | S_IROTH))) {
+        errno = EACCES;
+        return -1;
+    }
+    if ((amode & W_OK) && !(st.st_mode & (S_IWUSR | S_IWGRP | S_IWOTH))) {
+        errno = EACCES;
+        return -1;
+    }
+    if ((amode & X_OK) && !(st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {
+        errno = EACCES;
+        return -1;
+    }
+    return 0;
+}
+
+int linkat(int fd1, const char *path1, int fd2, const char *path2, int flag) {
+    if (flag & ~AT_SYMLINK_FOLLOW) {
+        errno = EINVAL;
+        return -1;
+    }
+    char old_buf[VFS_PATH_MAX];
+    char new_buf[VFS_PATH_MAX];
+    uint32_t old_h = 0u;
+    uint32_t new_h = 0u;
+    int r1 = build_req_path(fd1, path1, &old_h, old_buf);
+    if (r1 < 0) {
+        errno = -r1;
+        return -1;
+    }
+    int r2 = build_req_path(fd2, path2, &new_h, new_buf);
+    if (r2 < 0) {
+        errno = -r2;
+        return -1;
+    }
+    if (strlen(old_buf) >= VFS_RENAME_PATH_MAX ||
+        strlen(new_buf) >= VFS_RENAME_PATH_MAX) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_LINK;
+    req.handle = old_h;
+    req.flags = (uint32_t)flag;
+    req.u.ren.new_handle = new_h;
+    (void)strlcpy(req.u.ren.old_path, old_buf, sizeof(req.u.ren.old_path));
+    (void)strlcpy(req.u.ren.new_path, new_buf, sizeof(req.u.ren.new_path));
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int link(const char *path1, const char *path2) {
+    return linkat(AT_FDCWD, path1, AT_FDCWD, path2, 0);
+}
+
+int symlinkat(const char *path1, int fd, const char *path2) {
+    if (!path1 || !path2) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (path1[0] == '\0' || path2[0] == '\0') {
+        errno = ENOENT;
+        return -1;
+    }
+    char new_buf[VFS_PATH_MAX];
+    uint32_t new_h = 0u;
+    int r2 = build_req_path(fd, path2, &new_h, new_buf);
+    if (r2 < 0) {
+        errno = -r2;
+        return -1;
+    }
+    if (strlen(path1) >= VFS_RENAME_PATH_MAX ||
+        strlen(new_buf) >= VFS_RENAME_PATH_MAX) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_SYMLINK;
+    req.handle = new_h;
+    (void)strlcpy(req.u.ren.old_path, path1, sizeof(req.u.ren.old_path));
+    (void)strlcpy(req.u.ren.new_path, new_buf, sizeof(req.u.ren.new_path));
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int symlink(const char *path1, const char *path2) {
+    return symlinkat(path1, AT_FDCWD, path2);
+}
+
+ssize_t readlinkat(int fd, const char *restrict path, char *restrict buf,
+                   size_t bufsize) {
+    if (!buf) {
+        errno = EFAULT;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_READLINK;
+    int pr = build_req_path(fd, path, &req.handle, req.u.path);
+    if (pr < 0) {
+        errno = -pr;
+        return -1;
+    }
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    size_t copy_n = rep.len < bufsize ? (size_t)rep.len : bufsize;
+    if (copy_n > 0u) {
+        memcpy(buf, rep.u.path, copy_n);
+    }
+    return (ssize_t)copy_n;
+}
+
+ssize_t readlink(const char *restrict path, char *restrict buf,
+                 size_t bufsize) {
+    return readlinkat(AT_FDCWD, path, buf, bufsize);
+}
+
+int mkfifoat(int fd, const char *path, mode_t mode) {
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_MKFIFO;
+    mode_t cur_umask = current_umask();
+    req.mode = (uint32_t)(mode & ~cur_umask & 0777u);
+    int pr = build_req_path(fd, path, &req.handle, req.u.path);
+    if (pr < 0) {
+        errno = -pr;
+        return -1;
+    }
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int mkfifo(const char *path, mode_t mode) {
+    return mkfifoat(AT_FDCWD, path, mode);
+}
+
+ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset) {
+    __libc_cancel_point();
+    if (!buf && nbyte > 0u) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (fildes < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    if (offset < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_CONSOLE ||
+        e.kind == FD_KIND_TTY || e.kind == FD_KIND_SOCK) {
+        errno = ESPIPE;
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS) {
+        errno = EBADF;
+        return -1;
+    }
+    if (nbyte == 0u) {
+        return 0;
+    }
+    uint8_t *dst = (uint8_t *)buf;
+    size_t done = 0u;
+    while (done < nbyte) {
+        size_t chunk = nbyte - done;
+        if (chunk > VFS_DATA_MAX) {
+            chunk = VFS_DATA_MAX;
+        }
+        vfs_req_t req = {0};
+        vfs_rep_t rep = {0};
+        req.op = VFS_OP_PREAD;
+        req.handle = e.srv_handle;
+        req.offset = (int64_t)offset + (int64_t)done;
+        req.len = (uint32_t)chunk;
+        long r = vfs_rpc(&req, &rep);
+        if (r < 0) {
+            if (done > 0u) {
+                return (ssize_t)done;
+            }
+            errno = (int)(-r);
+            return -1;
+        }
+        if (rep.len > 0u) {
+            memcpy(dst + done, rep.u.data, rep.len);
+            done += rep.len;
+        }
+        if (rep.len < chunk) {
+            break;
+        }
+    }
+    return (ssize_t)done;
+}
+
+ssize_t pwrite(int fildes, const void *buf, size_t nbyte, off_t offset) {
+    __libc_cancel_point();
+    if (!buf && nbyte > 0u) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (fildes < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    if (offset < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_CONSOLE ||
+        e.kind == FD_KIND_TTY || e.kind == FD_KIND_SOCK) {
+        errno = ESPIPE;
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS) {
+        errno = EBADF;
+        return -1;
+    }
+    if (nbyte == 0u) {
+        return 0;
+    }
+    const uint8_t *src = (const uint8_t *)buf;
+    size_t done = 0u;
+    while (done < nbyte) {
+        size_t chunk = nbyte - done;
+        if (chunk > VFS_DATA_MAX) {
+            chunk = VFS_DATA_MAX;
+        }
+        vfs_req_t req = {0};
+        vfs_rep_t rep = {0};
+        req.op = VFS_OP_PWRITE;
+        req.handle = e.srv_handle;
+        req.offset = (int64_t)offset + (int64_t)done;
+        req.len = (uint32_t)chunk;
+        memcpy(req.u.data, src + done, chunk);
+        long r = vfs_rpc(&req, &rep);
+        if (r < 0) {
+            if (done > 0u) {
+                return (ssize_t)done;
+            }
+            errno = (int)(-r);
+            return -1;
+        }
+        done += rep.len;
+        if (rep.len < chunk) {
+            break;
+        }
+    }
+    return (ssize_t)done;
+}
+
+int truncate(const char *path, off_t length) {
+    if (length < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    int fd = open(path, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return -1;
+    }
+    int r = ftruncate(fd, length);
+    int saved = errno;
+    (void)close(fd);
+    if (r < 0) {
+        errno = saved;
+    }
+    return r;
+}
+
+ssize_t posix_getdents(int fildes, void *buf, size_t nbyte, int flags) {
+    if (flags != 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!buf) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (fildes < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS) {
+        errno = ENOTDIR;
+        return -1;
+    }
+
+    size_t hdr_sz = offsetof(struct posix_dent, d_name);
+    size_t max_rec = (hdr_sz + 256u + 7u) & ~(size_t)7u;
+    if (nbyte < hdr_sz + 8u) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    uint8_t *out = (uint8_t *)buf;
+    size_t used = 0u;
+    for (;;) {
+        if (used > 0u && used + max_rec > nbyte) {
+            break;
+        }
+        vfs_req_t req = {0};
+        vfs_rep_t rep = {0};
+        req.op = VFS_OP_READDIR;
+        req.handle = e.srv_handle;
+        req.flags = VFS_READDIR_NEXT;
+        long r = vfs_rpc(&req, &rep);
+        if (r < 0) {
+            if (used > 0u) {
+                return (ssize_t)used;
+            }
+            errno = (int)(-r);
+            return -1;
+        }
+        if (rep.flags != 0u) {
+            break; /* EOF */
+        }
+        size_t nlen = strlen(rep.u.dent.d_name);
+        size_t rec = (hdr_sz + nlen + 1u + 7u) & ~(size_t)7u;
+        if (used + rec > nbyte) {
+            if (used > 0u) {
+                break;
+            }
+            errno = EINVAL;
+            return -1;
+        }
+        struct posix_dent *pd = (struct posix_dent *)(out + used);
+        memset(pd, 0, rec);
+        pd->d_ino = (ino_t)rep.u.dent.d_ino;
+        pd->d_reclen = (reclen_t)rec;
+        pd->d_type = (unsigned char)rep.len;
+        memcpy(pd->d_name, rep.u.dent.d_name, nlen + 1u);
+        used += rec;
+    }
+    return (ssize_t)used;
+}
+
+static void convert_statvfs(const vfs_statvfs_t *src, struct statvfs *dst) {
+    dst->f_bsize = (unsigned long)src->f_bsize;
+    dst->f_frsize = (unsigned long)src->f_frsize;
+    dst->f_blocks = (fsblkcnt_t)src->f_blocks;
+    dst->f_bfree = (fsblkcnt_t)src->f_bfree;
+    dst->f_bavail = (fsblkcnt_t)src->f_bavail;
+    dst->f_files = (fsfilcnt_t)src->f_files;
+    dst->f_ffree = (fsfilcnt_t)src->f_ffree;
+    dst->f_favail = (fsfilcnt_t)src->f_favail;
+    dst->f_fsid = (unsigned long)src->f_fsid;
+    dst->f_flag = (unsigned long)src->f_flag;
+    dst->f_namemax = (unsigned long)src->f_namemax;
+}
+
+int statvfs(const char *restrict path, struct statvfs *restrict buf) {
+    if (!buf) {
+        errno = EFAULT;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_STATVFS;
+    int pr = build_req_path(AT_FDCWD, path, &req.handle, req.u.path);
+    if (pr < 0) {
+        errno = -pr;
+        return -1;
+    }
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    convert_statvfs(&rep.u.stvfs, buf);
+    return 0;
+}
+
+int fstatvfs(int fildes, struct statvfs *buf) {
+    if (!buf) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (fildes < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS) {
+        errno = EINVAL;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_STATVFS;
+    req.handle = e.srv_handle;
+    req.flags = VFS_FLAG_BY_FD;
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    convert_statvfs(&rep.u.stvfs, buf);
+    return 0;
 }

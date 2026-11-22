@@ -66,6 +66,7 @@ sh Issue 8 read -d custom and NUL delimiters verified
 sh cwd and umask persistence across execve verified
 XCU utilities ps, getconf, tty, and stty verified
 XCU id, logname, nice, renice, umask, and ulimit verified
+XCU chmod, chown, chgrp, ln, mkfifo, readlink, realpath, touch, rmdir, df, du, dd, basename, dirname, and pathchk verified
 uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified
@@ -73,6 +74,7 @@ atexit LIFO, qsort/bsearch, strtol/strtoul, and getopt verified
 alarm SIGALRM, rename/renameat, and realpath verified
 sysconf, confstr, pathconf, gethostname, ttyname, tcgetwinsize, and ProcList verified
 credentials, pwd/grp, getlogin, rlimit, and nice verified
+VFS chmod/chown, links, FIFO, pread/pwrite, getdents, statvfs, and temp files verified
 setpgid, getpgid, setsid, waitpid\(-pgid\), and kill\(-pgid\) verified
 TTY ISIG Ctrl-C SIGINT and tcgetpgrp/tcsetpgrp verified
 Ring 3 core utilities \(mkdir, rm, cp, mv, uname, env, wc, head\) verified

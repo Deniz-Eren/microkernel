@@ -20,6 +20,22 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0033 — Add VFS links, permissions, FIFOs, and <sys/statvfs.h>
+
+```{task} Add VFS links, permissions, FIFOs, and <sys/statvfs.h>
+:id: TSK_0033
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0030, SWR_IPC_0012
+
+Add `chmod*`, `chown*`, `faccessat`, `link*`, `symlink*`, `readlink*`, and
+`mkfifo*` in `vfsserv` and `pipeserv`. Add `pread`, `pwrite`, `truncate`,
+`posix_close`, `posix_getdents`, `scandir`, `alphasort`, `readdir_r`,
+`<sys/statvfs.h>`, `remove`, and temp-file helpers. Add file utilities `chmod`,
+`chown`, `chgrp`, `ln`, `mkfifo`, `readlink`, `realpath`, and `touch`. Also add
+`rmdir`, `df`, `du`, `dd`, `basename`, `dirname`, and `pathchk`
+({need}`BDR_0004`, {need}`SWR_IPC_0012`).
+```
+
 ### TSK_0032 — Add credentials, <pwd.h>, <grp.h>, and <sys/resource.h>
 
 ```{task} Add credentials, <pwd.h>, <grp.h>, and <sys/resource.h>

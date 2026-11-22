@@ -17,7 +17,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0007 VER_PROC_0008 VER_PROC_0009 */
+/* need:: VER_LIBC_0007 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -421,6 +421,57 @@ static int test_id_logname_nice_umask_ulimit(void) {
     return 0;
 }
 
+static int test_xcu_file_utilities(void) {
+    char out[2048];
+    ssize_t len = 0;
+
+    /* 1. touch, chmod, chown, chgrp, ln -s, readlink, realpath, rmdir. */
+    int rc =
+        run_sh_capture("/boot/mkdir /tmp/u33 && /boot/touch /tmp/u33/a.txt && "
+                       "/boot/chmod 0750 /tmp/u33/a.txt && "
+                       "/boot/chown nobody:wheel /tmp/u33/a.txt && "
+                       "/boot/chgrp root /tmp/u33/a.txt && "
+                       "/boot/ln -s /tmp/u33/a.txt /tmp/u33/link && "
+                       "/boot/readlink /tmp/u33/link && "
+                       "/boot/realpath /tmp/u33/link && "
+                       "/boot/mkfifo /tmp/u33/pipe && "
+                       "/boot/rm /tmp/u33/link /tmp/u33/pipe /tmp/u33/a.txt && "
+                       "/boot/rmdir /tmp/u33",
+                       NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "/tmp/u33/a.txt\n/tmp/u33/a.txt\n") != 0) {
+        printf("[FAIL] shtest file utils 1 rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 2. basename, dirname, pathchk, df, du, dd. */
+    rc = run_sh_capture(
+        "/boot/basename /usr/bin/sh.c .c && /boot/dirname /usr/bin/sh && "
+        "/boot/pathchk -p -P /tmp/good_name.txt && "
+        "! /boot/pathchk -P /tmp/-bad",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "sh\n/usr/bin\n") != 0) {
+        printf("[FAIL] shtest basename/dirname/pathchk rc=%d out='%s'\n", rc,
+               out);
+        return -1;
+    }
+
+    rc = run_sh_capture(
+        "/boot/df -k /tmp && /boot/du -s /boot && "
+        "/boot/echo hello | /boot/dd bs=5 count=1 conv=ucase 2>/tmp/dd.err && "
+        "/boot/rm /tmp/dd.err",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "tmpfs") || !strstr(out, "/boot") ||
+        !strstr(out, "HELLO")) {
+        printf("[FAIL] shtest df/du/dd rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU chmod, chown, chgrp, ln, mkfifo, readlink, realpath, "
+           "touch, rmdir, df, du, dd, basename, dirname, and pathchk "
+           "verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -439,6 +490,9 @@ int main(void) {
         return 1;
     }
     if (test_id_logname_nice_umask_ulimit() != 0) {
+        return 1;
+    }
+    if (test_xcu_file_utilities() != 0) {
         return 1;
     }
     return 0;

@@ -206,3 +206,18 @@ single-indirect data blocks, write-through `open`/`read`/`write`/`ftruncate`,
 `mkdir`, `unlink`, `rmdir`, `rename`, `EXDEV`, and open-unlinked inode cleanup
 ({need}`ICD_IPC_0007`, {need}`ICD_IPC_0015`, {need}`SWR_IPC_0011`).
 ```
+
+```{comp} VFS links, permissions, FIFOs, positional I/O, statvfs, and XCU tools
+:id: COMP_IPC_0017
+:status: active
+:posix: XBD/sys/statvfs.h (BASE), XSH/posix_getdents (BASE), XSH/mkfifo (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0016
+:satisfies: SWR_IPC_0012
+
+`servers/vfsserv/main.c`, `libc/src/vfs.c`, and `libc/src/vfs_helpers.c`
+implement permissions, ownership, symlinks, hard links, blocking FIFOs,
+positional I/O, `posix_getdents`, `scandir`, `statvfs`, and temp-file helpers.
+`bin/utils/` supplies `chmod`, `chown`, `chgrp`, `ln`, `mkfifo`, `readlink`,
+`realpath`, `touch`, `rmdir`, `df`, `du`, `dd`, `basename`, `dirname`, and
+`pathchk` ({need}`ICD_IPC_0016`, {need}`SWR_IPC_0012`).
+```

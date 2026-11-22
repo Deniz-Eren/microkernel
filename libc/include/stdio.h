@@ -22,6 +22,8 @@
 #define FILENAME_MAX 256
 #define FOPEN_MAX 32
 #define L_ctermid 16
+#define L_tmpnam 32
+#define TMP_MAX 10000
 
 #define _IOFBF 0
 #define _IOLBF 1
@@ -93,6 +95,9 @@ void perror(const char *s);
 
 int rename(const char *oldpath, const char *newpath);
 int renameat(int oldfd, const char *oldpath, int newfd, const char *newpath);
+int remove(const char *path);
+FILE *tmpfile(void);
+char *tmpnam(char *s);
 
 void flockfile(FILE *file);
 int ftrylockfile(FILE *file);
