@@ -11,7 +11,7 @@
 #ifndef _STDIO_H
 #define _STDIO_H
 
-/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0006 */
+/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0006 ICD_PROC_0009 */
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -21,6 +21,7 @@
 #define BUFSIZ 512
 #define FILENAME_MAX 256
 #define FOPEN_MAX 32
+#define L_ctermid 16
 
 #define _IOFBF 0
 #define _IOLBF 1
@@ -96,5 +97,7 @@ int renameat(int oldfd, const char *oldpath, int newfd, const char *newpath);
 void flockfile(FILE *file);
 int ftrylockfile(FILE *file);
 void funlockfile(FILE *file);
+
+char *ctermid(char *s);
 
 #endif /* _STDIO_H */

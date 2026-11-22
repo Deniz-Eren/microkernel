@@ -13,7 +13,7 @@
 # need:: VER_LIBC_0009 VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002
 # need:: VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0003
 # need:: VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004
-# need:: VER_BOOT_0003
+# need:: VER_BOOT_0003 VER_PROC_0008
 
 from __future__ import annotations
 
@@ -877,6 +877,43 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"fenv/math check failed:\n{err}")
+
+    def test_sysconf_and_tty_winsize_declarations(self) -> None:
+        src = "\n".join(
+            (
+                "#include <stdio.h>",
+                "#include <termios.h>",
+                "#include <unistd.h>",
+                "#ifdef _SC_NPROCESSORS_ONLN",
+                '#error "non-POSIX _SC_NPROCESSORS_ONLN must not be defined"',
+                "#endif",
+                "#ifdef SYS_DEBUG_LOG",
+                '#error "unistd/termios leaked SYS_DEBUG_LOG"',
+                "#endif",
+                "static long __check_sysconf_tty(int fd) {",
+                "    char buf[L_ctermid + 32];",
+                "    struct winsize ws = {0, 0};",
+                "    long v = sysconf(_SC_PAGESIZE) + sysconf(_SC_CLK_TCK) +",
+                "             pathconf(\"/\", _PC_PATH_MAX) +",
+                "             fpathconf(fd, _PC_PIPE_BUF);",
+                "    size_t n = confstr(_CS_PATH, buf, sizeof(buf));",
+                "    (void)gethostname(buf, sizeof(buf));",
+                "    (void)ctermid(buf);",
+                "    (void)ttyname(fd);",
+                "    (void)ttyname_r(fd, buf, sizeof(buf));",
+                "    (void)tcgetsid(fd);",
+                "    (void)tcgetwinsize(fd, &ws);",
+                "    (void)tcsetwinsize(fd, &ws);",
+                "    return v + (long)n;",
+                "}",
+                "long (*__sc_fn_ref)(int) = __check_sysconf_tty;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"sysconf/tty check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

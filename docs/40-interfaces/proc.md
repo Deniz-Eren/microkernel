@@ -100,3 +100,17 @@ TSD keys with no `<sys/microkernel.h>` leakage ({need}`ARC_PROC_0001`,
 `TTY_OP_GETPGRP`/`TTY_OP_SETPGRP` specify the kernel and `ttyserv` job-control
 ABI ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0008`).
 ```
+
+```{icd} Process snapshot ABI, sysconf, and TTY window-size interface
+:id: ICD_PROC_0009
+:status: active
+:posix: XSH/sysconf (BASE), XSH/tcgetwinsize (BASE), XCU/ps (BASE)
+:refines: ARC_PROC_0001
+:satisfies: SWR_PROC_0010
+
+`libc/include/sys/proc.h` defines `struct __k_proc_info` and `ProcList()` over
+`FD_OP_PROC_LIST`. `<unistd.h>`, `<stdio.h>`, and `<termios.h>` declare Base
+`sysconf`, `confstr`, `pathconf`, `fpathconf`, `gethostname`, `ctermid`,
+`ttyname`, `ttyname_r`, `struct winsize`, `tcgetsid`, `tcgetwinsize`, and
+`tcsetwinsize` ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0010`).
+```

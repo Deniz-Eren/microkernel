@@ -139,10 +139,30 @@ def extract_defined_macros(
     target: str = "x86_64-unknown-none-elf",
 ) -> set[str]:
     """Return macro names defined after preprocessing `#include <header>`."""
+    return extract_headers_defined_macros(
+        cc,
+        clang_inc,
+        sysroot,
+        (header,),
+        feature_macro=feature_macro,
+        target=target,
+    )
+
+
+def extract_headers_defined_macros(
+    cc: str,
+    clang_inc: Path,
+    sysroot: Path,
+    headers: Sequence[str],
+    feature_macro: str = "-D_POSIX_C_SOURCE=202405L",
+    target: str = "x86_64-unknown-none-elf",
+) -> set[str]:
+    """Return macro names defined across all `#include <hdr>` headers."""
+    src = "".join(f"#include <{hdr}>\n" for hdr in headers)
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".c", encoding="utf-8", delete=True
     ) as tmp:
-        tmp.write(f"#include <{header}>\n")
+        tmp.write(src)
         tmp.flush()
         proc = subprocess.run(
             [

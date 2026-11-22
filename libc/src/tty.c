@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/fd.h>
 #include <sys/ipc.h>
@@ -22,7 +23,7 @@
 #include "fd_internal.h"
 #include "tls_internal.h"
 
-/* need:: COMP_IPC_0011 COMP_PROC_0007 */
+/* need:: COMP_IPC_0011 COMP_PROC_0007 COMP_PROC_0009 */
 
 static int g_tty_conn = -1;
 static long g_tty_conn_pid = -1;
@@ -82,19 +83,25 @@ static long tty_rpc(const tty_req_t *req, tty_rep_t *rep) {
     return rep->err;
 }
 
-static int check_tty_fd(int fildes) {
+static int check_tty_fd_err(int fildes) {
     if (fildes < 0) {
-        errno = EBADF;
-        return -1;
+        return EBADF;
     }
     struct __k_fd_entry e = {0};
     long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
     if (gr < 0) {
-        errno = (int)(-gr);
-        return -1;
+        return (int)(-gr);
     }
     if (e.kind != FD_KIND_CONSOLE && e.kind != FD_KIND_TTY) {
-        errno = ENOTTY;
+        return ENOTTY;
+    }
+    return 0;
+}
+
+static int check_tty_fd(int fildes) {
+    int err = check_tty_fd_err(fildes);
+    if (err != 0) {
+        errno = err;
         return -1;
     }
     return 0;
@@ -397,4 +404,96 @@ int tcsetpgrp(int fildes, pid_t pgid_id) {
         return -1;
     }
     return 0;
+}
+
+pid_t tcgetsid(int fildes) {
+    if (check_tty_fd(fildes) != 0) {
+        return (pid_t)-1;
+    }
+    tty_req_t req = {0};
+    tty_rep_t rep = {0};
+    req.op = TTY_OP_GETSID;
+    long r = tty_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return (pid_t)-1;
+    }
+    if (rep.len > 0u) {
+        return (pid_t)rep.len;
+    }
+    return getsid(0);
+}
+
+int tcgetwinsize(int fildes, struct winsize *winsize_p) {
+    if (!winsize_p) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (check_tty_fd(fildes) != 0) {
+        return -1;
+    }
+    tty_req_t req = {0};
+    tty_rep_t rep = {0};
+    req.op = TTY_OP_GETWINSIZE;
+    long r = tty_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    *winsize_p = rep.u.ws;
+    return 0;
+}
+
+int tcsetwinsize(int fildes, const struct winsize *winsize_p) {
+    if (!winsize_p) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (check_tty_fd(fildes) != 0) {
+        return -1;
+    }
+    tty_req_t req = {0};
+    tty_rep_t rep = {0};
+    req.op = TTY_OP_SETWINSIZE;
+    req.u.ws = *winsize_p;
+    long r = tty_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int ttyname_r(int fildes, char *name, size_t namesize) {
+    int err = check_tty_fd_err(fildes);
+    if (err != 0) {
+        return err;
+    }
+    if (!name) {
+        return EINVAL;
+    }
+    static const char k_tty_path[] = "/dev/tty";
+    if (namesize < sizeof(k_tty_path)) {
+        return ERANGE;
+    }
+    memcpy(name, k_tty_path, sizeof(k_tty_path));
+    return 0;
+}
+
+char *ttyname(int fildes) {
+    static char g_ttyname_buf[L_ctermid];
+    int err = ttyname_r(fildes, g_ttyname_buf, sizeof(g_ttyname_buf));
+    if (err != 0) {
+        errno = err;
+        return NULL;
+    }
+    return g_ttyname_buf;
+}
+
+char *ctermid(char *s) {
+    static char g_ctermid_buf[L_ctermid];
+    static const char k_ctermid[] = "/dev/tty";
+    char *dst = s ? s : g_ctermid_buf;
+    memcpy(dst, k_ctermid, sizeof(k_ctermid));
+    return dst;
 }

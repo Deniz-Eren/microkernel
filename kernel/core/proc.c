@@ -36,7 +36,7 @@
 #include <sys/vm.h>
 #include "channel.h"
 
-/* need:: COMP_BOOT_0002 COMP_PROC_0002 */
+/* need:: COMP_BOOT_0002 COMP_PROC_0002 COMP_PROC_0009 */
 
 #define MAIN_STACK_TOP 0x700000000000ULL
 #define MAIN_STACK_SIZE (64ULL * 1024ULL)
@@ -231,6 +231,49 @@ static uint64_t build_user_stack_argv(uint64_t pml4_phys,
 
 static boot_info_t g_bootinfo;
 
+static void proc_format_comm_args(char *comm_dst, char *args_dst,
+                                  const char *path, const char *const *argv,
+                                  int argc) {
+    const char *src = (path && path[0]) ? path : "unknown";
+    const char *base = src;
+    for (const char *q = src; *q; q++) {
+        if (*q == '/' && q[1] != '\0') {
+            base = q + 1;
+        }
+    }
+    size_t clen = strlen(base);
+    if (clen >= PROC_COMM_MAX) {
+        clen = PROC_COMM_MAX - 1u;
+    }
+    memcpy(comm_dst, base, clen);
+    comm_dst[clen] = '\0';
+
+    size_t pos = 0u;
+    if (argv && argc > 0) {
+        for (int i = 0; i < argc && pos + 1u < PROC_ARGS_MAX; i++) {
+            const char *a = argv[i];
+            if (!a) {
+                continue;
+            }
+            if (i > 0 && pos + 1u < PROC_ARGS_MAX) {
+                args_dst[pos++] = ' ';
+            }
+            for (size_t j = 0; a[j] && pos + 1u < PROC_ARGS_MAX; j++) {
+                args_dst[pos++] = a[j];
+            }
+        }
+    }
+    if (pos == 0u) {
+        size_t alen = strlen(src);
+        if (alen >= PROC_ARGS_MAX) {
+            alen = PROC_ARGS_MAX - 1u;
+        }
+        memcpy(args_dst, src, alen);
+        pos = alen;
+    }
+    args_dst[pos] = '\0';
+}
+
 /* Load one ustar bootfs image into a fresh process with optional argv. */
 static pcb_t *proc_spawn_from_bootfs_argv(pcb_t *parent, uint64_t tar_phys,
                                           uint64_t tar_size, const char *name,
@@ -270,6 +313,7 @@ static pcb_t *proc_spawn_from_bootfs_argv(pcb_t *parent, uint64_t tar_phys,
     const char *argv_one[1] = {name};
     const char *const *use_argv = (argv && argc > 0) ? argv : argv_one;
     int use_argc = (argv && argc > 0) ? argc : 1;
+    proc_format_comm_args(p->comm, p->args, name, use_argv, use_argc);
     uint64_t user_rsp = build_user_stack_argv(p->pml4_phys, use_argv, use_argc,
                                               NULL, 0, &g_bootinfo);
     if (!user_rsp) {
@@ -639,6 +683,75 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         console_write_raw_locked(kbuf, len);
         return (long)len;
     }
+    case FD_OP_PROC_LIST: {
+        if (a1 == 0u && a2 == 0u) {
+            size_t total = 0u;
+            uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+            for (pcb_t *c = proc_list_head(); c; c = c->next) {
+                if (c->state != PROC_DEAD) {
+                    total++;
+                }
+            }
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return (long)total;
+        }
+        if (a1 == 0u) {
+            return -EFAULT;
+        }
+        size_t cap = (size_t)a2;
+        if (cap > PROC_LIST_MAX) {
+            cap = PROC_LIST_MAX;
+        }
+        if (cap == 0u) {
+            return 0;
+        }
+        struct __k_proc_info *snap =
+            kzalloc(cap * sizeof(struct __k_proc_info));
+        if (!snap) {
+            return -ENOMEM;
+        }
+        size_t count = 0u;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        for (pcb_t *c = proc_list_head(); c && count < cap; c = c->next) {
+            if (c->state == PROC_DEAD) {
+                continue;
+            }
+            struct __k_proc_info *dst = &snap[count++];
+            dst->pid = c->pid;
+            dst->ppid = c->parent_pid;
+            dst->pgid = c->pgid;
+            dst->sid = c->sid;
+            dst->state =
+                (c->state == PROC_ZOMBIE) ? PROC_INFO_ZOMBIE : PROC_INFO_ALIVE;
+            dst->nthreads = c->nthreads;
+            dst->prio = c->threads ? (uint32_t)c->threads->base_priority : 0u;
+            dst->tty_kind = FD_KIND_NONE;
+            for (int f = 0; f < 3; f++) {
+                if (c->fds[f].kind == FD_KIND_TTY ||
+                    c->fds[f].kind == FD_KIND_CONSOLE) {
+                    dst->tty_kind = c->fds[f].kind;
+                    break;
+                }
+            }
+            dst->utime_ticks =
+                __atomic_load_n(&c->utime_ticks, __ATOMIC_RELAXED);
+            dst->stime_ticks =
+                __atomic_load_n(&c->stime_ticks, __ATOMIC_RELAXED);
+            memcpy(dst->comm, c->comm, sizeof(dst->comm));
+            dst->comm[PROC_COMM_MAX - 1u] = '\0';
+            memcpy(dst->args, c->args, sizeof(dst->args));
+            dst->args[PROC_ARGS_MAX - 1u] = '\0';
+        }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+
+        long res = (long)count;
+        if (count > 0u &&
+            copy_to_user(a1, snap, count * sizeof(struct __k_proc_info)) < 0) {
+            res = -EFAULT;
+        }
+        kfree(snap);
+        return res;
+    }
     default:
         return -EINVAL;
     }
@@ -671,6 +784,8 @@ long sys_proc_fork(const trapframe_t *tf) {
     child->mlock_flags = 0u; /* POSIX: memory locks not inherited on fork */
     child->next_stack_va = parent->next_stack_va;
     child->caps = parent->caps;
+    memcpy(child->comm, parent->comm, sizeof(child->comm));
+    memcpy(child->args, parent->args, sizeof(child->args));
     memcpy(child->sig_handlers, parent->sig_handlers,
            sizeof(child->sig_handlers));
     memcpy(child->sig_masks, parent->sig_masks, sizeof(child->sig_masks));
@@ -830,6 +945,10 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
         return -ENOEXEC;
     }
 
+    char new_comm[PROC_COMM_MAX];
+    char new_args[PROC_ARGS_MAX];
+    proc_format_comm_args(new_comm, new_args, path, argv_ptrs, argc);
+
     uint64_t user_rsp = build_user_stack_argv(new_pml4, argv_ptrs, argc,
                                               envp_ptrs, envc, &g_bootinfo);
     kfree(arg_pool);
@@ -840,6 +959,10 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
     }
 
     /* Point of no return: commit the new process image. */
+    uint64_t comm_pf = spin_lock_irqsave(&g_proc_lock);
+    memcpy(p->comm, new_comm, sizeof(p->comm));
+    memcpy(p->args, new_args, sizeof(p->args));
+    spin_unlock_irqrestore(&g_proc_lock, comm_pf);
     cov_dump_proc(p);
 #ifdef MICROKERNEL_COVERAGE
     p->cov_registered = 0;

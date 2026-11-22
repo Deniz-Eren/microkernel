@@ -20,6 +20,21 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0031 — Add POSIX.1-2024 ps, sysconf/confstr/pathconf, and getconf
+
+```{task} Add POSIX.1-2024 ps, sysconf/confstr/pathconf, and getconf
+:id: TSK_0031
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0028, SWR_PROC_0010
+
+Add kernel `pcb_t` command metadata and read-only `FD_OP_PROC_LIST` snapshot
+support for Ring 3 `ps`. Add Base `<unistd.h>` `sysconf`, `confstr`, `pathconf`,
+`fpathconf`, `gethostname`, `ctermid`, `ttyname`, `ttyname_r`, `tcgetsid`,
+`tcgetwinsize`, and `tcsetwinsize` with no non-POSIX `_SC_*` names. Add `ps`,
+`getconf`, `tty`, and `stty`, and update Gate 2 to count standard header macros
+({need}`BDR_0004`, {need}`SWR_PROC_0010`).
+```
+
 ### TSK_0025 — Boot secondary CPUs via ACPI MADT and harden SMP locks
 
 ```{task} Boot secondary CPUs via ACPI MADT and harden SMP locks

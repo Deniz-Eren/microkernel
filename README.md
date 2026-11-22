@@ -256,7 +256,8 @@ subset available at this time:
   `pipe`/`pipe2`, `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`,
   `ftruncate`, `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, and `getcwd`.
   Also `setpgid`, `getpgid`, `getpgrp`, `setsid`, `getsid`, `tcgetpgrp`,
-  `tcsetpgrp`, `access`, `isatty`, `getopt`, `alarm`, `_exit`, `sleep`,
+  `tcsetpgrp`, `access`, `isatty`, `ttyname`, `ttyname_r`, `sysconf`, `confstr`,
+  `pathconf`, `fpathconf`, `gethostname`, `getopt`, `alarm`, `_exit`, `sleep`,
   `environ`, and `STD*_FILENO`
 - **Descriptor control and multiplexing (`<fcntl.h>`, `<poll.h>`,
   `<sys/select.h>`):** `open`, `openat`, `creat`, and `fcntl` (`F_DUPFD`,
@@ -270,10 +271,10 @@ subset available at this time:
   `getsockname`, `getpeername`, `getsockopt`, and `setsockopt` with atomic
   `SOCK_CLOEXEC` and `SOCK_NONBLOCK` over `sockserv` (`/dev/sock`)
 - **Terminal I/O (`<termios.h>`):** `tcgetattr`, `tcsetattr`, `tcflush`,
-  `tcdrain`, `tcflow`, `tcsendbreak`, `cfgetispeed`/`cfsetispeed`,
-  `cfgetospeed`/`cfsetospeed`, canonical line editing (`ICANON`, `VERASE`,
-  `VKILL`, `ICRNL`, `VEOF`), `ISIG` (`VINTR`/`VQUIT` to `SIGINT`/`SIGQUIT`), and
-  raw mode backed by COM1 IRQ 4 `ttyserv`
+  `tcdrain`, `tcflow`, `tcsendbreak`, `tcgetsid`, `tcgetwinsize`,
+  `tcsetwinsize`, and `cf*speed` helpers. Canonical line editing (`ICANON`,
+  `VERASE`, `VKILL`, `ICRNL`, `VEOF`), `ISIG`, and raw mode run on COM1 IRQ 4
+  `ttyserv`
 - **Filesystem and directories (`<sys/stat.h>`, `<dirent.h>`):** `stat`,
   `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, `umask`, `opendir`,
   `fdopendir`, `readdir`, `rewinddir`, `closedir`, and `dirfd` backed by Ring 3
@@ -316,7 +317,7 @@ subset available at this time:
   locks (`flockfile`, `ftrylockfile`, `funlockfile`). Formatted output covers
   `printf`/`vprintf`, `fprintf`/`vfprintf`, `snprintf`/`vsnprintf`,
   `sprintf`/`vsprintf`, `puts`, `fputs`, `putchar`/`putchar_unlocked`, `fputc`,
-  `putc`/`putc_unlocked`, `perror`, `rename`, and `renameat`
+  `putc`/`putc_unlocked`, `perror`, `ctermid`, `rename`, and `renameat`
 - **Heap, sorting, paths, environment, and exit (`<stdlib.h>`):**
   `mmap`/`munmap`-backed thread-safe coalescing `malloc`, `free`, `calloc`,
   `realloc`, and `reallocarray`. Also `atexit`, `qsort`, `bsearch`, `realpath`,
@@ -365,10 +366,11 @@ subset available at this time:
   `&&`/`||`/`;`, `$VAR`/`$?`, `$'...'` ANSI-C quoting, `set -o pipefail`, `read
   -d` custom/NUL delimiters, and built-ins `cd`/`pwd`/`export`/`unset`/`exit`).
   Standalone `/boot/` utilities: `echo`, `cat`, `ls`, `true`, `false`, `test`,
-  `mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, and `head`
+  `mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, `head`, `ps`, `getconf`,
+  `tty`, and `stty`
 - **Native processes and VM (`<sys/proc.h>`, `<sys/vm.h>`):** `ProcCreate` (from
-  `boot.tar`), `ProcWait`, `VMMap`, `VMUnmap`, `VMProtect`, and `VMCloneCow`
-  (copy-on-write page sharing between parent and child)
+  `boot.tar`), `ProcWait`, `ProcList`, `VMMap`, `VMUnmap`, `VMProtect`, and
+  `VMCloneCow` (copy-on-write page sharing between parent and child)
 - **Native threads (`<sys/thread.h>`):** `NewThread`, `ThreadReset`,
   `ThreadSpawn`, `ThreadGetCtx`, `ThreadGetTid` (256 priority levels with IPC
   priority inheritance)
@@ -386,9 +388,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): POSIX.1-2024 Base `ps`, `sysconf`,
-`getconf`, credentials, VFS links, and full C17 headers. Ring 3 TCP/IP
-networking and remaining XCU utilities follow under
+Not available at this time (planned next): POSIX.1-2024 Base credentials and
+`<pwd.h>`/`<grp.h>`/`<sys/resource.h>`, VFS links and FIFOs, full C17 headers,
+Ring 3 TCP/IP networking, and remaining XCU utilities under
 [BDR_0004](docs/10-product/bdr/BDR_0004.md). See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).

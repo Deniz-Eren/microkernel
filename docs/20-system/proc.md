@@ -120,10 +120,29 @@ locks for `pmm`, `vmm`, `sched`, `ipc`, and `futex` must run safely across
 multiple cores ({need}`SYS_PROC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 ps, sysconf, TTY size, and core utilities
+:id: SWR_PROC_0010
+:status: active
+:posix: XCU/ps (BASE), XCU/getconf (BASE), XSH/sysconf (BASE)
+:derives: SYS_PROC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0028
+
+The kernel must keep process command metadata and supply a read-only process
+snapshot for `ps` ([ps][xcu-ps]). `libc` and `ttyserv` must supply Base
+`sysconf` ([sysconf][fn-sysconf]), `confstr`, `pathconf`, `fpathconf`,
+`gethostname`, `ctermid`, `ttyname`, `ttyname_r`, `tcgetsid`, `tcgetwinsize`,
+and `tcsetwinsize` with no non-POSIX names. Ring 3 must supply `ps`, `getconf`,
+`tty`, and `stty` ({need}`SYS_PROC_0001`).
+```
+
 [hdr-wait]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_wait.h.html
 [fn-waitpid]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/waitpid.html
+[fn-sysconf]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/functions/sysconf.html
+[xcu-ps]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/utilities/ps.html
 [hdr-spawn]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/spawn.h.html
 [hdr-pth]:

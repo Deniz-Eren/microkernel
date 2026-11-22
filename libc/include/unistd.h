@@ -12,6 +12,7 @@
 #define _UNISTD_H
 
 /* need:: ICD_LIBC_0002 ICD_LIBC_0005 ICD_LIBC_0006 ICD_PROC_0008 */
+/* need:: ICD_PROC_0009 */
 
 #include <stddef.h>
 #include <stdint.h>
@@ -38,6 +39,95 @@
 #define R_OK 4
 
 #define GETENTROPY_MAX 256
+
+/* POSIX.1-2024 sysconf() names (strict Base/CX set per BDR_0004). */
+#define _SC_ARG_MAX 1
+#define _SC_CHILD_MAX 2
+#define _SC_CLK_TCK 3
+#define _SC_NGROUPS_MAX 4
+#define _SC_OPEN_MAX 5
+#define _SC_STREAM_MAX 6
+#define _SC_TZNAME_MAX 7
+#define _SC_JOB_CONTROL 8
+#define _SC_SAVED_IDS 9
+#define _SC_VERSION 10
+#define _SC_PAGESIZE 11
+#define _SC_PAGE_SIZE _SC_PAGESIZE
+#define _SC_2_VERSION 12
+#define _SC_2_C_BIND 13
+#define _SC_2_C_DEV 14
+#define _SC_2_CHAR_TERM 15
+#define _SC_2_LOCALEDEF 16
+#define _SC_2_SW_DEV 17
+#define _SC_2_UPE 18
+#define _SC_BC_BASE_MAX 19
+#define _SC_BC_DIM_MAX 20
+#define _SC_BC_SCALE_MAX 21
+#define _SC_BC_STRING_MAX 22
+#define _SC_COLL_WEIGHTS_MAX 23
+#define _SC_EXPR_NEST_MAX 24
+#define _SC_LINE_MAX 25
+#define _SC_RE_DUP_MAX 26
+#define _SC_ASYNCHRONOUS_IO 27
+#define _SC_FSYNC 28
+#define _SC_MAPPED_FILES 29
+#define _SC_MEMLOCK 30
+#define _SC_MEMLOCK_RANGE 31
+#define _SC_MEMORY_PROTECTION 32
+#define _SC_MESSAGE_PASSING 33
+#define _SC_PRIORITIZED_IO 34
+#define _SC_PRIORITY_SCHEDULING 35
+#define _SC_REALTIME_SIGNALS 36
+#define _SC_SEMAPHORES 37
+#define _SC_SHARED_MEMORY_OBJECTS 38
+#define _SC_SYNCHRONIZED_IO 39
+#define _SC_TIMERS 40
+#define _SC_THREADS 41
+#define _SC_THREAD_SAFE_FUNCTIONS 42
+#define _SC_THREAD_DESTRUCTOR_ITERATIONS 43
+#define _SC_THREAD_KEYS_MAX 44
+#define _SC_THREAD_STACK_MIN 45
+#define _SC_THREAD_THREADS_MAX 46
+#define _SC_MONOTONIC_CLOCK 47
+#define _SC_CLOCK_SELECTION 48
+#define _SC_BARRIERS 49
+#define _SC_READER_WRITER_LOCKS 50
+#define _SC_SPIN_LOCKS 51
+#define _SC_SPAWN 52
+#define _SC_HOST_NAME_MAX 53
+#define _SC_LOGIN_NAME_MAX 54
+#define _SC_TTY_NAME_MAX 55
+#define _SC_SYMLOOP_MAX 56
+#define _SC_IOV_MAX 57
+#define _SC_ATEXIT_MAX 58
+#define _SC_GETGR_R_SIZE_MAX 59
+#define _SC_GETPW_R_SIZE_MAX 60
+#define _SC_V8_LP64_OFF64 61
+
+/* POSIX.1-2024 confstr() names. */
+#define _CS_PATH 1
+#define _CS_POSIX_V8_LP64_OFF64_CFLAGS 2
+#define _CS_POSIX_V8_LP64_OFF64_LDFLAGS 3
+#define _CS_POSIX_V8_LP64_OFF64_LIBS 4
+#define _CS_POSIX_V8_WIDTH_RESTRICTED_ENVS 5
+#define _CS_V8_ENV 6
+
+/* POSIX.1-2024 pathconf() / fpathconf() names. */
+#define _PC_LINK_MAX 1
+#define _PC_MAX_CANON 2
+#define _PC_MAX_INPUT 3
+#define _PC_NAME_MAX 4
+#define _PC_PATH_MAX 5
+#define _PC_PIPE_BUF 6
+#define _PC_CHOWN_RESTRICTED 7
+#define _PC_NO_TRUNC 8
+#define _PC_VDISABLE 9
+#define _PC_ASYNC_IO 10
+#define _PC_PRIO_IO 11
+#define _PC_SYNC_IO 12
+#define _PC_FILESIZEBITS 13
+#define _PC_SYMLINK_MAX 14
+#define _PC_2_SYMLINKS 15
 
 extern char **environ;
 extern char *optarg;
@@ -79,6 +169,13 @@ int execve(const char *path, char *const argv[], char *const envp[]);
 int execv(const char *path, char *const argv[]);
 int execvp(const char *file, char *const argv[]);
 int getentropy(void *buffer, size_t length);
+long sysconf(int name);
+size_t confstr(int name, char *buf, size_t len);
+long pathconf(const char *path, int name);
+long fpathconf(int fildes, int name);
+int gethostname(char *name, size_t namelen);
+char *ttyname(int fildes);
+int ttyname_r(int fildes, char *name, size_t namesize);
 _Noreturn void _exit(int status);
 unsigned int sleep(unsigned int seconds);
 

@@ -24,9 +24,10 @@
 #include <sys/tty.h>
 #include <termios.h>
 #include <time.h>
+#include <unistd.h>
 #include "uart_backend.h"
 
-/* need:: COMP_IPC_0010 */
+/* need:: COMP_IPC_0010 COMP_PROC_0009 */
 
 #define DEFAULT_UART_BASE 0x3F8u
 #define DEFAULT_UART_IRQ 4u
@@ -68,6 +69,8 @@ static tty_pwait_t g_pwait[PWAIT_MAX];
 static volatile unsigned int g_timed_polls;
 static int g_self_conn = -1;
 static pid_t g_fg_pgrp = 0;
+static pid_t g_tty_sid = 0;
+static struct winsize g_winsize = {.ws_row = 24u, .ws_col = 80u};
 
 static uint64_t now_mono_ns(void) {
     struct timespec ts = {0};
@@ -601,8 +604,31 @@ int main(int argc, char **argv) {
                 rep.err = -EINVAL;
             } else {
                 g_fg_pgrp = (pid_t)req.arg;
+                pid_t sid = getsid(g_fg_pgrp);
+                if (sid > 0) {
+                    g_tty_sid = sid;
+                } else if (g_tty_sid <= 0) {
+                    g_tty_sid = g_fg_pgrp;
+                }
                 rep.err = 0;
             }
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+            break;
+        case TTY_OP_GETSID:
+            rep.err = 0;
+            rep.len =
+                (uint32_t)(g_tty_sid > 0 ? g_tty_sid
+                                         : (g_fg_pgrp > 0 ? g_fg_pgrp : 0));
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+            break;
+        case TTY_OP_GETWINSIZE:
+            rep.err = 0;
+            rep.u.ws = g_winsize;
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+            break;
+        case TTY_OP_SETWINSIZE:
+            g_winsize = req.u.ws;
+            rep.err = 0;
             (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
             break;
         default:

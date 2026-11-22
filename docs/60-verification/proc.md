@@ -90,3 +90,17 @@ shootdowns, and concurrent IPC with `XSAVE`/`FMA` isolation. CTest
 `proc.smp_cores` (`tests/boot/test_smp_cores.py`) verifies 4-core `-smp 4` boot
 and execution ({need}`SWR_PROC_0009`).
 ```
+
+```{ver} Verify ps, getconf, tty, stty, sysconf, and TTY size in QEMU
+:id: VER_PROC_0008
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0010
+
+The headless QEMU harness runs `utilstest` (`tests/utilstest/test_utils.c`) and
+`shtest` (`tests/shtest/test_sh.c`). They verify `sysconf`, `confstr`,
+`pathconf`, `fpathconf`, `gethostname`, `ctermid`, `ttyname*`, `tcgetsid`,
+`tcgetwinsize`/`tcsetwinsize`, `ProcList`, `ps`, `getconf`, `tty`, and `stty`.
+CTest Gates 1 to 3 verify header hygiene, non-POSIX exclusion, and
+async-signal-safety ({need}`SWR_PROC_0010`).
+```

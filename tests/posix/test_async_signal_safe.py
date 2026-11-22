@@ -123,6 +123,12 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "setsid",
     "tcgetpgrp",
     "tcsetpgrp",
+    "tcgetsid",
+    "tcgetwinsize",
+    "tcsetwinsize",
+    "sysconf",
+    "pathconf",
+    "fpathconf",
     "__errno_location",
 )
 

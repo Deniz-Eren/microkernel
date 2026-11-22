@@ -11,7 +11,7 @@
 #ifndef _TERMIOS_H
 #define _TERMIOS_H
 
-/* need:: ICD_IPC_0011 */
+/* need:: ICD_IPC_0011 ICD_PROC_0009 */
 
 #include <sys/types.h>
 
@@ -125,6 +125,11 @@ struct termios {
     speed_t __c_ospeed;
 };
 
+struct winsize {
+    unsigned short ws_row;
+    unsigned short ws_col;
+};
+
 speed_t cfgetispeed(const struct termios *termios_p);
 speed_t cfgetospeed(const struct termios *termios_p);
 int cfsetispeed(struct termios *termios_p, speed_t speed);
@@ -133,8 +138,11 @@ int tcdrain(int fildes);
 int tcflow(int fildes, int action);
 int tcflush(int fildes, int queue_selector);
 int tcgetattr(int fildes, struct termios *termios_p);
+pid_t tcgetsid(int fildes);
+int tcgetwinsize(int fildes, struct winsize *winsize_p);
 int tcsendbreak(int fildes, int duration);
 int tcsetattr(int fildes, int optional_actions,
               const struct termios *termios_p);
+int tcsetwinsize(int fildes, const struct winsize *winsize_p);
 
 #endif /* _TERMIOS_H */

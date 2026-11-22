@@ -26,14 +26,16 @@
 #include <stdlib.h>
 #include <stdnoreturn.h>
 #include <string.h>
+#include <sys/proc.h>
 #include <sys/stat.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
+#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0008 */
+/* need:: VER_LIBC_0008 VER_PROC_0008 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -513,6 +515,152 @@ static int test_alarm_rename_realpath(void) {
     return 0;
 }
 
+static int test_sysconf_tty_and_proclist(void) {
+    /* 1. sysconf() Base values, indeterminate preservation, and EINVAL. */
+    if (sysconf(_SC_PAGESIZE) != 4096L || sysconf(_SC_CLK_TCK) != 1000L ||
+        sysconf(_SC_OPEN_MAX) != OPEN_MAX || sysconf(_SC_VERSION) != 202405L ||
+        sysconf(_SC_2_VERSION) != 202405L || sysconf(_SC_THREADS) != 202405L ||
+        sysconf(_SC_SHARED_MEMORY_OBJECTS) != 202405L) {
+        printf("[FAIL] sysconf Base values mismatch\n");
+        return -1;
+    }
+    errno = EAGAIN;
+    if (sysconf(_SC_SPAWN) != -1L || errno != EAGAIN) {
+        printf("[FAIL] sysconf(_SC_SPAWN) altered errno (%d)\n", errno);
+        return -1;
+    }
+    errno = 0;
+    if (sysconf(-999) != -1L || errno != EINVAL) {
+        printf("[FAIL] sysconf(-999) expected EINVAL got %d\n", errno);
+        return -1;
+    }
+
+    /* 2. confstr() _CS_PATH, truncation, and EINVAL. */
+    char cbuf[32];
+    size_t clen = confstr(_CS_PATH, cbuf, sizeof(cbuf));
+    if (clen != 6u || strcmp(cbuf, "/boot") != 0) {
+        printf("[FAIL] confstr(_CS_PATH) got len=%zu '%s'\n", clen, cbuf);
+        return -1;
+    }
+    char small[4];
+    if (confstr(_CS_PATH, small, sizeof(small)) != 6u ||
+        strcmp(small, "/bo") != 0) {
+        printf("[FAIL] confstr truncation failed\n");
+        return -1;
+    }
+    errno = 0;
+    if (confstr(-1, cbuf, sizeof(cbuf)) != 0u || errno != EINVAL) {
+        printf("[FAIL] confstr(-1) expected EINVAL got %d\n", errno);
+        return -1;
+    }
+
+    /* 3. pathconf() and fpathconf(). */
+    if (pathconf("/", _PC_PATH_MAX) != PATH_MAX ||
+        pathconf("/boot", _PC_NAME_MAX) != NAME_MAX) {
+        printf("[FAIL] pathconf values mismatch\n");
+        return -1;
+    }
+    errno = 0;
+    if (pathconf("/no_such_pc_file", _PC_PATH_MAX) != -1L || errno != ENOENT) {
+        printf("[FAIL] pathconf missing expected ENOENT got %d\n", errno);
+        return -1;
+    }
+    errno = 0;
+    if (fpathconf(-1, _PC_PATH_MAX) != -1L || errno != EBADF) {
+        printf("[FAIL] fpathconf(-1) expected EBADF got %d\n", errno);
+        return -1;
+    }
+    int pfd[2] = {-1, -1};
+    if (pipe2(pfd, O_CLOEXEC) != 0) {
+        printf("[FAIL] pipe2 for fpathconf/ttyname failed\n");
+        return -1;
+    }
+    if (fpathconf(pfd[0], _PC_PIPE_BUF) != PIPE_BUF) {
+        printf("[FAIL] fpathconf(_PC_PIPE_BUF) mismatch\n");
+        close(pfd[0]);
+        close(pfd[1]);
+        return -1;
+    }
+
+    /* 4. gethostname(), ctermid(), ttyname(), ttyname_r(). */
+    char hbuf[64];
+    if (gethostname(hbuf, sizeof(hbuf)) != 0 ||
+        strcmp(hbuf, "microkernel") != 0) {
+        printf("[FAIL] gethostname mismatch '%s'\n", hbuf);
+        close(pfd[0]);
+        close(pfd[1]);
+        return -1;
+    }
+    char ctbuf[L_ctermid];
+    if (strcmp(ctermid(NULL), "/dev/tty") != 0 ||
+        strcmp(ctermid(ctbuf), "/dev/tty") != 0) {
+        printf("[FAIL] ctermid mismatch\n");
+        close(pfd[0]);
+        close(pfd[1]);
+        return -1;
+    }
+    char tbuf[32];
+    if (ttyname_r(pfd[0], tbuf, sizeof(tbuf)) != ENOTTY ||
+        ttyname_r(STDIN_FILENO, tbuf, 4u) != ERANGE ||
+        ttyname_r(STDIN_FILENO, tbuf, sizeof(tbuf)) != 0 ||
+        strcmp(tbuf, "/dev/tty") != 0) {
+        printf("[FAIL] ttyname_r checks failed\n");
+        close(pfd[0]);
+        close(pfd[1]);
+        return -1;
+    }
+    close(pfd[0]);
+    close(pfd[1]);
+    char *tn = ttyname(STDIN_FILENO);
+    if (!tn || strcmp(tn, "/dev/tty") != 0) {
+        printf("[FAIL] ttyname(STDIN_FILENO) mismatch\n");
+        return -1;
+    }
+
+    /* 5. tcgetsid(), tcgetwinsize(), tcsetwinsize() round-trip. */
+    if (tcgetsid(STDIN_FILENO) <= 0) {
+        printf("[FAIL] tcgetsid failed\n");
+        return -1;
+    }
+    struct winsize orig_ws = {0, 0};
+    struct winsize set_ws = {.ws_row = 40u, .ws_col = 120u};
+    struct winsize got_ws = {0, 0};
+    if (tcgetwinsize(STDIN_FILENO, &orig_ws) != 0 || orig_ws.ws_row == 0u ||
+        orig_ws.ws_col == 0u || tcsetwinsize(STDIN_FILENO, &set_ws) != 0 ||
+        tcgetwinsize(STDIN_FILENO, &got_ws) != 0 || got_ws.ws_row != 40u ||
+        got_ws.ws_col != 120u) {
+        printf("[FAIL] tcgetwinsize/tcsetwinsize round-trip failed\n");
+        return -1;
+    }
+    (void)tcsetwinsize(STDIN_FILENO, &orig_ws);
+
+    /* 6. ProcList() kernel snapshot check. */
+    struct __k_proc_info plist[PROC_LIST_MAX];
+    memset(plist, 0, sizeof(plist));
+    long nproc = ProcList(plist, PROC_LIST_MAX);
+    int seen_sysproc = 0;
+    int seen_self = 0;
+    pid_t me = getpid();
+    for (long i = 0; i < nproc; i++) {
+        if (plist[i].pid == 1u && strcmp(plist[i].comm, "sysproc") == 0) {
+            seen_sysproc = 1;
+        }
+        if ((pid_t)plist[i].pid == me &&
+            strcmp(plist[i].comm, "utilstest") == 0) {
+            seen_self = 1;
+        }
+    }
+    if (nproc < 3 || !seen_sysproc || !seen_self) {
+        printf("[FAIL] ProcList n=%ld sysproc=%d self=%d\n", nproc,
+               seen_sysproc, seen_self);
+        return -1;
+    }
+
+    printf("[OK] sysconf, confstr, pathconf, gethostname, ttyname, "
+           "tcgetwinsize, and ProcList verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -527,6 +675,9 @@ int main(void) {
         return 1;
     }
     if (test_alarm_rename_realpath() != 0) {
+        return 1;
+    }
+    if (test_sysconf_tty_and_proclist() != 0) {
         return 1;
     }
     return 0;

@@ -29,6 +29,9 @@
 #define TTY_OP_SENDBREAK 10u
 #define TTY_OP_GETPGRP 11u
 #define TTY_OP_SETPGRP 12u
+#define TTY_OP_GETSID 13u
+#define TTY_OP_GETWINSIZE 14u
+#define TTY_OP_SETWINSIZE 15u
 
 typedef struct {
     uint32_t op;
@@ -39,6 +42,7 @@ typedef struct {
     union {
         uint8_t data[TTY_DATA_MAX];
         struct termios tio;
+        struct winsize ws;
     } u;
 } tty_req_t;
 
@@ -50,6 +54,7 @@ typedef struct {
     union {
         uint8_t data[TTY_DATA_MAX];
         struct termios tio;
+        struct winsize ws;
     } u;
 } tty_rep_t;
 

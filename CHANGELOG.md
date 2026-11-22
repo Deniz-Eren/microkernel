@@ -21,6 +21,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Implemented strict POSIX.1-2024 Base process inspection, configuration, and
+  TTY size/name interfaces (`TSK_0031`, `SWR_PROC_0010`, `ADR_0028`,
+  `ICD_PROC_0009`, `COMP_PROC_0009`, `VER_PROC_0008`): added `pcb_t.comm`/`args`
+  and read-only `FD_OP_PROC_LIST` (`ProcList()` in `<sys/proc.h>`), added
+  `sysconf`, `confstr`, `pathconf`, `fpathconf`, `gethostname`, `ctermid`,
+  `ttyname`, `ttyname_r`, `tcgetsid`, `tcgetwinsize`, and `tcsetwinsize` with
+  `ttyserv` `TTY_OP_{GETSID,GETWINSIZE,SETWINSIZE}` and zero non-POSIX names,
+  added Ring 3 XCU utilities `ps`, `getconf`, `tty`, and `stty`, updated Gate 2
+  to count standard header macros in `build/posix-symbol-diff.txt`, and verified
+  in `utilstest`, `shtest`, and Gates 1 to 3.
 - Added business decision `BDR_0004` (`docs/10-product/bdr/BDR_0004.md`) and
   updated `CNV_0004` to keep public user-space headers, `libc`, and utilities
   within POSIX.1-2024 and require explicit `BDR_`/`ADR_` records for any future

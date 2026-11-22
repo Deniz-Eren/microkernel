@@ -104,3 +104,18 @@ keep per-CPU `GS.base` state and idle threads. SMP-hardened `sched.c`, `pmm.c`,
 `shm.c` serialize shared kernel state across cores ({need}`ARC_PROC_0001`,
 {need}`ICD_BOOT_0002`, {need}`SWR_PROC_0009`).
 ```
+
+```{comp} Process snapshot, sysconf, TTY size, and XCU utilities
+:id: COMP_PROC_0009
+:status: active
+:posix: XCU/ps (BASE), XCU/getconf (BASE), XSH/sysconf (BASE)
+:refines: ARC_PROC_0001, ICD_PROC_0009
+:satisfies: SWR_PROC_0010
+
+`kernel/core/proc.c` tracks `comm` and `args` on `pcb_t` and handles
+`FD_OP_PROC_LIST`. `libc/src/sysconf.c`, `libc/src/tty.c`, and
+`servers/ttyserv/main.c` supply Base `sysconf`, `confstr`, `pathconf`,
+`fpathconf`, `gethostname`, `ctermid`, `ttyname*`, `tcgetsid`, and
+`tcgetwinsize`/`tcsetwinsize`. `bin/utils/` supplies `ps`, `getconf`, `tty`, and
+`stty` ({need}`ICD_PROC_0009`, {need}`SWR_PROC_0010`).
+```

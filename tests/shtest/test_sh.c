@@ -17,7 +17,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0007 */
+/* need:: VER_LIBC_0007 VER_PROC_0008 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -282,6 +282,88 @@ static int test_cwd_across_execve(void) {
     return 0;
 }
 
+static int test_ps_getconf_tty_stty(void) {
+    char out[2048];
+    ssize_t len = 0;
+
+    /* 1. ps -e, ps -f, ps -l, ps -p, ps -o, and invalid flag. */
+    int rc = run_sh_capture("/boot/ps -e", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "PID") || !strstr(out, "CMD") ||
+        !strstr(out, "sysproc") || !strstr(out, "ttyserv") ||
+        !strstr(out, "vfsserv") || !strstr(out, "ps")) {
+        printf("[FAIL] shtest ps -e rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/ps -f -e", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "PPID") || !strstr(out, "STIME") ||
+        !strstr(out, "/boot/ps -f -e")) {
+        printf("[FAIL] shtest ps -f -e rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/ps -p 1 -o pid=ID,comm=NAME", NULL, 0, out,
+                        sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "ID") || !strstr(out, "NAME") ||
+        !strstr(out, "sysproc") || strstr(out, "vfsserv") != NULL) {
+        printf("[FAIL] shtest ps -p 1 -o rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/ps -p 1 -o pid=", NULL, 0, out, sizeof(out),
+                        &len);
+    if (rc != 0 || strstr(out, "PID") != NULL || !strstr(out, "1")) {
+        printf("[FAIL] shtest ps -o pid= header suppress rc=%d out='%s'\n", rc,
+               out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/ps -Z", NULL, 0, out, sizeof(out), &len);
+    if (rc == 0) {
+        printf("[FAIL] shtest ps -Z unexpectedly succeeded\n");
+        return -1;
+    }
+
+    /* 2. getconf system, path, indeterminate, and strict POSIX rejection. */
+    rc = run_sh_capture("/boot/getconf PAGE_SIZE && /boot/getconf PATH && "
+                        "/boot/getconf PATH_MAX / && "
+                        "/boot/getconf _POSIX_VERSION && "
+                        "/boot/getconf _POSIX_SPAWN",
+                        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "4096\n/boot\n256\n202405\nundefined\n") != 0) {
+        printf("[FAIL] shtest getconf rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/getconf _NPROCESSORS_ONLN", NULL, 0, out,
+                        sizeof(out), &len);
+    if (rc == 0) {
+        printf("[FAIL] shtest getconf accepted non-POSIX _NPROCESSORS_ONLN\n");
+        return -1;
+    }
+
+    /* 3. tty (console vs pipe) and stty (-a and -g). */
+    rc = run_sh_capture("/boot/tty", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "/dev/tty\n") != 0) {
+        printf("[FAIL] shtest tty on console rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/tty", "x", 1u, out, sizeof(out), &len);
+    if (rc != 1 || strcmp(out, "not a tty\n") != 0) {
+        printf("[FAIL] shtest tty on pipe rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/stty -a", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "baud") || !strstr(out, "rows") ||
+        !strstr(out, "columns") || !strstr(out, "icanon")) {
+        printf("[FAIL] shtest stty -a rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+    rc = run_sh_capture("/boot/stty -g", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, ":")) {
+        printf("[FAIL] shtest stty -g rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities ps, getconf, tty, and stty verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -294,6 +376,9 @@ int main(void) {
         return 1;
     }
     if (test_cwd_across_execve() != 0) {
+        return 1;
+    }
+    if (test_ps_getconf_tty_stty() != 0) {
         return 1;
     }
     return 0;

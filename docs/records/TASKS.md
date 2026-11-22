@@ -21,21 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0031 — Add POSIX.1-2024 ps, sysconf/confstr/pathconf, and getconf
-
-```{task} Add POSIX.1-2024 ps, sysconf/confstr/pathconf, and getconf
-:id: TSK_0031
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001, SYS_PROC_0001
-
-Add kernel `pcb_t` command metadata and read-only `FD_OP_PROC_LIST` snapshot
-support for Ring 3 `ps`. Add Base `<unistd.h>` `sysconf`, `confstr`, `pathconf`,
-`fpathconf`, `gethostname`, `ctermid`, `ttyname`, `ttyname_r`, `tcgetsid`,
-`tcgetwinsize`, and `tcsetwinsize` with no non-POSIX `_SC_*` names. Add `ps`,
-`getconf`, `tty`, and `stty`, and update Gate 2 to count standard header macros
-({need}`BDR_0004`, {need}`SYS_LIBC_0001`, {need}`SYS_PROC_0001`).
-```
-
 ### TSK_0032 — Add credentials, <pwd.h>, <grp.h>, and <sys/resource.h>
 
 ```{task} Add credentials, <pwd.h>, <grp.h>, and <sys/resource.h>

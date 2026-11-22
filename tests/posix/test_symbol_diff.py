@@ -29,6 +29,7 @@ from audit_lib import (  # noqa: E402
     extract_archive_symbols,
     extract_defined_macros,
     extract_header_ast_symbols,
+    extract_headers_defined_macros,
     is_reserved_identifier,
     load_manifest,
 )
@@ -127,6 +128,7 @@ def _write_diff_report(
     manifest: PosixManifest,
     ast_symbols: set[str],
     archive_symbols: set[str],
+    header_macros: set[str],
     active_macros: set[str],
 ) -> None:
     base_hdrs = manifest.base_headers()
@@ -134,7 +136,8 @@ def _write_diff_report(
     missing_hdrs = sorted(base_hdrs - impl_hdrs)
 
     base_ifaces = manifest.base_interfaces()
-    impl_ifaces = archive_symbols & base_ifaces
+    macro_ifaces = (header_macros & base_ifaces) - archive_symbols
+    impl_ifaces = (archive_symbols | macro_ifaces) & base_ifaces
     missing_ifaces = sorted(base_ifaces - impl_ifaces)
     active_opt_groups = sorted(
         grp
@@ -152,6 +155,7 @@ def _write_diff_report(
         f"headers_base_implemented: {len(impl_hdrs)}/{len(base_hdrs)}",
         f"interfaces_base_implemented: {len(impl_ifaces)}/{len(base_ifaces)}",
         f"header_ast_declarations: {len(ast_symbols)}",
+        f"header_macro_interfaces: {len(macro_ifaces)}",
         f"libc_exported_symbols: {len(archive_symbols)}",
         f"active_option_groups: {', '.join(active_opt_groups) or 'none'}",
         f"reserved_internal_exports: {', '.join(reserved_exports) or 'none'}",
@@ -233,8 +237,20 @@ class PosixSymbolDiffTests(unittest.TestCase):
         )
 
         if _REPORT is not None:
+            header_macros = extract_headers_defined_macros(
+                _COMPILER,
+                clang_inc,
+                _SYSROOT,
+                IMPLEMENTED_POSIX_HEADERS,
+                target=_TARGET,
+            )
             _write_diff_report(
-                _REPORT, manifest, ast_symbols, archive_symbols, active_macros
+                _REPORT,
+                manifest,
+                ast_symbols,
+                archive_symbols,
+                header_macros,
+                active_macros,
             )
             self.assertTrue(_REPORT.is_file())
 

@@ -15,6 +15,7 @@
 #include <kernel/spinlock.h>
 #include <sys/fd.h>
 #include <sys/microkernel.h>
+#include <sys/proc.h>
 
 struct trapframe;
 
@@ -124,9 +125,11 @@ struct pcb {
     /* Per-process file descriptor table. */
     struct __k_fd_entry fds[PROC_MAX_FDS];
 
-    /* Per-process current working directory and file creation mask. */
+    /* Per-process current working directory, umask, and command metadata. */
     char cwd[PROC_CWD_MAX];
     uint32_t umask;
+    char comm[PROC_COMM_MAX];
+    char args[PROC_ARGS_MAX];
 
     /* Process CPU tick accounting and alarm(2) deadline (monotonic ns). */
     uint64_t utime_ticks;
