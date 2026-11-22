@@ -76,3 +76,17 @@ and rwlocks on `SYS_FUTEX` and `SYS_THREAD_SET_FSBASE` ({need}`ICD_PROC_0006`,
 and `sem_getvalue` on `SYS_FUTEX` ({need}`ICD_PROC_0007`,
 {need}`SWR_PROC_0005`).
 ```
+
+```{comp} Process-group management, TTY ISIG delivery, and Ring 3 utilities
+:id: COMP_PROC_0007
+:status: active
+:posix: XSH/setpgid (BASE), XSH/tcsetpgrp (BASE), XBD/termios.h (BASE)
+:refines: ARC_PROC_0001, ICD_PROC_0008
+:satisfies: SWR_PROC_0008
+
+`kernel/core/proc.c`, `kernel/core/signal.c`, `servers/ttyserv/main.c`,
+`libc/src/` (`unistd.c`, `tty.c`), and `bin/sh/main.c` implement process groups,
+sessions, `waitpid(0)`/`-pgid`, `kill(-pgid)`, `ISIG` `SIGINT`/`SIGQUIT`, and
+foreground job control. `bin/utils/` supplies `mkdir`, `rm`, `cp`, `mv`,
+`uname`, `env`, `wc`, and `head` ({need}`ICD_PROC_0008`, {need}`SWR_PROC_0008`).
+```

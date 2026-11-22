@@ -268,6 +268,12 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_ALARM:
         ret = sys_alarm(a0);
         break;
+    case SYS_PROC_PGID:
+        ret = sys_proc_pgid(a0, (int64_t)a1, (int64_t)a2);
+        break;
+    case SYS_KILL:
+        ret = sys_kill((int64_t)a0, a1);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (a0 > 255) {

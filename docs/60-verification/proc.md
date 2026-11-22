@@ -63,3 +63,16 @@ The headless QEMU harness `tests/test_runner.py` runs `forkpipetest` and
 `O_CLOEXEC` cleanup. CTest `posix.headers` and `posix.async_signal_safe` check
 `<unistd.h>` and `fork`/`execve` safety ({need}`SWR_PROC_0004`).
 ```
+
+```{ver} Verify TTY ISIG job control, process groups, and core utilities in QEMU
+:id: VER_PROC_0006
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0008
+
+The headless QEMU harness `tests/test_runner.py` runs `jobtest`
+(`tests/jobtest/test_job.c`). It checks `setpgid`, `getpgid`, `setsid`,
+`waitpid(0)`/`-pgid`, `kill(-pgid)`, `tcgetpgrp`/`tcsetpgrp`, `ISIG` `Ctrl-C`
+`SIGINT`, and `mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, and `head`. CTest
+Gates 1 to 3 verify headers and async-signal-safety ({need}`SWR_PROC_0008`).
+```

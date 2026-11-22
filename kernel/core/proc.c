@@ -546,6 +546,9 @@ long sys_proc_fork(const trapframe_t *tf) {
     }
 
     child->brk = parent->brk;
+    child->pgid = parent->pgid;
+    child->sid = parent->sid;
+    child->has_execed = 0;
     child->next_mmap_va = parent->next_mmap_va;
     child->mlock_flags = 0u; /* POSIX: memory locks not inherited on fork */
     child->next_stack_va = parent->next_stack_va;
@@ -745,6 +748,7 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
     uint64_t old_pml4 = p->pml4_phys;
     p->pml4_phys = new_pml4;
     p->brk = brk;
+    p->has_execed = 1;
     p->next_mmap_va = 0;
     p->next_stack_va = 0;
     vmm_set_cr3(new_pml4);
@@ -792,9 +796,6 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
     if (options & ~(uint64_t)PROC_WAIT_NOHANG) {
         return -EINVAL;
     }
-    if (pid == 0 || pid < -1) {
-        return -ENOSYS;
-    }
 
     for (;;) {
         int has_matching = 0;
@@ -804,6 +805,12 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
                 continue;
             }
             if (pid > 0 && c->pid != (uint32_t)pid) {
+                continue;
+            }
+            if (pid == 0 && c->pgid != parent->pgid) {
+                continue;
+            }
+            if (pid < -1 && c->pgid != (uint32_t)(-pid)) {
                 continue;
             }
             has_matching = 1;
@@ -931,6 +938,81 @@ long sys_sys_stats(uint64_t ubuf) {
     return copy_to_user(ubuf, &st, sizeof(st)) < 0 ? -EFAULT : 0;
 }
 
+long sys_proc_pgid(uint64_t op, int64_t pid, int64_t pgid) {
+    pcb_t *cur = proc_current();
+    if (!cur) {
+        return -EPERM;
+    }
+    switch (op) {
+    case PGID_OP_GETPGID: {
+        if (pid < 0) {
+            return -EINVAL;
+        }
+        pcb_t *target = (pid == 0) ? cur : proc_find((uint32_t)pid);
+        if (!target || target->state == PROC_DEAD) {
+            return -ESRCH;
+        }
+        return (long)target->pgid;
+    }
+    case PGID_OP_GETSID: {
+        if (pid < 0) {
+            return -EINVAL;
+        }
+        pcb_t *target = (pid == 0) ? cur : proc_find((uint32_t)pid);
+        if (!target || target->state == PROC_DEAD) {
+            return -ESRCH;
+        }
+        return (long)target->sid;
+    }
+    case PGID_OP_SETSID: {
+        for (pcb_t *p = proc_list_head(); p; p = p->next) {
+            if (p->state == PROC_ALIVE && p->pgid == cur->pid) {
+                return -EPERM;
+            }
+        }
+        cur->sid = cur->pid;
+        cur->pgid = cur->pid;
+        return (long)cur->sid;
+    }
+    case PGID_OP_SETPGID: {
+        if (pid < 0 || pgid < 0) {
+            return -EINVAL;
+        }
+        pcb_t *target = (pid == 0) ? cur : proc_find((uint32_t)pid);
+        if (!target || target->state == PROC_DEAD) {
+            return -ESRCH;
+        }
+        if (target != cur && target->parent_pid != cur->pid) {
+            return -ESRCH;
+        }
+        if (target != cur && target->has_execed) {
+            return -EACCES;
+        }
+        if (target->pid == target->sid) {
+            return -EPERM;
+        }
+        uint32_t new_pgid = (pgid == 0) ? target->pid : (uint32_t)pgid;
+        if (new_pgid != target->pid) {
+            int exists_in_sid = 0;
+            for (pcb_t *p = proc_list_head(); p; p = p->next) {
+                if (p->state != PROC_DEAD && p->sid == cur->sid &&
+                    p->pgid == new_pgid) {
+                    exists_in_sid = 1;
+                    break;
+                }
+            }
+            if (!exists_in_sid) {
+                return -EPERM;
+            }
+        }
+        target->pgid = new_pgid;
+        return 0;
+    }
+    default:
+        return -EINVAL;
+    }
+}
+
 void proc_spawn_init(void) {
     size_t nmods;
     const mb_module_t *mods = mb_modules(&nmods);
@@ -1039,6 +1121,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "shtest", 100, 0);
     /* Additional POSIX.1-2024 Base headers and standard C utilities test. */
     spawn_image(tar_phys, tar_size, "utilstest", 100, 0);
+    /* TTY job control, ISIG Ctrl-C, process groups, and core utilities test. */
+    spawn_image(tar_phys, tar_size, "jobtest", 90, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

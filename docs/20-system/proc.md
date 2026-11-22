@@ -96,28 +96,28 @@ declare async-signal-safe `wait` and `waitpid` ([waitpid][fn-waitpid])
 
 ```{swr} Supply process groups, TTY signal control, and core utilities
 :id: SWR_PROC_0008
-:status: draft
+:status: active
 :posix: XSH/setpgid (BASE), XSH/tcsetpgrp (BASE), XBD/termios.h (BASE)
 :derives: SYS_PROC_0001
 :traces: BDR_0003, ADR_0003
 
 The kernel and `ttyserv` must supply process groups (`setpgid`, `getpgid`,
-`setsid`, `tcgetpgrp`, `tcsetpgrp`), `ISIG` (`SIGINT` on `Ctrl-C`),
-`waitpid(0)`/`waitpid(-pgid)`, and `kill(-pgid)`. Ring 3 user space must add
-core utilities (`mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, `head`)
-({need}`SYS_PROC_0001`).
+`getpgrp`, `setsid`, `getsid`, `tcgetpgrp`, `tcsetpgrp`), `ISIG` (`SIGINT` on
+`Ctrl-C`), `waitpid(0)`/`waitpid(-pgid)`, and `kill(-pgid)`. Interactive `sh`
+must manage foreground process groups, and Ring 3 must supply `mkdir`, `rm`,
+`cp`, `mv`, `uname`, `env`, `wc`, and `head` ({need}`SYS_PROC_0001`).
 ```
 
 ```{swr} Boot secondary CPUs via ACPI MADT and run SMP scheduling
 :id: SWR_PROC_0009
 :status: draft
 :derives: SYS_PROC_0001
-:traces: ADR_0003, ADR_0022
+:traces: ADR_0003, ADR_0022, ADR_0024
 
-The kernel must start secondary CPUs with LAPIC `INIT`/`SIPI` from ACPI `MADT`
-entries and hold per-CPU state in `GS.base`. Kernel locks for `pmm`, `vmm`,
-`sched`, `ipc`, and `futex` must run safely across multiple cores
-({need}`SYS_PROC_0001`).
+The kernel must start secondary CPUs behind portable HAL hooks (`INIT`/`SIPI`
+and `GS.base` on `x86-64`, `PSCI` and `TPIDR_EL1` for future `arm64`). Kernel
+locks for `pmm`, `vmm`, `sched`, `ipc`, and `futex` must run safely across
+multiple cores ({need}`SYS_PROC_0001`).
 ```
 
 [hdr-wait]:

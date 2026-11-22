@@ -87,3 +87,16 @@ TSD keys with no `<sys/microkernel.h>` leakage ({need}`ARC_PROC_0001`,
 `sem_getvalue` with no `<sys/microkernel.h>` leakage ({need}`ARC_PROC_0001`,
 {need}`SWR_PROC_0005`).
 ```
+
+```{icd} POSIX.1-2024 process groups, sessions, and TTY job-control ABI
+:id: ICD_PROC_0008
+:status: active
+:posix: XSH/setpgid (BASE), XSH/tcsetpgrp (BASE), XBD/termios.h (BASE)
+:refines: ARC_PROC_0001
+:satisfies: SWR_PROC_0008
+
+`libc/include/unistd.h` declares `setpgid`, `getpgid`, `getpgrp`, `setsid`,
+`getsid`, `tcgetpgrp`, and `tcsetpgrp`. `SYS_PROC_PGID`, `SYS_KILL`, and
+`TTY_OP_GETPGRP`/`TTY_OP_SETPGRP` specify the kernel and `ttyserv` job-control
+ABI ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0008`).
+```

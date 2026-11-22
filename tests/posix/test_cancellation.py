@@ -89,6 +89,13 @@ NON_CANCELLATION_POINTS: tuple[str, ...] = (
     "sched_yield",
     "times",
     "uname",
+    "setpgid",
+    "getpgid",
+    "getpgrp",
+    "setsid",
+    "getsid",
+    "tcgetpgrp",
+    "tcsetpgrp",
 )
 
 CANCEL_CHECK_TARGETS: frozenset[str] = frozenset(

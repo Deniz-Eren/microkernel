@@ -27,6 +27,8 @@
 #define TTY_OP_DRAIN 8u
 #define TTY_OP_FLOW 9u
 #define TTY_OP_SENDBREAK 10u
+#define TTY_OP_GETPGRP 11u
+#define TTY_OP_SETPGRP 12u
 
 typedef struct {
     uint32_t op;

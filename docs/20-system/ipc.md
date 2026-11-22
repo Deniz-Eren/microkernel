@@ -115,16 +115,26 @@ streams (`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4`,
 ({need}`SYS_IPC_0001`).
 ```
 
-```{swr} Supply Ring 3 virtio-blk storage driver and disk file system mount
+```{swr} Supply CAP_SYS_INTR MMIO/DMA syscalls and Ring 3 virtio-blk driver
 :id: SWR_IPC_0010
 :status: draft
 :derives: SYS_IPC_0001
 :traces: ADR_0003, ADR_0008, ADR_0016
 
-The kernel must supply `CAP_SYS_INTR` MMIO device mapping and DMA buffer
-syscalls. A Ring 3 PCI `virtio-blk` driver must do block I/O over IOAPIC IRQ
-pulses. `vfsserv` must mount a writable disk file system that keeps files across
-restarts ({need}`SYS_IPC_0001`).
+The kernel must supply `CAP_SYS_INTR` MMIO device mapping, PCI configuration,
+and DMA buffer syscalls. A Ring 3 PCI `virtio-blk` driver (`/dev/blk`) must do
+sector read and write I/O over IOAPIC IRQ pulses ({need}`SYS_IPC_0001`).
+```
+
+```{swr} Mount a writable on-disk file system in vfsserv over /dev/blk
+:id: SWR_IPC_0011
+:status: draft
+:derives: SYS_IPC_0001
+:traces: ADR_0003, ADR_0016
+
+`vfsserv` must mount a writable on-disk file system (such as `ext2`) over
+`/dev/blk` so files and directories stay across QEMU restarts
+({need}`SYS_IPC_0001`).
 ```
 
 [fn-pipe2]:

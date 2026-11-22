@@ -20,7 +20,7 @@
 #include "fd_internal.h"
 #include "tls_internal.h"
 
-/* need:: COMP_LIBC_0001 COMP_LIBC_0004 */
+/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_PROC_0007 */
 
 #ifdef MICROKERNEL_COVERAGE
 extern void __libc_cov_reset_counters(void);
@@ -40,6 +40,46 @@ pid_t getpid(void) {
 
 pid_t getppid(void) {
     return (pid_t)__sys0(SYS_PROC_GETPPID);
+}
+
+int setpgid(pid_t pid, pid_t pgid) {
+    long r = __sys3(SYS_PROC_PGID, PGID_OP_SETPGID, (long)pid, (long)pgid);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+pid_t getpgid(pid_t pid) {
+    long r = __sys3(SYS_PROC_PGID, PGID_OP_GETPGID, (long)pid, 0);
+    if (r < 0) {
+        errno = (int)(-r);
+        return (pid_t)-1;
+    }
+    return (pid_t)r;
+}
+
+pid_t getpgrp(void) {
+    return getpgid(0);
+}
+
+pid_t setsid(void) {
+    long r = __sys3(SYS_PROC_PGID, PGID_OP_SETSID, 0, 0);
+    if (r < 0) {
+        errno = (int)(-r);
+        return (pid_t)-1;
+    }
+    return (pid_t)r;
+}
+
+pid_t getsid(pid_t pid) {
+    long r = __sys3(SYS_PROC_PGID, PGID_OP_GETSID, (long)pid, 0);
+    if (r < 0) {
+        errno = (int)(-r);
+        return (pid_t)-1;
+    }
+    return (pid_t)r;
 }
 
 pid_t fork(void) {

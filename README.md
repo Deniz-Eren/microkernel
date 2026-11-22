@@ -250,8 +250,9 @@ subset available at this time:
   lookup and bootfs `argv`/`envp`), `getpid`, `getppid`, and `getentropy`. Also
   `pipe`/`pipe2`, `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`,
   `ftruncate`, `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, and `getcwd`.
-  Also `access`, `isatty`, `getopt`, `alarm`, `_exit`, `sleep`, `environ`, and
-  `STD*_FILENO`
+  Also `setpgid`, `getpgid`, `getpgrp`, `setsid`, `getsid`, `tcgetpgrp`,
+  `tcsetpgrp`, `access`, `isatty`, `getopt`, `alarm`, `_exit`, `sleep`,
+  `environ`, and `STD*_FILENO`
 - **Descriptor control and multiplexing (`<fcntl.h>`, `<poll.h>`,
   `<sys/select.h>`):** `open`, `openat`, `creat`, and `fcntl` (`F_DUPFD`,
   `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`). Also
@@ -266,7 +267,8 @@ subset available at this time:
 - **Terminal I/O (`<termios.h>`):** `tcgetattr`, `tcsetattr`, `tcflush`,
   `tcdrain`, `tcflow`, `tcsendbreak`, `cfgetispeed`/`cfsetispeed`,
   `cfgetospeed`/`cfsetospeed`, canonical line editing (`ICANON`, `VERASE`,
-  `VKILL`, `ICRNL`, `VEOF`), and raw mode backed by COM1 IRQ 4 `ttyserv`
+  `VKILL`, `ICRNL`, `VEOF`), `ISIG` (`VINTR`/`VQUIT` to `SIGINT`/`SIGQUIT`), and
+  raw mode backed by COM1 IRQ 4 `ttyserv`
 - **Filesystem and directories (`<sys/stat.h>`, `<dirent.h>`):** `stat`,
   `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, `umask`, `opendir`,
   `fdopendir`, `readdir`, `rewinddir`, `closedir`, and `dirfd` backed by Ring 3
@@ -341,11 +343,12 @@ subset available at this time:
   IRQ-to-IPC pulses), `IntrUnmask`, `IOPLSet` (`CAP_SYS_INTR` guarded), and Ring
   3 `port_in*`/`port_out*` helpers
 - **Command shell and core utilities (`bin/`):** Ring 3 `/boot/sh` targeting
-  POSIX.1-2024 XCU features (`-c`, script files, interactive `isatty()` input,
-  pipelines, redirections `<`/`>`/`>>`/`2>&1`, `&&`/`||`/`;`, `$VAR`/`$?`,
-  `$'...'` ANSI-C quoting, `set -o pipefail`, `read -d` custom/NUL delimiters,
-  and built-ins `cd`/`pwd`/`export`/`unset`/`exit`). Standalone `/boot/`
-  utilities: `echo`, `cat`, `ls`, `true`, `false`, and `test`
+  POSIX.1-2024 XCU features (`-c`, script files, interactive `isatty()` input
+  with foreground job control, pipelines, redirections `<`/`>`/`>>`/`2>&1`,
+  `&&`/`||`/`;`, `$VAR`/`$?`, `$'...'` ANSI-C quoting, `set -o pipefail`, `read
+  -d` custom/NUL delimiters, and built-ins `cd`/`pwd`/`export`/`unset`/`exit`).
+  Standalone `/boot/` utilities: `echo`, `cat`, `ls`, `true`, `false`, `test`,
+  `mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, and `head`
 - **Native processes and VM (`<sys/proc.h>`, `<sys/vm.h>`):** `ProcCreate` (from
   `boot.tar`), `ProcWait`, `VMMap`, `VMUnmap`, `VMProtect`, and `VMCloneCow`
   (copy-on-write page sharing between parent and child)
@@ -366,9 +369,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): TTY job control (`ISIG`) and process
-groups, Ring 3 `virtio-blk` disk storage, and ACPI `MADT` SMP bring-up. See
-[docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (planned next): `CAP_SYS_INTR` MMIO/DMA syscalls and
+Ring 3 `virtio-blk` driver, writable on-disk file system mount in `vfsserv`, and
+ACPI `MADT` SMP bring-up. See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree

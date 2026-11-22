@@ -11,8 +11,8 @@
 
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_LIBC_0008
 # need:: VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002 VER_PROC_0003
-# need:: VER_PROC_0004 VER_PROC_0005 VER_IPC_0003 VER_IPC_0004 VER_IPC_0005
-# need:: VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004 VER_BOOT_0003
+# need:: VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0003 VER_IPC_0004
+# need:: VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004 VER_BOOT_0003
 
 from __future__ import annotations
 
@@ -792,6 +792,13 @@ class PosixHeaderMatrixTests(unittest.TestCase):
                 "    (void)bsearch(&x, &x, 1u, sizeof(x), __noop_cmp);",
                 "    (void)getopt(ac, av, \"a:\");",
                 "    (void)alarm(0u);",
+                "    (void)setpgid(0, 0);",
+                "    (void)getpgid(0);",
+                "    (void)getpgrp();",
+                "    (void)setsid();",
+                "    (void)getsid(0);",
+                "    (void)tcgetpgrp(0);",
+                "    (void)tcsetpgrp(0, 1);",
                 "    (void)rename(\"/tmp/a\", \"/tmp/b\");",
                 "    (void)renameat(-1, \"a\", -1, \"b\");",
                 "    (void)realpath(\"/tmp\", (char *)0);",

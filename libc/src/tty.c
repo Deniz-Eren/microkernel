@@ -22,7 +22,7 @@
 #include "fd_internal.h"
 #include "tls_internal.h"
 
-/* need:: COMP_IPC_0011 */
+/* need:: COMP_IPC_0011 COMP_PROC_0007 */
 
 static int g_tty_conn = -1;
 static long g_tty_conn_pid = -1;
@@ -361,5 +361,40 @@ int cfsetospeed(struct termios *termios_p, speed_t speed) {
         return -1;
     }
     termios_p->__c_ospeed = speed;
+    return 0;
+}
+
+pid_t tcgetpgrp(int fildes) {
+    if (check_tty_fd(fildes) != 0) {
+        return (pid_t)-1;
+    }
+    tty_req_t req = {0};
+    tty_rep_t rep = {0};
+    req.op = TTY_OP_GETPGRP;
+    long r = tty_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return (pid_t)-1;
+    }
+    return (pid_t)rep.len;
+}
+
+int tcsetpgrp(int fildes, pid_t pgid_id) {
+    if (check_tty_fd(fildes) != 0) {
+        return -1;
+    }
+    if (pgid_id <= 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    tty_req_t req = {0};
+    tty_rep_t rep = {0};
+    req.op = TTY_OP_SETPGRP;
+    req.arg = (uint32_t)pgid_id;
+    long r = tty_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
     return 0;
 }

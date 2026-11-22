@@ -83,6 +83,9 @@ typedef enum { PROC_ALIVE, PROC_ZOMBIE, PROC_DEAD } proc_state_t;
 struct pcb {
     uint32_t pid;
     uint32_t parent_pid;
+    uint32_t pgid;
+    uint32_t sid;
+    uint8_t has_execed;
     proc_state_t state;
     int exit_code;
     int exit_signal;
@@ -191,6 +194,7 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4);
 long sys_sys_stats(uint64_t ubuf);
 long sys_sched_yield(void);
 long sys_proc_times(uint64_t ubuf);
+long sys_proc_pgid(uint64_t op, int64_t pid, int64_t pgid);
 void thread_exit_current(int status) __attribute__((noreturn));
 void proc_exit_current(int status) __attribute__((noreturn));
 void proc_exit_signal(int sig) __attribute__((noreturn));

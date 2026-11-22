@@ -203,6 +203,7 @@ add_subdirectory(tests/stdiotest)
 add_subdirectory(tests/socktest)
 add_subdirectory(tests/shtest)
 add_subdirectory(tests/utilstest)
+add_subdirectory(tests/jobtest)
 add_subdirectory(tests/stresstest)
 
 #------------------------------------------------------------------------------

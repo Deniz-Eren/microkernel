@@ -150,11 +150,7 @@ int sigprocmask(int how, const sigset_t *restrict set,
 }
 
 int kill(pid_t pid, int sig) {
-    if (pid < 0) {
-        errno = ENOSYS;
-        return -1;
-    }
-    long r = __sys3(SYS_THREAD_INJECT_SIG, (long)pid, 0, (long)sig);
+    long r = __sys2(SYS_KILL, (long)pid, (long)sig);
     if (r < 0) {
         errno = (int)(-r);
         return -1;

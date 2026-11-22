@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0022 — Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
+
+```{task} Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
+:id: TSK_0022
+:status: done
+:traces: ADR_0003, ADR_0018, ADR_0021, SWR_PROC_0008
+
+Add `ISIG` (`VINTR` to `SIGINT`) in `ttyserv`, process groups (`setpgid`,
+`getpgid`, `setsid`, `tcgetpgrp`, `tcsetpgrp`), `waitpid(0)`/`-pgid`, and
+`kill(-pgid)`. Add Ring 3 utilities (`mkdir`, `rm`, `cp`, `mv`, `uname`, `env`,
+`wc`, `head`) for the interactive shell ({need}`SWR_PROC_0008`).
+```
+
 ### TSK_0023 — Add high-leverage libc Base headers and standard C utilities
 
 ```{task} Add high-leverage libc Base headers and standard C utilities

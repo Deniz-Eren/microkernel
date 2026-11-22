@@ -100,6 +100,17 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- TTY job control, `ISIG` (`Ctrl-C`/`Ctrl-\`), process groups, sessions, and
+  Ring 3 core utilities (`TSK_0022`, `SWR_PROC_0008`, `ICD_PROC_0008`,
+  `COMP_PROC_0007`, `VER_PROC_0006`): added `SYS_PROC_PGID` (`setpgid`,
+  `getpgid`, `getpgrp`, `setsid`, `getsid`), `SYS_KILL` (`kill(-pgid)` /
+  `kill(0)` / `kill(-1)`), `waitpid(0)`/`waitpid(-pgid)`, `ttyserv`
+  `TTY_OP_GETPGRP`/`TTY_OP_SETPGRP` (`tcgetpgrp`/`tcsetpgrp`) and `ISIG`
+  `VINTR`/`VQUIT` delivery, interactive `/boot/sh` foreground job groups, 8 core
+  utilities (`mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, `head`), and QEMU
+  test `tests/jobtest/test_job.c`. Also split persistent storage backlog into
+  `TSK_0024` (`SWR_IPC_0010`, MMIO/DMA + `virtio-blk`) and `TSK_0028`
+  (`SWR_IPC_0011`, writable on-disk filesystem mount in `vfsserv`).
 - Additional POSIX.1-2024 Base headers and standard C utilities (`TSK_0023`,
   `SWR_LIBC_0008`, `ICD_LIBC_0006`, `COMP_LIBC_0006`, `VER_LIBC_0008`):
   registered 7 compiler freestanding headers (`<float.h>`, `<iso646.h>`,

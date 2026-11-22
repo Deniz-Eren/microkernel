@@ -183,6 +183,75 @@ long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig) {
     return 0;
 }
 
+static int deliver_sig_to_pcb(pcb_t *p, uint64_t sig) {
+    tcb_t *target = NULL;
+    for (tcb_t *t = p->threads; t; t = t->proc_next) {
+        if (t->state == THREAD_ZOMBIE) {
+            continue;
+        }
+        if (!target || t->tid < target->tid) {
+            target = t;
+        }
+    }
+    if (!target) {
+        return -ESRCH;
+    }
+    if (sig == 0) {
+        return 0;
+    }
+    target->pending_signals |= (1u << sig);
+    if (!(target->pending_signals & ~target->blocked_signals)) {
+        return 0;
+    }
+    if (target->state >= THREAD_SEND_BLOCKED &&
+        target->state <= THREAD_RECEIVE_BLOCKED) {
+        ipc_unblock_thread(target, -EINTR);
+    } else if (target->state == THREAD_WAIT_BLOCKED ||
+               target->state == THREAD_SLEEP_BLOCKED ||
+               target->state == THREAD_FUTEX_BLOCKED) {
+        target->futex_addr = 0;
+        target->futex_has_timeout = 0;
+        sched_unblock(target);
+    }
+    return 0;
+}
+
+long sys_kill(int64_t pid, uint64_t sig) {
+    if (sig >= NSIG) {
+        return -EINVAL;
+    }
+    pcb_t *cur = proc_current();
+    if (!cur) {
+        return -EPERM;
+    }
+    if (pid > 0) {
+        pcb_t *p = proc_find((uint32_t)pid);
+        if (!p || p->state != PROC_ALIVE) {
+            return -ESRCH;
+        }
+        return deliver_sig_to_pcb(p, sig);
+    }
+
+    int sent = 0;
+    uint32_t target_pgid = (pid == 0) ? cur->pgid : (uint32_t)(-pid);
+    for (pcb_t *p = proc_list_head(); p; p = p->next) {
+        if (p->state != PROC_ALIVE) {
+            continue;
+        }
+        if (pid == -1) {
+            if (p->pid <= 1u || p == cur) {
+                continue;
+            }
+        } else if (p->pgid != target_pgid) {
+            continue;
+        }
+        if (deliver_sig_to_pcb(p, sig) == 0) {
+            sent++;
+        }
+    }
+    return sent > 0 ? 0 : -ESRCH;
+}
+
 /* Timer-IRQ-safe helper: post a signal to pid's main thread without calling
  * schedule() inside the timer interrupt handler. */
 void signal_post_to_proc(uint32_t pid, int sig) {

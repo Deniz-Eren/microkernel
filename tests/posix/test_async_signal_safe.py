@@ -117,6 +117,12 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "sched_yield",
     "times",
     "uname",
+    "setpgid",
+    "getpgid",
+    "getpgrp",
+    "setsid",
+    "tcgetpgrp",
+    "tcsetpgrp",
     "__errno_location",
 )
 

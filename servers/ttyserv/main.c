@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,6 +67,7 @@ static tty_pwait_t g_pwait[PWAIT_MAX];
 
 static volatile unsigned int g_timed_polls;
 static int g_self_conn = -1;
+static pid_t g_fg_pgrp = 0;
 
 static uint64_t now_mono_ns(void) {
     struct timespec ts = {0};
@@ -257,6 +259,35 @@ static void tty_feed_byte(uint8_t c, int allow_echo) {
     }
 
     int do_echo = allow_echo && ((g_tio.c_lflag & ECHO) != 0u);
+
+    if ((g_tio.c_lflag & ISIG) != 0u) {
+        int sig = 0;
+        char echo_ch = 0;
+        if (g_tio.c_cc[VINTR] != 0u && c == g_tio.c_cc[VINTR]) {
+            sig = SIGINT;
+            echo_ch = 'C';
+        } else if (g_tio.c_cc[VQUIT] != 0u && c == g_tio.c_cc[VQUIT]) {
+            sig = SIGQUIT;
+            echo_ch = '\\';
+        }
+        if (sig != 0) {
+            if (do_echo) {
+                tty_tx_byte('^');
+                tty_tx_byte((uint8_t)echo_ch);
+                tty_tx_byte('\n');
+            }
+            if ((g_tio.c_lflag & NOFLSH) == 0u) {
+                g_edit_len = 0u;
+                g_ready_head = 0u;
+                g_ready_len = 0u;
+                g_eof_pending = 0u;
+            }
+            if (g_fg_pgrp > 0) {
+                (void)kill(-g_fg_pgrp, sig);
+            }
+            return;
+        }
+    }
 
     if (g_tio.c_lflag & ICANON) {
         if (c == g_tio.c_cc[VERASE] || c == '\b') {
@@ -547,6 +578,20 @@ int main(int argc, char **argv) {
                 req.arg != (uint32_t)TCIOFF && req.arg != (uint32_t)TCION) {
                 rep.err = -EINVAL;
             } else {
+                rep.err = 0;
+            }
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+            break;
+        case TTY_OP_GETPGRP:
+            rep.err = 0;
+            rep.len = (uint32_t)(g_fg_pgrp > 0 ? g_fg_pgrp : 1);
+            (void)ReplyMsg((int)msgid, &rep, sizeof(rep));
+            break;
+        case TTY_OP_SETPGRP:
+            if ((int32_t)req.arg <= 0) {
+                rep.err = -EINVAL;
+            } else {
+                g_fg_pgrp = (pid_t)req.arg;
                 rep.err = 0;
             }
             (void)ReplyMsg((int)msgid, &rep, sizeof(rep));

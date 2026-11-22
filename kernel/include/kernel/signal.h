@@ -51,4 +51,5 @@ long sys_sigprocmask(uint64_t how, uint64_t set_va, uint64_t oset_va);
 long sys_sigpending(uint64_t set_va);
 void sys_sigreturn(trapframe_t *tf); /* never returns to its caller */
 long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig);
+long sys_kill(int64_t pid, uint64_t sig);
 void signal_post_to_proc(uint32_t pid, int sig);

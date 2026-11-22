@@ -74,9 +74,16 @@
 #define SYS_SCHED_YIELD 54
 #define SYS_PROC_TIMES 55
 #define SYS_ALARM 56
+#define SYS_PROC_PGID 57
+#define SYS_KILL 58
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1
+
+#define PGID_OP_SETPGID 1u
+#define PGID_OP_GETPGID 2u
+#define PGID_OP_SETSID 3u
+#define PGID_OP_GETSID 4u
 
 #define COV_OP_REGISTER 1u
 #define COV_OP_DUMP_ALL 2u

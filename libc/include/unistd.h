@@ -11,7 +11,7 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H
 
-/* need:: ICD_LIBC_0002 ICD_LIBC_0005 ICD_LIBC_0006 */
+/* need:: ICD_LIBC_0002 ICD_LIBC_0005 ICD_LIBC_0006 ICD_PROC_0008 */
 
 #include <stddef.h>
 #include <stdint.h>
@@ -68,6 +68,13 @@ int isatty(int fildes);
 pid_t fork(void);
 pid_t getpid(void);
 pid_t getppid(void);
+int setpgid(pid_t pid, pid_t pgid);
+pid_t getpgid(pid_t pid);
+pid_t getpgrp(void);
+pid_t setsid(void);
+pid_t getsid(pid_t pid);
+pid_t tcgetpgrp(int fildes);
+int tcsetpgrp(int fildes, pid_t pgid_id);
 int execve(const char *path, char *const argv[], char *const envp[]);
 int execv(const char *path, char *const argv[]);
 int execvp(const char *file, char *const argv[]);

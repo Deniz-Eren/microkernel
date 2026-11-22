@@ -302,6 +302,9 @@ pcb_t *proc_create(pcb_t *parent) {
     }
     p->pid = proc_alloc_pid();
     p->parent_pid = parent ? parent->pid : 0;
+    p->pgid = (parent && parent->pgid) ? parent->pgid : p->pid;
+    p->sid = (parent && parent->sid) ? parent->sid : p->pid;
+    p->has_execed = 0;
     p->state = PROC_ALIVE;
     p->pml4_phys = vmm_create_user_pml4();
     if (!p->pml4_phys) {

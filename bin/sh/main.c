@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,6 +79,8 @@ static int g_pipefail = 0;
 static int g_errexit = 0;
 static int g_should_exit = 0;
 static int g_exit_code = 0;
+static int g_interactive = 0;
+static pid_t g_shell_pgid = 0;
 
 static const char *var_get(const char *name) {
     if (!name || !name[0]) {
@@ -890,6 +893,7 @@ static int exec_pipeline(int nstages, int negated) {
     for (int i = 0; i < SH_MAX_STAGES; i++) {
         pids[i] = -1;
     }
+    pid_t job_pgid = 0;
     for (int i = 0; i < nstages; i++) {
         pid_t pid = fork();
         if (pid < 0) {
@@ -897,6 +901,12 @@ static int exec_pipeline(int nstages, int negated) {
             break;
         }
         if (pid == 0) {
+            if (g_interactive) {
+                pid_t pg = job_pgid > 0 ? job_pgid : getpid();
+                (void)setpgid(0, pg);
+                (void)signal(SIGINT, SIG_DFL);
+                (void)signal(SIGQUIT, SIG_DFL);
+            }
             if (i > 0) {
                 (void)dup2(pipes[i - 1][0], STDIN_FILENO);
             }
@@ -936,6 +946,16 @@ static int exec_pipeline(int nstages, int negated) {
             _exit(err == ENOENT ? 127 : 126);
         }
         pids[i] = pid;
+        if (g_interactive) {
+            if (job_pgid == 0) {
+                job_pgid = pid;
+            }
+            (void)setpgid(pid, job_pgid);
+        }
+    }
+
+    if (g_interactive && job_pgid > 0) {
+        (void)tcsetpgrp(STDIN_FILENO, job_pgid);
     }
 
     for (int j = 0; j < nstages - 1; j++) {
@@ -956,6 +976,10 @@ static int exec_pipeline(int nstages, int negated) {
                 statuses[i] = 128 + WTERMSIG(wst);
             }
         }
+    }
+
+    if (g_interactive && g_shell_pgid > 0) {
+        (void)tcsetpgrp(STDIN_FILENO, g_shell_pgid);
     }
 
     int pipe_rc = 0;
@@ -1095,6 +1119,14 @@ int main(int argc, char **argv) {
     }
 
     int interactive = (!close_in && isatty(STDIN_FILENO));
+    g_interactive = interactive;
+    if (interactive) {
+        (void)signal(SIGINT, SIG_IGN);
+        (void)signal(SIGQUIT, SIG_IGN);
+        (void)setpgid(0, 0);
+        g_shell_pgid = getpgrp();
+        (void)tcsetpgrp(STDIN_FILENO, g_shell_pgid);
+    }
     char line[SH_MAX_LINE];
     while (!g_should_exit) {
         if (interactive) {
