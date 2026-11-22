@@ -73,6 +73,16 @@ void shm_acquire_id(uint32_t id) {
     }
 }
 
+uint32_t shm_active_count(void) {
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < SHM_MAX_OBJS; i++) {
+        if (g_shm[i].used) {
+            n++;
+        }
+    }
+    return n;
+}
+
 void shm_release_id(uint32_t id) {
     if (id == 0u || id > SHM_MAX_OBJS) {
         return;

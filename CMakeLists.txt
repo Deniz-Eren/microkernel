@@ -162,6 +162,7 @@ add_subdirectory(tests/ttytest)
 add_subdirectory(tests/stdiotest)
 add_subdirectory(tests/socktest)
 add_subdirectory(tests/shtest)
+add_subdirectory(tests/stresstest)
 
 #------------------------------------------------------------------------------
 # boot.tar (ustar archive of Ring 3 servers/apps)

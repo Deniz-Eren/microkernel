@@ -67,6 +67,7 @@
 #define SYS_SHM_OP 49
 #define SYS_SHM_MAP 50
 #define SYS_VM_MLOCK 51
+#define SYS_SYS_STATS 52
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1

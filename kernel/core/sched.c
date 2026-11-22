@@ -302,11 +302,11 @@ pcb_t *proc_create(pcb_t *parent) {
 tcb_t *thread_create_embryo(pcb_t *p, uint8_t priority) {
     tcb_t *t = kzalloc(sizeof(tcb_t));
     uint8_t *kstack = kmalloc(KERNEL_STACK_SIZE);
-    uint8_t *fpu = kmalloc(512 + 16);
-    if (!t || !kstack || !fpu) {
+    uint8_t *fpu_raw = kmalloc(512 + 16);
+    if (!t || !kstack || !fpu_raw) {
         panic("thread_create: out of kernel memory");
     }
-    fpu = (uint8_t *)(((uintptr_t)fpu + 15) & ~(uintptr_t)15);
+    uint8_t *fpu = (uint8_t *)(((uintptr_t)fpu_raw + 15) & ~(uintptr_t)15);
     memcpy(fpu, g_fpu_template, 512);
 
     t->tid = (uint32_t)g_next_tid++;
@@ -317,6 +317,7 @@ tcb_t *thread_create_embryo(pcb_t *p, uint8_t priority) {
     t->proc = p;
     t->kstack_top = (uint64_t)kstack + KERNEL_STACK_SIZE;
     t->fpu_area = fpu;
+    t->fpu_raw = fpu_raw;
 
     t->proc_next = p->threads;
     p->threads = t;
@@ -424,6 +425,72 @@ void proc_kill_other_threads(pcb_t *p, tcb_t *keep) {
     p->nthreads = 1;
 }
 
+void proc_reap_zombie_threads(pcb_t *p) {
+    if (!p) {
+        return;
+    }
+    tcb_t **pp = &p->threads;
+    while (*pp) {
+        tcb_t *t = *pp;
+        if (t != g_current && t->state == THREAD_ZOMBIE) {
+            *pp = t->proc_next;
+            if (t->user_stack_base && p->pml4_phys) {
+                for (uint64_t off = 0; off < 0x10000ULL; off += 4096ULL) {
+                    uint64_t phys = vmm_unmap_page_to(p->pml4_phys,
+                                                      t->user_stack_base + off);
+                    if (phys) {
+                        pmm_free_frame(phys);
+                    }
+                    if (p->pml4_phys == vmm_get_cr3()) {
+                        vmm_invlpg(t->user_stack_base + off);
+                    }
+                }
+            }
+            if (t->kstack_top) {
+                kfree((void *)(t->kstack_top - KERNEL_STACK_SIZE));
+            }
+            if (t->fpu_raw) {
+                kfree(t->fpu_raw);
+            }
+            kfree(t);
+            continue;
+        }
+        pp = &t->proc_next;
+    }
+}
+
+void proc_reap_zombie(pcb_t *zombie) {
+    if (!zombie) {
+        return;
+    }
+    tcb_t *t = zombie->threads;
+    while (t) {
+        tcb_t *next = t->proc_next;
+        if (t->kstack_top) {
+            kfree((void *)(t->kstack_top - KERNEL_STACK_SIZE));
+        }
+        if (t->fpu_raw) {
+            kfree(t->fpu_raw);
+        }
+        kfree(t);
+        t = next;
+    }
+    zombie->threads = NULL;
+    if (zombie->conn_table) {
+        kfree(zombie->conn_table);
+        zombie->conn_table = NULL;
+    }
+    pcb_t **pp = &g_proc_list;
+    while (*pp) {
+        if (*pp == zombie) {
+            *pp = zombie->next;
+            break;
+        }
+        pp = &(*pp)->next;
+    }
+    kfree(zombie);
+}
+
 void proc_exit_current(int status) {
     tcb_t *t = g_current;
     pcb_t *p = t->proc;
@@ -452,6 +519,7 @@ long sys_thread_create(uint64_t prio) {
     if (prio > 255) {
         return -EINVAL;
     }
+    proc_reap_zombie_threads(p);
     tcb_t *t = thread_create_embryo(p, (uint8_t)prio);
     return t ? (long)t->tid : -ENOMEM;
 }
@@ -474,10 +542,11 @@ long sys_thread_reset(uint64_t tid, uint64_t entry, uint64_t arg,
         if (!stack_top) {
             return -ENOMEM;
         }
+        t->user_stack_base = stack_top - 0x10000ULL;
         /* Pre-point FS.base at the zeroed stack bottom so %fs:0 reads NULL
          * safely even for raw ThreadSpawn workers before TLS init. */
         if (!t->fs_base) {
-            t->fs_base = stack_top - 0x10000ULL;
+            t->fs_base = t->user_stack_base;
         }
     }
     /* Entry point and stack must live in the user region. */

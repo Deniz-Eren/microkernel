@@ -21,6 +21,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Added a Mermaid documentation guideline to `AGENTS.md` instructing agents to
+  include purposeful, vertical (`flowchart TD` / `direction TB`), timeless
+  Mermaid diagrams where helpful to illustrate documented systems and concepts.
 - Refined `TSK_0020` (`SWR_DOCS_0004`) in `docs/records/TASKS.md` with Gate 1–3
   `<sys/select.h>` coverage and quantitative PMM/server-handle leak checks, and
   queued the next development phase (`TSK_0022` TTY job control/`ISIG`/core
@@ -76,6 +79,17 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- `<sys/select.h>` (`select`, `pselect`, `fd_set`, `FD_*`), kernel zombie
+  reclamation, and cross-subsystem zero-leak stress suite (`TSK_0020`,
+  `SWR_DOCS_0004`, `ADR_0023`, `ICD_IPC_0014`, `COMP_IPC_0014`,
+  `VER_DOCS_0005`): added standalone `libc/include/sys/select.h` (`suseconds_t`,
+  `struct timeval`, `FD_SETSIZE`), `libc/src/select.c` over multi-server
+  `ppoll()` with cancellation points, Gate 1–3 checks in `posix.headers`,
+  `posix.symbol_diff`, and `posix.cancellation`, kernel zombie process and
+  thread stack/TCB/FPU reclamation (`proc_reap_zombie()`,
+  `proc_reap_zombie_threads()`, slot-reusing `proc_user_stack_alloc()`),
+  `SYS_SYS_STATS` (`52`) and `PIPE_OP_STATS`/`VFS_OP_STATS`/`SOCK_OP_STATS`
+  RPCs, and QEMU `tests/stresstest/test_stress.c`.
 - ACPI `MADT`/`SPCR` hardware discovery, parameterized Ring 3 drivers, Ring 3
   `OPOST`/`ECHO` TX, and interactive QEMU shell boot (`SWR_BOOT_0003`,
   `ADR_0022`, `COMP_BOOT_0003`, `VER_BOOT_0002`): added `kernel/core/acpi.c`

@@ -1005,6 +1005,40 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
         ReplyMsg((int)msgid, &rep, sizeof(rep));
         return;
     }
+    case SOCK_OP_STATS: {
+        uint32_t active_socks = 0;
+        uint32_t waiters = 0;
+        for (int i = 1; i < SOCK_MAX; i++) {
+            if (g_socks[i].used) {
+                active_socks++;
+            }
+        }
+        for (int i = 0; i < RWAIT_MAX; i++) {
+            if (g_rwait[i].used) {
+                waiters++;
+            }
+        }
+        for (int i = 0; i < WWAIT_MAX; i++) {
+            if (g_wwait[i].used) {
+                waiters++;
+            }
+        }
+        for (int i = 0; i < AWAIT_MAX; i++) {
+            if (g_await[i].used) {
+                waiters++;
+            }
+        }
+        for (int i = 0; i < PWAIT_MAX; i++) {
+            if (g_pwait[i].used) {
+                waiters++;
+            }
+        }
+        rep.err = 0;
+        rep.len = active_socks;
+        rep.val = (int32_t)waiters;
+        ReplyMsg((int)msgid, &rep, sizeof(rep));
+        return;
+    }
     default:
         rep.err = -ENOSYS;
         ReplyMsg((int)msgid, &rep, sizeof(rep));

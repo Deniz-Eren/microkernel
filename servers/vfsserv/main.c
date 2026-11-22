@@ -975,6 +975,17 @@ int main(void) {
         case VFS_OP_RESOLVE:
             handle_resolve(&req, &rep);
             break;
+        case VFS_OP_STATS: {
+            uint32_t open_handles = 0;
+            for (uint32_t i = 1; i < VFS_MAX_HANDLES; i++) {
+                if (g_files[i].used) {
+                    open_handles++;
+                }
+            }
+            rep.err = 0;
+            rep.len = open_handles;
+            break;
+        }
         default:
             rep.err = -ENOSYS;
             break;

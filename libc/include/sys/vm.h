@@ -41,6 +41,19 @@ struct __k_shm_stat {
     uint32_t id;
 };
 
+struct __k_sys_stats {
+    uint64_t pmm_total_bytes;
+    uint64_t pmm_free_bytes;
+    uint32_t live_procs;
+    uint32_t live_threads;
+    uint32_t open_fds;
+    uint32_t active_shm_objs;
+};
+
+static inline long SysStats(struct __k_sys_stats *out) {
+    return __sys1(SYS_SYS_STATS, (long)(uintptr_t)out);
+}
+
 static inline long VMMap(uintptr_t va_hint, size_t len, unsigned prot,
                          unsigned flags) {
     return __sys4(SYS_VM_MAP, (long)va_hint, (long)len, (long)prot,

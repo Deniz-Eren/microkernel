@@ -60,6 +60,7 @@ struct __k_fd_entry {
 #define PIPE_OP_READ 4u
 #define PIPE_OP_WRITE 5u
 #define PIPE_OP_POLL 6u
+#define PIPE_OP_STATS 7u
 
 #define PIPE_CHUNK_MAX 384u
 #define PIPE_POLL_MAX 32u

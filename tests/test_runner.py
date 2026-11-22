@@ -12,7 +12,7 @@
 # need:: VER_PROC_0005 VER_IPC_0001 VER_IPC_0002 VER_IPC_0003 VER_IPC_0004
 # need:: VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_SIG_0001 VER_SIG_0002
 # need:: VER_LIBC_0001 VER_LIBC_0003 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006
-# need:: VER_LIBC_0007
+# need:: VER_LIBC_0007 VER_DOCS_0005
 """Headless QEMU serial-output assertion harness for Microkernel.
 
 Boots build/microkernel.iso with TCG software emulation (no KVM required), pipes

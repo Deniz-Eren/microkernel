@@ -67,8 +67,10 @@ typedef struct tcb {
     uint8_t futex_has_timeout;
     uint8_t futex_woken;
     uint64_t sleep_deadline_ns;
-    uint64_t fs_base;    /* x86-64 IA32_FS_BASE per-thread TLS pointer */
-    uint64_t futex_addr; /* user VA this thread is FUTEX_WAIT-blocked on */
+    uint64_t fs_base;         /* x86-64 IA32_FS_BASE per-thread TLS pointer */
+    uint64_t futex_addr;      /* user VA this thread is FUTEX_WAIT-blocked on */
+    uint8_t *fpu_raw;         /* unaligned kmalloc pointer for fpu_area */
+    uint64_t user_stack_base; /* kernel-allocated 64 KiB thread stack base VA */
 } tcb_t;
 
 /* switch.S reads these fields at fixed offsets. */
@@ -148,6 +150,8 @@ void thread_arm(tcb_t *t, uint64_t entry_rip, uint64_t arg, uint64_t user_rsp);
 void thread_arm_fork(tcb_t *t, const struct trapframe *tf);
 tcb_t *thread_find(pcb_t *p, uint32_t tid);
 void proc_kill_other_threads(pcb_t *p, tcb_t *keep);
+void proc_reap_zombie_threads(pcb_t *p);
+void proc_reap_zombie(pcb_t *zombie);
 void proc_close_fds(pcb_t *p, int cloexec_only);
 
 /* Allocate a fresh zeroed user stack in p's address space; returns its top
@@ -170,6 +174,7 @@ long sys_proc_execve(struct trapframe *tf, uint64_t path_va, uint64_t argv_va,
 long sys_proc_getpid(void);
 long sys_proc_getppid(void);
 long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4);
+long sys_sys_stats(uint64_t ubuf);
 void thread_exit_current(int status) __attribute__((noreturn));
 void proc_exit_current(int status) __attribute__((noreturn));
 void proc_exit_signal(int sig) __attribute__((noreturn));

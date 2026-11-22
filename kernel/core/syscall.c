@@ -250,6 +250,9 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_VM_MLOCK:
         ret = sys_vm_mlock(tf->rdi, tf->rsi, tf->rdx);
         break;
+    case SYS_SYS_STATS:
+        ret = sys_sys_stats(tf->rdi);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (tf->rdi > 255) {

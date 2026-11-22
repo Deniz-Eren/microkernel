@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0020 — Add pselect and cross-subsystem leak hardening
-
-```{task} Add pselect and cross-subsystem leak hardening
-:id: TSK_0020
-:status: open
-:traces: ADR_0003, WDR_0002, SWR_DOCS_0004
-
-Add `<sys/select.h>` (`select`, `pselect`) over multi-server `ppoll()` with Gate
-1 to Gate 3 checks. Add kernel frame count and server handle count checks.
-Verify zero leaks across `sh`, VFS, pipes, TTY, `AF_UNIX` sockets, `SHM`,
-signals, and pthreads ({need}`SWR_DOCS_0004`).
-```
-
 ### TSK_0022 — Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
 
 ```{task} Add TTY job control, ISIG (Ctrl-C), process groups, and utilities

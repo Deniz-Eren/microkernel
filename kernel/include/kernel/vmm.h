@@ -70,6 +70,7 @@ long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
                  uint64_t fd, uint64_t off);
 void shm_acquire_id(uint32_t id);
 void shm_release_id(uint32_t id);
+uint32_t shm_active_count(void);
 uint64_t vmm_alloc_mmap_va(uint64_t pml4_phys, uint64_t *next_va,
                            uint64_t npages);
 uint64_t vmm_prot_to_pte_flags(uint64_t prot);

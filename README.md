@@ -240,11 +240,12 @@ subset available at this time:
   `pipe`/`pipe2`, `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`,
   `ftruncate`, `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, `getcwd`,
   `access`, `isatty`, `_exit`, `sleep`, `environ`, and `STD*_FILENO`
-- **Descriptor control and polling (`<fcntl.h>`, `<poll.h>`):** `open`,
-  `openat`, `creat`, and `fcntl` (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`,
-  `F_SETFD`, `F_GETFL`, `F_SETFL`). Also `O_CLOEXEC`, `O_NONBLOCK`,
-  `O_DIRECTORY`, `O_SYNC`, `O_DSYNC`, `poll`, and multi-server `ppoll` backed by
-  Ring 3 `pipeserv`, `vfsserv`, `ttyserv`, and `sockserv`
+- **Descriptor control and multiplexing (`<fcntl.h>`, `<poll.h>`,
+  `<sys/select.h>`):** `open`, `openat`, `creat`, and `fcntl` (`F_DUPFD`,
+  `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`). Also
+  `O_CLOEXEC`, `O_NONBLOCK`, `O_DIRECTORY`, `O_SYNC`, `O_DSYNC`, `poll`,
+  multi-server `ppoll`, `select`, `pselect`, `fd_set`, and `FD_*` backed by Ring
+  3 `pipeserv`, `vfsserv`, `ttyserv`, and `sockserv`
 - **Local sockets (`<sys/socket.h>`, `<sys/un.h>`):** `AF_UNIX` `SOCK_STREAM`
   and `SOCK_DGRAM` sockets (`socket`, `socketpair`, `bind`, `listen`, `accept`,
   `accept4`, `connect`, `send`, `recv`). Also `sendto`, `recvfrom`, `shutdown`,

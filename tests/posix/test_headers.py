@@ -50,6 +50,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "uchar.h",
     "unistd.h",
     "sys/mman.h",
+    "sys/select.h",
     "sys/socket.h",
     "sys/stat.h",
     "sys/types.h",
@@ -685,6 +686,43 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"socket headers check failed:\n{err}")
+
+    def test_select_header_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <sys/select.h>",
+                "#ifdef SYS_FD_OP",
+                '#error "sys/select.h leaked SYS_FD_OP"',
+                "#endif",
+                "#ifdef SYS_SYS_STATS",
+                '#error "sys/select.h leaked SYS_SYS_STATS"',
+                "#endif",
+                "#ifndef FD_SET",
+                '#error "sys/select.h missing FD_SET"',
+                "#endif",
+                '_Static_assert(FD_SETSIZE >= 32, "FD_SETSIZE");',
+                "static int __check_select_api(void) {",
+                "    fd_set rfds;",
+                "    FD_ZERO(&rfds);",
+                "    FD_SET(0, &rfds);",
+                "    int is_set = FD_ISSET(0, &rfds);",
+                "    FD_CLR(0, &rfds);",
+                "    struct timeval tv = {.tv_sec = 0, .tv_usec = 1000};",
+                "    struct timespec ts = {.tv_sec = 0, .tv_nsec = 1000};",
+                "    sigset_t mask;",
+                "    sigemptyset(&mask);",
+                "    int r1 = select(1, &rfds, NULL, NULL, &tv);",
+                "    int r2 = pselect(1, &rfds, NULL, NULL, &ts, &mask);",
+                "    return is_set + r1 + r2;",
+                "}",
+                "int (*__select_fn_ref)(void) = __check_select_api;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"sys/select.h check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

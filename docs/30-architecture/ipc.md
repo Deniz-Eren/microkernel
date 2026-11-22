@@ -82,8 +82,8 @@ right Ring 3 server and coordinates multi-server `ppoll()`. The kernel sends
 
 ```mermaid
 flowchart TD
-    APP["User Program (open, read, write, accept4, ppoll, close)"]
-    LIBC["libc Descriptor Router (fd.c, vfs.c, tty.c, socket.c)"]
+    APP["User Program (open, read, write, accept4, ppoll, select, close)"]
+    LIBC["libc Descriptor Router (fd.c, vfs.c, tty.c, socket.c, select.c)"]
     KFD["Kernel SYS_FD_OP Table (FD_KIND_*)"]
 
     subgraph SRVS["Ring 3 Descriptor Servers & Kernel Backends"]

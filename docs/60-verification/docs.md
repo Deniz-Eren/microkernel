@@ -46,3 +46,15 @@ Verified by CTest `posix.headers`, `posix.symbol_diff`,
 `posix.async_signal_safe`, and `posix.cancellation` across `sysroot` and
 `libc.a`, paired with headless QEMU tests ({need}`SWR_DOCS_0003`).
 ```
+
+```{ver} Verify select, pselect, and cross-subsystem zero-leak stress in QEMU
+:id: VER_DOCS_0005
+:status: active
+:tags: integration
+:verifies: SWR_DOCS_0004
+
+`tests/stresstest/test_stress.c` verifies `<sys/select.h>` (`select`, `pselect`,
+multi-server FDs, atomic `sigmask` `EINTR`) and exact PMM frame, FD, SHM, pipe,
+VFS, and socket handle equality across stress rounds. CTest Gates 1 to 3 verify
+`<sys/select.h>` compilation, symbols, and cancellation ({need}`SWR_DOCS_0004`).
+```

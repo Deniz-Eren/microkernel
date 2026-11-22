@@ -188,6 +188,12 @@ Rules that apply only to this project. Each rule links to its skill or document.
   you must update the user-space functionality breakdown and use-case summary in
   [README.md](README.md) in the same commit so application developers always see
   accurate current capabilities.
+- **Mermaid diagrams for concepts and architecture:** When documenting a
+  subsystem, architecture, protocol, or workflow, add a focused Mermaid diagram
+  where it helps illustrate the system or concept—keep diagrams purposeful and
+  avoid unnecessary clutter. Prefer vertical orientation (`flowchart TD`,
+  `direction TB`) over wide horizontal layouts so diagrams stay readable, and
+  avoid volatile test or item counts inside diagrams.
 - **Milestone discipline:** Make one milestone at a time and commit after each
   complete milestone. A milestone is complete only when its test gives exit code
   0. See [docs/records/TASKS.md](docs/records/TASKS.md) and

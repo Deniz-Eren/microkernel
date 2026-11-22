@@ -31,6 +31,7 @@
 #include <sys/fd.h>
 #include <sys/intr.h>
 #include <sys/proc.h>
+#include <sys/vm.h>
 #include "channel.h"
 
 /* need:: COMP_BOOT_0002 COMP_PROC_0002 */
@@ -715,6 +716,10 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
 
     /* Point of no return: commit the new process image. */
     proc_kill_other_threads(p, cur);
+    for (tcb_t *x = p->threads; x; x = x->proc_next) {
+        x->user_stack_base = 0;
+    }
+    proc_reap_zombie_threads(p);
     time_cleanup_proc(p->pid);
     proc_close_fds(p, 1);
     p->mlock_flags = 0u;
@@ -817,6 +822,7 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
             zombie->state = PROC_DEAD;
             vmm_destroy_user_pml4(zombie->pml4_phys);
             zombie->pml4_phys = 0;
+            proc_reap_zombie(zombie);
             return (long)reaped_pid;
         }
         if (options & PROC_WAIT_NOHANG) {
@@ -833,30 +839,89 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
 #define USER_STACK_BASE 0x50000000ULL
 #define USER_STACK_LIMIT 0x80000000ULL
 
-/* Allocate a fresh zeroed 64 KiB user stack in p's address space (bump
- * allocator over the 0x50000000..0x80000000 region); returns the top VA. */
+/* Allocate a fresh zeroed 64 KiB user stack in p's address space, reusing any
+ * unmapped slots in [USER_STACK_BASE, USER_STACK_LIMIT); returns top VA. */
 uint64_t proc_user_stack_alloc(pcb_t *p) {
-    if (!p->next_stack_va) {
-        p->next_stack_va = USER_STACK_BASE;
+    uint64_t base = 0;
+    for (uint64_t va = USER_STACK_BASE;
+         va + USER_STACK_BYTES <= USER_STACK_LIMIT; va += USER_STACK_BYTES) {
+        int free_slot = 1;
+        for (uint64_t off = 0; off < USER_STACK_BYTES; off += 4096ULL) {
+            if (vmm_get_pte_to(p->pml4_phys, va + off) & VMM_PRESENT) {
+                free_slot = 0;
+                break;
+            }
+        }
+        if (free_slot) {
+            base = va;
+            break;
+        }
     }
-    uint64_t base = p->next_stack_va;
-    if (base + USER_STACK_BYTES > USER_STACK_LIMIT) {
+    if (!base) {
         return 0;
     }
-    p->next_stack_va = base + USER_STACK_BYTES;
+    if (base + USER_STACK_BYTES > p->next_stack_va) {
+        p->next_stack_va = base + USER_STACK_BYTES;
+    }
 
     for (uint64_t va = base; va < base + USER_STACK_BYTES; va += 4096) {
         uint64_t frame = pmm_alloc_frame();
         if (!frame) {
+            for (uint64_t u = base; u < va; u += 4096) {
+                uint64_t phys = vmm_unmap_page_to(p->pml4_phys, u);
+                if (phys) {
+                    pmm_free_frame(phys);
+                }
+            }
             return 0;
         }
         memset(phys_to_virt(frame), 0, 4096);
         if (vmm_map_page_to(p->pml4_phys, va, frame,
                             VMM_USER | VMM_PRESENT | VMM_WRITE | VMM_NX) != 0) {
+            pmm_free_frame(frame);
+            for (uint64_t u = base; u < va; u += 4096) {
+                uint64_t phys = vmm_unmap_page_to(p->pml4_phys, u);
+                if (phys) {
+                    pmm_free_frame(phys);
+                }
+            }
             return 0;
         }
     }
     return base + USER_STACK_BYTES;
+}
+
+long sys_sys_stats(uint64_t ubuf) {
+    pcb_t *cur = proc_current();
+    if (!cur) {
+        return -EPERM;
+    }
+    if (!ubuf) {
+        return -EFAULT;
+    }
+    proc_reap_zombie_threads(cur);
+
+    struct __k_sys_stats st = {0};
+    st.pmm_total_bytes = pmm_total_bytes();
+    st.pmm_free_bytes = pmm_free_bytes();
+    st.active_shm_objs = shm_active_count();
+
+    for (pcb_t *p = proc_list_head(); p; p = p->next) {
+        if (p->state == PROC_ALIVE) {
+            st.live_procs++;
+            for (tcb_t *t = p->threads; t; t = t->proc_next) {
+                if (t->state != THREAD_ZOMBIE) {
+                    st.live_threads++;
+                }
+            }
+        }
+    }
+    for (int i = 0; i < PROC_MAX_FDS; i++) {
+        if (cur->fds[i].kind != FD_KIND_NONE) {
+            st.open_fds++;
+        }
+    }
+    return copy_to_user(ubuf, &st, sizeof(st)) < 0 ? -EFAULT : 0;
 }
 
 void proc_spawn_init(void) {
@@ -965,6 +1030,9 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "socktest", 100, 0);
     /* Command shell (sh) and core utilities test (POSIX.1-2024 XCU target). */
     spawn_image(tar_phys, tar_size, "shtest", 100, 0);
+    /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
+     */
+    spawn_image(tar_phys, tar_size, "stresstest", 85, 0);
 
     sched_activate();
 }

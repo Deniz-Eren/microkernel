@@ -30,6 +30,7 @@
 #define VFS_OP_UNLINK 11u
 #define VFS_OP_READDIR 12u
 #define VFS_OP_RESOLVE 13u
+#define VFS_OP_STATS 14u
 
 typedef struct {
     uint64_t st_dev;

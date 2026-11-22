@@ -117,6 +117,9 @@ if ! "$ENV" test --timeout 120 \
     --expect 'sh pipelines, redirections, and core utilities' \
     --expect 'sh Issue 8 ANSI-C quoting, set -o pipefail, and built-ins' \
     --expect 'sh Issue 8 read -d custom and NUL delimiters verified' \
+    --expect '<sys/select\.h> select, pselect, multi-server FDs, and sigmask' \
+    --expect 'cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,' \
+    --expect 'zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks' \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

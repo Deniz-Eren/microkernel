@@ -160,3 +160,15 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 `shutdown`, and option helpers with no `<sys/microkernel.h>` leakage
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0009`).
 ```
+
+```{icd} POSIX.1-2024 <sys/select.h> public interface
+:id: ICD_IPC_0014
+:status: active
+:posix: XBD/sys/select.h (BASE), XSH/pselect (BASE), XSH/select (BASE)
+:refines: ARC_IPC_0001
+:satisfies: SWR_DOCS_0004
+
+`libc/include/sys/select.h` declares `struct timeval`, `fd_set`, `FD_SETSIZE`,
+`FD_CLR`, `FD_ISSET`, `FD_SET`, `FD_ZERO`, `select`, and `pselect` with no
+`<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_DOCS_0004`).
+```

@@ -398,6 +398,35 @@ static void handle_pipe_req(uint32_t msgid, const pipe_req_t *req) {
         ReplyMsg((int)msgid, &rep, sizeof(rep));
         return;
     }
+    case PIPE_OP_STATS: {
+        uint32_t pipes = 0;
+        uint32_t waiters = 0;
+        for (int i = 1; i < PIPE_MAX; i++) {
+            if (g_pipes[i].used) {
+                pipes++;
+            }
+        }
+        for (int i = 0; i < RWAIT_MAX; i++) {
+            if (g_rwait[i].used) {
+                waiters++;
+            }
+        }
+        for (int i = 0; i < WWAIT_MAX; i++) {
+            if (g_wwait[i].used) {
+                waiters++;
+            }
+        }
+        for (int i = 0; i < PWAIT_MAX; i++) {
+            if (g_pwait[i].used) {
+                waiters++;
+            }
+        }
+        rep.err = 0;
+        rep.len = pipes;
+        rep.handle_r = waiters;
+        ReplyMsg((int)msgid, &rep, sizeof(rep));
+        return;
+    }
     default:
         rep.err = -EINVAL;
         ReplyMsg((int)msgid, &rep, sizeof(rep));

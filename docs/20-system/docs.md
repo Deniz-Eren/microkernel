@@ -49,10 +49,10 @@ cancellation call-graph checks, and runtime compatibility test suites
 
 ```{swr} Verify cross-subsystem integration, pselect, and leak freedom
 :id: SWR_DOCS_0004
-:status: draft
+:status: active
 :posix: XBD/sys/select.h (BASE), XSH/pselect (BASE)
 :derives: SYS_DOCS_0001
-:traces: BDR_0003, ADR_0003
+:traces: BDR_0003, ADR_0003, ADR_0023
 
 The system must supply `<sys/select.h>` (`select`, `pselect`) over multi-server
 `ppoll` with Gate 1 to Gate 3 checks. An integrated QEMU stress suite must

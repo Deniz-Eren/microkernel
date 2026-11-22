@@ -34,6 +34,7 @@
 #define SOCK_OP_GETOPT 13u
 #define SOCK_OP_SETOPT 14u
 #define SOCK_OP_POLL 15u
+#define SOCK_OP_STATS 16u
 
 typedef struct {
     uint32_t op;

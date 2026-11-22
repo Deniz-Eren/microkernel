@@ -167,3 +167,16 @@ queues, deferred blocking `accept`/`send`/`recv`/`ppoll` requests, and
 `getsockopt`, and `setsockopt` over `/dev/sock` IPC with cancellation checks
 ({need}`ICD_IPC_0012`, {need}`ICD_IPC_0013`, {need}`SWR_IPC_0009`).
 ```
+
+```{comp} POSIX.1-2024 libc select and pselect wrappers over multi-server ppoll
+:id: COMP_IPC_0014
+:status: active
+:posix: XBD/sys/select.h (BASE), XSH/pselect (BASE), XSH/select (BASE)
+:refines: ARC_IPC_0001, ICD_IPC_0005, ICD_IPC_0014
+:satisfies: SWR_DOCS_0004
+
+`libc/src/select.c` implements `FD_CLR`, `FD_ISSET`, `FD_SET`, `FD_ZERO`,
+`select`, and `pselect` over multi-server `ppoll()` with cancellation point
+checks and `POLLNVAL` to `EBADF` mapping ({need}`ICD_IPC_0005`,
+{need}`ICD_IPC_0014`, {need}`SWR_DOCS_0004`).
+```
