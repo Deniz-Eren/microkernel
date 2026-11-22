@@ -21,6 +21,10 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Reordered `docs/records/TASKS.md` by dependency (`TSK_0026` -> `TSK_0023` ->
+  `TSK_0022` -> `TSK_0024` -> `TSK_0025`) and refined `SWR_PROC_0008`
+  (`waitpid(0)`/`-pgid`, `kill(-pgid)`) and `SWR_IPC_0010` (`CAP_SYS_INTR`
+  MMIO/DMA syscalls).
 - Defined the platform abstraction architecture (`ADR_0024`), added `RDM_0008`
   in `docs/records/ROADMAP.md` for future 64-bit ARM (`arm64`) support (no
   legacy 32-bit `x86`), queued `TSK_0026` (`SWR_BOOT_0004`) to isolate `x86-64`

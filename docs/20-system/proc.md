@@ -102,9 +102,10 @@ declare async-signal-safe `wait` and `waitpid` ([waitpid][fn-waitpid])
 :traces: BDR_0003, ADR_0003
 
 The kernel and `ttyserv` must supply process groups (`setpgid`, `getpgid`,
-`setsid`, `tcgetpgrp`, `tcsetpgrp`), `ISIG` (`SIGINT` on `Ctrl-C`), and
-`waitpid(-1)`. Ring 3 user space must add core utilities (`mkdir`, `rm`, `cp`,
-`mv`, `uname`, `env`, `wc`, `head`) ({need}`SYS_PROC_0001`).
+`setsid`, `tcgetpgrp`, `tcsetpgrp`), `ISIG` (`SIGINT` on `Ctrl-C`),
+`waitpid(0)`/`waitpid(-pgid)`, and `kill(-pgid)`. Ring 3 user space must add
+core utilities (`mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, `head`)
+({need}`SYS_PROC_0001`).
 ```
 
 ```{swr} Boot secondary CPUs via ACPI MADT and run SMP scheduling

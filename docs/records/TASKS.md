@@ -21,17 +21,17 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0022 — Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
+### TSK_0026 — Isolate x86-64 platform code behind x86-64 HAL folders
 
-```{task} Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
-:id: TSK_0022
+```{task} Isolate x86-64 platform code behind x86-64 HAL folders
+:id: TSK_0026
 :status: open
-:traces: ADR_0003, ADR_0018, ADR_0021, SWR_PROC_0008
+:traces: ADR_0024, SWR_BOOT_0004
 
-Add `ISIG` (`VINTR` to `SIGINT`) in `ttyserv`, process groups (`setpgid`,
-`getpgid`, `setsid`, `tcgetpgrp`, `tcsetpgrp`), and `waitpid(-1)`. Add Ring 3
-utilities (`mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, `head`) for the
-interactive shell ({need}`SWR_PROC_0008`).
+Move `x86-64` kernel, `libc`, and UART/RTC platform code into `x86-64` folders
+behind a portable HAL. Parameterize CMake, QEMU, and audit scripts on
+`-DMICROKERNEL_ARCH=x86-64` while keeping `x86-64` as the sole active target
+({need}`SWR_BOOT_0004`).
 ```
 
 ### TSK_0023 — Add high-leverage libc Base headers and standard C utilities
@@ -47,17 +47,17 @@ Register compiler freestanding headers in Gate 2 and add `<sys/utsname.h>`,
 and `realpath` ({need}`SWR_LIBC_0008`).
 ```
 
-### TSK_0026 — Isolate x86-64 platform code behind x86-64 HAL folders
+### TSK_0022 — Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
 
-```{task} Isolate x86-64 platform code behind x86-64 HAL folders
-:id: TSK_0026
+```{task} Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
+:id: TSK_0022
 :status: open
-:traces: ADR_0024, SWR_BOOT_0004
+:traces: ADR_0003, ADR_0018, ADR_0021, SWR_PROC_0008
 
-Move `x86-64` kernel, `libc`, and UART/RTC platform code into `x86-64` folders
-behind a portable HAL. Parameterize CMake, QEMU, and audit scripts on
-`-DMICROKERNEL_ARCH=x86-64` while keeping `x86-64` as the sole active target
-({need}`SWR_BOOT_0004`).
+Add `ISIG` (`VINTR` to `SIGINT`) in `ttyserv`, process groups (`setpgid`,
+`getpgid`, `setsid`, `tcgetpgrp`, `tcsetpgrp`), `waitpid(0)`/`-pgid`, and
+`kill(-pgid)`. Add Ring 3 utilities (`mkdir`, `rm`, `cp`, `mv`, `uname`, `env`,
+`wc`, `head`) for the interactive shell ({need}`SWR_PROC_0008`).
 ```
 
 ### TSK_0024 — Build Ring 3 virtio-blk driver and writable disk mount in vfsserv
@@ -67,9 +67,9 @@ behind a portable HAL. Parameterize CMake, QEMU, and audit scripts on
 :status: open
 :traces: ADR_0003, ADR_0008, ADR_0016, SWR_IPC_0010
 
-Add a `CAP_SYS_INTR` Ring 3 PCI `virtio-blk` block driver using contiguous DMA
-frames and IOAPIC IRQ pulses. Mount a writable disk file system in `vfsserv` so
-files stay across QEMU restarts ({need}`SWR_IPC_0010`).
+Add `CAP_SYS_INTR` MMIO device mapping and DMA buffer syscalls plus a Ring 3 PCI
+`virtio-blk` driver using IOAPIC IRQ pulses. Mount a writable disk file system
+in `vfsserv` so files stay across QEMU restarts ({need}`SWR_IPC_0010`).
 ```
 
 ### TSK_0025 — Boot secondary CPUs via ACPI MADT and harden SMP locks

@@ -121,9 +121,10 @@ streams (`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4`,
 :derives: SYS_IPC_0001
 :traces: ADR_0003, ADR_0008, ADR_0016
 
-A `CAP_SYS_INTR` Ring 3 PCI `virtio-blk` driver must do block I/O with
-contiguous DMA frames and IOAPIC IRQ pulses. `vfsserv` must mount a writable
-disk file system that keeps files across QEMU restarts ({need}`SYS_IPC_0001`).
+The kernel must supply `CAP_SYS_INTR` MMIO device mapping and DMA buffer
+syscalls. A Ring 3 PCI `virtio-blk` driver must do block I/O over IOAPIC IRQ
+pulses. `vfsserv` must mount a writable disk file system that keeps files across
+restarts ({need}`SYS_IPC_0001`).
 ```
 
 [fn-pipe2]:
