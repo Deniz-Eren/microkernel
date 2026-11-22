@@ -343,6 +343,14 @@ pcb_t *proc_create(pcb_t *parent) {
     p->fds[1].status_flags = 1; /* O_WRONLY */
     p->fds[2].kind = FD_KIND_CONSOLE;
     p->fds[2].status_flags = 1; /* O_WRONLY */
+    if (parent && parent->cwd[0] == '/') {
+        memcpy(p->cwd, parent->cwd, sizeof(p->cwd));
+        p->umask = parent->umask;
+    } else {
+        p->cwd[0] = '/';
+        p->cwd[1] = '\0';
+        p->umask = 0022u;
+    }
     p->next = g_proc_list;
     g_proc_list = p;
     return p;

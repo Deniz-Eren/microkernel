@@ -399,6 +399,8 @@ long sys_proc_getppid(void) {
     return p ? (long)p->parent_pid : -EPERM;
 }
 
+static long copy_user_cstr(uint64_t va, char *dst, size_t max_len);
+
 long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
                uint64_t a4) {
     pcb_t *p = proc_current();
@@ -517,6 +519,41 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
             return -EFAULT;
         }
         return (long)max_n;
+    }
+    case FD_OP_GETCWD: {
+        if (a1 == 0u || a2 == 0u) {
+            return -EINVAL;
+        }
+        size_t len = strlen(p->cwd);
+        if (len + 1u > a2) {
+            return -ERANGE;
+        }
+        if (copy_to_user(a1, p->cwd, len + 1u) < 0) {
+            return -EFAULT;
+        }
+        return (long)len;
+    }
+    case FD_OP_SETCWD: {
+        if (a1 == 0u) {
+            return -EFAULT;
+        }
+        char kpath[PROC_CWD_MAX];
+        long len = copy_user_cstr(a1, kpath, sizeof(kpath));
+        if (len < 0) {
+            return len;
+        }
+        if (len == 0 || kpath[0] != '/') {
+            return -EINVAL;
+        }
+        memcpy(p->cwd, kpath, (size_t)len + 1u);
+        return 0;
+    }
+    case FD_OP_UMASK: {
+        uint32_t old = p->umask;
+        if (a2 == 0u) {
+            p->umask = (uint32_t)(a1 & 0777u);
+        }
+        return (long)old;
     }
     default:
         return -EINVAL;

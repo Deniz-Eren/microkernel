@@ -117,6 +117,10 @@ struct pcb {
     /* Per-process file descriptor table. */
     struct __k_fd_entry fds[PROC_MAX_FDS];
 
+    /* Per-process current working directory and file creation mask. */
+    char cwd[PROC_CWD_MAX];
+    uint32_t umask;
+
     /* Process CPU tick accounting and alarm(2) deadline (monotonic ns). */
     uint64_t utime_ticks;
     uint64_t stime_ticks;

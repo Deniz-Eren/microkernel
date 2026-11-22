@@ -40,8 +40,17 @@ static int g_vfs_conn = -1;
 static long g_vfs_conn_pid = -1;
 static uint32_t g_vfs_srv_pid;
 static uint32_t g_vfs_srv_chan;
-static char g_cwd[VFS_PATH_MAX] = "/";
-static mode_t g_umask = 0022u;
+
+_Static_assert(PROC_CWD_MAX == VFS_PATH_MAX,
+               "PROC_CWD_MAX must match VFS_PATH_MAX");
+
+static mode_t current_umask(void) {
+    long r = __sys5(SYS_FD_OP, FD_OP_UMASK, 0, 1, 0, 0);
+    if (r >= 0) {
+        return (mode_t)(r & 0777L);
+    }
+    return 0022u;
+}
 
 static int ensure_vfsserv(void) {
     long cur_pid = __sys0(SYS_PROC_GETPID);
@@ -131,13 +140,19 @@ static int build_req_path(int dirfd, const char *path, uint32_t *out_handle,
         return 0;
     }
     /* Relative to process current working directory. */
-    size_t clen = strlen(g_cwd);
+    char cwd[VFS_PATH_MAX];
+    long cr = __sys5(SYS_FD_OP, FD_OP_GETCWD, (long)(uintptr_t)cwd,
+                     (long)sizeof(cwd), 0, 0);
+    if (cr < 0) {
+        return (int)cr;
+    }
+    size_t clen = (size_t)cr;
     size_t plen = strlen(path);
-    int need_slash = (clen > 0u && g_cwd[clen - 1u] != '/');
+    int need_slash = (clen > 0u && cwd[clen - 1u] != '/');
     if (clen + (size_t)need_slash + plen + 1u > VFS_PATH_MAX) {
         return -ENAMETOOLONG;
     }
-    memcpy(out_path, g_cwd, clen);
+    memcpy(out_path, cwd, clen);
     size_t pos = clen;
     if (need_slash) {
         out_path[pos++] = '/';
@@ -284,7 +299,7 @@ int openat(int fd, const char *path, int oflag, ...) {
     vfs_rep_t rep = {0};
     req.op = VFS_OP_OPEN;
     req.flags = (uint32_t)oflag;
-    mode_t cur_umask = __atomic_load_n(&g_umask, __ATOMIC_RELAXED);
+    mode_t cur_umask = current_umask();
     req.mode = (uint32_t)(mode & ~cur_umask & 0777u);
     int pr = build_req_path(fd, path, &req.handle, req.u.path);
     if (pr < 0) {
@@ -505,7 +520,7 @@ int mkdirat(int fd, const char *path, mode_t mode) {
     vfs_req_t req = {0};
     vfs_rep_t rep = {0};
     req.op = VFS_OP_MKDIR;
-    mode_t cur_umask = __atomic_load_n(&g_umask, __ATOMIC_RELAXED);
+    mode_t cur_umask = current_umask();
     req.mode = (uint32_t)(mode & ~cur_umask & 0777u);
     int pr = build_req_path(fd, path, &req.handle, req.u.path);
     if (pr < 0) {
@@ -572,7 +587,12 @@ int chdir(const char *path) {
         errno = ENOTDIR;
         return -1;
     }
-    (void)strlcpy(g_cwd, rep.u.path, sizeof(g_cwd));
+    long sr =
+        __sys5(SYS_FD_OP, FD_OP_SETCWD, (long)(uintptr_t)rep.u.path, 0, 0, 0);
+    if (sr < 0) {
+        errno = (int)(-sr);
+        return -1;
+    }
     return 0;
 }
 
@@ -604,7 +624,12 @@ int fchdir(int fildes) {
         errno = ENOTDIR;
         return -1;
     }
-    (void)strlcpy(g_cwd, rep.u.path, sizeof(g_cwd));
+    long sr =
+        __sys5(SYS_FD_OP, FD_OP_SETCWD, (long)(uintptr_t)rep.u.path, 0, 0, 0);
+    if (sr < 0) {
+        errno = (int)(-sr);
+        return -1;
+    }
     return 0;
 }
 
@@ -613,17 +638,21 @@ char *getcwd(char *buf, size_t size) {
         errno = EINVAL;
         return NULL;
     }
-    size_t len = strlen(g_cwd);
-    if (len + 1u > size) {
-        errno = ERANGE;
+    long r =
+        __sys5(SYS_FD_OP, FD_OP_GETCWD, (long)(uintptr_t)buf, (long)size, 0, 0);
+    if (r < 0) {
+        errno = (int)(-r);
         return NULL;
     }
-    memcpy(buf, g_cwd, len + 1u);
     return buf;
 }
 
 mode_t umask(mode_t cmask) {
-    return __atomic_exchange_n(&g_umask, cmask & 0777u, __ATOMIC_ACQ_REL);
+    long r = __sys5(SYS_FD_OP, FD_OP_UMASK, (long)(cmask & 0777u), 0, 0, 0);
+    if (r >= 0) {
+        return (mode_t)(r & 0777L);
+    }
+    return 0022u;
 }
 
 int access(const char *path, int amode) {

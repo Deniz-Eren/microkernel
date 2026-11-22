@@ -15,6 +15,7 @@
 #include <stdint.h>
 
 #define PROC_MAX_FDS 32
+#define PROC_CWD_MAX 256u
 
 #define FD_KIND_NONE 0u
 #define FD_KIND_CONSOLE 1u
@@ -35,6 +36,9 @@
 #define FD_OP_SETFD 6u
 #define FD_OP_SETFL 7u
 #define FD_OP_LIST 8u
+#define FD_OP_GETCWD 9u
+#define FD_OP_SETCWD 10u
+#define FD_OP_UMASK 11u
 
 /* Kernel-to-server pulse sent on execve O_CLOEXEC close or process exit. */
 #define PULSE_CODE_FD_CLOSE 0x4644u

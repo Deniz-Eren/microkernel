@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -82,12 +83,20 @@ static int run_sh_capture(const char *script, const void *stdin_data,
     }
 
     size_t got = 0;
-    while (got + 1u < out_cap) {
-        ssize_t n = read(out_pfd[0], out + got, out_cap - 1u - got);
-        if (n <= 0) {
-            break;
+    for (;;) {
+        if (got + 1u < out_cap) {
+            ssize_t n = read(out_pfd[0], out + got, out_cap - 1u - got);
+            if (n <= 0) {
+                break;
+            }
+            got += (size_t)n;
+        } else {
+            char discard[128];
+            ssize_t n = read(out_pfd[0], discard, sizeof(discard));
+            if (n <= 0) {
+                break;
+            }
         }
-        got += (size_t)n;
     }
     out[got] = '\0';
     (void)close(out_pfd[0]);
@@ -222,6 +231,57 @@ static int test_read_delim(void) {
     return 0;
 }
 
+static int test_cwd_across_execve(void) {
+    char out[2048];
+    ssize_t len = 0;
+
+    /* cd + bare ls must list the working directory, not root '/'. */
+    int rc =
+        run_sh_capture("cd /boot && /boot/ls", NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "sh\n") || !strstr(out, "ls\n") ||
+        strstr(out, "tmp\n") != NULL || strstr(out, "boot\n") != NULL) {
+        printf("[FAIL] shtest cd /boot && ls rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* Relative file creation, ls, and cat across execve in a subdirectory. */
+    rc = run_sh_capture(
+        "cd /tmp && /boot/mkdir cwd_sub && cd cwd_sub && "
+        "/boot/echo cwd_ok > note.txt && /boot/ls && /boot/cat note.txt && "
+        "/boot/rm note.txt",
+        NULL, 0, out, sizeof(out), &len);
+    (void)rmdir("/tmp/cwd_sub");
+    if (rc != 0 || strcmp(out, "note.txt\ncwd_ok\n") != 0) {
+        printf("[FAIL] shtest relative cwd ops rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* ls -l in working directory must lstat relative ./<entry> paths. */
+    rc = run_sh_capture("cd /boot && /boot/ls -l", NULL, 0, out, sizeof(out),
+                        &len);
+    if (rc != 0 || !strstr(out, " ls\n") || strstr(out, "?") != NULL) {
+        printf("[FAIL] shtest cd /boot && ls -l rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* Process umask must persist across fork and execve. */
+    mode_t prev_mask = umask(0077u);
+    rc = run_sh_capture("cd /tmp && /boot/echo mask_ok > umask_check.txt", NULL,
+                        0, out, sizeof(out), &len);
+    (void)umask(prev_mask);
+    struct stat st = {0};
+    int sr = stat("/tmp/umask_check.txt", &st);
+    (void)unlink("/tmp/umask_check.txt");
+    if (rc != 0 || sr != 0 || (st.st_mode & 0777u) != 0600u) {
+        printf("[FAIL] shtest umask across execve rc=%d sr=%d mode=%04o\n", rc,
+               sr, (unsigned)(st.st_mode & 0777u));
+        return -1;
+    }
+
+    printf("[OK] sh cwd and umask persistence across execve verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -231,6 +291,9 @@ int main(void) {
         return 1;
     }
     if (test_read_delim() != 0) {
+        return 1;
+    }
+    if (test_cwd_across_execve() != 0) {
         return 1;
     }
     return 0;

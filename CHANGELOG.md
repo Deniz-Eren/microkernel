@@ -137,6 +137,14 @@ Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- Fixed process current working directory (`cwd`) and file creation mask
+  (`umask`) persistence across `execve()` and `fork()` by storing `cwd` and
+  `umask` in the kernel `pcb_t` (`kernel/include/kernel/sched.h`,
+  `kernel/core/sched.c`, `kernel/core/proc.c`) and exposing `FD_OP_GETCWD`,
+  `FD_OP_SETCWD`, and `FD_OP_UMASK` through `SYS_FD_OP`
+  (`libc/include/sys/fd.h`, `libc/src/vfs.c`), so utilities such as `ls` operate
+  on the shell working directory after `cd` instead of resetting to `/`, with
+  regression tests in `tests/shtest/test_sh.c`.
 - Fixed strict priority enforcement in `kernel/core/sched.c` (`schedule()`) so a
   running higher-priority thread (such as `sysproc` at priority 110 during boot)
   is never preempted by a lower-priority ready thread when its round-robin time
