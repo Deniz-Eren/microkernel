@@ -113,10 +113,11 @@ gates:
    `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800`. `posix.symbol_diff` runs a
    Clang AST and `llvm-nm` diff against `issue8-manifest.tsv` and writes
    `build/posix-symbol-diff.txt`. That report lists implemented and missing
-   POSIX.1-2024 Base headers and interfaces, active option groups, and exported
-   `libc.a` symbols. `posix.async_signal_safe`, `posix.cancellation`,
-   `coverage.unit`, `traceability.unit`, `docs.html`, `docs.needs`, and
-   `docs.audit` complete the suite.
+   POSIX.1-2024 Base headers, interfaces, and XCU utilities. It also lists
+   active option groups and exported `libc.a` symbols.
+   `posix.async_signal_safe`, `posix.cancellation`, `coverage.unit`,
+   `traceability.unit`, `docs.html`, `docs.needs`, and `docs.audit` complete the
+   suite.
 
 ## Containerized workflow and commands
 

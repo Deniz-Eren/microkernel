@@ -21,6 +21,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Extended Gate 2 (`posix.symbol_diff`, `tools/posix/audit_lib.py`,
+  `tests/posix/test_symbol_diff.py`, `CMakeLists.txt`) to index POSIX.1-2024
+  `XCU` Base utilities, verify every binary in `bin/CMakeLists.txt` is packed in
+  `boot.tar` and belongs to POSIX.1-2024 Base (`BDR_0004`), and report
+  `utilities_base_implemented` plus `## Missing BASE/CX/OB Utilities` in
+  `build/posix-symbol-diff.txt`.
 - Implemented strict POSIX.1-2024 Base process inspection, configuration, and
   TTY size/name interfaces (`TSK_0031`, `SWR_PROC_0010`, `ADR_0028`,
   `ICD_PROC_0009`, `COMP_PROC_0009`, `VER_PROC_0008`): added `pcb_t.comm`/`args`

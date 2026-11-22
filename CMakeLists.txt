@@ -344,6 +344,8 @@ add_test(
         --nm "${CMAKE_NM}"
         --libc "${SYSROOT_DIR}/usr/lib/libc.a"
         --manifest "${CMAKE_SOURCE_DIR}/tests/posix/issue8-manifest.tsv"
+        --bin-cmake "${CMAKE_SOURCE_DIR}/bin/CMakeLists.txt"
+        --boot-tar "${CMAKE_BINARY_DIR}/boot.tar"
         --report "${CMAKE_BINARY_DIR}/posix-symbol-diff.txt"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )

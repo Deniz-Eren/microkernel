@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import tarfile
 import tempfile
 from collections import defaultdict
 from dataclasses import dataclass
@@ -53,6 +54,9 @@ _RELOC_RE = re.compile(
     r"\bR_(?:X86_64|AARCH64)_\w+\s+([A-Za-z_][A-Za-z0-9_.$]*)"
 )
 _DEFINE_RE = re.compile(r"^#define\s+([A-Za-z_][A-Za-z0-9_]*)\b")
+_BIN_TARGET_RE = re.compile(
+    r"microkernel_add_user_executable\(\s*([^)]+?)\s*\)"
+)
 
 
 @dataclass(frozen=True)
@@ -68,10 +72,11 @@ class ManifestEntry:
 
 @dataclass(frozen=True)
 class PosixManifest:
-    """Indexed view of POSIX.1-2024 Issue 8 headers and interfaces."""
+    """Indexed view of POSIX.1-2024 Issue 8 headers, interfaces, utilities."""
 
     headers: dict[str, ManifestEntry]
     interfaces: dict[str, ManifestEntry]
+    utilities: dict[str, ManifestEntry]
 
     def base_headers(self) -> set[str]:
         return {
@@ -87,11 +92,19 @@ class PosixManifest:
             if entry.group in BASE_TARGET_GROUPS
         }
 
+    def base_utilities(self) -> set[str]:
+        return {
+            name
+            for name, entry in self.utilities.items()
+            if entry.group in BASE_TARGET_GROUPS
+        }
+
 
 def load_manifest(path: Path) -> PosixManifest:
-    """Parse `issue8-manifest.tsv` into header and interface maps."""
+    """Parse `issue8-manifest.tsv` into header, interface, and utility maps."""
     headers: dict[str, ManifestEntry] = {}
     interfaces: dict[str, ManifestEntry] = {}
+    utilities: dict[str, ManifestEntry] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith("#"):
             continue
@@ -109,7 +122,32 @@ def load_manifest(path: Path) -> PosixManifest:
             headers[entry.identifier] = entry
         elif entry.category == "interface":
             interfaces[entry.identifier] = entry
-    return PosixManifest(headers=headers, interfaces=interfaces)
+        elif entry.category == "utility":
+            utilities[entry.identifier] = entry
+    return PosixManifest(
+        headers=headers, interfaces=interfaces, utilities=utilities
+    )
+
+
+def extract_bin_utilities(bin_cmake: Path) -> set[str]:
+    """Return bootfs binary names registered in `bin/CMakeLists.txt`."""
+    names: set[str] = set()
+    text = bin_cmake.read_text(encoding="utf-8")
+    for match in _BIN_TARGET_RE.finditer(text):
+        tokens = match.group(1).split()
+        if not tokens:
+            continue
+        if len(tokens) >= 3 and tokens[1] == "BOOT_NAME":
+            names.add(tokens[2])
+        else:
+            names.add(tokens[0])
+    return names
+
+
+def extract_tar_members(boot_tar: Path) -> set[str]:
+    """Return top-level file names packed inside `boot.tar`."""
+    with tarfile.open(boot_tar, "r") as tf:
+        return {Path(m.name).name for m in tf.getmembers() if m.isfile()}
 
 
 def is_reserved_identifier(name: str) -> bool:
