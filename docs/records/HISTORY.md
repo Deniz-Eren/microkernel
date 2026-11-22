@@ -20,6 +20,20 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0027 — Add opt-in automated LLVM code coverage pipeline
+
+```{task} Add opt-in automated LLVM code coverage pipeline
+:id: TSK_0027
+:status: done
+:traces: ADR_0025, SWR_DOCS_0005
+
+Add `-DMICROKERNEL_COVERAGE=ON` LLVM instrumentation, linker `__llvm_prf_*`
+anchors, and a freestanding Raw Profile v8 emitter. Stream base64 records over
+`arch_console_write()` via `SYS_COV_WRITE` and `test_runner.py --cov-out`. Add
+`tools/coverage/generate_report.py` and `./scripts/env.sh coverage` for HTML,
+LCOV, and text reports in `build-cov/` ({need}`SWR_DOCS_0005`).
+```
+
 ### TSK_0026 — Isolate x86-64 platform code behind x86-64 HAL folders
 
 ```{task} Isolate x86-64 platform code behind x86-64 HAL folders

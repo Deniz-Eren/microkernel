@@ -10,7 +10,7 @@
 
 # Microkernel Podman environment wrapper.
 #
-# Usage: ./scripts/env.sh <configure|build|test|run|clean|shell|cmd...>
+# Usage: ./scripts/env.sh <configure|build|test|run|coverage|clean|shell|cmd...>
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -83,8 +83,35 @@ EOF
                 -serial mon:stdio -display none -no-reboot "$@"
         ' -- "$@"
         ;;
+    coverage)
+        shift
+        ensure_image
+        crun bash -c '
+            set -euo pipefail
+            ARCH="$1"
+            shift
+            cmake -S . -B build-cov -G Ninja \
+                -DMICROKERNEL_ARCH="$ARCH" \
+                -DCMAKE_TOOLCHAIN_FILE="cmake/clang-${ARCH}.cmake" \
+                -DMICROKERNEL_COVERAGE=ON "$@"
+            cmake --build build-cov
+            rm -rf build-cov/coverage
+            mkdir -p build-cov/coverage/raw
+            python3 tests/test_runner.py \
+                --arch "$ARCH" \
+                --iso build-cov/microkernel.iso \
+                --timeout 240 \
+                --expect-file scripts/qemu-expects.txt \
+                --cov-out build-cov/coverage/raw \
+                --wait-cov
+            python3 tools/coverage/generate_report.py \
+                --raw-dir build-cov/coverage/raw \
+                --build-dir build-cov \
+                --out-dir build-cov/coverage
+        ' -- "$ARCH" "$@"
+        ;;
     clean)
-        rm -rf "$ROOT/build" "$ROOT/sysroot"
+        rm -rf "$ROOT/build" "$ROOT/build-cov" "$ROOT/sysroot"
         ;;
     shell)
         ensure_image

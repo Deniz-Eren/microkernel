@@ -22,7 +22,8 @@ to `build/` and `sysroot/`.
 | `./scripts/env.sh configure` | configure `build/` (Ninja, toolchain) |
 | `./scripts/env.sh build` | incremental build of all targets |
 | `./scripts/env.sh test` | run the QEMU test harness |
-| `./scripts/env.sh clean` | remove `build/` and `sysroot/` |
+| `./scripts/env.sh coverage` | build `build-cov/` and emit HTML/LCOV coverage |
+| `./scripts/env.sh clean` | remove `build/`, `build-cov/`, and `sysroot/` |
 
 For each phase of work, run `scripts/build-agent.sh`. It builds, tests, and
 lints, and it prints only the summary and the failures.

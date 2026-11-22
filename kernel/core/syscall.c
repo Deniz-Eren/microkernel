@@ -9,6 +9,7 @@
  */
 
 #include <kernel/arch.h>
+#include <kernel/cov.h>
 #include <kernel/trapframe.h>
 #include <kernel/printk.h>
 #include <kernel/sched.h>
@@ -254,6 +255,9 @@ void syscall_handler(trapframe_t *tf) {
         break;
     case SYS_SYS_STATS:
         ret = sys_sys_stats(a0);
+        break;
+    case SYS_COV_WRITE:
+        ret = sys_cov_write(a0, a1);
         break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();

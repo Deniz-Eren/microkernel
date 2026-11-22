@@ -137,6 +137,9 @@ Your host needs only Podman. The first `./scripts/env.sh` run builds the pinned
 # Boot Microkernel interactively into the Ring 3 command shell (Ctrl-A X exits)
 ./scripts/env.sh run
 
+# Generate on-demand LLVM HTML, LCOV, and text coverage in build-cov/coverage/
+./scripts/env.sh coverage
+
 # Open a development bash shell inside the Podman container
 ./scripts/enter-dev.sh
 ```
@@ -350,8 +353,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (next task): `<sys/select.h>` (`select`, `pselect`)
-and cross-subsystem stress and leak hardening. See
+Not available at this time (planned next): additional `libc` Base headers
+(`<sys/utsname.h>`, `<setjmp.h>`, `<fnmatch.h>`), TTY job control (`ISIG`), Ring
+3 `virtio-blk` disk storage, and ACPI `MADT` SMP bring-up. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
@@ -398,10 +402,10 @@ library functions. Recent milestones added the 4-gate POSIX harness,
 `SHM`/`ML`/`MLR`. They also added Ring 3 COM1 TTY (`<termios.h>`), buffered
 `<stdio.h>`, `setenv`/`unsetenv`, `execvp`, and core C17/POSIX headers.
 
-Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`) and the Ring
-3 command shell (`sh`) with core utilities. They also added ACPI `MADT`/`SPCR`
-driver discovery, Ring 3 `OPOST` TX, and interactive `./scripts/env.sh run`
-boot. The remaining task adds `<sys/select.h>` and cross-subsystem hardening.
+Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`), the Ring 3
+command shell (`sh`) with core utilities, and `<sys/select.h>` leak-freedom
+stress tests. They also added ACPI `MADT`/`SPCR` driver discovery, `x86-64` HAL
+isolation, and opt-in LLVM coverage (`./scripts/env.sh coverage`).
 
 ## Documentation
 

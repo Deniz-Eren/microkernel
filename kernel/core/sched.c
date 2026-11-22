@@ -9,6 +9,7 @@
  */
 
 #include <kernel/arch.h>
+#include <kernel/cov.h>
 #include <kernel/sched.h>
 #include <kernel/ipc.h>
 #include <kernel/time.h>
@@ -371,6 +372,7 @@ void thread_exit_current(int status) {
     reap_thread(t);
     p->nthreads--;
     if (p->nthreads == 0) {
+        cov_dump_proc(p);
         time_cleanup_proc(p->pid);
         proc_close_fds(p, 0);
         p->state = PROC_ZOMBIE;

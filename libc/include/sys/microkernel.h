@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 /* need:: ICD_PROC_0001 */
 /* Microkernel system call ABI — shared between the kernel and libc. Register
  * convention: System V AMD64. RAX = number in / result out (negative errno on
@@ -68,8 +70,22 @@
 #define SYS_SHM_MAP 50
 #define SYS_VM_MLOCK 51
 #define SYS_SYS_STATS 52
+#define SYS_COV_WRITE 53
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1
+
+#define COV_OP_REGISTER 1u
+#define COV_OP_DUMP_ALL 2u
+
+struct __k_cov_desc {
+    uint64_t data_begin;
+    uint64_t data_end;
+    uint64_t cnts_begin;
+    uint64_t cnts_end;
+    uint64_t names_begin;
+    uint64_t names_end;
+    char name[32];
+};
 
 #include <sys/arch/syscall.h>

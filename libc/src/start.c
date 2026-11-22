@@ -21,6 +21,9 @@ char **environ;
 void *__auxv;
 
 extern int main(int argc, char **argv, char **envp);
+#ifdef MICROKERNEL_COVERAGE
+extern void __libc_cov_init(const char *progname);
+#endif
 
 /* C++ forward-compatibility hooks: iterate global constructors before main
  * and destructors at exit. */
@@ -57,6 +60,9 @@ void __libc_start_main(long *stack) {
     __auxv = p + 1;
 
     __libc_init_main_tls();
+#ifdef MICROKERNEL_COVERAGE
+    __libc_cov_init(argc > 0 ? argv[0] : "app");
+#endif
     __libc_init_array();
     exit(main(argc, argv, envp));
 }

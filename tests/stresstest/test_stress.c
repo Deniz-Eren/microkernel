@@ -19,6 +19,7 @@
 #include <string.h>
 #include <sys/fd.h>
 #include <sys/ipc.h>
+#include <sys/microkernel.h>
 #include <sys/mman.h>
 #include <sys/select.h>
 #include <sys/sock.h>
@@ -666,5 +667,9 @@ int main(void) {
     printf("[OK] zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks "
            "verified (pmm_free=%llu)\n",
            (unsigned long long)after.k.pmm_free_bytes);
+#ifdef MICROKERNEL_COVERAGE
+    (void)fflush(stdout);
+    (void)__sys2(SYS_COV_WRITE, (long)COV_OP_DUMP_ALL, 0);
+#endif
     return 0;
 }

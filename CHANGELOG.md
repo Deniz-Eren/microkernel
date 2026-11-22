@@ -93,6 +93,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Opt-in automated LLVM source-based code coverage pipeline (`TSK_0027`,
+  `SWR_DOCS_0005`, `ADR_0025`, `ICD_DOCS_0002`, `COMP_DOCS_0004`,
+  `VER_DOCS_0006`): added `-DMICROKERNEL_COVERAGE=ON` instrumentation for Ring 0
+  and Ring 3 (`kernel/`, `libc/`, `servers/`, `bin/`), linker `__llvm_prf_*`
+  section anchors, freestanding Raw Profile v8 streaming over
+  `arch_console_write()` (`SYS_COV_WRITE`), `tests/test_runner.py --cov-out
+  --wait-cov`, `tools/coverage/generate_report.py`, CTest `coverage.unit`,
+  `./scripts/env.sh coverage` (generating `build-cov/coverage/html/index.html`,
+  `lcov.info`, and `summary.txt`), and `build-cov/` in `.gitignore`.
 - `x86-64` Hardware Abstraction Layer (HAL) isolation and parameterized platform
   build (`TSK_0026`, `SWR_BOOT_0004`, `ADR_0024`, `ICD_BOOT_0002`,
   `COMP_BOOT_0004`, `VER_BOOT_0003`): moved `x86-64` kernel, linker, `libc`

@@ -63,7 +63,7 @@ pipes, TTY, sockets, and `SHM`. It must check exact kernel frame counts and Ring
 
 ```{swr} Generate automated Ring 0 and Ring 3 LLVM code coverage on demand
 :id: SWR_DOCS_0005
-:status: draft
+:status: active
 :derives: SYS_DOCS_0001
 :traces: ADR_0025
 

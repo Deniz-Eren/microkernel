@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/fd.h>
+#include <sys/microkernel.h>
 
 struct trapframe;
 
@@ -112,6 +113,12 @@ struct pcb {
 
     /* Per-process file descriptor table. */
     struct __k_fd_entry fds[PROC_MAX_FDS];
+
+#ifdef MICROKERNEL_COVERAGE
+    struct __k_cov_desc cov;
+    uint8_t cov_registered;
+    uint8_t cov_dumped;
+#endif
 
     pcb_t *next; /* global process list */
 };

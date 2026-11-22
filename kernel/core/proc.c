@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <kernel/acpi.h>
 #include <kernel/arch.h>
+#include <kernel/cov.h>
 #include <kernel/elf.h>
 #include <kernel/ipc.h>
 #include <kernel/kheap.h>
@@ -554,6 +555,11 @@ long sys_proc_fork(const trapframe_t *tf) {
     memcpy(child->sig_masks, parent->sig_masks, sizeof(child->sig_masks));
     memcpy(child->sig_flags, parent->sig_flags, sizeof(child->sig_flags));
     child->sig_restorer = parent->sig_restorer;
+#ifdef MICROKERNEL_COVERAGE
+    child->cov = parent->cov;
+    child->cov_registered = parent->cov_registered;
+    child->cov_dumped = 0;
+#endif
     memcpy(child->fds, parent->fds, sizeof(child->fds));
     for (int i = 0; i < PROC_MAX_FDS; i++) {
         if (child->fds[i].kind == FD_KIND_SHM) {
@@ -713,6 +719,11 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
     }
 
     /* Point of no return: commit the new process image. */
+    cov_dump_proc(p);
+#ifdef MICROKERNEL_COVERAGE
+    p->cov_registered = 0;
+    p->cov_dumped = 0;
+#endif
     proc_kill_other_threads(p, cur);
     for (tcb_t *x = p->threads; x; x = x->proc_next) {
         x->user_stack_base = 0;

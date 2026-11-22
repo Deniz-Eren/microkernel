@@ -66,6 +66,27 @@ SECTIONS
     .data : AT(ADDR(.data) - KERNEL_OFFSET) {
         __data_start = .;
         *(.data .data.*)
+    }
+
+    . = ALIGN(8);
+    __llvm_prf_data : AT(ADDR(__llvm_prf_data) - KERNEL_OFFSET) {
+        __start___llvm_prf_data = .;
+        KEEP(*(__llvm_prf_data))
+        __stop___llvm_prf_data = .;
+    }
+
+    . = ALIGN(8);
+    __llvm_prf_cnts : AT(ADDR(__llvm_prf_cnts) - KERNEL_OFFSET) {
+        __start___llvm_prf_cnts = .;
+        KEEP(*(__llvm_prf_cnts))
+        __stop___llvm_prf_cnts = .;
+    }
+
+    . = ALIGN(8);
+    __llvm_prf_names : AT(ADDR(__llvm_prf_names) - KERNEL_OFFSET) {
+        __start___llvm_prf_names = .;
+        KEEP(*(__llvm_prf_names))
+        __stop___llvm_prf_names = .;
         __data_end = .;
     }
 

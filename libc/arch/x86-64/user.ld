@@ -23,6 +23,21 @@ SECTIONS
     .rodata : { *(.rodata .rodata.*) } :rodata
     . = ALIGN(4096);
     .data : { *(.data .data.*) } :data
+    __llvm_prf_data : ALIGN(8) {
+        __start___llvm_prf_data = .;
+        KEEP(*(__llvm_prf_data))
+        __stop___llvm_prf_data = .;
+    } :data
+    __llvm_prf_cnts : ALIGN(8) {
+        __start___llvm_prf_cnts = .;
+        KEEP(*(__llvm_prf_cnts))
+        __stop___llvm_prf_cnts = .;
+    } :data
+    __llvm_prf_names : ALIGN(8) {
+        __start___llvm_prf_names = .;
+        KEEP(*(__llvm_prf_names))
+        __stop___llvm_prf_names = .;
+    } :data
     .bss : { *(.bss .bss.*) *(COMMON) } :data
     . = ALIGN(4096);
 

@@ -57,69 +57,7 @@ fi
 echo "==> test"
 TEST_LOG="$(mktemp)"
 if ! "$ENV" test --timeout 120 \
-    --expect '\[OK\] PMM/VMM/APIC initialized' \
-    --expect 'ACPI MADT discovered IOAPIC @ 0x' \
-    --expect 'name resolved /dev/echo' \
-    --expect 'sigaction rejects SIGKILL and SIGSTOP with EINVAL' \
-    --expect 'errno thread-local and preserved across success' \
-    --expect 'signal handler entered' \
-    --expect 'signal mask saved and restored across sigreturn' \
-    --expect 'VMMap/mmap W\^X, mprotect, msync, and munmap verified' \
-    --expect 'ProcCreate spawned procchild' \
-    --expect 'procchild COW read and private write succeeded' \
-    --expect 'waitpid reaped procchild .* exit=42' \
-    --expect 'VMCloneCow isolated parent and child writes cleanly' \
-    --expect 'rtcdrv granted Ring 3 IOPL=3' \
-    --expect 'rtcdrv configured CMOS port=0x70 gsi=8' \
-    --expect 'rtcdrv handled 3 hardware IRQ 8 events via IPC' \
-    --expect 'unprivileged IOPLSet and AttachIntrEvent rejected with EPERM' \
-    --expect 'drvtest ReadMsgV/WriteMsgV /dev/rtc round trip succeeded' \
-    --expect 'CLOCK_MONOTONIC, CLOCK_REALTIME, and clock_nanosleep verified' \
-    --expect 'POSIX timer_create/timer_settime fired .* SIGUSR1 ticks' \
-    --expect 'pthreads FS\.base TLS, mutex, spinlock, barrier, rwlock' \
-    --expect 'pthread_cond_clockwait and sem_wait/sem_clockwait verified' \
-    --expect 'pipeserv registered /dev/pipe' \
-    --expect 'fork COW isolated parent and child \(child=.* exit=33\)' \
-    --expect 'pipe2, dup3 O_CLOEXEC, and execve argv/envp/pipe verified' \
-    --expect 'ppoll finite timeout and atomic sigmask EINTR verified' \
-    --expect 'aio_read, aio_write, aio_suspend, and SIGEV_SIGNAL verified' \
-    --expect 'aio_cancel, aio_suspend EAGAIN timeout, and aio_fsync verified' \
-    --expect 'lio_listio LIO_WAIT and LIO_NOWAIT batch verified' \
-    --expect 'pthread_cancel woke cond_wait and ran cleanup' \
-    --expect 'PTHREAD_CANCEL_DISABLE, testcancel, and LIFO cleanup verified' \
-    --expect 'cancellation points read, ppoll, sem_wait, and clock_nanosleep' \
-    --expect 'flockfile/ftrylockfile/funlockfile serialized concurrent stdio' \
-    --expect 'strlcpy, strlcat, reallocarray, and secure_getenv verified' \
-    --expect 'getentropy\(32\) uniqueness and >256 EINVAL verified' \
-    --expect '<stdatomic\.h>, <stdalign\.h>, and <uchar\.h> UTF-16/UTF-32' \
-    --expect 'mmap slab coalescing, alignment, and 20 MiB churn verified' \
-    --expect 'large munmap reclamation, free errno, and realloc boundaries' \
-    --expect '4-thread concurrent mmap malloc/calloc/realloc/free stress' \
-    --expect 'vfsserv registered /dev/vfs' \
-    --expect 'bootfs /boot readdir, ELF read, fstat, and EROFS verified' \
-    --expect 'tmpfs mkdir, chdir, getcwd, openat, lseek, ftruncate, and stat' \
-    --expect 'VFS shared dup/fork offsets, unlinked open persistence' \
-    --expect 'SHM shm_open/shm_unlink, ftruncate, and cross-process' \
-    --expect 'ML/MLR mlock, munlock, mlockall, and munlockall verified' \
-    --expect 'ttyserv handled COM1 IRQ 4 pulse via IOAPIC' \
-    --expect 'ttyserv configured UART port=0x3f8 gsi=4 \(OPOST/ECHO' \
-    --expect 'ttyserv registered /dev/tty' \
-    --expect 'isatty, /dev/tty, tcgetattr/tcsetattr, and speeds verified' \
-    --expect 'canonical line discipline \(VERASE, VKILL, ICRNL, VEOF\)' \
-    --expect 'raw mode and multi-server ppoll \(TTY \+ pipe\) verified' \
-    --expect 'buffered stdio fopen, fread/fwrite, fgets, ungetc, fseek, and' \
-    --expect 'setenv/unsetenv and execvp PATH lookup with environ' \
-    --expect 'ctype, strings, inttypes, limits, assert, strdup, strstr, and' \
-    --expect 'sockserv registered /dev/sock' \
-    --expect 'AF_UNIX socketpair, SOCK_CLOEXEC/SOCK_NONBLOCK, MSG_PEEK, and' \
-    --expect 'AF_UNIX bind, listen, connect, and accept4 atomic flags' \
-    --expect 'AF_UNIX SOCK_DGRAM sendto/recvfrom and multi-server ppoll' \
-    --expect 'sh pipelines, redirections, and core utilities' \
-    --expect 'sh Issue 8 ANSI-C quoting, set -o pipefail, and built-ins' \
-    --expect 'sh Issue 8 read -d custom and NUL delimiters verified' \
-    --expect '<sys/select\.h> select, pselect, multi-server FDs, and sigmask' \
-    --expect 'cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,' \
-    --expect 'zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks' \
+    --expect-file scripts/qemu-expects.txt \
     > "$TEST_LOG" 2>&1; then
     echo "BUILD: FAIL (test step; log: $TEST_LOG)"
     tail -20 "$TEST_LOG"

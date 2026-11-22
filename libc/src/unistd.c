@@ -22,6 +22,10 @@
 
 /* need:: COMP_LIBC_0001 COMP_LIBC_0004 */
 
+#ifdef MICROKERNEL_COVERAGE
+extern void __libc_cov_reset_counters(void);
+#endif
+
 ssize_t write(int fd, const void *buf, size_t n) {
     return __libc_fd_write(fd, buf, n);
 }
@@ -51,6 +55,9 @@ pid_t fork(void) {
         return -1;
     }
     if (r == 0) {
+#ifdef MICROKERNEL_COVERAGE
+        __libc_cov_reset_counters();
+#endif
         __pthread_tls_t *tls = __libc_tls_self();
         if (tls) {
             tls->tid = (unsigned int)ThreadGetTid();

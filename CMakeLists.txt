@@ -26,7 +26,18 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/cmake/arch/${MICROKERNEL_ARCH}.cmake")
 endif()
 include("${CMAKE_SOURCE_DIR}/cmake/arch/${MICROKERNEL_ARCH}.cmake")
 
-set(SYSROOT_DIR ${CMAKE_SOURCE_DIR}/sysroot)
+option(MICROKERNEL_COVERAGE "Enable LLVM source-based code coverage" OFF)
+if(MICROKERNEL_COVERAGE)
+    set(SYSROOT_DIR ${CMAKE_BINARY_DIR}/sysroot)
+    set(COV_INSTR_FLAGS
+        -fprofile-instr-generate
+        -fcoverage-mapping
+        -DMICROKERNEL_COVERAGE=1
+    )
+else()
+    set(SYSROOT_DIR ${CMAKE_SOURCE_DIR}/sysroot)
+    set(COV_INSTR_FLAGS "")
+endif()
 
 # Clang provides freestanding headers (stdint.h, stddef.h, stdarg.h, ...) in its
 # resource dir; we pass -nostdinc and re-add exactly that directory.
@@ -86,6 +97,18 @@ set(USER_CFLAGS
 file(GLOB LIBC_SRCS CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/libc/src/*.c
     ${CMAKE_SOURCE_DIR}/libc/arch/${MICROKERNEL_ARCH}/*.c)
+if(MICROKERNEL_COVERAGE)
+    foreach(src IN LISTS LIBC_SRCS)
+        get_filename_component(fname "${src}" NAME)
+        if(fname STREQUAL "cov_runtime.c")
+            set_source_files_properties("${src}" PROPERTIES
+                COMPILE_OPTIONS "-DMICROKERNEL_COVERAGE=1")
+        else()
+            set_source_files_properties("${src}" PROPERTIES
+                COMPILE_OPTIONS "${COV_INSTR_FLAGS}")
+        endif()
+    endforeach()
+endif()
 add_library(c STATIC ${LIBC_SRCS})
 target_compile_options(c PRIVATE ${USER_CFLAGS})
 target_include_directories(c SYSTEM PRIVATE
@@ -130,6 +153,13 @@ function(microkernel_add_user_executable name)
     endif()
     add_executable(${name} ${srcs})
     target_compile_options(${name} PRIVATE ${USER_CFLAGS})
+    if(MICROKERNEL_COVERAGE)
+        if(CMAKE_CURRENT_SOURCE_DIR MATCHES "/(servers|bin)(/|$)")
+            target_compile_options(${name} PRIVATE ${COV_INSTR_FLAGS})
+        else()
+            target_compile_options(${name} PRIVATE -DMICROKERNEL_COVERAGE=1)
+        endif()
+    endif()
     target_include_directories(${name} SYSTEM PRIVATE
         ${SYSROOT_DIR}/usr/include
         ${CLANG_RESOURCE_DIR}/include
@@ -218,6 +248,18 @@ file(GLOB KERNEL_CORE_SRCS CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/kernel/lib/*.c
     ${CMAKE_SOURCE_DIR}/kernel/arch/${MICROKERNEL_ARCH}/*.c
 )
+if(MICROKERNEL_COVERAGE)
+    foreach(src IN LISTS KERNEL_CORE_SRCS)
+        get_filename_component(fname "${src}" NAME)
+        if(fname STREQUAL "cov.c")
+            set_source_files_properties("${src}" PROPERTIES
+                COMPILE_OPTIONS "-DMICROKERNEL_COVERAGE=1")
+        else()
+            set_source_files_properties("${src}" PROPERTIES
+                COMPILE_OPTIONS "${COV_INSTR_FLAGS}")
+        endif()
+    endforeach()
+endif()
 
 add_executable(kernel.elf
     ${KERNEL_CORE_SRCS}
@@ -265,7 +307,9 @@ add_custom_target(iso ALL
 #------------------------------------------------------------------------------
 # Documentation and traceability (Sphinx, MyST-Parser, Sphinx-Needs, CTest)
 #------------------------------------------------------------------------------
-add_subdirectory(docs)
+if(NOT MICROKERNEL_COVERAGE)
+    add_subdirectory(docs)
+endif()
 enable_testing()
 
 add_test(
@@ -330,4 +374,16 @@ add_test(
 set_tests_properties(
     posix.cancellation
     PROPERTIES LABELS "posix;libc"
+)
+
+add_test(
+    NAME coverage.unit
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/coverage/test_generate_report.py"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_tests_properties(
+    coverage.unit
+    PROPERTIES LABELS "docs;coverage"
 )

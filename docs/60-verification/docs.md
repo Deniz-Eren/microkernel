@@ -58,3 +58,15 @@ multi-server FDs, atomic `sigmask` `EINTR`) and exact PMM frame, FD, SHM, pipe,
 VFS, and socket handle equality across stress rounds. CTest Gates 1 to 3 verify
 `<sys/select.h>` compilation, symbols, and cancellation ({need}`SWR_DOCS_0004`).
 ```
+
+```{ver} Verify framed LLVM profile decoding and coverage report pipeline
+:id: VER_DOCS_0006
+:status: active
+:tags: unit
+:verifies: SWR_DOCS_0005
+
+CTest `coverage.unit` (`tests/coverage/test_generate_report.py`) verifies base64
+frame decoding, magic validation, ELF `__llvm_covmap` detection, and `llvm-cov`
+commands. `tests/test_runner.py --cov-out --wait-cov` captures Ring 0 and Ring 3
+profiles during `./scripts/env.sh coverage` ({need}`SWR_DOCS_0005`).
+```

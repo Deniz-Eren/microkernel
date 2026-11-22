@@ -37,3 +37,16 @@ tags, untagged tests, or active `ICD_`/`COMP_`/`VER_` items with no code tags
 Clang JSON AST declarations and `llvm-nm` exports, and builds `llvm-objdump`
 call graphs for the POSIX.1-2024 compatibility gates ({need}`ARC_DOCS_0001`).
 ```
+
+```{comp} Freestanding LLVM Raw Profile v8 collector and report generator
+:id: COMP_DOCS_0004
+:status: active
+:refines: ARC_DOCS_0001, ICD_DOCS_0002
+:satisfies: SWR_DOCS_0005
+
+`kernel/core/cov.c` and `libc/src/cov_runtime.c` stream Raw Profile v8 data as
+base64 frames over `arch_console_write()` under `-DMICROKERNEL_COVERAGE=ON`.
+`tools/coverage/generate_report.py` decodes frames and runs `llvm-profdata` and
+`llvm-cov` to emit HTML, LCOV, and text reports ({need}`ICD_DOCS_0002`,
+{need}`ARC_DOCS_0001`).
+```

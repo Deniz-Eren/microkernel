@@ -12,3 +12,15 @@ Domain `DOCS`: Traceability configuration schema and exported model contract.
 schema for domains, ID patterns, SysML v2 links, and test file patterns
 ({need}`ARC_DOCS_0001`, {need}`SWR_DOCS_0001`, {need}`SWR_DOCS_0002`).
 ```
+
+```{icd} Kernel coverage collector and framed console ABI
+:id: ICD_DOCS_0002
+:status: active
+:refines: ARC_DOCS_0001
+:satisfies: SWR_DOCS_0005
+
+`kernel/include/kernel/cov.h` and `SYS_COV_WRITE` (`COV_OP_REGISTER`,
+`COV_OP_DUMP_ALL`, `struct __k_cov_desc`) define the opt-in coverage handoff.
+Base64 frames use `@@COV_BEGIN <name>@@`, `@@COV_END@@`, and `@@COV_COMPLETE@@`
+over `arch_console_write()` ({need}`ARC_DOCS_0001`, {need}`SWR_DOCS_0005`).
+```
