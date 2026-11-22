@@ -25,6 +25,8 @@ ssize_t __libc_vfs_write(uint32_t handle, const void *buf, size_t n,
                          uint32_t status_flags);
 long __libc_vfs_dup_handle(uint32_t handle);
 void __libc_vfs_close_handle(uint32_t handle);
+int __libc_vfs_resolve_handle(uint32_t handle, char *out, size_t out_cap,
+                              uint32_t *mode_out);
 
 ssize_t __libc_tty_read(void *buf, size_t n, uint32_t status_flags);
 ssize_t __libc_tty_write(const void *buf, size_t n);

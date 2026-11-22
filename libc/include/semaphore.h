@@ -13,6 +13,7 @@
 
 /* need:: ICD_PROC_0007 */
 
+#include <fcntl.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -22,6 +23,7 @@
 typedef struct {
     unsigned int __val;
     unsigned int __waiters;
+    unsigned long long __uid;
 } sem_t;
 
 int sem_init(sem_t *sem, int pshared, unsigned value);
@@ -33,5 +35,9 @@ int sem_clockwait(sem_t *restrict sem, clockid_t clock_id,
                   const struct timespec *restrict abstime);
 int sem_post(sem_t *sem);
 int sem_getvalue(sem_t *restrict sem, int *restrict sval);
+
+sem_t *sem_open(const char *name, int oflag, ...);
+int sem_close(sem_t *sem);
+int sem_unlink(const char *name);
 
 #endif /* _SEMAPHORE_H */

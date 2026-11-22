@@ -16,6 +16,7 @@
 #include <kernel/pmm.h>
 #include <kernel/printk.h>
 #include <kernel/sched.h>
+#include <kernel/signal.h>
 #include <kernel/smp.h>
 #include <kernel/spinlock.h>
 #include <kernel/string.h>
@@ -157,6 +158,10 @@ void sched_ready(tcb_t *t) {
     uint64_t flags = spin_lock_irqsave(&g_sched_lock);
     sched_ready_locked(t);
     spin_unlock_irqrestore(&g_sched_lock, flags);
+}
+
+void sched_remove_ready_locked(tcb_t *t) {
+    ready_remove_locked(t);
 }
 
 void sched_unready(tcb_t *t) {
@@ -703,13 +708,14 @@ void thread_exit_current(int status) {
         p->exit_code = status;
         pcb_t *parent = p->parent_pid ? proc_find_locked(p->parent_pid) : NULL;
         if (parent) {
-            uint64_t sf = spin_lock_irqsave(&g_sched_lock);
+            signal_notify_child_locked(parent, p->pid, p->uid);
+            spin_lock(&g_sched_lock);
             for (tcb_t *wt = parent->threads; wt; wt = wt->proc_next) {
-                if (wt->state == THREAD_WAIT_BLOCKED) {
+                if (wt->state == THREAD_WAIT_BLOCKED && !wt->in_sigsuspend) {
                     sched_ready_locked(wt);
                 }
             }
-            spin_unlock_irqrestore(&g_sched_lock, sf);
+            spin_unlock(&g_sched_lock);
         }
         spin_unlock_irqrestore(&g_proc_lock, pf);
         printk("[proc] pid %u became zombie (exit %d)\n", p->pid, status);
@@ -950,6 +956,17 @@ long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
         return -EINVAL;
     }
 
+    /* Key VMM_SHARED pages by physical address so MAP_SHARED semaphores and
+     * mutexes synchronize across processes without a Ring 0 registry. */
+    uint64_t pte = vmm_get_pte_to(p->pml4_phys, uaddr);
+    if (!(pte & VMM_PRESENT)) {
+        return -EFAULT;
+    }
+    uint8_t is_shared = (pte & VMM_SHARED) ? 1u : 0u;
+    uint64_t fkey = is_shared
+                        ? ((pte & 0x000FFFFFFFFFF000ULL) | (uaddr & 0xFFFULL))
+                        : uaddr;
+
     if (op == FUTEX_WAIT) {
         uint8_t has_timeout = 0u;
         uint64_t deadline = 0ULL;
@@ -989,13 +1006,15 @@ long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
         cur->futex_has_timeout = has_timeout;
         cur->sleep_clock_id = (uint8_t)clock_id;
         cur->sleep_deadline_ns = deadline;
-        cur->futex_addr = uaddr;
+        cur->futex_addr = fkey;
+        cur->futex_is_shared = is_shared;
         cur->futex_woken = 0;
         cur->state = THREAD_FUTEX_BLOCKED;
         spin_unlock(&g_futex_lock);
         schedule_with_lock(ff);
 
         cur->futex_addr = 0;
+        cur->futex_is_shared = 0u;
         cur->futex_has_timeout = 0;
         if (cur->futex_woken) {
             return 0;
@@ -1013,16 +1032,42 @@ long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
         uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         spin_lock(&g_futex_lock);
         spin_lock(&g_sched_lock);
-        for (tcb_t *t = p->threads; t && woken < val; t = t->proc_next) {
-            if (t->state == THREAD_FUTEX_BLOCKED && t->futex_addr == uaddr) {
-                t->futex_addr = 0;
-                t->futex_has_timeout = 0;
-                t->futex_woken = 1;
-                sched_ready_locked(t);
-                if (t->effective_priority > cur->effective_priority) {
-                    need_preempt = 1;
+        if (!is_shared) {
+            for (tcb_t *t = p->threads; t && woken < val; t = t->proc_next) {
+                if (t->state == THREAD_FUTEX_BLOCKED && !t->futex_is_shared &&
+                    t->futex_addr == fkey) {
+                    t->futex_addr = 0;
+                    t->futex_is_shared = 0u;
+                    t->futex_has_timeout = 0;
+                    t->futex_woken = 1;
+                    sched_ready_locked(t);
+                    if (t->effective_priority > cur->effective_priority) {
+                        need_preempt = 1;
+                    }
+                    woken++;
                 }
-                woken++;
+            }
+        } else {
+            for (pcb_t *op_p = proc_list_head(); op_p && woken < val;
+                 op_p = op_p->next) {
+                if (op_p->state != PROC_ALIVE) {
+                    continue;
+                }
+                for (tcb_t *t = op_p->threads; t && woken < val;
+                     t = t->proc_next) {
+                    if (t->state == THREAD_FUTEX_BLOCKED &&
+                        t->futex_is_shared && t->futex_addr == fkey) {
+                        t->futex_addr = 0;
+                        t->futex_is_shared = 0u;
+                        t->futex_has_timeout = 0;
+                        t->futex_woken = 1;
+                        sched_ready_locked(t);
+                        if (t->effective_priority > cur->effective_priority) {
+                            need_preempt = 1;
+                        }
+                        woken++;
+                    }
+                }
             }
         }
         spin_unlock(&g_sched_lock);

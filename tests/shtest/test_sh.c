@@ -472,6 +472,35 @@ static int test_xcu_file_utilities(void) {
     return 0;
 }
 
+static int test_wait_builtin(void) {
+    char out[256];
+    ssize_t len = 0;
+
+    int rc = run_sh_capture("/bin/true; wait; echo rc=$?", NULL, 0, out,
+                            sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "rc=0\n") != 0) {
+        printf("[FAIL] shtest wait-all rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    rc = run_sh_capture("wait -- 99999; echo rc=$?", NULL, 0, out, sizeof(out),
+                        &len);
+    if (rc != 0 || strcmp(out, "rc=127\n") != 0) {
+        printf("[FAIL] shtest wait-unknown rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    rc = run_sh_capture("wait notapid; echo rc=$?", NULL, 0, out, sizeof(out),
+                        &len);
+    if (rc != 0 || strcmp(out, "rc=127\n") != 0) {
+        printf("[FAIL] shtest wait-invalid rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] sh wait builtin reaped children and reported statuses\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -493,6 +522,9 @@ int main(void) {
         return 1;
     }
     if (test_xcu_file_utilities() != 0) {
+        return 1;
+    }
+    if (test_wait_builtin() != 0) {
         return 1;
     }
     return 0;

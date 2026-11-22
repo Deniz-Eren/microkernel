@@ -237,6 +237,10 @@ int pthread_attr_init(pthread_attr_t *attr) {
         return EINVAL;
     }
     attr->__detachstate = PTHREAD_CREATE_JOINABLE;
+    attr->__guardsize = 4096u;
+    attr->__schedparam.sched_priority = 0;
+    attr->__stackaddr = (void *)0;
+    attr->__stacksize = 0;
     return 0;
 }
 
@@ -261,6 +265,120 @@ int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate) {
     return 0;
 }
 
+int pthread_attr_getguardsize(const pthread_attr_t *restrict attr,
+                              size_t *restrict guardsize) {
+    if (!attr || !guardsize) {
+        return EINVAL;
+    }
+    *guardsize = attr->__guardsize;
+    return 0;
+}
+
+int pthread_attr_setguardsize(pthread_attr_t *attr, size_t guardsize) {
+    if (!attr) {
+        return EINVAL;
+    }
+    attr->__guardsize = guardsize;
+    return 0;
+}
+
+int pthread_attr_getschedparam(const pthread_attr_t *restrict attr,
+                               struct sched_param *restrict param) {
+    if (!attr || !param) {
+        return EINVAL;
+    }
+    *param = attr->__schedparam;
+    return 0;
+}
+
+int pthread_attr_setschedparam(pthread_attr_t *restrict attr,
+                               const struct sched_param *restrict param) {
+    if (!attr || !param || param->sched_priority < 0 ||
+        param->sched_priority > 255) {
+        return EINVAL;
+    }
+    attr->__schedparam = *param;
+    return 0;
+}
+
+int pthread_attr_getstack(const pthread_attr_t *restrict attr,
+                          void **restrict stackaddr,
+                          size_t *restrict stacksize) {
+    if (!attr || !stackaddr || !stacksize) {
+        return EINVAL;
+    }
+    *stackaddr = attr->__stackaddr;
+    *stacksize = attr->__stacksize;
+    return 0;
+}
+
+int pthread_attr_setstack(pthread_attr_t *attr, void *stackaddr,
+                          size_t stacksize) {
+    if (!attr || !stackaddr || stacksize < 4096u) {
+        return EINVAL;
+    }
+    attr->__stackaddr = stackaddr;
+    attr->__stacksize = stacksize;
+    return 0;
+}
+
+#define ATFORK_MAX 16
+
+static pthread_mutex_t g_atfork_lock = PTHREAD_MUTEX_INITIALIZER;
+static int g_atfork_count;
+static struct {
+    void (*prepare)(void);
+    void (*parent)(void);
+    void (*child)(void);
+} g_atfork[ATFORK_MAX];
+
+int pthread_atfork(void (*prepare)(void), void (*parent)(void),
+                   void (*child)(void)) {
+    (void)pthread_mutex_lock(&g_atfork_lock);
+    if (g_atfork_count >= ATFORK_MAX) {
+        (void)pthread_mutex_unlock(&g_atfork_lock);
+        return ENOMEM;
+    }
+    int idx = g_atfork_count++;
+    g_atfork[idx].prepare = prepare;
+    g_atfork[idx].parent = parent;
+    g_atfork[idx].child = child;
+    (void)pthread_mutex_unlock(&g_atfork_lock);
+    return 0;
+}
+
+void __libc_run_atfork_prepare(void) {
+    (void)pthread_mutex_lock(&g_atfork_lock);
+    int n = g_atfork_count;
+    (void)pthread_mutex_unlock(&g_atfork_lock);
+    for (int i = n - 1; i >= 0; i--) {
+        if (g_atfork[i].prepare) {
+            g_atfork[i].prepare();
+        }
+    }
+}
+
+void __libc_run_atfork_parent(void) {
+    (void)pthread_mutex_lock(&g_atfork_lock);
+    int n = g_atfork_count;
+    (void)pthread_mutex_unlock(&g_atfork_lock);
+    for (int i = 0; i < n; i++) {
+        if (g_atfork[i].parent) {
+            g_atfork[i].parent();
+        }
+    }
+}
+
+void __libc_run_atfork_child(void) {
+    g_atfork_lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    int n = g_atfork_count;
+    for (int i = 0; i < n; i++) {
+        if (g_atfork[i].child) {
+            g_atfork[i].child();
+        }
+    }
+}
+
 int pthread_create(pthread_t *restrict thread,
                    const pthread_attr_t *restrict attr,
                    void *(*start_routine)(void *), void *restrict arg) {
@@ -281,6 +399,9 @@ int pthread_create(pthread_t *restrict thread,
     if (ThreadGetCtx(0, &self_ti) >= 0) {
         prio = self_ti.prio;
     }
+    if (attr && attr->__schedparam.sched_priority > 0) {
+        prio = (unsigned)attr->__schedparam.sched_priority;
+    }
 
     long tid = NewThread(prio);
     if (tid < 0) {
@@ -290,12 +411,38 @@ int pthread_create(pthread_t *restrict thread,
     tls->tid = (unsigned int)tid;
     *thread = (pthread_t)tid;
 
-    long rc = ThreadReset((unsigned)tid, pthread_trampoline, tls, 0);
+    unsigned long stack_top = 0;
+    if (attr && attr->__stackaddr && attr->__stacksize >= 4096u) {
+        stack_top = (unsigned long)attr->__stackaddr + attr->__stacksize;
+    }
+    long rc = ThreadReset((unsigned)tid, pthread_trampoline, tls, stack_top);
     if (rc < 0) {
         __atomic_store_n(&tls->used, 0u, __ATOMIC_RELEASE);
         return (int)(-rc);
     }
     return 0;
+}
+
+#define MUTEX_RFLAG_INCONSISTENT 1u
+#define MUTEX_RFLAG_UNRECOVERABLE 2u
+
+static void release_robust_mutexes(__pthread_tls_t *tls) {
+    struct __pthread_mutex_s *m = tls->robust_head;
+    tls->robust_head = (struct __pthread_mutex_s *)0;
+    while (m) {
+        struct __pthread_mutex_s *next = m->__next_robust;
+        m->__next_robust = (struct __pthread_mutex_s *)0;
+        m->__owner = (pthread_t)0;
+        m->__count = 0u;
+        __atomic_fetch_or(&m->__rflags, MUTEX_RFLAG_INCONSISTENT,
+                          __ATOMIC_RELEASE);
+        unsigned int prev =
+            __atomic_exchange_n(&m->__state, 0u, __ATOMIC_RELEASE);
+        if (prev == 2u) {
+            (void)futex_wake(&m->__state, 1u);
+        }
+        m = next;
+    }
 }
 
 void pthread_exit(void *value_ptr) {
@@ -310,6 +457,7 @@ void pthread_exit(void *value_ptr) {
             }
         }
         run_tsd_destructors(tls);
+        release_robust_mutexes(tls);
         tls->retval = value_ptr;
         if (__atomic_load_n(&tls->detached, __ATOMIC_ACQUIRE)) {
             __atomic_store_n(&tls->used, 0u, __ATOMIC_RELEASE);
@@ -444,11 +592,44 @@ int pthread_setspecific(pthread_key_t key, const void *value) {
 
 /* ---- Mutexes (3-state futex: 0=free, 1=locked, 2=contended) ---- */
 
+static void robust_list_push(pthread_mutex_t *mutex) {
+    if (mutex->__robust != PTHREAD_MUTEX_ROBUST) {
+        return;
+    }
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (!tls) {
+        return;
+    }
+    mutex->__next_robust = tls->robust_head;
+    tls->robust_head = mutex;
+}
+
+static void robust_list_pop(pthread_mutex_t *mutex) {
+    if (mutex->__robust != PTHREAD_MUTEX_ROBUST) {
+        return;
+    }
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (!tls) {
+        return;
+    }
+    struct __pthread_mutex_s **pp = &tls->robust_head;
+    while (*pp) {
+        if (*pp == mutex) {
+            *pp = mutex->__next_robust;
+            mutex->__next_robust = (struct __pthread_mutex_s *)0;
+            return;
+        }
+        pp = &(*pp)->__next_robust;
+    }
+}
+
 int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
     if (!attr) {
         return EINVAL;
     }
     attr->__type = PTHREAD_MUTEX_NORMAL;
+    attr->__robust = PTHREAD_MUTEX_STALLED;
+    attr->__prioceiling = 0;
     return 0;
 }
 
@@ -475,6 +656,42 @@ int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
     return 0;
 }
 
+int pthread_mutexattr_getprioceiling(const pthread_mutexattr_t *restrict attr,
+                                     int *restrict prioceiling) {
+    if (!attr || !prioceiling) {
+        return EINVAL;
+    }
+    *prioceiling = attr->__prioceiling;
+    return 0;
+}
+
+int pthread_mutexattr_setprioceiling(pthread_mutexattr_t *attr,
+                                     int prioceiling) {
+    if (!attr || prioceiling < 0 || prioceiling > 255) {
+        return EINVAL;
+    }
+    attr->__prioceiling = prioceiling;
+    return 0;
+}
+
+int pthread_mutexattr_getrobust(const pthread_mutexattr_t *restrict attr,
+                                int *restrict robust) {
+    if (!attr || !robust) {
+        return EINVAL;
+    }
+    *robust = attr->__robust;
+    return 0;
+}
+
+int pthread_mutexattr_setrobust(pthread_mutexattr_t *attr, int robust) {
+    if (!attr ||
+        (robust != PTHREAD_MUTEX_STALLED && robust != PTHREAD_MUTEX_ROBUST)) {
+        return EINVAL;
+    }
+    attr->__robust = robust;
+    return 0;
+}
+
 int pthread_mutex_init(pthread_mutex_t *restrict mutex,
                        const pthread_mutexattr_t *restrict attr) {
     if (!mutex) {
@@ -484,6 +701,49 @@ int pthread_mutex_init(pthread_mutex_t *restrict mutex,
     mutex->__type = attr ? attr->__type : PTHREAD_MUTEX_NORMAL;
     mutex->__owner = (pthread_t)0;
     mutex->__count = 0u;
+    mutex->__robust = attr ? attr->__robust : PTHREAD_MUTEX_STALLED;
+    mutex->__prioceiling = attr ? attr->__prioceiling : 0;
+    mutex->__rflags = 0u;
+    mutex->__next_robust = (struct __pthread_mutex_s *)0;
+    return 0;
+}
+
+int pthread_mutex_getprioceiling(const pthread_mutex_t *restrict mutex,
+                                 int *restrict prioceiling) {
+    if (!mutex || !prioceiling) {
+        return EINVAL;
+    }
+    *prioceiling = mutex->__prioceiling;
+    return 0;
+}
+
+int pthread_mutex_setprioceiling(pthread_mutex_t *restrict mutex,
+                                 int prioceiling, int *restrict old_ceiling) {
+    if (!mutex || prioceiling < 0 || prioceiling > 255) {
+        return EINVAL;
+    }
+    int rc = pthread_mutex_lock(mutex);
+    if (rc != 0) {
+        return rc;
+    }
+    if (old_ceiling) {
+        *old_ceiling = mutex->__prioceiling;
+    }
+    mutex->__prioceiling = prioceiling;
+    return pthread_mutex_unlock(mutex);
+}
+
+int pthread_mutex_consistent(pthread_mutex_t *mutex) {
+    if (!mutex || mutex->__robust != PTHREAD_MUTEX_ROBUST) {
+        return EINVAL;
+    }
+    if (mutex->__owner != pthread_self() ||
+        (__atomic_load_n(&mutex->__rflags, __ATOMIC_ACQUIRE) &
+         MUTEX_RFLAG_INCONSISTENT) == 0u) {
+        return EINVAL;
+    }
+    __atomic_fetch_and(&mutex->__rflags, ~MUTEX_RFLAG_INCONSISTENT,
+                       __ATOMIC_RELEASE);
     return 0;
 }
 
@@ -497,9 +757,38 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex) {
     return 0;
 }
 
+static int mutex_finish_acquire(pthread_mutex_t *mutex, pthread_t self) {
+    if (mutex->__robust == PTHREAD_MUTEX_ROBUST) {
+        unsigned int rf = __atomic_load_n(&mutex->__rflags, __ATOMIC_ACQUIRE);
+        if (rf & MUTEX_RFLAG_UNRECOVERABLE) {
+            unsigned int prev =
+                __atomic_exchange_n(&mutex->__state, 0u, __ATOMIC_RELEASE);
+            if (prev == 2u) {
+                (void)futex_wake(&mutex->__state, (unsigned int)INT_MAX);
+            }
+            return ENOTRECOVERABLE;
+        }
+        mutex->__owner = self;
+        mutex->__count = 1u;
+        robust_list_push(mutex);
+        if (rf & MUTEX_RFLAG_INCONSISTENT) {
+            return EOWNERDEAD;
+        }
+        return 0;
+    }
+    mutex->__owner = self;
+    mutex->__count = 1u;
+    return 0;
+}
+
 int pthread_mutex_trylock(pthread_mutex_t *mutex) {
     if (!mutex) {
         return EINVAL;
+    }
+    if (mutex->__robust == PTHREAD_MUTEX_ROBUST &&
+        (__atomic_load_n(&mutex->__rflags, __ATOMIC_ACQUIRE) &
+         MUTEX_RFLAG_UNRECOVERABLE) != 0u) {
+        return ENOTRECOVERABLE;
     }
     pthread_t self = pthread_self();
     if (mutex->__type == PTHREAD_MUTEX_RECURSIVE &&
@@ -511,9 +800,7 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex) {
     unsigned int expected = 0u;
     if (__atomic_compare_exchange_n(&mutex->__state, &expected, 1u, 0,
                                     __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-        mutex->__owner = self;
-        mutex->__count = 1u;
-        return 0;
+        return mutex_finish_acquire(mutex, self);
     }
     return EBUSY;
 }
@@ -523,6 +810,11 @@ int pthread_mutex_clocklock(pthread_mutex_t *restrict mutex, clockid_t clock_id,
     if (!mutex) {
         return EINVAL;
     }
+    if (mutex->__robust == PTHREAD_MUTEX_ROBUST &&
+        (__atomic_load_n(&mutex->__rflags, __ATOMIC_ACQUIRE) &
+         MUTEX_RFLAG_UNRECOVERABLE) != 0u) {
+        return ENOTRECOVERABLE;
+    }
     pthread_t self = pthread_self();
     if (__atomic_load_n(&mutex->__state, __ATOMIC_RELAXED) != 0u &&
         mutex->__owner == self) {
@@ -530,7 +822,8 @@ int pthread_mutex_clocklock(pthread_mutex_t *restrict mutex, clockid_t clock_id,
             mutex->__count++;
             return 0;
         }
-        if (mutex->__type == PTHREAD_MUTEX_ERRORCHECK) {
+        if (mutex->__type == PTHREAD_MUTEX_ERRORCHECK ||
+            mutex->__robust == PTHREAD_MUTEX_ROBUST) {
             return EDEADLK;
         }
     }
@@ -538,12 +831,15 @@ int pthread_mutex_clocklock(pthread_mutex_t *restrict mutex, clockid_t clock_id,
     unsigned int expected = 0u;
     if (__atomic_compare_exchange_n(&mutex->__state, &expected, 1u, 0,
                                     __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-        mutex->__owner = self;
-        mutex->__count = 1u;
-        return 0;
+        return mutex_finish_acquire(mutex, self);
     }
 
     for (;;) {
+        if (mutex->__robust == PTHREAD_MUTEX_ROBUST &&
+            (__atomic_load_n(&mutex->__rflags, __ATOMIC_ACQUIRE) &
+             MUTEX_RFLAG_UNRECOVERABLE) != 0u) {
+            return ENOTRECOVERABLE;
+        }
         if (expected == 2u ||
             __atomic_compare_exchange_n(&mutex->__state, &expected, 2u, 0,
                                         __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
@@ -558,9 +854,7 @@ int pthread_mutex_clocklock(pthread_mutex_t *restrict mutex, clockid_t clock_id,
         expected = 0u;
         if (__atomic_compare_exchange_n(&mutex->__state, &expected, 2u, 0,
                                         __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-            mutex->__owner = self;
-            mutex->__count = 1u;
-            return 0;
+            return mutex_finish_acquire(mutex, self);
         }
     }
 }
@@ -580,7 +874,8 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) {
         return EINVAL;
     }
     pthread_t self = pthread_self();
-    if (mutex->__type != PTHREAD_MUTEX_NORMAL) {
+    if (mutex->__type != PTHREAD_MUTEX_NORMAL ||
+        mutex->__robust == PTHREAD_MUTEX_ROBUST) {
         if (__atomic_load_n(&mutex->__state, __ATOMIC_RELAXED) == 0u ||
             mutex->__owner != self) {
             return EPERM;
@@ -590,12 +885,23 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) {
             return 0;
         }
     }
+    if (mutex->__robust == PTHREAD_MUTEX_ROBUST) {
+        robust_list_pop(mutex);
+        if ((__atomic_load_n(&mutex->__rflags, __ATOMIC_ACQUIRE) &
+             MUTEX_RFLAG_INCONSISTENT) != 0u) {
+            __atomic_store_n(&mutex->__rflags, MUTEX_RFLAG_UNRECOVERABLE,
+                             __ATOMIC_RELEASE);
+        }
+    }
     mutex->__owner = (pthread_t)0;
     mutex->__count = 0u;
     unsigned int prev =
         __atomic_exchange_n(&mutex->__state, 0u, __ATOMIC_RELEASE);
     if (prev == 2u) {
-        (void)futex_wake(&mutex->__state, 1u);
+        (void)futex_wake(&mutex->__state,
+                         (mutex->__robust == PTHREAD_MUTEX_ROBUST)
+                             ? (unsigned int)INT_MAX
+                             : 1u);
     }
     return 0;
 }

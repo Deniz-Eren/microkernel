@@ -81,6 +81,9 @@
 #define SYS_PCI_CFG 61
 #define SYS_PROC_CRED 62
 #define SYS_PROC_RLIMIT 63
+#define SYS_SIGTIMEDWAIT 64
+#define SYS_SIGSUSPEND 65
+#define SYS_SIGQUEUE 66
 
 #define PCI_CFG_OP_READ32 0u
 #define PCI_CFG_OP_WRITE32 1u
@@ -109,6 +112,13 @@ struct __k_rlimit {
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1
+
+struct __k_wait_ext {
+    int32_t status;
+    uint32_t pid;
+    uint32_t uid;
+    uint32_t pad;
+};
 
 #define PGID_OP_SETPGID 1u
 #define PGID_OP_GETPGID 2u

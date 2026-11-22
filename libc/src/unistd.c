@@ -9,11 +9,16 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/fd.h>
 #include <sys/microkernel.h>
+#include <sys/stat.h>
 #include <sys/thread.h>
 #include <time.h>
 #include <unistd.h>
@@ -21,6 +26,10 @@
 #include "tls_internal.h"
 
 /* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_PROC_0007 */
+
+void __libc_run_atfork_prepare(void);
+void __libc_run_atfork_parent(void);
+void __libc_run_atfork_child(void);
 
 #ifdef MICROKERNEL_COVERAGE
 extern void __libc_cov_reset_counters(void);
@@ -82,7 +91,7 @@ pid_t getsid(pid_t pid) {
     return (pid_t)r;
 }
 
-pid_t fork(void) {
+pid_t _Fork(void) {
     int pr = __libc_fd_prefork();
     if (pr < 0) {
         errno = -pr;
@@ -104,6 +113,120 @@ pid_t fork(void) {
         }
     }
     return (pid_t)r;
+}
+
+pid_t fork(void) {
+    __libc_run_atfork_prepare();
+    pid_t r = _Fork();
+    if (r < 0) {
+        int saved = errno;
+        __libc_run_atfork_parent();
+        errno = saved;
+        return -1;
+    }
+    if (r == 0) {
+        __libc_run_atfork_child();
+    } else {
+        __libc_run_atfork_parent();
+    }
+    return r;
+}
+
+int pause(void) {
+    __libc_cancel_point();
+    sigset_t cur;
+    if (sigprocmask(SIG_SETMASK, (const sigset_t *)0, &cur) != 0) {
+        return -1;
+    }
+    (void)sigsuspend(&cur);
+    errno = EINTR;
+    return -1;
+}
+
+int fexecve(int fildes, char *const argv[], char *const envp[]) {
+    if (fildes < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fildes, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS ||
+        (e.status_flags & (uint16_t)O_ACCMODE) == (uint16_t)O_WRONLY) {
+        errno = EBADF;
+        return -1;
+    }
+    char path[PATH_MAX];
+    uint32_t mode = 0u;
+    int rr = __libc_vfs_resolve_handle(e.srv_handle, path, sizeof(path), &mode);
+    if (rr < 0) {
+        errno = -rr;
+        return -1;
+    }
+    if (!S_ISREG(mode) || (mode & 0111u) == 0u) {
+        errno = EACCES;
+        return -1;
+    }
+    return execve(path, argv, envp);
+}
+
+#define EXECL_ARG_MAX 64
+
+static int collect_execl_argv(va_list ap, const char *arg0, const char **argv) {
+    int argc = 0;
+    const char *arg = arg0;
+    while (arg != NULL) {
+        if (argc >= EXECL_ARG_MAX) {
+            return -1;
+        }
+        argv[argc++] = arg;
+        arg = va_arg(ap, const char *);
+    }
+    argv[argc] = NULL;
+    return argc;
+}
+
+int execl(const char *path, const char *arg0, ...) {
+    const char *argv[EXECL_ARG_MAX + 1];
+    va_list ap;
+    va_start(ap, arg0);
+    int argc = collect_execl_argv(ap, arg0, argv);
+    va_end(ap);
+    if (argc < 0) {
+        errno = E2BIG;
+        return -1;
+    }
+    return execve(path, (char *const *)argv, environ);
+}
+
+int execle(const char *path, const char *arg0, ...) {
+    const char *argv[EXECL_ARG_MAX + 1];
+    va_list ap;
+    va_start(ap, arg0);
+    int argc = collect_execl_argv(ap, arg0, argv);
+    char *const *envp = (argc >= 0) ? va_arg(ap, char *const *) : NULL;
+    va_end(ap);
+    if (argc < 0) {
+        errno = E2BIG;
+        return -1;
+    }
+    return execve(path, (char *const *)argv, envp);
+}
+
+int execlp(const char *file, const char *arg0, ...) {
+    const char *argv[EXECL_ARG_MAX + 1];
+    va_list ap;
+    va_start(ap, arg0);
+    int argc = collect_execl_argv(ap, arg0, argv);
+    va_end(ap);
+    if (argc < 0) {
+        errno = E2BIG;
+        return -1;
+    }
+    return execvp(file, (char *const *)argv);
 }
 
 int execve(const char *path, char *const argv[], char *const envp[]) {

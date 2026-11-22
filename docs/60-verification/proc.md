@@ -117,3 +117,18 @@ checks, `getlogin*`, `<pwd.h>`, `<grp.h>`, `RLIMIT_NOFILE`, `id`, `logname`,
 `nice`, `renice`, `umask`, and `ulimit`. CTest Gates 1 to 3 verify the new
 headers, XCU utilities, and async-signal-safety ({need}`SWR_PROC_0011`).
 ```
+
+```{ver} Verify Base signals, waitid, _Fork, popen/system, and <threads.h>
+:id: VER_PROC_0010
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0012
+
+The headless QEMU harness runs `sigtest`, `proctest`, `pthreadtest`,
+`utilstest`, and `shtest`. They verify `sigqueue`, `sigwait*`, `sigsuspend`,
+`pause`, `sig2str`/`str2sig`, `waitid`, `_Fork`, `execl*`, `fexecve`, `popen`,
+and `system`. They also verify `<threads.h>`, LIFO `pthread_atfork`, robust
+mutex `EOWNERDEAD`, `MAP_SHARED` named semaphores, `sleep`, `time`, `timeout`,
+`nohup`, and `sh` `wait`. CTest Gates 1 to 3 verify header hygiene,
+async-signal-safety, and cancellation points ({need}`SWR_PROC_0012`).
+```

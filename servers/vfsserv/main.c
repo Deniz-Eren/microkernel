@@ -1868,6 +1868,20 @@ int main(void) {
         return 1;
     }
     populate_bootfs(boot_dir);
+    vfs_node_t *bin_link = node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, g_root);
+    if (bin_link) {
+        bin_link->data = (uint8_t *)malloc(6u);
+        if (bin_link->data) {
+            memcpy(bin_link->data, "/boot", 6u);
+            bin_link->size = 5u;
+            bin_link->cap = 6u;
+            if (dir_add_child(g_root, "bin", bin_link) != 0) {
+                node_destroy(bin_link);
+            }
+        } else {
+            node_destroy(bin_link);
+        }
+    }
     mount_ext2_on_mnt();
 
     int chanid = (int)CreateChannel();

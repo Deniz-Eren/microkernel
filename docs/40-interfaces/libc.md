@@ -91,3 +91,19 @@ classification and comparison macros plus the Base/CX `float`, `double`, and
 `long double` math functions ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
 {need}`SWR_LIBC_0009`).
 ```
+
+```{icd} ISO C17 <threads.h> and Base process/signal/semaphore extensions
+:id: ICD_LIBC_0008
+:status: active
+:posix: XBD/threads.h (CX), XSH/waitid (BASE), XSH/sem_open (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_PROC_0012
+
+`libc/include/threads.h` declares C11 `thrd_*`, `mtx_*`, `cnd_*`, `call_once`,
+and `tss_*` over `<sys/_pthread_types.h>` with no `<pthread.h>` leakage.
+`<signal.h>`, `<sys/wait.h>`, `<unistd.h>`, `<stdio.h>`, and `<stdlib.h>`
+declare `siginfo_t`, `waitid`, `_Fork`, `execl*`, `fexecve`, `popen`/`pclose`,
+and `system`. `<pthread.h>`, `<sched.h>`, and `<semaphore.h>` declare robust
+mutexes, `pthread_atfork`, `sched_*`, and named `sem_*` ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0002`, {need}`SWR_PROC_0012`).
+```

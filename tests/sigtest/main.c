@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/microkernel.h>
 #include <sys/ipc.h>
@@ -172,6 +173,151 @@ int main(void) {
         printf("[FAIL] SIG_IGN handling\n");
         return 1;
     }
+
+    char name[SIG2STR_MAX];
+    int num = 0;
+    if (sig2str(SIGTERM, name) != 0 || strcmp(name, "TERM") != 0 ||
+        str2sig("TERM", &num) != 0 || num != SIGTERM ||
+        str2sig("KILL", &num) != 0 || num != SIGKILL ||
+        str2sig("9", &num) != 0 || num != SIGKILL ||
+        sig2str(SIGKILL, name) != 0 || strcmp(name, "KILL") != 0 ||
+        str2sig("SIGKILL", &num) == 0 || str2sig("NOSUCH", &num) == 0) {
+        printf("[FAIL] sig2str/str2sig round trip (name=%s num=%d)\n", name,
+               num);
+        return 1;
+    }
+    printf("[OK] sig2str and str2sig round trip verified\n");
+
+    if (strcmp(strsignal(SIGPIPE), "Broken pipe") != 0 ||
+        strncmp(strsignal(9999), "Unknown signal", 14) != 0) {
+        printf("[FAIL] strsignal descriptions\n");
+        return 1;
+    }
+    psignal(SIGFPE, "sigtest psignal");
+    printf("[OK] strsignal and psignal descriptions verified\n");
+
+    sigset_t waitset = 0;
+    sigemptyset(&waitset);
+    sigaddset(&waitset, SIGUSR1);
+    if (sigprocmask(SIG_BLOCK, &waitset, NULL) != 0) {
+        printf("[FAIL] sigprocmask block for sigwaitinfo\n");
+        return 1;
+    }
+    union sigval qv = {.sival_int = 4242};
+    if (sigqueue(getpid(), SIGUSR1, qv) != 0) {
+        printf("[FAIL] sigqueue -> errno=%d\n", errno);
+        return 1;
+    }
+    siginfo_t qi = {0};
+    int got = sigwaitinfo(&waitset, &qi);
+    if (got != SIGUSR1 || qi.si_signo != SIGUSR1 || qi.si_code != SI_QUEUE ||
+        qi.si_value.sival_int != 4242 || qi.si_pid != (pid_t)getpid()) {
+        printf("[FAIL] sigwaitinfo got=%d code=%d val=%d pid=%d\n", got,
+               qi.si_code, qi.si_value.sival_int, (int)qi.si_pid);
+        return 1;
+    }
+    printf("[OK] sigqueue and sigwaitinfo queued value verified\n");
+
+    qv.sival_int = 19;
+    if (sigqueue(getpid(), SIGUSR1, qv) != 0) {
+        printf("[FAIL] sigqueue for zero-timeout sigtimedwait\n");
+        return 1;
+    }
+    struct timespec zero_tmo = {.tv_sec = 0, .tv_nsec = 0};
+    memset(&qi, 0, sizeof(qi));
+    if (sigtimedwait(&waitset, &qi, &zero_tmo) != SIGUSR1 ||
+        qi.si_value.sival_int != 19) {
+        printf("[FAIL] sigtimedwait zero-timeout missed pending signal\n");
+        return 1;
+    }
+
+    g_caught_sig = 0;
+    qv.sival_int = 7;
+    if (sigqueue(getpid(), SIGUSR1, qv) != 0) {
+        printf("[FAIL] sigqueue for sigwait\n");
+        return 1;
+    }
+    int wgot = -1;
+    errno = ENOENT;
+    if (sigwait(&waitset, &wgot) != 0 || wgot != SIGUSR1 || g_caught_sig != 0 ||
+        errno != ENOENT) {
+        printf("[FAIL] sigwait got=%d handler_ran=%d errno=%d\n", wgot,
+               (int)g_caught_sig, errno);
+        return 1;
+    }
+    printf("[OK] sigwait consumed pending signal without handler\n");
+
+    sigset_t emptyset = 0;
+    sigemptyset(&emptyset);
+    struct timespec t0 = {0};
+    struct timespec t1 = {0};
+    struct timespec tmo = {.tv_sec = 0, .tv_nsec = 50000000L};
+    (void)clock_gettime(CLOCK_MONOTONIC, &t0);
+    errno = 0;
+    if (sigtimedwait(&emptyset, NULL, &tmo) != -1 || errno != EAGAIN) {
+        printf("[FAIL] sigtimedwait timeout errno=%d\n", errno);
+        return 1;
+    }
+    (void)clock_gettime(CLOCK_MONOTONIC, &t1);
+    long waited_ms =
+        (t1.tv_sec - t0.tv_sec) * 1000L + (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+    if (waited_ms < 30L) {
+        printf("[FAIL] sigtimedwait returned too early (%ld ms)\n", waited_ms);
+        return 1;
+    }
+    printf("[OK] sigtimedwait relative timeout waited and returned EAGAIN\n");
+
+    if (sigprocmask(SIG_BLOCK, &waitset, NULL) != 0) {
+        printf("[FAIL] sigprocmask block for sigsuspend\n");
+        return 1;
+    }
+    g_caught_sig = 0;
+    qv.sival_int = 0;
+    if (sigqueue(getpid(), SIGUSR1, qv) != 0) {
+        printf("[FAIL] sigqueue for sigsuspend\n");
+        return 1;
+    }
+    sigset_t emptysig = 0;
+    sigemptyset(&emptysig);
+    errno = 0;
+    int sret = sigsuspend(&emptysig);
+    if (sret != -1 || errno != EINTR || g_caught_sig != SIGUSR1) {
+        printf("[FAIL] sigsuspend ret=%d errno=%d caught=%d\n", sret, errno,
+               (int)g_caught_sig);
+        return 1;
+    }
+    sigset_t mask_now = 0;
+    sigprocmask(SIG_BLOCK, NULL, &mask_now);
+    if (sigismember(&mask_now, SIGUSR1) != 1) {
+        printf("[FAIL] sigsuspend did not restore the previous mask\n");
+        return 1;
+    }
+    (void)sigprocmask(SIG_UNBLOCK, &waitset, NULL);
+    printf("[OK] sigsuspend ran handler and restored the mask\n");
+
+    struct sigaction al = {0};
+    al.sa_handler = handler;
+    sigemptyset(&al.sa_mask);
+    if (sigaction(SIGALRM, &al, NULL) != 0) {
+        printf("[FAIL] sigaction(SIGALRM) for pause\n");
+        return 1;
+    }
+    g_caught_sig = 0;
+    (void)alarm(1);
+    errno = 0;
+    int pret = pause();
+    if (pret != -1 || errno != EINTR || g_caught_sig != SIGALRM) {
+        printf("[FAIL] pause ret=%d errno=%d caught=%d\n", pret, errno,
+               (int)g_caught_sig);
+        return 1;
+    }
+    printf("[OK] pause slept until SIGALRM and returned EINTR\n");
+
+    siginfo_t pi = {0};
+    pi.si_signo = SIGTERM;
+    pi.si_code = SI_USER;
+    psiginfo(&pi, "sigtest psiginfo");
+    printf("[OK] psiginfo description verified\n");
 
     printf("[OK] sigtest raising SIGUSR2 (unhandled)\n");
     raise(SIGUSR2);

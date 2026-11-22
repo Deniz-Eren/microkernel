@@ -116,6 +116,9 @@ void time_tick(void) {
             }
         }
         for (tcb_t *t = p->threads; t; t = t->proc_next) {
+            if (p->stopped) {
+                continue; /* stopped processes keep all threads parked */
+            }
             if (t->state == THREAD_SLEEP_BLOCKED) {
                 uint64_t now = clock_now_ns((clockid_t)t->sleep_clock_id);
                 if (now >= t->sleep_deadline_ns) {
@@ -126,7 +129,9 @@ void time_tick(void) {
                 uint64_t now = clock_now_ns((clockid_t)t->sleep_clock_id);
                 if (now >= t->sleep_deadline_ns) {
                     t->futex_addr = 0;
+                    t->futex_is_shared = 0u;
                     t->futex_has_timeout = 0;
+                    t->sig_wait_set = 0;
                     sched_ready_locked(t);
                 }
             }

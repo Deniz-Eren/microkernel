@@ -32,6 +32,7 @@ typedef long blkcnt_t;
 typedef unsigned int uid_t;
 typedef unsigned int gid_t;
 typedef int pid_t;
+typedef int id_t;
 typedef unsigned int pthread_t;
 typedef int clockid_t;
 typedef int timer_t;

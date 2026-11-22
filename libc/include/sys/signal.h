@@ -60,4 +60,19 @@ struct __k_sigaction {
     uint32_t flags;   /* SA_* flags */
 };
 
+#define K_SI_USER 0
+#define K_SI_QUEUE 1
+
+struct __k_siginfo {
+    int32_t signo;
+    int32_t err;
+    int32_t code;
+    uint32_t pad;
+    uint32_t pid;
+    uint32_t uid;
+    uint64_t value;
+    int32_t status;
+    uint32_t pad2;
+};
+
 #endif /* _SYS_SIGNAL_H */

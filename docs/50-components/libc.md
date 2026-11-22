@@ -94,3 +94,18 @@ implements `<math.h>` classification, hardware `FMA`/`sqrt`/`vround`,
 exponential, logarithmic, power, error, gamma, trigonometric, and hyperbolic
 functions ({need}`ICD_LIBC_0007`, {need}`SWR_LIBC_0009`).
 ```
+
+```{comp} ISO C17 <threads.h> and Base signal, waitid, and semaphore support
+:id: COMP_LIBC_0008
+:status: active
+:posix: XBD/threads.h (CX), XSH/waitid (BASE), XSH/sem_open (BASE)
+:refines: ARC_LIBC_0001, ICD_LIBC_0008
+:satisfies: SWR_PROC_0012
+
+`libc/src/threads.c` implements `<threads.h>` over `pthread_*`. `signal.c`,
+`wait.c`, `unistd.c`, `stdio.c`, and `stdlib.c` implement Base signal waits,
+`waitid`, `_Fork`, `fexecve`, `popen`/`pclose`, and `system`. `pthread.c`,
+`sched.c`, and `semaphore.c` implement robust mutexes, LIFO `pthread_atfork`,
+`sched_*`, and `MAP_SHARED` named semaphores ({need}`ICD_LIBC_0008`,
+{need}`SWR_PROC_0012`).
+```

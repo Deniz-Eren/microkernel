@@ -12,14 +12,65 @@
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/bootinfo.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 /* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0006 */
+
+int system(const char *command) {
+    if (!command) {
+        return access("/bin/sh", X_OK) == 0;
+    }
+    sigset_t chldmask;
+    sigset_t oldmask;
+    struct sigaction ign = {0};
+    struct sigaction old_int;
+    struct sigaction old_quit;
+    (void)sigemptyset(&chldmask);
+    (void)sigaddset(&chldmask, SIGCHLD);
+    (void)sigprocmask(SIG_BLOCK, &chldmask, &oldmask);
+    (void)sigemptyset(&ign.sa_mask);
+    ign.sa_handler = SIG_IGN;
+    (void)sigaction(SIGINT, &ign, &old_int);
+    (void)sigaction(SIGQUIT, &ign, &old_quit);
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        int saved = errno;
+        (void)sigaction(SIGINT, &old_int, NULL);
+        (void)sigaction(SIGQUIT, &old_quit, NULL);
+        (void)sigprocmask(SIG_SETMASK, &oldmask, NULL);
+        errno = saved;
+        return -1;
+    }
+    if (pid == 0) {
+        (void)sigaction(SIGINT, &old_int, NULL);
+        (void)sigaction(SIGQUIT, &old_quit, NULL);
+        (void)sigprocmask(SIG_SETMASK, &oldmask, NULL);
+        (void)execl("/bin/sh", "sh", "-c", command, (char *)0);
+        _exit(127);
+    }
+
+    int wstatus = 0;
+    pid_t wr;
+    while ((wr = waitpid(pid, &wstatus, 0)) < 0 && errno == EINTR) {
+    }
+    int saved = (wr < 0) ? errno : 0;
+    (void)sigaction(SIGINT, &old_int, NULL);
+    (void)sigaction(SIGQUIT, &old_quit, NULL);
+    (void)sigprocmask(SIG_SETMASK, &oldmask, NULL);
+    if (wr < 0) {
+        errno = saved;
+        return -1;
+    }
+    return wstatus;
+}
 
 #define AT_SECURE_KEY 23UL
 #define ATEXIT_CAPACITY 64u

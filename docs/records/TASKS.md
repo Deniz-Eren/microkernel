@@ -21,22 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0034 — Add Base signals, waitid, _Fork, popen/system, and <threads.h>
-
-```{task} Add Base signals, waitid, _Fork, popen/system, and <threads.h>
-:id: TSK_0034
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_PROC_0001, SYS_SIG_0001
-
-Add `_Fork`, `waitid`, `execl`, `execle`, `execlp`, `fexecve`, `popen`,
-`pclose`, and `system`. Add `pause`, `sigsuspend`, `sigwait`, `sigwaitinfo`,
-`sigtimedwait`, `sigqueue`, `sig2str`, `str2sig`, `strsignal`, `psignal`, and
-`psiginfo`. Supply C11 `<threads.h>`, remaining Base `pthread_*` and `sched_*`
-helpers, named `sem_open`/`sem_close`/`sem_unlink`, and `sleep`, `time`,
-`timeout`, `nohup`, and `sh` `wait` ({need}`BDR_0004`, {need}`SYS_PROC_0001`,
-{need}`SYS_SIG_0001`).
-```
-
 ### TSK_0035 — Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>
 
 ```{task} Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>

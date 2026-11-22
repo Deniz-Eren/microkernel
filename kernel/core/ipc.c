@@ -300,6 +300,9 @@ long ipc_msg_reply(int msgid, uint64_t rmsg, uint64_t rbytes) {
         return -EPERM;
     }
     inflight_remove_locked(m);
+    if (m->sender) {
+        m->sender->blocked_on_chan = NULL;
+    }
     spin_unlock_irqrestore(&g_ipc_lock, fl);
 
     tcb_t *client = m->sender;
@@ -323,7 +326,7 @@ long ipc_msg_reply(int msgid, uint64_t rmsg, uint64_t rbytes) {
     int need_preempt = 0;
     uint64_t sf = spin_lock_irqsave(&g_sched_lock);
     srv->effective_priority = srv->base_priority; /* drop inheritance */
-    if (client) {
+    if (client && client->state == THREAD_REPLY_BLOCKED) {
         long final_len = (rbytes == 0 && m->reply_written > 0)
                              ? (long)m->reply_written
                              : (long)rbytes;

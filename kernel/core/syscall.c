@@ -331,6 +331,15 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_SIGPROCMASK:
         ret = sys_sigprocmask(a0, a1, a2);
         break;
+    case SYS_SIGTIMEDWAIT:
+        ret = sys_sigtimedwait(a0, a1, a2, a3);
+        break;
+    case SYS_SIGSUSPEND:
+        ret = sys_sigsuspend(a0);
+        break;
+    case SYS_SIGQUEUE:
+        ret = sys_sigqueue((int64_t)a0, a1, a2);
+        break;
     default:
         ret = -ENOSYS;
         break;

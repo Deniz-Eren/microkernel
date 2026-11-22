@@ -944,16 +944,22 @@ long sys_proc_cred(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3) {
         }
         t->nice = (int32_t)next;
         uint8_t new_prio = (uint8_t)(100 - t->nice);
-        uint64_t sf = spin_lock_irqsave(&g_sched_lock);
+        spin_lock(&g_sched_lock);
         for (tcb_t *th = t->threads; th; th = th->proc_next) {
             if (!th->is_idle && th->state != THREAD_ZOMBIE) {
                 th->base_priority = new_prio;
                 if (th->effective_priority < new_prio) {
-                    th->effective_priority = new_prio;
+                    if (th->state == THREAD_READY) {
+                        sched_remove_ready_locked(th);
+                        th->effective_priority = new_prio;
+                        sched_ready_locked(th);
+                    } else {
+                        th->effective_priority = new_prio;
+                    }
                 }
             }
         }
-        spin_unlock_irqrestore(&g_sched_lock, sf);
+        spin_unlock(&g_sched_lock);
         spin_unlock_irqrestore(&g_proc_lock, pf);
         return (long)(next + 20);
     }
@@ -1275,13 +1281,21 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
     if (!parent || !cur) {
         return -EPERM;
     }
-    if (options & ~(uint64_t)PROC_WAIT_NOHANG) {
+    if (options &
+        ~(uint64_t)(PROC_WAIT_NOHANG | PROC_WAIT_STOP | PROC_WAIT_CONT |
+                    PROC_WAIT_EXT | PROC_WAIT_NOWAIT | PROC_WAIT_EXITED)) {
         return -EINVAL;
     }
+    /* Preserve legacy ProcWait callers that pass 0 or NOHANG without EXITED. */
+    uint64_t want_exited =
+        (options & PROC_WAIT_EXT) ? (options & PROC_WAIT_EXITED) : 1ULL;
 
     for (;;) {
         int has_matching = 0;
         pcb_t *zombie = NULL;
+        pcb_t *ev_proc = NULL;
+        int ev_kind = 0; /* 1 = stopped, 2 = continued */
+        int ev_status = 0;
         uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         for (pcb_t *c = proc_list_head(); c; c = c->next) {
             if (c->parent_pid != parent->pid || c->state == PROC_DEAD) {
@@ -1297,10 +1311,23 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
                 continue;
             }
             has_matching = 1;
-            if (c->state == PROC_ZOMBIE) {
+            if (want_exited && c->state == PROC_ZOMBIE) {
                 zombie = c;
-                zombie->state = PROC_DEAD;
+                if (!(options & PROC_WAIT_NOWAIT)) {
+                    zombie->state = PROC_DEAD;
+                }
                 break;
+            }
+            if (!ev_kind && (options & PROC_WAIT_STOP) && c->stopped &&
+                c->stop_sig) {
+                ev_kind = 1;
+                ev_proc = c;
+                ev_status = (int)(((uint32_t)c->stop_sig << 8) | 0x7Fu);
+            }
+            if (!ev_kind && (options & PROC_WAIT_CONT) && c->cont_pending) {
+                ev_kind = 2;
+                ev_proc = c;
+                ev_status = 0xFFFF;
             }
         }
         if (!has_matching) {
@@ -1312,31 +1339,76 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
                               ? (zombie->exit_signal & 0x7F)
                               : ((zombie->exit_code & 0xFF) << 8);
             uint32_t reaped_pid = zombie->pid;
+            uint32_t reaped_uid = zombie->uid;
             spin_unlock_irqrestore(&g_proc_lock, pf);
-            if (status_va != 0 &&
-                copy_to_user(status_va, &wstatus, sizeof(wstatus)) < 0) {
-                pf = spin_lock_irqsave(&g_proc_lock);
-                zombie->state = PROC_ZOMBIE;
-                spin_unlock_irqrestore(&g_proc_lock, pf);
-                return -EFAULT;
-            }
-            __atomic_fetch_add(&parent->cutime_ticks,
-                               zombie->utime_ticks + zombie->cutime_ticks,
-                               __ATOMIC_RELAXED);
-            __atomic_fetch_add(&parent->cstime_ticks,
-                               zombie->stime_ticks + zombie->cstime_ticks,
-                               __ATOMIC_RELAXED);
-            /* Ensure zombie threads have exited their CPU before destroying
-             * the zombie's PML4. */
-            for (tcb_t *zt = zombie->threads; zt; zt = zt->proc_next) {
-                while (__atomic_load_n(&zt->on_cpu, __ATOMIC_ACQUIRE) != 0u) {
-                    arch_cpu_relax();
+            if (status_va != 0) {
+                int copy_err = 0;
+                if (options & PROC_WAIT_EXT) {
+                    struct __k_wait_ext ext = {.status = wstatus,
+                                               .pid = reaped_pid,
+                                               .uid = reaped_uid,
+                                               .pad = 0u};
+                    copy_err = copy_to_user(status_va, &ext, sizeof(ext)) < 0;
+                } else {
+                    copy_err =
+                        copy_to_user(status_va, &wstatus, sizeof(wstatus)) < 0;
+                }
+                if (copy_err) {
+                    if (!(options & PROC_WAIT_NOWAIT)) {
+                        pf = spin_lock_irqsave(&g_proc_lock);
+                        zombie->state = PROC_ZOMBIE;
+                        spin_unlock_irqrestore(&g_proc_lock, pf);
+                    }
+                    return -EFAULT;
                 }
             }
-            vmm_destroy_user_pml4(zombie->pml4_phys);
-            zombie->pml4_phys = 0;
-            proc_reap_zombie(zombie);
+            if (!(options & PROC_WAIT_NOWAIT)) {
+                __atomic_fetch_add(&parent->cutime_ticks,
+                                   zombie->utime_ticks + zombie->cutime_ticks,
+                                   __ATOMIC_RELAXED);
+                __atomic_fetch_add(&parent->cstime_ticks,
+                                   zombie->stime_ticks + zombie->cstime_ticks,
+                                   __ATOMIC_RELAXED);
+                /* Ensure zombie threads have exited their CPU before
+                 * destroying the zombie's PML4. */
+                for (tcb_t *zt = zombie->threads; zt; zt = zt->proc_next) {
+                    while (__atomic_load_n(&zt->on_cpu, __ATOMIC_ACQUIRE) !=
+                           0u) {
+                        arch_cpu_relax();
+                    }
+                }
+                vmm_destroy_user_pml4(zombie->pml4_phys);
+                zombie->pml4_phys = 0;
+                proc_reap_zombie(zombie);
+            }
             return (long)reaped_pid;
+        }
+        if (ev_proc) {
+            uint32_t ev_pid = ev_proc->pid;
+            uint32_t ev_uid = ev_proc->uid;
+            if (!(options & PROC_WAIT_NOWAIT)) {
+                if (ev_kind == 1) {
+                    ev_proc->stop_sig = 0u;
+                } else {
+                    ev_proc->cont_pending = 0u;
+                }
+            }
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            if (status_va != 0) {
+                if (options & PROC_WAIT_EXT) {
+                    struct __k_wait_ext ext = {.status = ev_status,
+                                               .pid = ev_pid,
+                                               .uid = ev_uid,
+                                               .pad = 0u};
+                    if (copy_to_user(status_va, &ext, sizeof(ext)) < 0) {
+                        return -EFAULT;
+                    }
+                } else if (copy_to_user(status_va, &ev_status,
+                                        sizeof(ev_status)) < 0) {
+                    return -EFAULT;
+                }
+            }
+            return (long)ev_pid;
         }
         if (options & PROC_WAIT_NOHANG) {
             spin_unlock_irqrestore(&g_proc_lock, pf);

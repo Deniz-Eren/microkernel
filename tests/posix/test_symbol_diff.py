@@ -41,7 +41,9 @@ DEFAULT_LIBC = ROOT / "sysroot" / "usr" / "lib" / "libc.a"
 DEFAULT_MANIFEST = ROOT / "tests" / "posix" / "issue8-manifest.tsv"
 DEFAULT_BIN_CMAKE = ROOT / "bin" / "CMakeLists.txt"
 
-SH_BUILTIN_UTILITIES: tuple[str, ...] = ("cd", "pwd", "read", "ulimit", "umask")
+SH_BUILTIN_UTILITIES: tuple[str, ...] = (
+    "cd", "pwd", "read", "ulimit", "umask", "wait"
+)
 
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
@@ -78,6 +80,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "string.h",
     "strings.h",
     "termios.h",
+    "threads.h",
     "time.h",
     "uchar.h",
     "unistd.h",

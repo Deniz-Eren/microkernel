@@ -19,6 +19,7 @@
 #define EXIT_FAILURE 1
 
 int atexit(void (*func)(void));
+int system(const char *command);
 _Noreturn void exit(int status);
 _Noreturn void _Exit(int status);
 _Noreturn void abort(void);

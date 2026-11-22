@@ -17,6 +17,7 @@
 #define LIBC_SIGCANCEL 30
 
 struct __pthread_cleanup_frame;
+struct __pthread_mutex_s;
 
 typedef struct __pthread_tls {
     struct __pthread_tls *self;   /* %fs:0 — NULL until TLS is installed */
@@ -30,6 +31,7 @@ typedef struct __pthread_tls {
     unsigned int cancel_pending;  /* 1 = pthread_cancel() pending */
     unsigned int canceling;       /* 1 = running cleanup / exiting */
     struct __pthread_cleanup_frame *cleanup_head;
+    struct __pthread_mutex_s *robust_head;
     void *retval;
     void *(*start_fn)(void *);
     void *start_arg;

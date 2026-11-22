@@ -12,12 +12,14 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 /* need:: COMP_LIBC_0001 COMP_LIBC_0004 */
@@ -47,7 +49,8 @@ struct __microkernel_file {
 
 static struct __microkernel_file g_stdin_file = {
     .fd = STDIN_FILENO,
-    .lock = {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u},
+    .lock = {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u, 0, 0, 0u,
+             (struct __pthread_mutex_s *)0},
     .flags = STDIO_FLAG_READ | STDIO_FLAG_STATIC,
     .buf_mode = _IONBF,
     .buf = 0,
@@ -61,7 +64,8 @@ static struct __microkernel_file g_stdin_file = {
 
 static struct __microkernel_file g_stdout_file = {
     .fd = STDOUT_FILENO,
-    .lock = {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u},
+    .lock = {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u, 0, 0, 0u,
+             (struct __pthread_mutex_s *)0},
     .flags = STDIO_FLAG_WRITE | STDIO_FLAG_STATIC,
     .buf_mode = _IONBF,
     .buf = 0,
@@ -75,7 +79,8 @@ static struct __microkernel_file g_stdout_file = {
 
 static struct __microkernel_file g_stderr_file = {
     .fd = STDERR_FILENO,
-    .lock = {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u},
+    .lock = {0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u, 0, 0, 0u,
+             (struct __pthread_mutex_s *)0},
     .flags = STDIO_FLAG_WRITE | STDIO_FLAG_STATIC,
     .buf_mode = _IONBF,
     .buf = 0,
@@ -173,7 +178,8 @@ static FILE *alloc_stream(int fd, unsigned int sflags) {
     }
     memset(f, 0, sizeof(*f));
     f->fd = fd;
-    f->lock = (pthread_mutex_t){0u, PTHREAD_MUTEX_RECURSIVE, 0u, 0u};
+    f->lock = (pthread_mutex_t){0u, PTHREAD_MUTEX_RECURSIVE,      0u, 0u, 0, 0,
+                                0u, (struct __pthread_mutex_s *)0};
     f->flags = sflags;
     f->buf_mode = _IOFBF;
     f->buf = f->inline_buf;
@@ -1133,4 +1139,150 @@ int putc(int c, FILE *stream) {
 
 int putchar(int c) {
     return fputc(c, stdout);
+}
+
+#define POPEN_MAX 16
+
+static pthread_mutex_t g_popen_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct {
+    FILE *stream;
+    pid_t pid;
+} g_popen_table[POPEN_MAX];
+
+FILE *popen(const char *restrict command, const char *restrict mode) {
+    if (!command || !mode) {
+        errno = EINVAL;
+        return (FILE *)0;
+    }
+    char base = mode[0];
+    int cloexec = 0;
+    if (base != 'r' && base != 'w') {
+        errno = EINVAL;
+        return (FILE *)0;
+    }
+    for (const char *m = mode + 1; *m; m++) {
+        if (*m == 'e') {
+            cloexec = 1;
+        } else {
+            errno = EINVAL;
+            return (FILE *)0;
+        }
+    }
+
+    int fds[2] = {-1, -1};
+    if (pipe2(fds, O_CLOEXEC) < 0) {
+        return (FILE *)0;
+    }
+
+    (void)pthread_mutex_lock(&g_popen_lock);
+    int slot = -1;
+    for (int i = 0; i < POPEN_MAX; i++) {
+        if (!g_popen_table[i].stream) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot < 0) {
+        (void)pthread_mutex_unlock(&g_popen_lock);
+        (void)close(fds[0]);
+        (void)close(fds[1]);
+        errno = EMFILE;
+        return (FILE *)0;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        int saved = errno;
+        (void)pthread_mutex_unlock(&g_popen_lock);
+        (void)close(fds[0]);
+        (void)close(fds[1]);
+        errno = saved;
+        return (FILE *)0;
+    }
+    if (pid == 0) {
+        int use_fd = (base == 'r') ? STDOUT_FILENO : STDIN_FILENO;
+        int src_fd = (base == 'r') ? fds[1] : fds[0];
+        for (int i = 0; i < POPEN_MAX; i++) {
+            if (g_popen_table[i].stream) {
+                int pfd = fileno(g_popen_table[i].stream);
+                if (pfd >= 0 && pfd != src_fd && pfd != use_fd) {
+                    (void)close(pfd);
+                }
+            }
+        }
+        if (src_fd == use_fd) {
+            if (fcntl(use_fd, F_SETFD, 0) < 0) {
+                _exit(127);
+            }
+            (void)close((base == 'r') ? fds[0] : fds[1]);
+        } else {
+            if (dup2(src_fd, use_fd) < 0) {
+                _exit(127);
+            }
+            (void)close(fds[0]);
+            (void)close(fds[1]);
+        }
+        (void)execl("/bin/sh", "sh", "-c", command, (char *)0);
+        _exit(127);
+    }
+
+    int keep_fd = (base == 'r') ? fds[0] : fds[1];
+    int close_fd = (base == 'r') ? fds[1] : fds[0];
+    (void)close(close_fd);
+    if (!cloexec) {
+        (void)fcntl(keep_fd, F_SETFD, 0);
+    }
+
+    FILE *f = fdopen(keep_fd, (base == 'r') ? "r" : "w");
+    if (!f) {
+        int saved = errno;
+        (void)pthread_mutex_unlock(&g_popen_lock);
+        (void)close(keep_fd);
+        (void)kill(pid, SIGKILL);
+        while (waitpid(pid, (int *)0, 0) < 0 && errno == EINTR) {
+        }
+        errno = saved;
+        return (FILE *)0;
+    }
+
+    g_popen_table[slot].stream = f;
+    g_popen_table[slot].pid = pid;
+    (void)pthread_mutex_unlock(&g_popen_lock);
+    return f;
+}
+
+int pclose(FILE *stream) {
+    if (!stream) {
+        errno = EINVAL;
+        return -1;
+    }
+    pid_t pid = 0;
+    (void)pthread_mutex_lock(&g_popen_lock);
+    for (int i = 0; i < POPEN_MAX; i++) {
+        if (g_popen_table[i].stream == stream) {
+            pid = g_popen_table[i].pid;
+            g_popen_table[i].stream = (FILE *)0;
+            g_popen_table[i].pid = 0;
+            break;
+        }
+    }
+    (void)pthread_mutex_unlock(&g_popen_lock);
+    if (pid == 0) {
+        errno = ECHILD;
+        return -1;
+    }
+    int close_rc = fclose(stream);
+    int close_err = (close_rc == EOF) ? errno : 0;
+    int wstatus = 0;
+    pid_t wr;
+    while ((wr = waitpid(pid, &wstatus, 0)) < 0 && errno == EINTR) {
+    }
+    if (wr < 0) {
+        return -1;
+    }
+    if (close_rc == EOF) {
+        errno = close_err;
+        return -1;
+    }
+    return wstatus;
 }

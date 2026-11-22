@@ -40,7 +40,8 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0008 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0008 VER_PROC_0008 VER_PROC_0009 */
+/* need:: VER_PROC_0010 VER_IPC_0010 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -796,6 +797,145 @@ static int test_cred_pwd_grp_rlimit(void) {
     return 0;
 }
 
+static int test_signal_sched_process_utils(void) {
+    int pmax = sched_get_priority_max(SCHED_FIFO);
+    int pmin = sched_get_priority_min(SCHED_FIFO);
+    if (pmax <= pmin || sched_get_priority_max(SCHED_OTHER) != 0 ||
+        sched_get_priority_max(-1) != -1 || errno != EINVAL) {
+        printf("[FAIL] sched priority range max=%d min=%d\n", pmax, pmin);
+        return -1;
+    }
+    struct timespec rr = {0, 0};
+    if (sched_rr_get_interval(0, &rr) != 0 || rr.tv_nsec <= 0) {
+        printf("[FAIL] sched_rr_get_interval %ld.%09ld\n", (long)rr.tv_sec,
+               rr.tv_nsec);
+        return -1;
+    }
+    printf("[OK] sched priority range and round-robin interval verified\n");
+
+    struct timespec s0 = {0, 0};
+    struct timespec s1 = {0, 0};
+    (void)clock_gettime(CLOCK_MONOTONIC, &s0);
+    pid_t sp = fork();
+    if (sp == 0) {
+        char *const sargv[] = {"sleep", "--", "1", NULL};
+        (void)execv("/bin/sleep", sargv);
+        _exit(127);
+    }
+    int sst = 0;
+    if (waitpid(sp, &sst, 0) != sp || WEXITSTATUS(sst) != 0) {
+        printf("[FAIL] sleep utility st=0x%x\n", sst);
+        return -1;
+    }
+    (void)clock_gettime(CLOCK_MONOTONIC, &s1);
+    long elapsed_ms =
+        (s1.tv_sec - s0.tv_sec) * 1000L + (s1.tv_nsec - s0.tv_nsec) / 1000000L;
+    if (elapsed_ms < 900L || elapsed_ms > 5000L) {
+        printf("[FAIL] sleep 1 elapsed %ld ms\n", elapsed_ms);
+        return -1;
+    }
+    printf("[OK] sleep utility suspended for about one second\n");
+
+    int out_p[2] = {-1, -1};
+    int err_p[2] = {-1, -1};
+    if (pipe(out_p) != 0 || pipe(err_p) != 0) {
+        printf("[FAIL] time pipes\n");
+        return -1;
+    }
+    pid_t tp = fork();
+    if (tp == 0) {
+        (void)dup2(out_p[1], STDOUT_FILENO);
+        (void)dup2(err_p[1], STDERR_FILENO);
+        (void)close(out_p[0]);
+        (void)close(out_p[1]);
+        (void)close(err_p[0]);
+        (void)close(err_p[1]);
+        char *const targv[] = {"time", "-p", "true", NULL};
+        (void)execv("/bin/time", targv);
+        _exit(127);
+    }
+    (void)close(out_p[1]);
+    (void)close(err_p[1]);
+    char tout[64] = {0};
+    char terr[128] = {0};
+    ssize_t tn_out = read(out_p[0], tout, sizeof(tout) - 1u);
+    ssize_t tn_err = read(err_p[0], terr, sizeof(terr) - 1u);
+    (void)close(out_p[0]);
+    (void)close(err_p[0]);
+    int tst = 0;
+    if (waitpid(tp, &tst, 0) != tp || WEXITSTATUS(tst) != 0 || tn_out != 0 ||
+        tn_err <= 0 || !strstr(terr, "real ") || !strstr(terr, "user ") ||
+        !strstr(terr, "sys ")) {
+        printf("[FAIL] time utility st=0x%x out=%ld err='%s'\n", tst,
+               (long)tn_out, terr);
+        return -1;
+    }
+    printf("[OK] time utility reported real/user/sys on stderr\n");
+
+    pid_t o1 = fork();
+    if (o1 == 0) {
+        char *const oargv[] = {"timeout", "5", "true", NULL};
+        (void)execv("/bin/timeout", oargv);
+        _exit(127);
+    }
+    int ost = 0;
+    if (waitpid(o1, &ost, 0) != o1 || WEXITSTATUS(ost) != 0) {
+        printf("[FAIL] timeout passing command st=0x%x\n", ost);
+        return -1;
+    }
+    (void)clock_gettime(CLOCK_MONOTONIC, &s0);
+    pid_t o2 = fork();
+    if (o2 == 0) {
+        char *const oargv[] = {"timeout", "0.2", "sleep", "30", NULL};
+        (void)execv("/bin/timeout", oargv);
+        _exit(127);
+    }
+    if (waitpid(o2, &ost, 0) != o2 || WEXITSTATUS(ost) != 124) {
+        printf("[FAIL] timeout expiry st=0x%x\n", ost);
+        return -1;
+    }
+    (void)clock_gettime(CLOCK_MONOTONIC, &s1);
+    elapsed_ms =
+        (s1.tv_sec - s0.tv_sec) * 1000L + (s1.tv_nsec - s0.tv_nsec) / 1000000L;
+    if (elapsed_ms > 5000L) {
+        printf("[FAIL] timeout took %ld ms to terminate the child\n",
+               elapsed_ms);
+        return -1;
+    }
+    pid_t o3 = fork();
+    if (o3 == 0) {
+        char *const oargv[] = {"timeout", "-s",    "KILL", "-p", "--",
+                               "0.15",    "sleep", "30",   NULL};
+        (void)execv("/bin/timeout", oargv);
+        _exit(127);
+    }
+    if (waitpid(o3, &ost, 0) != o3 || WEXITSTATUS(ost) != 128 + SIGKILL) {
+        printf("[FAIL] timeout -s KILL -p st=0x%x\n", ost);
+        return -1;
+    }
+    printf("[OK] timeout utility enforced limits and -s/-p/-- options\n");
+
+    if (chdir("/tmp") != 0) {
+        printf("[FAIL] chdir /tmp for nohup errno=%d\n", errno);
+        return -1;
+    }
+    (void)unlink("nohup.out");
+    pid_t np = fork();
+    if (np == 0) {
+        char *const nargv[] = {"nohup", "--", "true", NULL};
+        (void)execv("/bin/nohup", nargv);
+        _exit(127);
+    }
+    int nst = 0;
+    if (waitpid(np, &nst, 0) != np || WEXITSTATUS(nst) != 0) {
+        printf("[FAIL] nohup st=0x%x\n", nst);
+        return -1;
+    }
+    (void)unlink("nohup.out");
+    printf("[OK] nohup utility ran a command immune to SIGHUP\n");
+    return 0;
+}
+
 static int test_vfs_links_fifo_statvfs_temp(void) {
     /* 1. chmod/fchmod/chown/lchown/faccessat. */
     int fd = open("/tmp/v33_f", O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0644u);
@@ -1024,6 +1164,9 @@ int main(void) {
         return 1;
     }
     if (test_vfs_links_fifo_statvfs_temp() != 0) {
+        return 1;
+    }
+    if (test_signal_sched_process_utils() != 0) {
         return 1;
     }
     return 0;

@@ -258,17 +258,18 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
 
 - **Run scripts and command pipelines:** Chain commands with pipes, redirections
   (`<`, `>`, `>>`, `2>&1`), `&&`/`||`/`;`, environment variables, and built-ins
-  (`cd`, `pwd`, `export`, `unset`, `read`, `set`, `umask`, `ulimit`, `exit`).
-  The shell also targets Issue 8 `$'...'` quoting, `set -o pipefail`, and `read
-  -d` with custom or NUL delimiters.
+  (`cd`, `pwd`, `export`, `unset`, `read`, `set`, `umask`, `ulimit`, `wait`,
+  `exit`). The shell also targets Issue 8 `$'...'` quoting, `set -o pipefail`,
+  and `read -d` with custom or NUL delimiters.
 - **Work with read-only, temporary, and persistent files:** List, inspect, copy,
-  move, link, and remove files across `/boot` (`bootfs`), `/tmp` (`tmpfs`), and
+  move, link, and remove files across `/boot` (`/bin`), `/tmp` (`tmpfs`), and
   persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Manage file
   modes, ownership, links, FIFOs, and disk usage with standard XCU utilities
   (such as `ls`, `chmod`, `ln`, `mkfifo`, `df`, `du`, and `dd`).
-- **Inspect processes, credentials, limits, and terminal settings:** View live
-  processes with `ps`, check identity with `id` and `logname`, adjust priority
-  with `nice` and `renice`, and query POSIX limits with `getconf`. Check system
+- **Inspect and control processes, timing, credentials, and terminals:** View
+  live processes with `ps` and check identity with `id` and `logname`. Adjust
+  priority with `nice` and `renice`, and control execution with `sleep`, `time`,
+  `timeout`, and `nohup`. Query POSIX limits with `getconf`, check system
   details with `uname` and `env`, and adjust terminal modes with `tty` and
   `stty`.
 
@@ -277,11 +278,15 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
 You can write portable, standalone C17 programs packed into `boot.tar` and run
 them in isolated Ring 3 address spaces across multiple CPU cores:
 
-- **Processes, credentials, threads, and timing:** Fork copy-on-write child
-  processes, manage UIDs/GIDs, query `<pwd.h>`/`<grp.h>`, and enforce
-  `<sys/resource.h>` limits. Run multithreaded code across SMP cores with
-  pthreads, semaphores, deferred cancellation, and thread-local `errno`. Use
-  POSIX signals and monotonic or realtime clocks and timers.
+- **Processes, credentials, threads, signals, and timing:** Spawn processes with
+  `fork`, `_Fork`, `execl*`, `execv*`, `fexecve`, `popen`/`pclose`, and
+  `system`, and reap or inspect state with `waitpid` and `waitid`. Manage
+  UIDs/GIDs, `<pwd.h>`/`<grp.h>`, and `<sys/resource.h>` limits. Run
+  multithreaded code with pthreads (robust mutexes and `pthread_atfork`) and ISO
+  C17 `<threads.h>`. Synchronize with unnamed and named semaphores, `sched_*`
+  helpers, deferred cancellation, and thread-local `errno`. Use Base signals
+  (`sigaction`, `sigsuspend`, `sigwait*`, `sigqueue`, `sig2str`/`str2sig`,
+  `pause`) and monotonic or realtime clocks and timers.
 - **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered
   `<stdio.h>` streams, permissions, hard and symbolic links, FIFOs, positional
   I/O, directory traversal (`posix_getdents`, `scandir`), `<sys/statvfs.h>`, and
@@ -314,10 +319,11 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** Signal wait APIs, `<threads.h>`,
-  `popen`/`system`, locales, wide characters, regular expressions, and
-  `<dlfcn.h>`. Ring 3 TCP/IP networking and remaining shell grammar and XCU
-  utilities follow. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** Full `<stdio.h>`/`<stdlib.h>`/`<time.h>`
+  completion (`scanf*`, `strtod`, `strftime`), `<complex.h>`/`<tgmath.h>`,
+  locales, wide characters, regular expressions, and `<dlfcn.h>`. Ring 3 TCP/IP
+  networking and remaining shell grammar and XCU utilities follow. See
+  [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree

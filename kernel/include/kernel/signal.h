@@ -52,4 +52,11 @@ long sys_sigpending(uint64_t set_va);
 void sys_sigreturn(trapframe_t *tf); /* never returns to its caller */
 long sys_inject_sig(uint64_t pid, uint64_t tid, uint64_t sig);
 long sys_kill(int64_t pid, uint64_t sig);
+long sys_sigqueue(int64_t pid, uint64_t value_va, uint64_t sig);
+long sys_sigtimedwait(uint64_t set_va, uint64_t info_va, uint64_t timeout_va,
+                      uint64_t clock_id);
+long sys_sigsuspend(uint64_t mask_va);
 void signal_post_to_proc(uint32_t pid, int sig);
+struct pcb;
+void signal_notify_child_locked(struct pcb *parent, uint32_t child_pid,
+                                uint32_t child_uid);

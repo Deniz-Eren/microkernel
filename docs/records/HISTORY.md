@@ -20,6 +20,22 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0034 — Add Base signals, waitid, _Fork, popen/system, and <threads.h>
+
+```{task} Add Base signals, waitid, _Fork, popen/system, and <threads.h>
+:id: TSK_0034
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0031, SWR_PROC_0012
+
+Add `_Fork`, `waitid`, `execl`, `execle`, `execlp`, `fexecve`, `popen`,
+`pclose`, and `system`. Add `pause`, `sigsuspend`, `sigwait`, `sigwaitinfo`,
+`sigtimedwait`, `sigqueue`, `sig2str`, `str2sig`, `strsignal`, `psignal`, and
+`psiginfo`. Supply C11 `<threads.h>`, remaining Base `pthread_*` and `sched_*`
+helpers, named `sem_open`/`sem_close`/`sem_unlink`, and `sleep`, `time`,
+`timeout`, `nohup`, and `sh` `wait` ({need}`BDR_0004`, {need}`SWR_PROC_0012`,
+{need}`SYS_PROC_0001`, {need}`SYS_SIG_0001`).
+```
+
 ### TSK_0033 — Add VFS links, permissions, FIFOs, and <sys/statvfs.h>
 
 ```{task} Add VFS links, permissions, FIFOs, and <sys/statvfs.h>

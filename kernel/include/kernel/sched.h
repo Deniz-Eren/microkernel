@@ -29,6 +29,7 @@ typedef enum {
     THREAD_WAIT_BLOCKED,
     THREAD_SLEEP_BLOCKED,
     THREAD_FUTEX_BLOCKED,
+    THREAD_STOPPED,
     THREAD_ZOMBIE,
 } thread_state_t;
 
@@ -53,6 +54,11 @@ typedef struct tcb {
     uint64_t slice_ticks; /* consumed quantum */
     uint32_t pending_signals;
     uint32_t blocked_signals;
+    uint32_t sig_wait_set;
+    uint32_t saved_sigmask;
+    uint8_t in_sigsuspend;
+    uint8_t has_saved_sigmask;
+    uint8_t futex_is_shared;
 
     /* IPC state (Milestone 3) */
     void *blocked_on_chan; /* channel_t* this thread is blocked on */
@@ -122,6 +128,15 @@ struct pcb {
     uint64_t sig_restorer;  /* __sigreturn_trampoline address */
     uint64_t next_stack_va; /* bump cursor for per-thread user stacks */
 
+    uint64_t sig_values[32];
+    uint32_t sig_senders[32];
+    uint32_t sig_sender_uids[32];
+    uint8_t sig_codes[32];
+
+    uint8_t stopped;
+    uint8_t stop_sig;
+    uint8_t cont_pending;
+
     /* Per-process file descriptor table. */
     struct __k_fd_entry fds[PROC_MAX_FDS];
 
@@ -177,6 +192,7 @@ void schedule(void);
 void schedule_with_lock(uint64_t saved_flags);
 void sched_ready(tcb_t *t);
 void sched_ready_locked(tcb_t *t);
+void sched_remove_ready_locked(tcb_t *t);
 void sched_unready(tcb_t *t);
 void sched_activate(void);
 void sched_reset_current_fpu(void);

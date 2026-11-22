@@ -28,6 +28,18 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Implemented POSIX.1-2024 Base signals, `waitid`, `_Fork`, `popen`/`system`,
+  ISO C17 `<threads.h>`, named `MAP_SHARED` semaphores, and XCU utilities
+  `sleep`, `time`, `timeout`, `nohup`, and `sh` `wait` (`TSK_0034`,
+  `SWR_PROC_0012`, `ADR_0031`, `ICD_LIBC_0008`, `COMP_LIBC_0008`,
+  `VER_PROC_0010`): extended `SYS_FUTEX` with physical-frame keying on
+  `VMM_SHARED` pages for Ring 3 `sem_open`/`sem_close`/`sem_unlink`, added
+  `SYS_SIGTIMEDWAIT` (`64`), `SYS_SIGSUSPEND` (`65`), `SYS_SIGQUEUE` (`66`),
+  `THREAD_STOPPED`, and `PROC_WAIT_*` flags, exposed `/bin -> /boot` in
+  `vfsserv` and resolved `fexecve` over `VFS_OP_RESOLVE`, added flat
+  `siginfo_t`, `<threads.h>` over `<sys/_pthread_types.h>`, LIFO
+  `pthread_atfork`, real `PTHREAD_MUTEX_ROBUST` (`EOWNERDEAD` and
+  `ENOTRECOVERABLE`), and verified in QEMU and Gates 1 to 3.
 - Implemented POSIX.1-2024 Base VFS links, permissions, FIFOs, positional I/O,
   directory enumeration, `<sys/statvfs.h>`, temp-file helpers, and 15 XCU Base
   file utilities (`TSK_0033`, `SWR_IPC_0012`, `ADR_0030`, `ICD_IPC_0016`,

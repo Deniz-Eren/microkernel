@@ -13,7 +13,9 @@
 
 /* need:: ICD_PROC_0006 */
 
+#include <sched.h>
 #include <stddef.h>
+#include <sys/_pthread_types.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -27,6 +29,13 @@
 #define PTHREAD_MUTEX_ERRORCHECK 1
 #define PTHREAD_MUTEX_RECURSIVE 2
 #define PTHREAD_MUTEX_DEFAULT PTHREAD_MUTEX_NORMAL
+
+#define PTHREAD_MUTEX_STALLED 0
+#define PTHREAD_MUTEX_ROBUST 1
+
+#define PTHREAD_PRIO_NONE 0
+#define PTHREAD_PRIO_INHERIT 1
+#define PTHREAD_PRIO_PROTECT 2
 
 #define PTHREAD_BARRIER_SERIAL_THREAD (-1)
 
@@ -44,27 +53,25 @@ struct __pthread_cleanup_frame {
 
 typedef struct {
     int __detachstate;
+    size_t __guardsize;
+    struct sched_param __schedparam;
+    void *__stackaddr;
+    size_t __stacksize;
 } pthread_attr_t;
 
 typedef struct {
     int __type;
+    int __robust;
+    int __prioceiling;
 } pthread_mutexattr_t;
 
-typedef struct {
-    unsigned int __state;
-    int __type;
-    pthread_t __owner;
-    unsigned int __count;
-} pthread_mutex_t;
+typedef struct __pthread_mutex_s pthread_mutex_t;
 
 typedef struct {
     clockid_t __clock_id;
 } pthread_condattr_t;
 
-typedef struct {
-    unsigned int __seq;
-    clockid_t __clock_id;
-} pthread_cond_t;
+typedef struct __pthread_cond_s pthread_cond_t;
 
 typedef struct {
     int __pshared;
@@ -88,11 +95,14 @@ typedef struct {
     unsigned int __waiters;
 } pthread_rwlock_t;
 
-typedef unsigned int pthread_once_t;
-typedef unsigned int pthread_key_t;
+typedef __pthread_once_t pthread_once_t;
+typedef __pthread_key_t pthread_key_t;
 
 #define PTHREAD_MUTEX_INITIALIZER                                              \
-    { 0u, PTHREAD_MUTEX_NORMAL, 0u, 0u }
+    {                                                                          \
+        0u, PTHREAD_MUTEX_NORMAL, 0u, 0u, 0, 0, 0u,                            \
+            (struct __pthread_mutex_s *)0                                      \
+    }
 #define PTHREAD_COND_INITIALIZER                                               \
     { 0u, CLOCK_REALTIME }
 #define PTHREAD_RWLOCK_INITIALIZER                                             \
@@ -103,6 +113,21 @@ int pthread_attr_init(pthread_attr_t *attr);
 int pthread_attr_destroy(pthread_attr_t *attr);
 int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate);
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
+int pthread_attr_getguardsize(const pthread_attr_t *restrict attr,
+                              size_t *restrict guardsize);
+int pthread_attr_setguardsize(pthread_attr_t *attr, size_t guardsize);
+int pthread_attr_getschedparam(const pthread_attr_t *restrict attr,
+                               struct sched_param *restrict param);
+int pthread_attr_setschedparam(pthread_attr_t *restrict attr,
+                               const struct sched_param *restrict param);
+int pthread_attr_getstack(const pthread_attr_t *restrict attr,
+                          void **restrict stackaddr,
+                          size_t *restrict stacksize);
+int pthread_attr_setstack(pthread_attr_t *attr, void *stackaddr,
+                          size_t stacksize);
+
+int pthread_atfork(void (*prepare)(void), void (*parent)(void),
+                   void (*child)(void));
 
 int pthread_create(pthread_t *restrict thread,
                    const pthread_attr_t *restrict attr,
@@ -143,6 +168,13 @@ int pthread_mutexattr_destroy(pthread_mutexattr_t *attr);
 int pthread_mutexattr_gettype(const pthread_mutexattr_t *restrict attr,
                               int *restrict type);
 int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
+int pthread_mutexattr_getprioceiling(const pthread_mutexattr_t *restrict attr,
+                                     int *restrict prioceiling);
+int pthread_mutexattr_setprioceiling(pthread_mutexattr_t *attr,
+                                     int prioceiling);
+int pthread_mutexattr_getrobust(const pthread_mutexattr_t *restrict attr,
+                                int *restrict robust);
+int pthread_mutexattr_setrobust(pthread_mutexattr_t *attr, int robust);
 
 int pthread_mutex_init(pthread_mutex_t *restrict mutex,
                        const pthread_mutexattr_t *restrict attr);
@@ -154,6 +186,12 @@ int pthread_mutex_timedlock(pthread_mutex_t *restrict mutex,
 int pthread_mutex_clocklock(pthread_mutex_t *restrict mutex, clockid_t clock_id,
                             const struct timespec *restrict abstime);
 int pthread_mutex_unlock(pthread_mutex_t *mutex);
+
+int pthread_mutex_getprioceiling(const pthread_mutex_t *restrict mutex,
+                                 int *restrict prioceiling);
+int pthread_mutex_setprioceiling(pthread_mutex_t *restrict mutex,
+                                 int prioceiling, int *restrict old_ceiling);
+int pthread_mutex_consistent(pthread_mutex_t *mutex);
 
 int pthread_condattr_init(pthread_condattr_t *attr);
 int pthread_condattr_destroy(pthread_condattr_t *attr);

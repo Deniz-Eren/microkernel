@@ -150,10 +150,33 @@ Ring 3 must supply `id`, `logname`, `nice`, `renice`, `umask`, and `ulimit`
 ({need}`SYS_PROC_0001`).
 ```
 
+```{swr} Supply Base signals, waitid, _Fork, popen/system, and <threads.h>
+:id: SWR_PROC_0012
+:status: active
+:posix: XBD/threads.h (CX), XSH/waitid (BASE), XSH/sem_open (BASE)
+:derives: SYS_PROC_0001, SYS_SIG_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0031
+
+The kernel and `libc` must supply Base `_Fork` ([_Fork][fn-ufork]), `waitid`
+([waitid][fn-waitid]), `execl*`, `fexecve`, `popen`, `pclose`, and `system`.
+They must also supply `pause`, `sigsuspend`, `sigwait*`, `sigqueue`, `sig2str`,
+`str2sig`, `strsignal`, `psignal`, and `psiginfo`. The library must supply
+`<threads.h>` ([threads.h][hdr-thr]), remaining Base `pthread_*` and `sched_*`
+helpers, and Ring 3 `MAP_SHARED` named `sem_open`/`sem_close`/`sem_unlink`. Ring
+3 must supply `sleep`, `time`, `timeout`, `nohup`, and `sh` `wait`
+({need}`SYS_PROC_0001`, {need}`SYS_SIG_0001`).
+```
+
 [hdr-wait]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_wait.h.html
 [fn-waitpid]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/waitpid.html
+[fn-waitid]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/functions/waitid.html
+[fn-ufork]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/functions/_Fork.html
+[hdr-thr]:
+  https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/threads.h.html
 [fn-sysconf]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/sysconf.html
 [xcu-ps]:

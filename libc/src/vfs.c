@@ -199,6 +199,31 @@ long __libc_vfs_dup_handle(uint32_t handle) {
     return vfs_rpc(&req, &rep);
 }
 
+int __libc_vfs_resolve_handle(uint32_t handle, char *out, size_t out_cap,
+                              uint32_t *mode_out) {
+    if (!out || out_cap == 0u) {
+        return -EINVAL;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_RESOLVE;
+    req.handle = handle;
+    req.u.path[0] = '\0';
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        return (int)r;
+    }
+    size_t plen = strlen(rep.u.path);
+    if (plen == 0u || plen + 1u > out_cap) {
+        return -ENAMETOOLONG;
+    }
+    memcpy(out, rep.u.path, plen + 1u);
+    if (mode_out) {
+        *mode_out = rep.flags;
+    }
+    return 0;
+}
+
 ssize_t __libc_vfs_read(uint32_t handle, void *buf, size_t n) {
     if (n == 0u) {
         return 0;

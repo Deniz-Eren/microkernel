@@ -913,7 +913,52 @@ static int is_builtin_name(const char *cmd) {
            strcmp(cmd, "set") == 0 || strcmp(cmd, "read") == 0 ||
            strcmp(cmd, "exit") == 0 || strcmp(cmd, "true") == 0 ||
            strcmp(cmd, "false") == 0 || strcmp(cmd, "echo") == 0 ||
-           strcmp(cmd, "umask") == 0 || strcmp(cmd, "ulimit") == 0;
+           strcmp(cmd, "wait") == 0 || strcmp(cmd, "umask") == 0 ||
+           strcmp(cmd, "ulimit") == 0;
+}
+
+static int builtin_wait(int argc, char **argv) {
+    int i = 1;
+    if (i < argc && strcmp(argv[i], "--") == 0) {
+        i++;
+    }
+    if (i >= argc) {
+        int wstatus = 0;
+        pid_t pid;
+        while ((pid = waitpid((pid_t)-1, &wstatus, 0)) > 0 ||
+               (pid < 0 && errno == EINTR)) {
+        }
+        if (pid < 0 && errno != ECHILD) {
+            return 1;
+        }
+        return 0;
+    }
+    int status = 0;
+    for (; i < argc; i++) {
+        char *end = (char *)0;
+        errno = 0;
+        long target = strtol(argv[i], &end, 10);
+        if (errno != 0 || end == argv[i] || *end != '\0' || target <= 0) {
+            (void)fprintf(stderr, "wait: %s: invalid pid\n", argv[i]);
+            status = 127;
+            continue;
+        }
+        int wstatus = 0;
+        pid_t pid;
+        while ((pid = waitpid((pid_t)target, &wstatus, 0)) < 0 &&
+               errno == EINTR) {
+        }
+        if (pid < 0) {
+            status = 127;
+            continue;
+        }
+        if (WIFEXITED(wstatus)) {
+            status = WEXITSTATUS(wstatus);
+        } else if (WIFSIGNALED(wstatus)) {
+            status = 128 + WTERMSIG(wstatus);
+        }
+    }
+    return status;
 }
 
 static int run_builtin(int argc, char **argv) {
@@ -999,6 +1044,9 @@ static int run_builtin(int argc, char **argv) {
     }
     if (strcmp(cmd, "ulimit") == 0) {
         return builtin_ulimit(argc, argv);
+    }
+    if (strcmp(cmd, "wait") == 0) {
+        return builtin_wait(argc, argv);
     }
     if (strcmp(cmd, "exit") == 0) {
         g_should_exit = 1;

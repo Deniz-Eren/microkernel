@@ -17,6 +17,11 @@
 #include <sys/microkernel.h>
 
 #define PROC_WAIT_NOHANG 1
+#define PROC_WAIT_STOP 2
+#define PROC_WAIT_CONT 4
+#define PROC_WAIT_EXT 8
+#define PROC_WAIT_NOWAIT 16
+#define PROC_WAIT_EXITED 32
 
 #define PROC_COMM_MAX 32u
 #define PROC_ARGS_MAX 64u

@@ -75,6 +75,8 @@ int feof(FILE *stream);
 int ferror(FILE *stream);
 void clearerr(FILE *stream);
 int fileno(FILE *stream);
+FILE *popen(const char *restrict command, const char *restrict mode);
+int pclose(FILE *stream);
 int fflush(FILE *stream);
 int setvbuf(FILE *restrict stream, char *restrict buf, int type, size_t size);
 void setbuf(FILE *restrict stream, char *restrict buf);

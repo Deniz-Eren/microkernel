@@ -10,11 +10,30 @@ sigaction rejects SIGKILL and SIGSTOP with EINVAL
 errno thread-local and preserved across success
 signal handler entered
 signal mask saved and restored across sigreturn
+sig2str and str2sig round trip verified
+strsignal and psignal descriptions verified
+sigqueue and sigwaitinfo queued value verified
+sigwait consumed pending signal without handler
+sigtimedwait relative timeout waited and returned EAGAIN
+sigsuspend ran handler and restored the mask
+pause slept until SIGALRM and returned EINTR
+psiginfo description verified
 VMMap/mmap W\^X, mprotect, msync, and munmap verified
 ProcCreate spawned procchild
 procchild COW read and private write succeeded
 waitpid reaped procchild .* exit=42
 VMCloneCow isolated parent and child writes cleanly
+waitid\(P_PID, WEXITED\) reports exit status 7
+waitid WNOWAIT left the child waitable for waitpid
+waitid WNOHANG reports no event with si_pid 0
+_Fork spawned and reaped a child \(exit 11\)
+execl, execle, and execlp executed bootfs utilities
+fexecve executed an open bootfs descriptor
+system ran /bin/sh -c and reported the exit status
+popen/pclose reader and writer pipes verified
+SIGSTOP parked the child and waitid\(WSTOPPED\) reported it
+SIGCONT resumed the child and waitid\(WCONTINUED\) reported it
+SIGKILL terminated the resumed child
 rtcdrv granted Ring 3 IOPL=3
 rtcdrv configured CMOS port=0x70 gsi=8
 rtcdrv handled 3 hardware IRQ 8 events via IPC
@@ -24,6 +43,13 @@ CLOCK_MONOTONIC, CLOCK_REALTIME, and clock_nanosleep verified
 POSIX timer_create/timer_settime fired .* SIGUSR1 ticks
 pthreads FS\.base TLS, mutex, spinlock, barrier, rwlock
 pthread_cond_clockwait and sem_wait/sem_clockwait verified
+threads\.h thrd_create, thrd_join, and thrd_equal verified
+threads\.h mtx and cnd wait/signal verified
+threads\.h call_once and tss verified
+pthread_atfork LIFO prepare and FIFO parent/child verified
+PTHREAD_MUTEX_ROBUST EOWNERDEAD and ENOTRECOVERABLE verified
+pthread_attr stack, guardsize, and custom-stack thread
+named sem_open/sem_wait/sem_post/sem_close/sem_unlink
 pipeserv registered /dev/pipe
 fork COW isolated parent and child \(child=.* exit=33\)
 pipe2, dup3 O_CLOEXEC, and execve argv/envp/pipe verified
@@ -67,6 +93,7 @@ sh cwd and umask persistence across execve verified
 XCU utilities ps, getconf, tty, and stty verified
 XCU id, logname, nice, renice, umask, and ulimit verified
 XCU chmod, chown, chgrp, ln, mkfifo, readlink, realpath, touch, rmdir, df, du, dd, basename, dirname, and pathchk verified
+sh wait builtin reaped children and reported statuses
 uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified
@@ -75,6 +102,11 @@ alarm SIGALRM, rename/renameat, and realpath verified
 sysconf, confstr, pathconf, gethostname, ttyname, tcgetwinsize, and ProcList verified
 credentials, pwd/grp, getlogin, rlimit, and nice verified
 VFS chmod/chown, links, FIFO, pread/pwrite, getdents, statvfs, and temp files verified
+sched priority range and round-robin interval verified
+sleep utility suspended for about one second
+time utility reported real/user/sys on stderr
+timeout utility enforced limits and -s/-p/-- options
+nohup utility ran a command immune to SIGHUP
 setpgid, getpgid, setsid, waitpid\(-pgid\), and kill\(-pgid\) verified
 TTY ISIG Ctrl-C SIGINT and tcgetpgrp/tcsetpgrp verified
 Ring 3 core utilities \(mkdir, rm, cp, mv, uname, env, wc, head\) verified

@@ -42,5 +42,6 @@ char *strtok_r(char *restrict s, const char *restrict sep,
 char *strdup(const char *s);
 char *strndup(const char *s, size_t size);
 char *strerror(int errnum);
+char *strsignal(int sig);
 
 #endif /* _STRING_H */
