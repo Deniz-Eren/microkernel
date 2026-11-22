@@ -21,6 +21,9 @@
 #define BOOTINFO_VA 0x10000000ULL
 #define BOOTFS_USER_VA 0x11000000ULL
 
+#define BOOT_CPU_X86_64_V3 (1u << 0)
+#define BOOT_CPU_AVX512 (1u << 1)
+
 typedef struct boot_info {
     uint64_t magic;
     uint64_t boot_tar_phys; /* physical address of the ustar bootfs module */
@@ -31,7 +34,7 @@ typedef struct boot_info {
     uint32_t serial_port; /* ACPI SPCR / COM1 I/O base port */
     uint32_t serial_gsi;  /* ACPI SPCR / MADT serial GSI */
     uint32_t rtc_gsi;     /* ACPI MADT RTC GSI */
-    uint32_t reserved;
+    uint32_t cpu_features;
     char cmdline[128];
 } boot_info_t;
 

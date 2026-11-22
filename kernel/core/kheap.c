@@ -10,6 +10,7 @@
 
 #include <kernel/kheap.h>
 #include <kernel/pmm.h>
+#include <kernel/string.h>
 #include <kernel/vmm.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -108,10 +109,7 @@ void *kmalloc(size_t n) {
 void *kzalloc(size_t n) {
     void *p = kmalloc(n);
     if (p) {
-        uint8_t *q = (uint8_t *)p;
-        for (size_t i = 0; i < n; i++) {
-            q[i] = 0;
-        }
+        memset(p, 0, n);
     }
     return p;
 }

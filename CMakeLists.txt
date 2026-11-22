@@ -204,6 +204,7 @@ add_subdirectory(tests/socktest)
 add_subdirectory(tests/shtest)
 add_subdirectory(tests/utilstest)
 add_subdirectory(tests/jobtest)
+add_subdirectory(tests/simdtest)
 add_subdirectory(tests/stresstest)
 
 #------------------------------------------------------------------------------
@@ -385,3 +386,22 @@ set_tests_properties(
     coverage.unit
     PROPERTIES LABELS "docs;coverage"
 )
+
+if(MICROKERNEL_ARCH STREQUAL "x86-64" AND NOT MICROKERNEL_COVERAGE)
+    add_test(
+        NAME boot.x86_64_v3
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            "${CMAKE_SOURCE_DIR}/tests/boot/test_x86_64_v3.py"
+            --iso "${CMAKE_BINARY_DIR}/microkernel.iso"
+            --kernel "${CMAKE_BINARY_DIR}/kernel.elf"
+            --libc "${SYSROOT_DIR}/usr/lib/libc.a"
+            --simdtest "$<TARGET_FILE:simdtest>"
+            --objdump "${CMAKE_OBJDUMP}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+    set_tests_properties(
+        boot.x86_64_v3
+        PROPERTIES LABELS "boot;arch"
+    )
+endif()

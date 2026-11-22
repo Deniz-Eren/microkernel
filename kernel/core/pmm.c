@@ -42,15 +42,27 @@ static inline void bit_set(uint64_t idx) {
 }
 
 void pmm_reserve(uint64_t base, uint64_t len) {
+    if (len == 0) {
+        return;
+    }
     uint64_t start = base / FRAME_SIZE;
     uint64_t end = (base + len + FRAME_SIZE - 1) / FRAME_SIZE;
     if (end > g_total_frames) {
         end = g_total_frames;
     }
-    for (uint64_t i = start; i < end; i++) {
-        if (bit_test(i)) {
-            bit_clear(i);
-            g_free_frames--;
+    if (start >= end) {
+        return;
+    }
+    uint64_t first_w = start / 64ULL;
+    uint64_t last_w = (end - 1ULL) / 64ULL;
+    for (uint64_t w = first_w; w <= last_w; w++) {
+        uint64_t lo = (w == first_w) ? (start % 64ULL) : 0ULL;
+        uint64_t hi = (w == last_w) ? ((end - 1ULL) % 64ULL) : 63ULL;
+        uint64_t mask = (~0ULL << lo) & (~0ULL >> (63ULL - hi));
+        uint64_t cleared = g_bitmap[w] & mask;
+        if (cleared) {
+            g_free_frames -= (uint64_t)__builtin_popcountll(cleared);
+            g_bitmap[w] &= ~mask;
         }
     }
 }
@@ -80,14 +92,19 @@ void pmm_init(void) {
         }
     }
 
-    /* Mark all frames free, then beyond-total used. */
-    for (uint64_t i = 0; i < g_total_frames; i++) {
-        bit_set(i);
+    /* Mark all frames free at word granularity, then beyond-total used. */
+    uint64_t full_words = g_total_frames / 64ULL;
+    uint64_t rem_bits = g_total_frames % 64ULL;
+    for (uint64_t w = 0; w < full_words; w++) {
+        g_bitmap[w] = ~0ULL;
+    }
+    if (full_words < BITMAP_WORDS) {
+        g_bitmap[full_words] = rem_bits ? ((1ULL << rem_bits) - 1ULL) : 0ULL;
+        for (uint64_t w = full_words + 1ULL; w < BITMAP_WORDS; w++) {
+            g_bitmap[w] = 0ULL;
+        }
     }
     g_free_frames = g_total_frames;
-    for (uint64_t i = g_total_frames; i < BITMAP_WORDS * 64; i++) {
-        bit_clear(i);
-    }
 
     /* Reserve everything not covered by usable mmap regions. */
     uint64_t cursor = 0;
@@ -168,11 +185,37 @@ uint64_t pmm_alloc_frame(void) {
 }
 
 int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
-    if (count == 0) {
+    if (count == 0 || count > g_free_frames) {
         return -1;
     }
     uint64_t run = 0;
-    for (uint64_t i = 0; i < g_total_frames; i++) {
+    uint64_t i = 0;
+    while (i < g_total_frames) {
+        if ((i & 63ULL) == 0ULL && i + 64ULL <= g_total_frames) {
+            uint64_t word = g_bitmap[i / 64ULL];
+            if (word == 0ULL) {
+                run = 0;
+                i += 64ULL;
+                continue;
+            }
+            if (word == ~0ULL) {
+                if (run + 64ULL >= count) {
+                    uint64_t base = i - run;
+                    for (uint64_t j = 0; j < count; j++) {
+                        bit_clear(base + j);
+                        if (g_refcount) {
+                            g_refcount[base + j] = 1;
+                        }
+                    }
+                    g_free_frames -= count;
+                    *out_base = base * FRAME_SIZE;
+                    return 0;
+                }
+                run += 64ULL;
+                i += 64ULL;
+                continue;
+            }
+        }
         if (bit_test(i)) {
             run++;
             if (run == count) {
@@ -190,6 +233,7 @@ int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
         } else {
             run = 0;
         }
+        i++;
     }
     return -1;
 }

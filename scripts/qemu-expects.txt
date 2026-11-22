@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
 # Ordered regex expectations for headless QEMU serial test runs.
+\[OK\] CPU x86-64-v3 verified: XSAVE=.* bytes XCR0=0x
 \[OK\] PMM/VMM/APIC initialized
 ACPI MADT discovered IOAPIC @ 0x
 name resolved /dev/echo
@@ -69,6 +70,8 @@ alarm SIGALRM, rename/renameat, and realpath verified
 setpgid, getpgid, setsid, waitpid\(-pgid\), and kill\(-pgid\) verified
 TTY ISIG Ctrl-C SIGINT and tcgetpgrp/tcsetpgrp verified
 Ring 3 core utilities \(mkdir, rm, cp, mv, uname, env, wc, head\) verified
+x86-64-v3 AVX2, FMA, BMI1/BMI2, and bootinfo flags verified
+preemptive XSAVE/XRSTOR YMM and MXCSR thread isolation verified
 <sys/select\.h> select, pselect, multi-server FDs, and sigmask
 cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,
 zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks

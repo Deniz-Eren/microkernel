@@ -10,16 +10,22 @@
 set(MICROKERNEL_TARGET_TRIPLE "x86_64-unknown-none-elf")
 
 set(MICROKERNEL_USER_ARCH_CFLAGS
+    -march=x86-64-v3
     -mno-red-zone
     -DMICROKERNEL_ARCH="x86-64"
 )
 
 set(MICROKERNEL_KERNEL_ARCH_CFLAGS
+    -march=x86-64-v3
     -mcmodel=kernel
     -mno-red-zone
     -mno-mmx
     -mno-sse
     -mno-sse2
+    -mno-avx
+    -mno-avx2
+    -mno-fma
+    -mno-f16c
     -DMICROKERNEL_ARCH="x86-64"
     -DARCH_ELF_MACHINE=62
 )

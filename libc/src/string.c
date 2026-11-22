@@ -15,40 +15,134 @@
 
 /* need:: COMP_LIBC_0001 COMP_LIBC_0004 */
 
+typedef uint64_t __attribute__((may_alias, aligned(1))) libc_u64_unaligned_t;
+
+#if defined(__AVX2__)
+typedef uint8_t libc_v32u8_t __attribute__((vector_size(32), aligned(1)));
+#endif
+
 void *memset(void *dst, int c, size_t n) {
-    uint8_t *d = dst;
-    for (size_t i = 0; i < n; i++) {
-        d[i] = (uint8_t)c;
+    uint8_t *d = (uint8_t *)dst;
+    uint8_t b = (uint8_t)c;
+#if defined(__AVX2__)
+    if (n >= 32u) {
+        libc_v32u8_t v = {b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b,
+                          b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b};
+        while (n >= 32u) {
+            *(libc_v32u8_t *)d = v;
+            d += 32u;
+            n -= 32u;
+        }
+    }
+#endif
+    if (n >= 8u) {
+        uint64_t fill = (uint64_t)b * 0x0101010101010101ULL;
+        while (n >= 8u) {
+            *(libc_u64_unaligned_t *)d = fill;
+            d += 8u;
+            n -= 8u;
+        }
+    }
+    while (n > 0u) {
+        *d++ = b;
+        n--;
     }
     return dst;
 }
 
 void *memcpy(void *dst, const void *src, size_t n) {
-    uint8_t *d = dst;
-    const uint8_t *s = src;
-    for (size_t i = 0; i < n; i++) {
-        d[i] = s[i];
+    uint8_t *d = (uint8_t *)dst;
+    const uint8_t *s = (const uint8_t *)src;
+#if defined(__AVX2__)
+    while (n >= 32u) {
+        *(libc_v32u8_t *)d = *(const libc_v32u8_t *)s;
+        d += 32u;
+        s += 32u;
+        n -= 32u;
+    }
+#endif
+    while (n >= 8u) {
+        *(libc_u64_unaligned_t *)d = *(const libc_u64_unaligned_t *)s;
+        d += 8u;
+        s += 8u;
+        n -= 8u;
+    }
+    while (n > 0u) {
+        *d++ = *s++;
+        n--;
     }
     return dst;
 }
 
 void *memmove(void *dst, const void *src, size_t n) {
-    uint8_t *d = dst;
-    const uint8_t *s = src;
+    uint8_t *d = (uint8_t *)dst;
+    const uint8_t *s = (const uint8_t *)src;
     if (d < s) {
-        for (size_t i = 0; i < n; i++) {
-            d[i] = s[i];
+        size_t gap = (size_t)(s - d);
+#if defined(__AVX2__)
+        if (gap >= 32u) {
+            while (n >= 32u) {
+                *(libc_v32u8_t *)d = *(const libc_v32u8_t *)s;
+                d += 32u;
+                s += 32u;
+                n -= 32u;
+            }
+        }
+#endif
+        if (gap >= 8u) {
+            while (n >= 8u) {
+                *(libc_u64_unaligned_t *)d = *(const libc_u64_unaligned_t *)s;
+                d += 8u;
+                s += 8u;
+                n -= 8u;
+            }
+        }
+        while (n > 0u) {
+            *d++ = *s++;
+            n--;
         }
     } else if (d > s) {
-        for (size_t i = n; i > 0; i--) {
-            d[i - 1] = s[i - 1];
+        size_t gap = (size_t)(d - s);
+        d += n;
+        s += n;
+#if defined(__AVX2__)
+        if (gap >= 32u) {
+            while (n >= 32u) {
+                d -= 32u;
+                s -= 32u;
+                *(libc_v32u8_t *)d = *(const libc_v32u8_t *)s;
+                n -= 32u;
+            }
+        }
+#endif
+        if (gap >= 8u) {
+            while (n >= 8u) {
+                d -= 8u;
+                s -= 8u;
+                *(libc_u64_unaligned_t *)d = *(const libc_u64_unaligned_t *)s;
+                n -= 8u;
+            }
+        }
+        while (n > 0u) {
+            *--d = *--s;
+            n--;
         }
     }
     return dst;
 }
 
 int memcmp(const void *a, const void *b, size_t n) {
-    const uint8_t *x = a, *y = b;
+    const uint8_t *x = (const uint8_t *)a;
+    const uint8_t *y = (const uint8_t *)b;
+    while (n >= 8u) {
+        if (*(const libc_u64_unaligned_t *)x !=
+            *(const libc_u64_unaligned_t *)y) {
+            break;
+        }
+        x += 8u;
+        y += 8u;
+        n -= 8u;
+    }
     for (size_t i = 0; i < n; i++) {
         if (x[i] != y[i]) {
             return x[i] < y[i] ? -1 : 1;

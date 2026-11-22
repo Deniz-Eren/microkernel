@@ -177,7 +177,7 @@ installed directly on your host, you can also boot `build/microkernel-shell.iso`
 without Podman:
 
 ```bash
-qemu-system-x86_64 -machine q35 -cpu qemu64,+smap,+smep -m 256M -smp 2 \
+qemu-system-x86_64 -machine q35 -cpu max -m 256M -smp 2 \
     -cdrom build/microkernel-shell.iso -serial mon:stdio -display none \
     -no-reboot
 ```
@@ -198,6 +198,9 @@ The kernel supplies these services:
 - memory management with four-level page tables, copy-on-write, and W^X policy
 - IOAPIC IRQ-to-IPC pulse routing and `CAP_SYS_INTR`-gated port I/O
 - fast system calls with the `syscall`/`sysret` instructions
+- `x86-64-v3` minimum CPU verification (`AVX`, `AVX2`, `FMA`, `BMI1`, `BMI2`),
+  `XSAVE`/`XRSTOR` per-thread vector state switching, and optional `AVX-512`
+  detection (Ring 3 builds with `-march=x86-64-v3` while Ring 0 stays scalar)
 
 W^X means: the system maps a page as writable or as code, but not the two
 together.
@@ -369,9 +372,10 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): `CAP_SYS_INTR` MMIO/DMA syscalls and
-Ring 3 `virtio-blk` driver, writable on-disk file system mount in `vfsserv`, and
-ACPI `MADT` SMP bring-up. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (planned next): `<math.h>` and `<fenv.h>` with `FMA`,
+`CAP_SYS_INTR` MMIO/DMA syscalls and Ring 3 `virtio-blk` driver, writable
+on-disk file system mount in `vfsserv`, and ACPI `MADT` SMP bring-up. See
+[docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -418,9 +422,11 @@ library functions. Recent milestones added the 4-gate POSIX harness,
 `<stdio.h>`, `setenv`/`unsetenv`, `execvp`, and core C17/POSIX headers.
 
 Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`), the Ring 3
-command shell (`sh`) with core utilities, and `<sys/select.h>` leak-freedom
-stress tests. They also added ACPI `MADT`/`SPCR` driver discovery, `x86-64` HAL
-isolation, and opt-in LLVM coverage (`./scripts/env.sh coverage`).
+command shell (`sh`) with job control, and `<sys/select.h>` leak-freedom stress
+tests. They also added ACPI `MADT`/`SPCR` driver discovery, `x86-64` HAL
+isolation, and opt-in LLVM coverage (`./scripts/env.sh coverage`). The newest
+milestone enforces the `x86-64-v3` boot gate with `XSAVE`/`XRSTOR` and optional
+`AVX-512`.
 
 ## Documentation
 

@@ -4,7 +4,7 @@
 /* Context switch, syscall entry, and thread bootstrap.
  * Offsets into struct tcb must match kernel/include/kernel/sched.h:
  *   TCB_KRSP (32) : kernel_rsp   (asserted in sched.c via _Static_assert)
- *   TCB_FPU  (40) : fpu_area     (pointer to 512-byte aligned image) */
+ *   TCB_FPU  (40) : fpu_area     (pointer to 64-byte aligned XSAVE image) */
 
 .set TCB_KRSP, 32
 .set TCB_FPU,  40
@@ -25,11 +25,14 @@ switch_to:
 
     movq %rsp, TCB_KRSP(%rdi)
 
-    /* Eager FPU save/restore: kernel code never touches XMM, Ring 3 may. */
-    movq TCB_FPU(%rdi), %rax
-    fxsave (%rax)
-    movq TCB_FPU(%rsi), %rax
-    fxrstor (%rax)
+    /* Eager extended-state save/restore via XSAVE/XRSTOR: kernel stays scalar,
+     * Ring 3 uses AVX/AVX2 (and optional AVX-512 when present). */
+    movl g_xsave_mask_lo(%rip), %eax
+    movl g_xsave_mask_hi(%rip), %edx
+    movq TCB_FPU(%rdi), %rcx
+    xsave (%rcx)
+    movq TCB_FPU(%rsi), %rcx
+    xrstor (%rcx)
 
     movq TCB_KRSP(%rsi), %rsp
     popq %r15

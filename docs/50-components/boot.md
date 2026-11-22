@@ -50,3 +50,17 @@ interactive boot ({need}`ICD_BOOT_0001`, {need}`SWR_BOOT_0003`).
 backends isolate platform code under `-DMICROKERNEL_ARCH=x86-64`
 ({need}`ICD_BOOT_0002`, {need}`SWR_BOOT_0004`).
 ```
+
+```{comp} x86-64-v3 CPUID gate, XSAVE/XRSTOR switching, and AVX2 userland
+:id: COMP_BOOT_0005
+:status: active
+:refines: ARC_BOOT_0001, ICD_BOOT_0001, ICD_BOOT_0002
+:satisfies: SWR_BOOT_0005
+
+`kernel/arch/x86-64/arch.c` verifies `x86-64-v3` features via `CPUID` during
+early boot, halts legacy CPUs, enables `CR4.OSXSAVE` and `XCR0` (with optional
+`AVX-512`), and reports `XSAVE` size. `kernel/arch/x86-64/switch.S` and
+`kernel/core/sched.c` switch 64-byte-aligned `XSAVE` areas. Ring 3 compiles with
+`-march=x86-64-v3` while Ring 0 stays scalar ({need}`ICD_BOOT_0001`,
+{need}`ICD_BOOT_0002`, {need}`SWR_BOOT_0005`).
+```

@@ -19,6 +19,20 @@ Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- Enforced the `x86-64-v3` minimum CPU baseline at early boot (`CPUID` gate
+  halting legacy CPUs cleanly before `x86-64-v3` instructions run), upgraded
+  `switch.S` and `sched.c` to dynamically sized 64-byte-aligned `XSAVE`/`XRSTOR`
+  context switching with optional `AVX-512` `XCR0` detection, exposed
+  `BOOT_CPU_*` flags in `boot_info_t`, compiled Ring 3 with `-march=x86-64-v3`
+  and Ring 0 with scalar-only `x86-64-v3` integer instructions (`POPCNT`,
+  `TZCNT`/`LZCNT`, `BMI1`/`BMI2`), refactored `pmm.c` (`POPCNT` word reserve and
+  contiguous scan), `kernel/lib/string.c` (64-bit scalar word ops), `kheap.c`,
+  and `libc/src/string.c` (256-bit `AVX2` `memcpy`/`memmove`/`memset`), and
+  added `tests/simdtest/` plus CTest `boot.x86_64_v3` (`SWR_BOOT_0005`,
+  `COMP_BOOT_0005`, `VER_BOOT_0004`, `TSK_0029`).
+
 ### Changed
 
 - Recorded `ADR_0026` standardizing the minimum `x86-64` CPU baseline on

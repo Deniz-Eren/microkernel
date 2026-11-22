@@ -199,12 +199,9 @@ static uint64_t build_user_stack_argv(uint64_t pml4_phys,
     if (!kbi) {
         return 0;
     }
+    *kbi = *bi;
     kbi->magic = BOOTINFO_MAGIC;
-    kbi->boot_tar_phys = bi->boot_tar_phys;
-    kbi->boot_tar_size = bi->boot_tar_size;
-    kbi->rsdp_phys = bi->rsdp_phys;
-    kbi->mem_total_bytes = bi->mem_total_bytes;
-    memcpy(kbi->cmdline, bi->cmdline, sizeof(kbi->cmdline) - 1);
+    kbi->cmdline[sizeof(kbi->cmdline) - 1] = '\0';
     for (uint64_t va = BOOTINFO_VA; va < BOOTINFO_VA + 4096; va += 4096) {
         uint64_t frame = pmm_alloc_frame();
         if (!frame) {
@@ -756,6 +753,7 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
 
     cur->fs_base = MAIN_STACK_TOP - MAIN_STACK_SIZE;
     arch_set_tls_base(cur->fs_base);
+    sched_reset_current_fpu();
 
     memset(tf, 0, sizeof(*tf));
     arch_tf_init_user(tf, entry, 0, user_rsp, cur->iopl);
@@ -1031,6 +1029,7 @@ void proc_spawn_init(void) {
     g_bootinfo.serial_port = ai->serial_port;
     g_bootinfo.serial_gsi = ai->serial_gsi;
     g_bootinfo.rtc_gsi = ai->rtc_gsi;
+    g_bootinfo.cpu_features = arch_cpu_features();
     const char *cmd = mb_cmdline();
     memcpy(g_bootinfo.cmdline, cmd,
            strlen(cmd) < sizeof(g_bootinfo.cmdline) - 1
@@ -1123,6 +1122,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "utilstest", 100, 0);
     /* TTY job control, ISIG Ctrl-C, process groups, and core utilities test. */
     spawn_image(tar_phys, tar_size, "jobtest", 90, 0);
+    /* x86-64-v3 AVX2/FMA/BMI and preemptive XSAVE/XRSTOR isolation test. */
+    spawn_image(tar_phys, tar_size, "simdtest", 100, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

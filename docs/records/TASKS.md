@@ -21,20 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0029 — Enforce x86-64-v3 boot gate, XSAVE/XRSTOR, and optional AVX-512
-
-```{task} Enforce x86-64-v3 boot gate, XSAVE/XRSTOR, and optional AVX-512
-:id: TSK_0029
-:status: open
-:traces: ADR_0024, ADR_0026, SWR_BOOT_0005
-
-Add early `CPUID` gating for `x86-64-v3` (`XSAVE`, `AVX`, `AVX2`, `FMA`,
-`BMI1`/`BMI2`) that halts legacy CPUs on boot. Upgrade `switch.S` to
-`XSAVE`/`XRSTOR` with optional `AVX-512` `XCR0` detection, build Ring 3 with
-`-march=x86-64-v3`, and add positive and negative QEMU tests
-({need}`SWR_BOOT_0005`).
-```
-
 ### TSK_0030 — Add POSIX.1-2024 <math.h> and <fenv.h> with AVX2/FMA support
 
 ```{task} Add POSIX.1-2024 <math.h> and <fenv.h> with AVX2/FMA support

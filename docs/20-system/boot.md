@@ -57,7 +57,7 @@ kernel, `libc`, and Ring 3 servers must call portable HAL interfaces so future
 
 ```{swr} Require x86-64-v3 at boot, switch XSAVE state, and detect AVX-512
 :id: SWR_BOOT_0005
-:status: draft
+:status: active
 :derives: SYS_BOOT_0001
 :traces: ADR_0024, ADR_0026
 

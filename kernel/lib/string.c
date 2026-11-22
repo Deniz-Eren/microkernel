@@ -8,14 +8,26 @@
  *
  */
 
-/* Freestanding string/memory helpers (compiler may emit calls to these). */
+/* Freestanding scalar string/memory helpers (Ring 0 never uses SIMD). */
 #include <stddef.h>
 #include <stdint.h>
 
+typedef uint64_t __attribute__((may_alias, aligned(1))) k_u64_unaligned_t;
+
 void *memset(void *dst, int c, size_t n) {
     uint8_t *d = (uint8_t *)dst;
-    for (size_t i = 0; i < n; i++) {
-        d[i] = (uint8_t)c;
+    uint8_t byte = (uint8_t)c;
+    if (n >= 8u) {
+        uint64_t fill = (uint64_t)byte * 0x0101010101010101ULL;
+        while (n >= 8u) {
+            *(k_u64_unaligned_t *)d = fill;
+            d += 8u;
+            n -= 8u;
+        }
+    }
+    while (n > 0u) {
+        *d++ = byte;
+        n--;
     }
     return dst;
 }
@@ -23,8 +35,15 @@ void *memset(void *dst, int c, size_t n) {
 void *memcpy(void *dst, const void *src, size_t n) {
     uint8_t *d = (uint8_t *)dst;
     const uint8_t *s = (const uint8_t *)src;
-    for (size_t i = 0; i < n; i++) {
-        d[i] = s[i];
+    while (n >= 8u) {
+        *(k_u64_unaligned_t *)d = *(const k_u64_unaligned_t *)s;
+        d += 8u;
+        s += 8u;
+        n -= 8u;
+    }
+    while (n > 0u) {
+        *d++ = *s++;
+        n--;
     }
     return dst;
 }
@@ -33,12 +52,32 @@ void *memmove(void *dst, const void *src, size_t n) {
     uint8_t *d = (uint8_t *)dst;
     const uint8_t *s = (const uint8_t *)src;
     if (d < s) {
-        for (size_t i = 0; i < n; i++) {
-            d[i] = s[i];
+        if ((size_t)(s - d) >= 8u) {
+            while (n >= 8u) {
+                *(k_u64_unaligned_t *)d = *(const k_u64_unaligned_t *)s;
+                d += 8u;
+                s += 8u;
+                n -= 8u;
+            }
+        }
+        while (n > 0u) {
+            *d++ = *s++;
+            n--;
         }
     } else if (d > s) {
-        for (size_t i = n; i > 0; i--) {
-            d[i - 1] = s[i - 1];
+        d += n;
+        s += n;
+        if ((size_t)(d - s) >= 8u) {
+            while (n >= 8u) {
+                d -= 8u;
+                s -= 8u;
+                *(k_u64_unaligned_t *)d = *(const k_u64_unaligned_t *)s;
+                n -= 8u;
+            }
+        }
+        while (n > 0u) {
+            *--d = *--s;
+            n--;
         }
     }
     return dst;
@@ -47,6 +86,14 @@ void *memmove(void *dst, const void *src, size_t n) {
 int memcmp(const void *a, const void *b, size_t n) {
     const uint8_t *x = (const uint8_t *)a;
     const uint8_t *y = (const uint8_t *)b;
+    while (n >= 8u) {
+        if (*(const k_u64_unaligned_t *)x != *(const k_u64_unaligned_t *)y) {
+            break;
+        }
+        x += 8u;
+        y += 8u;
+        n -= 8u;
+    }
     for (size_t i = 0; i < n; i++) {
         if (x[i] != y[i]) {
             return x[i] < y[i] ? -1 : 1;

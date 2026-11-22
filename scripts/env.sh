@@ -78,7 +78,7 @@ EOF
             cp build/boot.tar build/iso-sh/boot/boot.tar
             grub-mkrescue -o build/microkernel-shell.iso build/iso-sh \
                 >/dev/null 2>&1
-            exec qemu-system-x86_64 -machine q35 -cpu qemu64,+smap,+smep \
+            exec qemu-system-x86_64 -machine q35 -cpu max \
                 -m 256M -smp 2 -cdrom build/microkernel-shell.iso \
                 -serial mon:stdio -display none -no-reboot "$@"
         ' -- "$@"

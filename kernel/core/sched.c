@@ -41,7 +41,9 @@ static tcb_t *g_ready_tail[256];
 static tcb_t *g_current;
 static int g_sched_active;
 static uint64_t g_next_tid = 1;
-static uint64_t g_fpu_template[64] __attribute__((aligned(16)));
+static uint8_t *g_fpu_template;
+static size_t g_fpu_size;
+static size_t g_fpu_align;
 
 #define SLICE_TICKS 5
 
@@ -59,12 +61,8 @@ static inline void bitmap_clear(unsigned prio) {
 }
 
 static int ready_empty(void) {
-    for (int i = 0; i < 4; i++) {
-        if (g_ready_bitmap[i]) {
-            return 0;
-        }
-    }
-    return 1;
+    return (g_ready_bitmap[0] | g_ready_bitmap[1] | g_ready_bitmap[2] |
+            g_ready_bitmap[3]) == 0ULL;
 }
 
 static tcb_t *pick_next(void) {
@@ -149,8 +147,29 @@ _Static_assert(offsetof(tcb_t, kernel_rsp) == 32, "switch.S TCB_KRSP mismatch");
 _Static_assert(offsetof(tcb_t, fpu_area) == 40, "switch.S TCB_FPU mismatch");
 
 void sched_init(void) {
-    arch_fpu_init_template((uint8_t *)g_fpu_template);
-    printk("[sched] 256-level bitmap scheduler ready\n");
+    g_fpu_size = arch_fpu_state_size();
+    g_fpu_align = arch_fpu_state_align();
+    if (g_fpu_align < 16u) {
+        g_fpu_align = 16u;
+    }
+    uint8_t *raw = kmalloc(g_fpu_size + g_fpu_align);
+    if (!raw) {
+        panic("sched: out of memory for XSAVE template");
+    }
+    uintptr_t mask = (uintptr_t)(g_fpu_align - 1u);
+    g_fpu_template = (uint8_t *)(((uintptr_t)raw + mask) & ~mask);
+    arch_fpu_init_template(g_fpu_template);
+    printk("[sched] 256-level bitmap scheduler ready (fpu=%llu align=%llu)\n",
+           (unsigned long long)g_fpu_size, (unsigned long long)g_fpu_align);
+}
+
+void sched_reset_current_fpu(void) {
+    tcb_t *t = g_current;
+    if (!t || !t->fpu_area || !g_fpu_template) {
+        return;
+    }
+    memcpy(t->fpu_area, g_fpu_template, g_fpu_size);
+    arch_fpu_restore_current(t->fpu_area);
 }
 
 static void apply_switch(tcb_t *next) {
@@ -215,6 +234,7 @@ void schedule(void) {
     if (prev) {
         switch_to(prev, next);
     } else {
+        arch_fpu_restore_current(next->fpu_area);
         arch_first_switch(next->kernel_rsp);
     }
 }
@@ -331,12 +351,13 @@ pcb_t *proc_create(pcb_t *parent) {
 tcb_t *thread_create_embryo(pcb_t *p, uint8_t priority) {
     tcb_t *t = kzalloc(sizeof(tcb_t));
     uint8_t *kstack = kmalloc(KERNEL_STACK_SIZE);
-    uint8_t *fpu_raw = kmalloc(512 + 16);
+    uint8_t *fpu_raw = kmalloc(g_fpu_size + g_fpu_align);
     if (!t || !kstack || !fpu_raw) {
         panic("thread_create: out of kernel memory");
     }
-    uint8_t *fpu = (uint8_t *)(((uintptr_t)fpu_raw + 15) & ~(uintptr_t)15);
-    memcpy(fpu, g_fpu_template, 512);
+    uintptr_t mask = (uintptr_t)(g_fpu_align - 1u);
+    uint8_t *fpu = (uint8_t *)(((uintptr_t)fpu_raw + mask) & ~mask);
+    memcpy(fpu, g_fpu_template, g_fpu_size);
 
     t->tid = (uint32_t)g_next_tid++;
     t->pid = p->pid;

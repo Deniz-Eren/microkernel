@@ -7,9 +7,10 @@
 # SPDX-License-Identifier: MIT
 #
 
-# need:: VER_BOOT_0001 VER_BOOT_0002 VER_BOOT_0003 VER_MEM_0001 VER_MEM_0002
-# need:: VER_MEM_0003 VER_MEM_0004 VER_PROC_0001 VER_PROC_0002 VER_PROC_0003
-# need:: VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0001 VER_IPC_0002
+# need:: VER_BOOT_0001 VER_BOOT_0002 VER_BOOT_0003 VER_BOOT_0004
+# need:: VER_MEM_0001 VER_MEM_0002 VER_MEM_0003 VER_MEM_0004
+# need:: VER_PROC_0001 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
+# need:: VER_PROC_0005 VER_PROC_0006 VER_IPC_0001 VER_IPC_0002
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_SIG_0001 VER_SIG_0002 VER_LIBC_0001 VER_LIBC_0003 VER_LIBC_0004
 # need:: VER_LIBC_0005 VER_LIBC_0006 VER_LIBC_0007 VER_LIBC_0008 VER_DOCS_0005
@@ -43,9 +44,9 @@ from generate_report import CoverageStreamDecoder  # noqa: E402
 ARCH_QEMU_PROFILES = {
     "x86-64": {
         "qemu": "qemu-system-x86_64",
+        "cpu": "max",
         "flags": [
             "-machine", "q35",
-            "-cpu", "qemu64,+smap,+smep",
             "-m", "256M",
             "-smp", "2",
         ],
@@ -58,14 +59,20 @@ def build_cmd(args):
     if profile is None:
         raise SystemExit(f"test_runner: unsupported --arch '{args.arch}'")
     qemu_bin = args.qemu or profile["qemu"]
-    cmd = shlex.split(qemu_bin) + list(profile["flags"]) + [
-        "-cdrom", args.iso,
-        "-serial", "stdio",
-        "-display", "none",
-        "-no-reboot",
-        "-no-shutdown",
-        "-monitor", "none",
-    ]
+    cpu_model = args.cpu or profile["cpu"]
+    cmd = (
+        shlex.split(qemu_bin)
+        + list(profile["flags"])
+        + ["-cpu", cpu_model]
+        + [
+            "-cdrom", args.iso,
+            "-serial", "stdio",
+            "-display", "none",
+            "-no-reboot",
+            "-no-shutdown",
+            "-monitor", "none",
+        ]
+    )
     for extra in args.extra_qemu_arg:
         cmd.extend(shlex.split(extra))
     return cmd
@@ -92,6 +99,7 @@ def main() -> int:
     ap.add_argument("--cov-out", default=None)
     ap.add_argument("--wait-cov", action="store_true")
     ap.add_argument("--extra-qemu-arg", action="append", default=[])
+    ap.add_argument("--cpu", default=None)
     ap.add_argument("--qemu", default=None)
     args = ap.parse_args()
 

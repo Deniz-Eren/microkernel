@@ -42,7 +42,7 @@ typedef struct tcb {
     pcb_t *proc;
     uint64_t kstack_top; /* top of this thread's 16 KiB kernel stack */
     uint64_t kernel_rsp; /* saved Ring 0 stack pointer (switch.S offset) */
-    uint8_t *fpu_area;   /* 512-byte fxsave image, 16-byte aligned */
+    uint8_t *fpu_area;   /* 64-byte aligned XSAVE extended-state image */
 
     struct tcb *queue_next; /* ready-queue link */
     struct tcb *proc_next;  /* per-process thread list */
@@ -141,6 +141,7 @@ void schedule(void);
 void sched_ready(tcb_t *t);
 void sched_unready(tcb_t *t);
 void sched_activate(void);
+void sched_reset_current_fpu(void);
 tcb_t *sched_current(void);
 
 /* Block the current thread on an IPC/other wait queue: marks it non-RUNNING and

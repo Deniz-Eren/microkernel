@@ -37,3 +37,16 @@ Verified by building with `-DMICROKERNEL_ARCH=x86-64`, running
 `posix.symbol_diff` with `--target x86_64-unknown-none-elf`
 ({need}`SWR_BOOT_0004`).
 ```
+
+```{ver} Verify x86-64-v3 boot gate, XSAVE/XRSTOR isolation, and scalar Ring 0
+:id: VER_BOOT_0004
+:status: active
+:tags: integration
+:verifies: SWR_BOOT_0005
+
+Verified by `tests/simdtest/test_simd.c` in headless QEMU (`AVX2`, `FMA`,
+`BMI1`/`BMI2`, `boot_info_t` flags, preemptive `YMM`/`MXCSR` thread isolation,
+and `fork` inheritance) and CTest `boot.x86_64_v3`
+(`tests/boot/test_x86_64_v3.py`, legacy CPU boot halt, scalar Ring 0 audit, and
+Ring 3 `AVX2`/`FMA` audit) ({need}`SWR_BOOT_0005`).
+```

@@ -20,6 +20,20 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0029 — Enforce x86-64-v3 boot gate, XSAVE/XRSTOR, and optional AVX-512
+
+```{task} Enforce x86-64-v3 boot gate, XSAVE/XRSTOR, and optional AVX-512
+:id: TSK_0029
+:status: done
+:traces: ADR_0024, ADR_0026, SWR_BOOT_0005
+
+Add early `CPUID` gating for `x86-64-v3` (`XSAVE`, `AVX`, `AVX2`, `FMA`,
+`BMI1`/`BMI2`) that halts legacy CPUs on boot. Upgrade `switch.S` to
+`XSAVE`/`XRSTOR` with optional `AVX-512` `XCR0` detection, build Ring 3 with
+`-march=x86-64-v3`, and add positive and negative QEMU tests
+({need}`SWR_BOOT_0005`).
+```
+
 ### TSK_0022 — Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
 
 ```{task} Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
