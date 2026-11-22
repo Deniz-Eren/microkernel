@@ -54,3 +54,16 @@ code under `x86-64` folders selected by `-DMICROKERNEL_ARCH=x86-64`. Core
 kernel, `libc`, and Ring 3 servers must call portable HAL interfaces so future
 `arm64` support plugs in cleanly ({need}`SYS_BOOT_0001`).
 ```
+
+```{swr} Require x86-64-v3 at boot, switch XSAVE state, and detect AVX-512
+:id: SWR_BOOT_0005
+:status: draft
+:derives: SYS_BOOT_0001
+:traces: ADR_0024, ADR_0026
+
+On `x86-64`, early boot must verify `x86-64-v3` (`XSAVE`, `AVX`, `AVX2`, `FMA`,
+`BMI1`, `BMI2`) via `CPUID` and halt with an error on legacy CPUs. The kernel
+must enable `CR4.OSXSAVE` and `XCR0` (with optional `AVX-512` when present) and
+switch extended state with `XSAVE`/`XRSTOR`. Ring 3 must build with
+`-march=x86-64-v3` while Ring 0 stays scalar ({need}`SYS_BOOT_0001`).
+```

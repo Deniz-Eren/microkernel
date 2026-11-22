@@ -21,6 +21,12 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Recorded `ADR_0026` standardizing the minimum `x86-64` CPU baseline on
+  `x86-64-v3` (`XSAVE`, `AVX`, `AVX2`, `FMA`, `BMI1`, `BMI2`, with optional
+  `AVX-512` detection and `XSAVE`/`XRSTOR` context switching), added draft
+  requirements `SWR_BOOT_0005` and `SWR_LIBC_0009`, and queued `TSK_0029` and
+  `TSK_0030` (`<math.h>` and `<fenv.h>`) ahead of `TSK_0024`, `TSK_0028`, and
+  `TSK_0025` in `docs/records/TASKS.md`.
 - Recorded the opt-in automated LLVM code coverage architecture (`ADR_0025`,
   draft `SWR_DOCS_0005`) and queued `TSK_0027` as the next task in
   `docs/records/TASKS.md` (using freestanding Raw Profile v8 over portable

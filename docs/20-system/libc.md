@@ -118,6 +118,19 @@ follow Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d`
 `strtoul`, `getopt`, `alarm`, `rename`, and `realpath` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 <math.h> and <fenv.h> with x86-64-v3 FMA support
+:id: SWR_LIBC_0009
+:status: draft
+:posix: XBD/math.h (CX), XBD/fenv.h (CX)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, ADR_0003, ADR_0026
+
+`libc` must supply `<fenv.h>` (rounding modes and exception flags via `MXCSR`)
+and `<math.h>` (IEEE-754 classification, rounding, `sqrt`, `fma`, exponential,
+logarithmic, power, and trigonometric functions) compiled for `x86-64-v3` with
+hardware `FMA` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:
