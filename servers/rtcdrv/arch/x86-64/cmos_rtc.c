@@ -1,5 +1,5 @@
 /**
- * @file     main.c
+ * @file     cmos_rtc.c
  * @brief    Ring 3 MC146818 CMOS RTC driver using IOPLSet, IRQ 8, and MsgV
  *
  * @copyright

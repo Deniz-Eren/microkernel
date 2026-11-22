@@ -64,7 +64,7 @@ static inline long futex_wake(unsigned int *addr, unsigned int count) {
 }
 
 static inline void cpu_pause(void) {
-    __asm__ volatile("pause" : : : "memory");
+    arch_cpu_relax();
 }
 
 void __libc_init_main_tls(void) {

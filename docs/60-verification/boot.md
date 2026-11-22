@@ -25,3 +25,15 @@ The headless QEMU harness `tests/test_runner.py` checks `ACPI MADT` IOAPIC and
 ISO discovery, parameterized `ttyserv` (`-p 0x3f8 -i 4`) with `OPOST`/`ECHO` TX
 ownership, and parameterized `rtcdrv` (`-p 0x70 -i 8`) ({need}`SWR_BOOT_0003`).
 ```
+
+```{ver} Verify x86-64 HAL isolation across build, QEMU, and header gates
+:id: VER_BOOT_0003
+:status: active
+:tags: integration
+:verifies: SWR_BOOT_0004
+
+Verified by building with `-DMICROKERNEL_ARCH=x86-64`, running
+`tests/test_runner.py --arch x86-64`, and running CTest `posix.headers` and
+`posix.symbol_diff` with `--target x86_64-unknown-none-elf`
+({need}`SWR_BOOT_0004`).
+```

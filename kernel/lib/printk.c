@@ -11,8 +11,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <kernel/arch.h>
 #include <kernel/printk.h>
-#include <arch/x86_64/serial.h>
 
 static int g_quiet;
 
@@ -150,7 +150,7 @@ void printk_v(const char *fmt, va_list ap) {
     if (!g_quiet) {
         const char *s = buf;
         while (*s) {
-            serial_putc(*s++);
+            arch_console_putc(*s++);
         }
     }
 }

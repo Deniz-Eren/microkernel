@@ -8,10 +8,9 @@
  *
  */
 
-#include <arch/x86_64/gdt.h>
-#include <arch/x86_64/msr.h>
 #include <fcntl.h>
 #include <kernel/acpi.h>
+#include <kernel/arch.h>
 #include <kernel/elf.h>
 #include <kernel/ipc.h>
 #include <kernel/kheap.h>
@@ -36,7 +35,6 @@
 
 /* need:: COMP_BOOT_0002 COMP_PROC_0002 */
 
-#define MSR_FS_BASE 0xC0000100U
 #define MAIN_STACK_TOP 0x700000000000ULL
 #define MAIN_STACK_SIZE (64ULL * 1024ULL)
 #define EXEC_MAX_ARGS 32
@@ -742,14 +740,10 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
     vmm_destroy_user_pml4(old_pml4);
 
     cur->fs_base = MAIN_STACK_TOP - MAIN_STACK_SIZE;
-    wrmsr(MSR_FS_BASE, cur->fs_base);
+    arch_set_tls_base(cur->fs_base);
 
     memset(tf, 0, sizeof(*tf));
-    tf->rip = entry;
-    tf->rsp = user_rsp;
-    tf->cs = GDT_UCODE | 3;
-    tf->ss = GDT_UDATA | 3;
-    tf->rflags = 0x202ULL | (((uint64_t)cur->iopl & 3ULL) << 12);
+    arch_tf_init_user(tf, entry, 0, user_rsp, cur->iopl);
     return 0;
 }
 

@@ -46,7 +46,7 @@ own user `OPOST` TX with early boot fallback ({need}`SYS_BOOT_0001`).
 
 ```{swr} Isolate x86-64 platform code behind arch/x86-64 HAL boundaries
 :id: SWR_BOOT_0004
-:status: draft
+:status: active
 :derives: SYS_BOOT_0001
 :traces: ADR_0024
 

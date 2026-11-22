@@ -64,9 +64,10 @@ define the system contract inside the Sphinx-Needs traceability model (`docs/`):
 ### 2. The Fabricator (Podman, LLVM, and four-stage build)
 
 **LLVM** (`clang`, `ld.lld`, `llvm-objdump`) with **CMake** and **Ninja**
-(`cmake/clang-x86_64.cmake`) cross-compiles freestanding C17 and x86-64
-assembly. The build runs inside the `microkernel-dev` Podman image
-(`Containerfile`) with no host headers or host libraries in four stages:
+(`cmake/clang-x86-64.cmake`, `cmake/arch/x86-64.cmake`) cross-compiles
+freestanding C17 and x86-64 assembly. The build runs inside the
+`microkernel-dev` Podman image (`Containerfile`) with no host headers or host
+libraries in four stages:
 
 1. **Headers:** Public `libc/include/` headers and Clang freestanding headers
    install into `sysroot/usr/include`.

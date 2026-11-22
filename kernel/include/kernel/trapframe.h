@@ -1,6 +1,6 @@
 /**
  * @file     trapframe.h
- * @brief    x86-64 saved CPU trapframe register layout
+ * @brief    Portable forwarding header for the active platform trapframe layout
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -9,13 +9,6 @@
  */
 
 #pragma once
-/* Register frame pushed by the IDT stubs (and synthesized for syscalls).
- * Memory layout, low -> high addresses, matches push order in isr.S. */
-#include <stdint.h>
 
-typedef struct trapframe {
-    uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
-    uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
-    uint64_t vec, err;
-    uint64_t rip, cs, rflags, rsp, ss;
-} trapframe_t;
+/* Resolved from kernel/arch/<MICROKERNEL_ARCH>/arch_trapframe.h. */
+#include <arch_trapframe.h>

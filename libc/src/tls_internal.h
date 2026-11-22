@@ -11,6 +11,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <sys/arch/cpu.h>
 
 #define PTHREAD_KEYS_MAX_INT 32
 #define LIBC_SIGCANCEL 30
@@ -36,9 +37,7 @@ typedef struct __pthread_tls {
 } __pthread_tls_t;
 
 static inline __pthread_tls_t *__libc_tls_self(void) {
-    __pthread_tls_t *self;
-    __asm__ volatile("movq %%fs:0, %0" : "=r"(self));
-    return self;
+    return (__pthread_tls_t *)arch_tls_self_ptr();
 }
 
 void __libc_init_main_tls(void);

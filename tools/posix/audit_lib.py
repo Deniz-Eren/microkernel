@@ -47,9 +47,11 @@ OPTION_GROUP_MACROS: dict[str, tuple[str, ...]] = {
 
 _FUNC_HDR_RE = re.compile(r"^[0-9a-fA-F]+\s+<([^>]+)>:\s*$")
 _CALL_RE = re.compile(
-    r"\b(?:callq?|jmpq?)\s+.*<([^+>]+)(?:\+0x[0-9a-fA-F]+)?>"
+    r"\b(?:callq?|jmpq?|bl|b)\s+.*<([^+>]+)(?:\+0x[0-9a-fA-F]+)?>"
 )
-_RELOC_RE = re.compile(r"\bR_X86_64_\w+\s+([A-Za-z_][A-Za-z0-9_.$]*)")
+_RELOC_RE = re.compile(
+    r"\bR_(?:X86_64|AARCH64)_\w+\s+([A-Za-z_][A-Za-z0-9_.$]*)"
+)
 _DEFINE_RE = re.compile(r"^#define\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 
 
@@ -134,6 +136,7 @@ def extract_defined_macros(
     sysroot: Path,
     header: str,
     feature_macro: str = "-D_POSIX_C_SOURCE=202405L",
+    target: str = "x86_64-unknown-none-elf",
 ) -> set[str]:
     """Return macro names defined after preprocessing `#include <header>`."""
     with tempfile.NamedTemporaryFile(
@@ -145,7 +148,7 @@ def extract_defined_macros(
             [
                 cc,
                 "-target",
-                "x86_64-unknown-none-elf",
+                target,
                 "-ffreestanding",
                 "-nostdinc",
                 "-isystem",
@@ -176,6 +179,7 @@ def extract_header_ast_symbols(
     sysroot: Path,
     headers: Sequence[str],
     feature_macro: str = "-D_POSIX_C_SOURCE=202405L",
+    target: str = "x86_64-unknown-none-elf",
 ) -> set[str]:
     """Extract top-level FunctionDecl and VarDecl names via Clang JSON AST."""
     src = "".join(f"#include <{hdr}>\n" for hdr in headers)
@@ -188,7 +192,7 @@ def extract_header_ast_symbols(
             [
                 cc,
                 "-target",
-                "x86_64-unknown-none-elf",
+                target,
                 "-ffreestanding",
                 "-nostdinc",
                 "-isystem",

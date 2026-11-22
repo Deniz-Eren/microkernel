@@ -8,9 +8,9 @@
  *
  */
 
+#include <kernel/arch.h>
 #include <kernel/trapframe.h>
 #include <kernel/printk.h>
-#include <arch/x86_64/serial.h>
 #include <kernel/sched.h>
 #include <kernel/entropy.h>
 #include <kernel/intr.h>
@@ -92,14 +92,18 @@ static long sys_debug_log(uint64_t ubuf, uint64_t len) {
     if (r < 0) {
         return r;
     }
-    for (long i = 0; i < r; i++) {
-        serial_putc(buf[i]);
-    }
+    arch_console_write(buf, (size_t)r);
     return r;
 }
 
 void syscall_handler(trapframe_t *tf) {
-    uint64_t nr = tf->rax;
+    uint64_t nr = arch_tf_syscall_num(tf);
+    uint64_t a0 = arch_tf_arg0(tf);
+    uint64_t a1 = arch_tf_arg1(tf);
+    uint64_t a2 = arch_tf_arg2(tf);
+    uint64_t a3 = arch_tf_arg3(tf);
+    uint64_t a4 = arch_tf_arg4(tf);
+    uint64_t a5 = arch_tf_arg5(tf);
     long ret = -ENOSYS;
 
     /* SIGRETURN restores the interrupted context wholesale; the syscall
@@ -111,18 +115,18 @@ void syscall_handler(trapframe_t *tf) {
 
     /* EXECVE replaces the address space and rewrites the frame on success. */
     if (nr == SYS_PROC_EXECVE) {
-        ret = sys_proc_execve(tf, tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_proc_execve(tf, a0, a1, a2);
         if (ret == 0) {
             return;
         }
-        tf->rax = (uint64_t)ret;
+        arch_tf_set_ret(tf, ret);
         signal_deliver_check(tf);
         return;
     }
 
     switch (nr) {
     case SYS_DEBUG_LOG:
-        ret = sys_debug_log(tf->rdi, tf->rsi);
+        ret = sys_debug_log(a0, a1);
         break;
     case SYS_CHANNEL_CREATE: {
         pcb_t *p = proc_current();
@@ -131,97 +135,95 @@ void syscall_handler(trapframe_t *tf) {
     }
     case SYS_CHANNEL_DESTROY: {
         pcb_t *p = proc_current();
-        ret = p ? channel_destroy(p->pid, (int)tf->rdi) : -EPERM;
+        ret = p ? channel_destroy(p->pid, (int)a0) : -EPERM;
         break;
     }
     case SYS_CONNECT_ATTACH:
-        ret = ipc_conn_attach((uint32_t)tf->rdi, (uint32_t)tf->rsi);
+        ret = ipc_conn_attach((uint32_t)a0, (uint32_t)a1);
         break;
     case SYS_CONNECT_DETACH:
-        ret = ipc_conn_detach((int)tf->rdi);
+        ret = ipc_conn_detach((int)a0);
         break;
     case SYS_MSG_SENDV:
-        /* connid, smsg, sbytes, rmsg (R10), rbytes (R8) */
-        ret = ipc_msg_send((int)tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8);
+        ret = ipc_msg_send((int)a0, a1, a2, a3, a4);
         break;
     case SYS_MSG_RECEIVE:
-        ret = ipc_msg_receive((int)tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = ipc_msg_receive((int)a0, a1, a2, a3);
         break;
     case SYS_MSG_REPLYV:
-        ret = ipc_msg_reply((int)tf->rdi, tf->rsi, tf->rdx);
+        ret = ipc_msg_reply((int)a0, a1, a2);
         break;
     case SYS_MSG_READV:
-        ret = ipc_msg_readv((int)tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = ipc_msg_readv((int)a0, a1, a2, a3);
         break;
     case SYS_MSG_WRITEV:
-        ret = ipc_msg_writev((int)tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = ipc_msg_writev((int)a0, a1, a2, a3);
         break;
     case SYS_MSG_SEND_PULSE:
-        ret = ipc_msg_send_pulse((int)tf->rdi, (uint32_t)tf->rsi,
-                                 (uint32_t)tf->rdx);
+        ret = ipc_msg_send_pulse((int)a0, (uint32_t)a1, (uint32_t)a2);
         break;
     case SYS_INTR_ATTACH_EVENT:
-        ret = sys_intr_attach_event(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = sys_intr_attach_event(a0, a1, a2, a3);
         break;
     case SYS_INTR_UNMASK:
-        ret = sys_intr_unmask(tf->rdi);
+        ret = sys_intr_unmask(a0);
         break;
     case SYS_PROC_CREATE:
-        ret = sys_proc_create(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_proc_create(a0, a1, a2);
         break;
     case SYS_PROC_EXIT:
-        proc_exit_current((int)tf->rdi);
+        proc_exit_current((int)a0);
         break; /* noreturn */
     case SYS_PROC_WAIT:
-        ret = sys_proc_wait((int64_t)tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_proc_wait((int64_t)a0, a1, a2);
         break;
     case SYS_VM_MAP:
-        ret = sys_vm_map(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = sys_vm_map(a0, a1, a2, a3);
         break;
     case SYS_VM_UNMAP:
-        ret = sys_vm_unmap(tf->rdi, tf->rsi);
+        ret = sys_vm_unmap(a0, a1);
         break;
     case SYS_VM_CLONE_COW:
-        ret = sys_vm_clone_cow(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_vm_clone_cow(a0, a1, a2);
         break;
     case SYS_VM_PROTECT:
-        ret = sys_vm_protect(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_vm_protect(a0, a1, a2);
         break;
     case SYS_CLOCK_GETTIME:
-        ret = sys_clock_gettime(tf->rdi, tf->rsi);
+        ret = sys_clock_gettime(a0, a1);
         break;
     case SYS_CLOCK_SETTIME:
-        ret = sys_clock_settime(tf->rdi, tf->rsi);
+        ret = sys_clock_settime(a0, a1);
         break;
     case SYS_CLOCK_GETRES:
-        ret = sys_clock_getres(tf->rdi, tf->rsi);
+        ret = sys_clock_getres(a0, a1);
         break;
     case SYS_CLOCK_NANOSLEEP:
-        ret = sys_clock_nanosleep(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = sys_clock_nanosleep(a0, a1, a2, a3);
         break;
     case SYS_TIMER_CREATE:
-        ret = sys_timer_create(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_timer_create(a0, a1, a2);
         break;
     case SYS_TIMER_DELETE:
-        ret = sys_timer_delete(tf->rdi);
+        ret = sys_timer_delete(a0);
         break;
     case SYS_TIMER_SETTIME:
-        ret = sys_timer_settime(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = sys_timer_settime(a0, a1, a2, a3);
         break;
     case SYS_TIMER_GETTIME:
-        ret = sys_timer_gettime(tf->rdi, tf->rsi);
+        ret = sys_timer_gettime(a0, a1);
         break;
     case SYS_TIMER_GETOVERRUN:
-        ret = sys_timer_getoverrun(tf->rdi);
+        ret = sys_timer_getoverrun(a0);
         break;
     case SYS_THREAD_SET_FSBASE:
-        ret = sys_thread_set_fsbase(tf->rdi);
+        ret = sys_thread_set_fsbase(a0);
         break;
     case SYS_THREAD_EXIT:
-        thread_exit_current((int)tf->rdi);
+        thread_exit_current((int)a0);
         break; /* noreturn */
     case SYS_FUTEX:
-        ret = sys_futex(tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8);
+        ret = sys_futex(a0, a1, a2, a3, a4);
         break;
     case SYS_PROC_FORK:
         ret = sys_proc_fork(tf);
@@ -233,64 +235,64 @@ void syscall_handler(trapframe_t *tf) {
         ret = sys_proc_getppid();
         break;
     case SYS_FD_OP:
-        ret = sys_fd_op(tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8);
+        ret = sys_fd_op(a0, a1, a2, a3, a4);
         break;
     case SYS_SIGPENDING:
-        ret = sys_sigpending(tf->rdi);
+        ret = sys_sigpending(a0);
         break;
     case SYS_GETENTROPY:
-        ret = sys_getentropy(tf->rdi, tf->rsi);
+        ret = sys_getentropy(a0, a1);
         break;
     case SYS_SHM_OP:
-        ret = sys_shm_op(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = sys_shm_op(a0, a1, a2, a3);
         break;
     case SYS_SHM_MAP:
-        ret = sys_shm_map(tf->rdi, tf->rsi, tf->rdx, tf->r10, tf->r8, tf->r9);
+        ret = sys_shm_map(a0, a1, a2, a3, a4, a5);
         break;
     case SYS_VM_MLOCK:
-        ret = sys_vm_mlock(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_vm_mlock(a0, a1, a2);
         break;
     case SYS_SYS_STATS:
-        ret = sys_sys_stats(tf->rdi);
+        ret = sys_sys_stats(a0);
         break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
-        if (tf->rdi > 255) {
+        if (a0 > 255) {
             ret = -EINVAL;
         } else {
-            t->base_priority = (uint8_t)tf->rdi;
-            t->effective_priority = (uint8_t)tf->rdi;
+            t->base_priority = (uint8_t)a0;
+            t->effective_priority = (uint8_t)a0;
             ret = 0;
         }
         break;
     }
     case SYS_IOPL_SET:
-        ret = sys_iopl_set(tf, tf->rdi);
+        ret = sys_iopl_set(tf, a0);
         break;
     case SYS_THREAD_CREATE:
-        ret = sys_thread_create(tf->rdi);
+        ret = sys_thread_create(a0);
         break;
     case SYS_THREAD_GET_CTX:
-        ret = sys_thread_get_ctx(tf->rdi, tf->rsi);
+        ret = sys_thread_get_ctx(a0, a1);
         break;
     case SYS_THREAD_RESET:
-        ret = sys_thread_reset(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = sys_thread_reset(a0, a1, a2, a3);
         break;
     case SYS_THREAD_INJECT_SIG:
-        ret = sys_inject_sig(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_inject_sig(a0, a1, a2);
         break;
     case SYS_SIGACTION:
-        ret = sys_sigaction(tf->rdi, tf->rsi, tf->rdx, tf->r10);
+        ret = sys_sigaction(a0, a1, a2, a3);
         break;
     case SYS_SIGPROCMASK:
-        ret = sys_sigprocmask(tf->rdi, tf->rsi, tf->rdx);
+        ret = sys_sigprocmask(a0, a1, a2);
         break;
     default:
         ret = -ENOSYS;
         break;
     }
 
-    tf->rax = (uint64_t)ret;
+    arch_tf_set_ret(tf, ret);
 
     /* Return-to-user boundary: deliver any pending signals by rewriting the
      * frame (handler runs first; SIGRETURN later restores this context with

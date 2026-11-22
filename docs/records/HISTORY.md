@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0026 — Isolate x86-64 platform code behind x86-64 HAL folders
+
+```{task} Isolate x86-64 platform code behind x86-64 HAL folders
+:id: TSK_0026
+:status: done
+:traces: ADR_0024, SWR_BOOT_0004
+
+Move `x86-64` kernel, `libc`, and UART/RTC platform code into `x86-64` folders
+behind a portable HAL. Parameterize CMake, QEMU, and audit scripts on
+`-DMICROKERNEL_ARCH=x86-64` while keeping `x86-64` as the sole active target
+({need}`SWR_BOOT_0004`).
+```
+
 ### TSK_0020 — Add pselect and cross-subsystem leak hardening
 
 ```{task} Add pselect and cross-subsystem leak hardening

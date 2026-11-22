@@ -117,9 +117,10 @@ long sys_sigpending(uint64_t set_va) {
 
 void sys_sigreturn(trapframe_t *tf) {
     sig_frame_t f = {0};
-    if (copy_from_user(&f, tf->rdi, sizeof(f)) < 0) {
+    uint64_t frame_addr = arch_tf_arg0(tf);
+    if (copy_from_user(&f, frame_addr, sizeof(f)) < 0) {
         printk("[sig] pid %u: bad signal frame %llx\n", proc_current()->pid,
-               (unsigned long long)tf->rdi);
+               (unsigned long long)frame_addr);
         proc_exit_signal(SIGSEGV); /* noreturn */
     }
     tcb_t *t = sched_current();
@@ -215,7 +216,7 @@ void signal_post_to_proc(uint32_t pid, int sig) {
 }
 
 void signal_deliver_check(trapframe_t *tf) {
-    if (!(tf->cs & 3)) {
+    if (!arch_tf_is_user(tf)) {
         return; /* kernel frame: never inject here */
     }
     tcb_t *t = sched_current();
@@ -249,7 +250,8 @@ void signal_deliver_check(trapframe_t *tf) {
         f.sig = sig;
         f.saved_mask = t->blocked_signals;
 
-        uint64_t frame_va = (tf->rsp - sizeof(sig_frame_t)) & ~15ULL;
+        uint64_t frame_va =
+            (arch_tf_user_sp(tf) - sizeof(sig_frame_t)) & ~15ULL;
         uint64_t ret_va = frame_va - 8; /* handler's return address slot */
 
         if (copy_to_user(frame_va, &f, sizeof(f)) < 0 ||
@@ -269,11 +271,7 @@ void signal_deliver_check(trapframe_t *tf) {
             p->sig_handlers[sig] = K_SIG_DFL;
         }
 
-        tf->rsp = ret_va;
-        tf->rip = handler;
-        tf->rdi = sig; /* handler(int sig) */
-        tf->rax = 0;
-        tf->rflags = 0x202ULL | (((uint64_t)t->iopl & 3ULL) << 12);
+        arch_tf_setup_signal_handler(tf, handler, sig, ret_va, t->iopl);
         return;
     }
 }

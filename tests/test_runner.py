@@ -7,12 +7,12 @@
 # SPDX-License-Identifier: MIT
 #
 
-# need:: VER_BOOT_0001 VER_BOOT_0002 VER_MEM_0001 VER_MEM_0002 VER_MEM_0003
-# need:: VER_MEM_0004 VER_PROC_0001 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
-# need:: VER_PROC_0005 VER_IPC_0001 VER_IPC_0002 VER_IPC_0003 VER_IPC_0004
-# need:: VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_SIG_0001 VER_SIG_0002
-# need:: VER_LIBC_0001 VER_LIBC_0003 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006
-# need:: VER_LIBC_0007 VER_DOCS_0005
+# need:: VER_BOOT_0001 VER_BOOT_0002 VER_BOOT_0003 VER_MEM_0001 VER_MEM_0002
+# need:: VER_MEM_0003 VER_MEM_0004 VER_PROC_0001 VER_PROC_0002 VER_PROC_0003
+# need:: VER_PROC_0004 VER_PROC_0005 VER_IPC_0001 VER_IPC_0002 VER_IPC_0003
+# need:: VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_SIG_0001
+# need:: VER_SIG_0002 VER_LIBC_0001 VER_LIBC_0003 VER_LIBC_0004 VER_LIBC_0005
+# need:: VER_LIBC_0006 VER_LIBC_0007 VER_DOCS_0005
 """Headless QEMU serial-output assertion harness for Microkernel.
 
 Boots build/microkernel.iso with TCG software emulation (no KVM required), pipes
@@ -34,12 +34,25 @@ import threading
 import time
 
 
+ARCH_QEMU_PROFILES = {
+    "x86-64": {
+        "qemu": "qemu-system-x86_64",
+        "flags": [
+            "-machine", "q35",
+            "-cpu", "qemu64,+smap,+smep",
+            "-m", "256M",
+            "-smp", "2",
+        ],
+    },
+}
+
+
 def build_cmd(args):
-    cmd = shlex.split(args.qemu) + [
-        "-machine", "q35",
-        "-cpu", "qemu64,+smap,+smep",
-        "-m", "256M",
-        "-smp", "2",
+    profile = ARCH_QEMU_PROFILES.get(args.arch)
+    if profile is None:
+        raise SystemExit(f"test_runner: unsupported --arch '{args.arch}'")
+    qemu_bin = args.qemu or profile["qemu"]
+    cmd = shlex.split(qemu_bin) + list(profile["flags"]) + [
         "-cdrom", args.iso,
         "-serial", "stdio",
         "-display", "none",
@@ -54,11 +67,12 @@ def build_cmd(args):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--arch", default="x86-64")
     ap.add_argument("--iso", default="build/microkernel.iso")
     ap.add_argument("--timeout", type=float, default=120.0)
     ap.add_argument("--expect", action="append", default=[])
     ap.add_argument("--extra-qemu-arg", action="append", default=[])
-    ap.add_argument("--qemu", default="qemu-system-x86_64")
+    ap.add_argument("--qemu", default=None)
     args = ap.parse_args()
 
     if not args.expect:

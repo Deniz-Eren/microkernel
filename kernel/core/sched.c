@@ -8,6 +8,7 @@
  *
  */
 
+#include <kernel/arch.h>
 #include <kernel/sched.h>
 #include <kernel/ipc.h>
 #include <kernel/time.h>
@@ -23,10 +24,6 @@
 #include <kernel/string.h>
 #include <sys/microkernel.h>
 #include <time.h>
-#include <arch/x86_64/gdt.h>
-#include <arch/x86_64/msr.h>
-
-#define MSR_FS_BASE 0xC0000100U
 
 /* need:: COMP_PROC_0001 */
 
@@ -151,11 +148,7 @@ _Static_assert(offsetof(tcb_t, kernel_rsp) == 32, "switch.S TCB_KRSP mismatch");
 _Static_assert(offsetof(tcb_t, fpu_area) == 40, "switch.S TCB_FPU mismatch");
 
 void sched_init(void) {
-    __asm__ volatile("fxsave %0" : : "m"(g_fpu_template) : "memory");
-    uint64_t cr4;
-    __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
-    cr4 |= (1ULL << 9) | (1ULL << 10); /* OSFXSR | OSXMMEXCPT */
-    __asm__ volatile("mov %0, %%cr4" : : "r"(cr4) : "memory");
+    arch_fpu_init_template((uint8_t *)g_fpu_template);
     printk("[sched] 256-level bitmap scheduler ready\n");
 }
 
@@ -166,9 +159,9 @@ static void apply_switch(tcb_t *next) {
     } else if (!g_current && next->proc) {
         vmm_set_cr3(next->proc->pml4_phys);
     }
-    tss_set_rsp0(next->kstack_top);
+    arch_set_kernel_stack(next->kstack_top);
     g_syscall_kstack = next->kstack_top;
-    wrmsr(MSR_FS_BASE, next->fs_base);
+    arch_set_tls_base(next->fs_base);
     next->state = THREAD_RUNNING;
     next->slice_ticks = 0;
     g_current = next;
@@ -183,7 +176,7 @@ void schedule(void) {
         /* Nothing runnable and the current thread cannot continue (blocked or
          * reaped): enable interrupts and halt until a timer/IRQ wakes runnable
          * work. */
-        __asm__ volatile("sti; hlt; cli" : : : "memory");
+        arch_cpu_idle_wait();
         next = pick_next();
     }
 
@@ -213,17 +206,7 @@ void schedule(void) {
     if (prev) {
         switch_to(prev, next);
     } else {
-        /* First ever dispatch: emulate switch_to's restore path directly. */
-        __asm__ volatile("mov %0, %%rsp\n"
-                         "popq %%r15\n"
-                         "popq %%r14\n"
-                         "popq %%r13\n"
-                         "popq %%r12\n"
-                         "popq %%rbp\n"
-                         "popq %%rbx\n"
-                         "ret\n" ::"r"(next->kernel_rsp)
-                         : "memory");
-        __builtin_unreachable();
+        arch_first_switch(next->kernel_rsp);
     }
 }
 
@@ -335,12 +318,7 @@ void thread_arm(tcb_t *t, uint64_t entry_rip, uint64_t arg, uint64_t user_rsp) {
 
     trapframe_t *tf = (trapframe_t *)(sp + 7);
     memset(tf, 0, sizeof(*tf));
-    tf->rip = entry_rip;
-    tf->rdi = arg;
-    tf->cs = GDT_UCODE | 3;
-    tf->rflags = 0x202; /* IF=1 */
-    tf->rsp = user_rsp;
-    tf->ss = GDT_UDATA | 3;
+    arch_tf_init_user(tf, entry_rip, arg, user_rsp, 0);
 
     t->start_rip = entry_rip;
     t->start_arg = arg;
@@ -349,23 +327,18 @@ void thread_arm(tcb_t *t, uint64_t entry_rip, uint64_t arg, uint64_t user_rsp) {
 }
 
 void thread_arm_fork(tcb_t *t, const trapframe_t *tf) {
-    __asm__ volatile("fxsave %0" : : "m"(*t->fpu_area) : "memory");
+    arch_fpu_save_current(t->fpu_area);
 
     uint64_t *sp = (uint64_t *)(t->kstack_top - 56 - sizeof(trapframe_t));
     t->kernel_rsp = (uint64_t)sp;
     sp[6] = (uint64_t)thread_bootstrap;
 
     trapframe_t *ctf = (trapframe_t *)(sp + 7);
-    memcpy(ctf, tf, sizeof(*ctf));
-    ctf->rax = 0;
-    ctf->cs = GDT_UCODE | 3;
-    ctf->ss = GDT_UDATA | 3;
-    ctf->rflags = (tf->rflags & ~(uint64_t)(3ULL << 12)) | 0x202ULL |
-                  (((uint64_t)t->iopl & 3ULL) << 12);
+    arch_tf_setup_fork_child(ctf, tf, t->iopl);
 
     t->start_rip = ctf->rip;
     t->start_arg = 0;
-    t->start_rsp = ctf->rsp;
+    t->start_rsp = arch_tf_user_sp(ctf);
     sched_ready(t);
 }
 
@@ -595,7 +568,7 @@ long sys_thread_set_fsbase(uint64_t base) {
         return -EINVAL;
     }
     t->fs_base = base;
-    wrmsr(MSR_FS_BASE, base);
+    arch_set_tls_base(base);
     return 0;
 }
 

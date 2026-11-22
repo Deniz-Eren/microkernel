@@ -43,10 +43,10 @@ pre-allocated pulses ({need}`ICD_IPC_0002`, {need}`SWR_IPC_0006`).
 :refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0002
 :satisfies: SWR_IPC_0006
 
-`servers/rtcdrv/main.c` runs in Ring 3 with `IOPLSet(3)`, handles hardware IRQ 8
-pulses through `AttachIntrEvent`/`IntrUnmask`, registers `/dev/rtc`, and serves
-clients with `ReadMsgV` and `WriteMsgV` ({need}`ICD_IPC_0001`,
-{need}`ICD_IPC_0002`, {need}`SWR_IPC_0006`).
+`servers/rtcdrv/arch/x86-64/cmos_rtc.c` runs in Ring 3 with `IOPLSet(3)`,
+handles hardware IRQ 8 pulses through `AttachIntrEvent`/`IntrUnmask`, registers
+`/dev/rtc`, and serves clients with `ReadMsgV` and `WriteMsgV`
+({need}`ICD_IPC_0001`, {need}`ICD_IPC_0002`, {need}`SWR_IPC_0006`).
 ```
 
 ```{comp} Ring 3 pipe and ppoll server
@@ -122,10 +122,10 @@ offsets, and `PULSE_CODE_FD_CLOSE` handle cleanup ({need}`ICD_IPC_0007`,
 :refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0002, ICD_IPC_0010
 :satisfies: SWR_IPC_0008
 
-`servers/ttyserv/main.c` runs with `CAP_SYS_INTR` and COM1 IRQ 4 pulses and
-registers `/dev/tty`. It implements canonical and raw `<termios.h>` line
-discipline and serves deferred blocking `read` and `ppoll` requests
-({need}`ICD_IPC_0010`, {need}`SWR_IPC_0008`).
+`servers/ttyserv/main.c` and `servers/ttyserv/arch/x86-64/uart_16550.c` run with
+`CAP_SYS_INTR` and COM1 IRQ 4 pulses and register `/dev/tty`. They implement
+canonical and raw `<termios.h>` line discipline and serve deferred blocking
+`read` and `ppoll` requests ({need}`ICD_IPC_0010`, {need}`SWR_IPC_0008`).
 ```
 
 ```{comp} POSIX.1-2024 libc termios, isatty, and /dev/tty client wrappers

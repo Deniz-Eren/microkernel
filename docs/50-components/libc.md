@@ -9,9 +9,9 @@ thread-local `errno` storage.
 :refines: ARC_LIBC_0001, ICD_LIBC_0001, ICD_LIBC_0002
 :satisfies: SWR_LIBC_0001, SWR_LIBC_0003, SWR_LIBC_0004
 
-`libc/crt/crt0.S` and `libc/src/` (`start.c`, `stdio.c`, `stdlib.c`, `string.c`,
-`unistd.c`) give Ring 3 startup, `__sigreturn_trampoline`, recursive `<stdio.h>`
-stream locking, heap, string helpers, and `errno` wrappers
+`libc/arch/x86-64/crt0.S` and `libc/src/` (`start.c`, `stdio.c`, `stdlib.c`,
+`string.c`, `unistd.c`) give Ring 3 startup, `__sigreturn_trampoline`, recursive
+`<stdio.h>` stream locking, heap, string helpers, and `errno` wrappers
 ({need}`ICD_LIBC_0001`, {need}`ICD_LIBC_0002`, {need}`ARC_LIBC_0001`).
 ```
 

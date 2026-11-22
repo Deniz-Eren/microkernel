@@ -23,6 +23,7 @@
 #include <sys/tty.h>
 #include <termios.h>
 #include <time.h>
+#include "uart_backend.h"
 
 /* need:: COMP_IPC_0010 */
 
@@ -229,12 +230,7 @@ static void commit_edit_buffer(void) {
 }
 
 static void uart_putc_raw(uint8_t c) {
-    for (uint32_t spin = 0; spin < 100000u; spin++) {
-        if (port_inb((uint16_t)(g_uart_base + 5u)) & 0x20u) {
-            break;
-        }
-    }
-    port_outb(g_uart_base, c);
+    tty_uart_putc(c);
 }
 
 static void tty_tx_byte(uint8_t c) {
@@ -319,44 +315,12 @@ static void tty_feed_byte(uint8_t c, int allow_echo) {
 }
 
 static void drain_com1_rx(int feed_ldisc) {
-    while (port_inb((uint16_t)(g_uart_base + 5u)) & 0x01u) {
-        uint8_t b = port_inb(g_uart_base);
+    uint8_t b = 0;
+    while (tty_uart_getc(&b)) {
         if (feed_ldisc) {
             tty_feed_byte(b, 1);
         }
     }
-}
-
-static int run_com1_irq4_selftest(int chan) {
-    /* 1-byte FIFO trigger, clear FIFOs, enable Received Data Available IRQ. */
-    port_outb((uint16_t)(g_uart_base + 2u), 0x07u);
-    drain_com1_rx(0);
-    port_outb((uint16_t)(g_uart_base + 1u), 0x01u);
-
-    /* Brief 16550A loopback (MCR bit 4) to verify IOAPIC IRQ -> IPC pulse. */
-    port_outb((uint16_t)(g_uart_base + 4u), 0x1Bu);
-    port_outb(g_uart_base, 0x5Au);
-
-    int ok = 0;
-    for (int tries = 0; tries < 8; tries++) {
-        ipc_pulse_t pulse = {0};
-        ipc_recv_info_t info = {0};
-        long msgid = ReceiveMsg(chan, &pulse, sizeof(pulse), &info);
-        if (msgid == 0 && pulse.code == PULSE_CODE_IRQ &&
-            pulse.value == g_uart_irq) {
-            while (port_inb((uint16_t)(g_uart_base + 5u)) & 0x01u) {
-                if (port_inb(g_uart_base) == 0x5Au) {
-                    ok = 1;
-                }
-            }
-            break;
-        }
-    }
-
-    /* Restore normal UART operation (DTR | RTS | OUT2, no loopback). */
-    port_outb((uint16_t)(g_uart_base + 4u), 0x0Bu);
-    (void)IntrUnmask(g_uart_irq);
-    return ok ? 0 : -1;
 }
 
 static int register_tty_service(int chanid) {
@@ -463,28 +427,14 @@ int main(int argc, char **argv) {
 
     init_default_termios();
 
-    if (IOPLSet(3) != 0) {
-        printf("[FAIL] ttyserv IOPLSet(3) failed\n");
-        return 1;
-    }
     int chan = (int)CreateChannel();
     if (chan < 0) {
         printf("[FAIL] ttyserv CreateChannel failed\n");
         return 1;
     }
-    if (AttachIntrEvent(g_uart_irq, chan, PULSE_CODE_IRQ, g_uart_irq) != 0) {
-        printf("[FAIL] ttyserv AttachIntrEvent(%u) failed\n", g_uart_irq);
+    if (tty_uart_init(g_uart_base, g_uart_irq, chan) != 0) {
         return 1;
     }
-    if (run_com1_irq4_selftest(chan) != 0) {
-        printf("[FAIL] ttyserv UART IRQ %u loopback self-test failed\n",
-               g_uart_irq);
-        return 1;
-    }
-    printf("[OK] ttyserv handled COM1 IRQ %u pulse via IOAPIC\n", g_uart_irq);
-    printf("[OK] ttyserv configured UART port=0x%x gsi=%u (OPOST/ECHO "
-           "active)\n",
-           (unsigned)g_uart_base, g_uart_irq);
 
     if (register_tty_service(chan) != 0) {
         printf("[FAIL] ttyserv failed to register /dev/tty\n");

@@ -70,6 +70,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
 )
 
 _COMPILER = "clang"
+_TARGET = "x86_64-unknown-none-elf"
 _CLANG_INC: Path | None = None
 _SYSROOT = DEFAULT_SYSROOT
 _NM = "llvm-nm"
@@ -164,12 +165,16 @@ class PosixSymbolDiffTests(unittest.TestCase):
 
         clang_inc = _CLANG_INC or detect_clang_include(_COMPILER)
         active_macros = extract_defined_macros(
-            _COMPILER, clang_inc, _SYSROOT, "unistd.h"
+            _COMPILER, clang_inc, _SYSROOT, "unistd.h", target=_TARGET
         )
         self.assertIn("_POSIX_VERSION", active_macros)
 
         ast_symbols = extract_header_ast_symbols(
-            _COMPILER, clang_inc, _SYSROOT, IMPLEMENTED_POSIX_HEADERS
+            _COMPILER,
+            clang_inc,
+            _SYSROOT,
+            IMPLEMENTED_POSIX_HEADERS,
+            target=_TARGET,
         )
         archive_symbols = extract_archive_symbols(_NM, _LIBC)
 
@@ -220,11 +225,13 @@ class PosixSymbolDiffTests(unittest.TestCase):
 
 
 def main(argv: list[str] | None = None) -> int:
-    global _COMPILER, _CLANG_INC, _SYSROOT, _NM, _LIBC, _MANIFEST, _REPORT
+    global _COMPILER, _TARGET, _CLANG_INC, _SYSROOT, _NM, _LIBC, _MANIFEST
+    global _REPORT
     parser = argparse.ArgumentParser(
         description="Run Gate 2 POSIX.1-2024 AST and symbol diff check."
     )
     parser.add_argument("--cc", default="clang")
+    parser.add_argument("--target", default="x86_64-unknown-none-elf")
     parser.add_argument("--clang-include", default=None)
     parser.add_argument("--sysroot", default=str(DEFAULT_SYSROOT))
     parser.add_argument("--nm", default="llvm-nm")
@@ -234,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     args, _ = parser.parse_known_args(argv)
 
     _COMPILER = args.cc
+    _TARGET = args.target
     _CLANG_INC = Path(args.clang_include) if args.clang_include else None
     _SYSROOT = Path(args.sysroot)
     _NM = args.nm or "llvm-nm"

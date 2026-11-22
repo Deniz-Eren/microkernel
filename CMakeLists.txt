@@ -18,6 +18,14 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+set(MICROKERNEL_ARCH "x86-64" CACHE STRING "Target 64-bit platform (x86-64)")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/cmake/arch/${MICROKERNEL_ARCH}.cmake")
+    message(FATAL_ERROR
+        "Unsupported MICROKERNEL_ARCH='${MICROKERNEL_ARCH}'. "
+        "Currently supported platform: x86-64 (future arm64 planned).")
+endif()
+include("${CMAKE_SOURCE_DIR}/cmake/arch/${MICROKERNEL_ARCH}.cmake")
+
 set(SYSROOT_DIR ${CMAKE_SOURCE_DIR}/sysroot)
 
 # Clang provides freestanding headers (stdint.h, stddef.h, stdarg.h, ...) in its
@@ -39,7 +47,8 @@ set(CMAKE_C_LINK_EXECUTABLE
 # Stage 1: install public headers into the sysroot
 #------------------------------------------------------------------------------
 file(GLOB_RECURSE PUBLIC_HEADERS CONFIGURE_DEPENDS
-    ${CMAKE_SOURCE_DIR}/libc/include/*.h)
+    ${CMAKE_SOURCE_DIR}/libc/include/*.h
+    ${CMAKE_SOURCE_DIR}/libc/arch/${MICROKERNEL_ARCH}/include/*.h)
 # Freestanding compiler headers (stdint.h, stddef.h, stdarg.h, ...) are vendored
 # into the sysroot so every component compiles against it uniformly.
 add_custom_target(install_headers
@@ -48,8 +57,11 @@ add_custom_target(install_headers
             ${CLANG_RESOURCE_DIR}/include ${SYSROOT_DIR}/usr/include
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/libc/include ${SYSROOT_DIR}/usr/include
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/libc/arch/${MICROKERNEL_ARCH}/include
+            ${SYSROOT_DIR}/usr/include
     DEPENDS ${PUBLIC_HEADERS}
-    COMMENT "Stage 1: installing headers into sysroot/usr/include"
+    COMMENT "Stage 1: installing ${MICROKERNEL_ARCH} headers into sysroot"
 )
 
 #------------------------------------------------------------------------------
@@ -64,14 +76,16 @@ set(USER_CFLAGS
     -fno-pic
     -fno-pie
     -fno-asynchronous-unwind-tables
-    -mno-red-zone
+    ${MICROKERNEL_USER_ARCH_CFLAGS}
     -Wall
     -Wextra
     -Werror
 )
 # CMake dedups identical "-isystem" tokens; add include dirs per-target instead.
 
-file(GLOB LIBC_SRCS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/libc/src/*.c)
+file(GLOB LIBC_SRCS CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/libc/src/*.c
+    ${CMAKE_SOURCE_DIR}/libc/arch/${MICROKERNEL_ARCH}/*.c)
 add_library(c STATIC ${LIBC_SRCS})
 target_compile_options(c PRIVATE ${USER_CFLAGS})
 target_include_directories(c SYSTEM PRIVATE
@@ -89,12 +103,12 @@ add_custom_command(
     OUTPUT ${SYSROOT_DIR}/usr/lib/crt0.o
     COMMAND ${CMAKE_COMMAND} -E make_directory ${SYSROOT_DIR}/usr/lib
     COMMAND ${CMAKE_C_COMPILER} ${USER_CFLAGS}
-            -target x86_64-unknown-none-elf
+            -target ${MICROKERNEL_TARGET_TRIPLE}
             -isystem ${SYSROOT_DIR}/usr/include
-            -c ${CMAKE_SOURCE_DIR}/libc/crt/crt0.S
+            -c ${MICROKERNEL_CRT0_SRC}
             -o ${SYSROOT_DIR}/usr/lib/crt0.o
-    DEPENDS ${CMAKE_SOURCE_DIR}/libc/crt/crt0.S install_headers
-    COMMENT "Stage 2: compiling crt0.o"
+    DEPENDS ${MICROKERNEL_CRT0_SRC} install_headers
+    COMMENT "Stage 2: compiling crt0.o (${MICROKERNEL_ARCH})"
     VERBATIM
 )
 add_custom_target(crt0 DEPENDS ${SYSROOT_DIR}/usr/lib/crt0.o)
@@ -123,13 +137,13 @@ function(microkernel_add_user_executable name)
     target_link_options(${name} PRIVATE
         -static
         --no-pie
-        -T ${CMAKE_SOURCE_DIR}/libc/user.ld
+        -T ${MICROKERNEL_USER_LINKER_SCRIPT}
         -z noseparate-code
         --build-id=none
         ${SYSROOT_DIR}/usr/lib/crt0.o
     )
     set_target_properties(${name} PROPERTIES LINK_DEPENDS
-        ${CMAKE_SOURCE_DIR}/libc/user.ld)
+        ${MICROKERNEL_USER_LINKER_SCRIPT})
     target_link_libraries(${name} PRIVATE c)
     add_dependencies(${name} c)
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
@@ -191,41 +205,42 @@ set(KERNEL_CFLAGS
     -fno-pic
     -fno-pie
     -fno-asynchronous-unwind-tables
-    -mcmodel=kernel
-    -mno-red-zone
-    -mno-mmx
-    -mno-sse
-    -mno-sse2
+    ${MICROKERNEL_KERNEL_ARCH_CFLAGS}
     -Wall
     -Wextra
     -Werror
     -isystem ${SYSROOT_DIR}/usr/include
 )
 
-file(GLOB_RECURSE KERNEL_SRCS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/kernel/*.c)
+file(GLOB KERNEL_CORE_SRCS CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/kernel/main.c
+    ${CMAKE_SOURCE_DIR}/kernel/core/*.c
+    ${CMAKE_SOURCE_DIR}/kernel/lib/*.c
+    ${CMAKE_SOURCE_DIR}/kernel/arch/${MICROKERNEL_ARCH}/*.c
+)
 
 add_executable(kernel.elf
-    ${KERNEL_SRCS}
-    ${CMAKE_SOURCE_DIR}/kernel/arch/x86_64/boot.S
-    ${CMAKE_SOURCE_DIR}/kernel/arch/x86_64/isr.S
-    ${CMAKE_SOURCE_DIR}/kernel/arch/x86_64/switch.S
+    ${KERNEL_CORE_SRCS}
+    ${MICROKERNEL_KERNEL_ASM_SRCS}
 )
 target_compile_options(kernel.elf PRIVATE ${KERNEL_CFLAGS})
 target_include_directories(kernel.elf PRIVATE
     ${CMAKE_SOURCE_DIR}/kernel
     ${CMAKE_SOURCE_DIR}/kernel/include
+    ${CMAKE_SOURCE_DIR}/kernel/arch/${MICROKERNEL_ARCH}
     ${CMAKE_SOURCE_DIR}/libc/include
+    ${CMAKE_SOURCE_DIR}/libc/arch/${MICROKERNEL_ARCH}/include
 )
 
 target_link_options(kernel.elf PRIVATE
     -static
     --no-pie
-    -T ${CMAKE_SOURCE_DIR}/kernel/linker.ld
+    -T ${MICROKERNEL_KERNEL_LINKER_SCRIPT}
     --build-id=none
     -z max-page-size=0x1000
 )
 set_target_properties(kernel.elf PROPERTIES
-    LINK_DEPENDS ${CMAKE_SOURCE_DIR}/kernel/linker.ld
+    LINK_DEPENDS ${MICROKERNEL_KERNEL_LINKER_SCRIPT}
 )
 add_dependencies(kernel.elf install_headers)
 
@@ -259,6 +274,7 @@ add_test(
         "${Python3_EXECUTABLE}"
         "${CMAKE_SOURCE_DIR}/tests/posix/test_headers.py"
         --cc "${CMAKE_C_COMPILER}"
+        --target "${MICROKERNEL_TARGET_TRIPLE}"
         --clang-include "${CLANG_RESOURCE_DIR}/include"
         --sysroot "${SYSROOT_DIR}/usr/include"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
@@ -274,6 +290,7 @@ add_test(
         "${Python3_EXECUTABLE}"
         "${CMAKE_SOURCE_DIR}/tests/posix/test_symbol_diff.py"
         --cc "${CMAKE_C_COMPILER}"
+        --target "${MICROKERNEL_TARGET_TRIPLE}"
         --clang-include "${CLANG_RESOURCE_DIR}/include"
         --sysroot "${SYSROOT_DIR}/usr/include"
         --nm "${CMAKE_NM}"

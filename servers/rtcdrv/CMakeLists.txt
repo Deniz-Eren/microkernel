@@ -7,4 +7,6 @@
 # SPDX-License-Identifier: MIT
 #
 
-microkernel_add_user_executable(rtcdrv main.c)
+microkernel_add_user_executable(rtcdrv
+    arch/${MICROKERNEL_ARCH}/cmos_rtc.c
+)

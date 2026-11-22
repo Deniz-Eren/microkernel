@@ -12,7 +12,7 @@
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_SIG_0003
 # need:: VER_MEM_0002 VER_MEM_0004 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
 # need:: VER_PROC_0005 VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006
-# need:: VER_IPC_0007 VER_DOCS_0004
+# need:: VER_IPC_0007 VER_DOCS_0004 VER_BOOT_0003
 
 from __future__ import annotations
 
@@ -64,6 +64,7 @@ FEATURE_PROFILES: tuple[tuple[str, str], ...] = (
 )
 
 _COMPILER = "clang"
+_TARGET = "x86_64-unknown-none-elf"
 _CLANG_INC: Path | None = None
 _SYSROOT: Path = SYSROOT_INC
 
@@ -88,7 +89,7 @@ def _compile_snippet(source: str, extra_flags: list[str]) -> tuple[int, str]:
         cmd = [
             _COMPILER,
             "-target",
-            "x86_64-unknown-none-elf",
+            _TARGET,
             "-ffreestanding",
             "-nostdinc",
             "-isystem",
@@ -726,11 +727,16 @@ class PosixHeaderMatrixTests(unittest.TestCase):
 
 
 def main(argv: list[str] | None = None) -> int:
-    global _COMPILER, _CLANG_INC, _SYSROOT
+    global _COMPILER, _TARGET, _CLANG_INC, _SYSROOT
     parser = argparse.ArgumentParser(
         description="Run POSIX.1-2024 standalone header compilation gate."
     )
     parser.add_argument("--cc", default="clang", help="C compiler executable.")
+    parser.add_argument(
+        "--target",
+        default="x86_64-unknown-none-elf",
+        help="Clang target triple.",
+    )
     parser.add_argument(
         "--clang-include", default=None, help="Clang resource include dir."
     )
@@ -741,6 +747,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args, remaining = parser.parse_known_args(argv)
     _COMPILER = args.cc
+    _TARGET = args.target
     _CLANG_INC = Path(args.clang_include) if args.clang_include else None
     _SYSROOT = Path(args.sysroot)
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(

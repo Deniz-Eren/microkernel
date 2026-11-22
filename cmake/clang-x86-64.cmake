@@ -1,5 +1,5 @@
 ##
-# @file     clang-x86_64.cmake
+# @file     clang-x86-64.cmake
 # @brief    LLVM cross-toolchain configuration for x86-64 microkernel targets
 #
 # @copyright

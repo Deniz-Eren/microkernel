@@ -7,4 +7,8 @@
 # SPDX-License-Identifier: MIT
 #
 
-microkernel_add_user_executable(ttyserv main.c)
+microkernel_add_user_executable(ttyserv
+    main.c
+    arch/${MICROKERNEL_ARCH}/uart_16550.c
+)
+target_include_directories(ttyserv PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

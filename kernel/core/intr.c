@@ -9,6 +9,7 @@
  */
 
 #include <kernel/acpi.h>
+#include <kernel/arch.h>
 #include <kernel/intr.h>
 #include <kernel/ipc.h>
 #include <kernel/printk.h>
@@ -16,7 +17,6 @@
 #include <kernel/vmm.h>
 #include <sys/errno.h>
 #include <sys/intr.h>
-#include <arch/x86_64/apic.h>
 #include "channel.h"
 
 /* need:: COMP_IPC_0003 */
@@ -108,7 +108,7 @@ void ioapic_init(void) {
         pins = MAX_IRQS;
     }
     g_ioapic_max_irq = pins;
-    g_bsp_lapic_id = (lapic_read(0x020) >> 24) & 0xFFu;
+    g_bsp_lapic_id = arch_bsp_cpu_id();
 
     /* Mask all IOAPIC lines until a privileged Ring 3 driver attaches them. */
     for (uint32_t i = 0; i < g_ioapic_max_irq; i++) {
@@ -130,7 +130,7 @@ int intr_dispatch_irq(uint64_t vec) {
     /* Mask the line until the Ring 3 driver acknowledges and calls IntrUnmask,
      * send LAPIC EOI before any potential preemption, then deliver pulse. */
     ioapic_mask_irq(irq);
-    apic_eoi();
+    arch_irq_eoi();
     ipc_deliver_irq_pulse(slot->chanid, &slot->pulse_node, slot->pulse_code,
                           slot->pulse_val);
     return 1;

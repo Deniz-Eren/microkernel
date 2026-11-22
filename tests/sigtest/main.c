@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <sys/microkernel.h>
 #include <sys/ipc.h>
+#include <sys/arch/cpu.h>
 #include <sys/thread.h>
 
 static volatile int g_worker_errno_ok;
@@ -52,7 +53,7 @@ static void worker(void *arg) {
                (long)bad, after_fail, after_ok);
     }
     for (;;) {
-        __asm__ volatile("pause");
+        arch_cpu_relax();
     }
 }
 

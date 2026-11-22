@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/arch/cpu.h>
 #include <sys/microkernel.h>
 #include <sys/thread.h>
 #include <time.h>
@@ -57,7 +58,7 @@ static pid_t g_worker_pid;
 
 static void q_lock(void) {
     while (__atomic_exchange_n(&g_queue_lock, 1u, __ATOMIC_ACQUIRE) != 0u) {
-        __asm__ volatile("pause");
+        arch_cpu_relax();
     }
 }
 

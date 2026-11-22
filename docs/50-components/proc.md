@@ -9,7 +9,7 @@ system call dispatch, and `waitpid` wrappers.
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0001
 
-`kernel/core/sched.c` and `kernel/arch/x86_64/switch.S` keep 256 priority ready
+`kernel/core/sched.c` and `kernel/arch/x86-64/switch.S` keep 256 priority ready
 queues, count slice ticks on LAPIC timer interrupts, and switch kernel stacks
 and FPU state ({need}`ARC_PROC_0001`).
 ```

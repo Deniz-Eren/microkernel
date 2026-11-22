@@ -8,6 +8,7 @@
  *
  */
 
+#include <kernel/arch.h>
 #include <kernel/elf.h>
 #include <kernel/pmm.h>
 #include <kernel/printk.h>
@@ -45,7 +46,7 @@ int elf_load_user(uint64_t pml4_phys, const void *image, size_t size,
         eh->e_ident[2] != 'L' || eh->e_ident[3] != 'F' ||
         eh->e_ident[4] != 2 /* ELFCLASS64 */ ||
         eh->e_ident[5] != 1 /* little endian */ ||
-        eh->e_machine != 62 /* x86-64 */) {
+        eh->e_machine != ARCH_ELF_MACHINE) {
         return -1;
     }
     if (eh->e_phentsize < sizeof(elf64_phdr_t) ||

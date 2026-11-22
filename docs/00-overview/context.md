@@ -132,8 +132,9 @@ flowchart TD
 
 ## Component Descriptions
 
-- `kernel/arch/x86_64/`: CPU and platform bring-up (`boot.S`), GDT, IDT,
-  interrupt stubs, LAPIC timer, serial port, and context switch.
+- `kernel/arch/x86-64/`: CPU and platform bring-up (`boot.S`), HAL (`arch.c`,
+  `arch_trapframe.h`), GDT, IDT, interrupt stubs, LAPIC timer, serial port,
+  linker script, and context switch.
 - `kernel/core/`: Core subsystems for memory (`pmm`, `vmm`, `shm`, `kheap`),
   scheduling and processes (`sched`, `proc`, `time`, `entropy`), IPC and IRQs
   (`ipc`, `channel`, `intr`), signals (`signal`), syscalls (`syscall`), and boot
@@ -172,8 +173,8 @@ flowchart TD
 - `scripts/`: `env.sh` (Podman workflow), `enter-dev.sh` (interactive shell),
   `mk_boot_tar.py` (ustar packer), `build-agent.sh` (all pre-commit gates),
   `formatter-agent.sh`, and `install-hooks.sh`.
-- `cmake/clang-x86_64.cmake`: Clang cross-toolchain (`x86_64-unknown-none-elf`,
-  LLD, LLVM binutils).
+- `cmake/clang-x86-64.cmake`, `cmake/arch/x86-64.cmake`: Clang cross-toolchain
+  and platform build settings (`-DMICROKERNEL_ARCH=x86-64`, LLD, LLVM binutils).
 - `Containerfile`: Debian container with Clang, LLD, CMake, Ninja, GRUB tools,
   xorriso, mtools, QEMU, Python 3, `clang-format`, and `clang-tidy`.
 

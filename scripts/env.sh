@@ -15,6 +15,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${MICROKERNEL_DEV_IMAGE:-microkernel-dev}"
+ARCH="${MICROKERNEL_ARCH:-x86-64}"
 
 ensure_image() {
     if ! podman image exists "$IMAGE"; then
@@ -40,7 +41,8 @@ case "${1:-shell}" in
         shift
         ensure_image
         crun cmake -S . -B build -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=cmake/clang-x86_64.cmake \
+            -DMICROKERNEL_ARCH="$ARCH" \
+            -DCMAKE_TOOLCHAIN_FILE="cmake/clang-${ARCH}.cmake" \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON "$@"
         ;;
     build)
@@ -51,7 +53,7 @@ case "${1:-shell}" in
     test)
         shift
         ensure_image
-        crun python3 tests/test_runner.py "$@"
+        crun python3 tests/test_runner.py --arch "$ARCH" "$@"
         ;;
     run)
         shift

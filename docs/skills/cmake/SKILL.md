@@ -10,7 +10,8 @@ description: >-
 
 The build runs in the container (see the [dev-environment
 skill](../dev-environment/SKILL.md)). The toolchain is Clang with the target
-`x86_64-unknown-none-elf` (`cmake/clang-x86_64.cmake`). The C standard is C17
+`x86_64-unknown-none-elf` (`cmake/clang-x86-64.cmake`,
+`cmake/arch/x86-64.cmake`, `-DMICROKERNEL_ARCH=x86-64`). The C standard is C17
 with warnings as errors. The build convention is out-of-source: all output goes
 to `build/` and `sysroot/`.
 
@@ -38,8 +39,8 @@ Each stage gives its output to the next stage:
    `scripts/mk_boot_tar.py` packs the programs into `build/boot.tar` (ustar).
    The programs come from `servers/` and `tests/`.
 4. **Kernel and ISO.** The kernel links at `0xFFFFFFFF80000000` with
-   `kernel/linker.ld`. `grub-mkrescue` makes `build/microkernel.iso` with
-   `iso/boot/grub/grub.cfg`.
+   `kernel/arch/x86-64/linker.ld`. `grub-mkrescue` makes `build/microkernel.iso`
+   with `iso/boot/grub/grub.cfg`.
 
 ## Test harness
 

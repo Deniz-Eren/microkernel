@@ -8,6 +8,7 @@
  *
  */
 
+#include <kernel/arch.h>
 #include <kernel/entropy.h>
 #include <kernel/sched.h>
 #include <kernel/time.h>
@@ -21,39 +22,6 @@
 
 static uint64_t g_state[4];
 static int g_seeded;
-static int g_has_rdrand;
-
-static inline uint64_t read_tsc(void) {
-    uint32_t lo = 0;
-    uint32_t hi = 0;
-    __asm__ volatile("rdtsc" : "=a"(lo), "=d"(hi));
-    return ((uint64_t)hi << 32) | lo;
-}
-
-static int detect_rdrand(void) {
-    uint32_t eax = 1u;
-    uint32_t ebx = 0u;
-    uint32_t ecx = 0u;
-    uint32_t edx = 0u;
-    __asm__ volatile("cpuid" : "+a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx));
-    return (ecx & (1u << 30)) != 0u;
-}
-
-static int try_rdrand64(uint64_t *out) {
-    if (!g_has_rdrand) {
-        return 0;
-    }
-    for (int i = 0; i < 10; i++) {
-        uint64_t v = 0;
-        unsigned char ok = 0;
-        __asm__ volatile("rdrand %0; setc %1" : "=r"(v), "=qm"(ok));
-        if (ok) {
-            *out = v;
-            return 1;
-        }
-    }
-    return 0;
-}
 
 static uint64_t splitmix64(uint64_t *x) {
     uint64_t z = (*x += 0x9E3779B97F4A7C15ULL);
@@ -70,18 +38,10 @@ static void entropy_seed_if_needed(void) {
     if (g_seeded) {
         return;
     }
-    g_has_rdrand = detect_rdrand();
-    uint64_t seed =
-        read_tsc() ^ time_clock_now_ns(CLOCK_MONOTONIC) ^ 0x243F6A8885A308D3ULL;
-    uint64_t hw = 0;
-    if (try_rdrand64(&hw)) {
-        seed ^= hw;
-    }
+    uint64_t seed = arch_entropy_hw_sample() ^
+                    time_clock_now_ns(CLOCK_MONOTONIC) ^ 0x243F6A8885A308D3ULL;
     for (int i = 0; i < 4; i++) {
-        uint64_t extra = read_tsc();
-        if (try_rdrand64(&hw)) {
-            extra ^= hw;
-        }
+        uint64_t extra = arch_entropy_hw_sample();
         g_state[i] = splitmix64(&seed) ^ extra;
     }
     if ((g_state[0] | g_state[1] | g_state[2] | g_state[3]) == 0ULL) {
@@ -91,11 +51,8 @@ static void entropy_seed_if_needed(void) {
 }
 
 static uint64_t entropy_next64(void) {
-    uint64_t hw = 0;
-    if (try_rdrand64(&hw)) {
-        g_state[0] ^= hw;
-    }
-    g_state[1] ^= read_tsc();
+    g_state[0] ^= arch_entropy_hw_sample();
+    g_state[1] ^= arch_entropy_hw_sample();
 
     /* xoshiro256** step */
     uint64_t result = rotl64(g_state[1] * 5ULL, 7) * 9ULL;

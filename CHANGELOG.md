@@ -88,6 +88,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- `x86-64` Hardware Abstraction Layer (HAL) isolation and parameterized platform
+  build (`TSK_0026`, `SWR_BOOT_0004`, `ADR_0024`, `ICD_BOOT_0002`,
+  `COMP_BOOT_0004`, `VER_BOOT_0003`): moved `x86-64` kernel, linker, `libc`
+  CRT/syscall/TLS/port-I/O, and Ring 3 UART/RTC hardware backends into `x86-64`
+  folders (`kernel/arch/x86-64/`, `libc/arch/x86-64/`,
+  `servers/ttyserv/arch/x86-64/`, `servers/rtcdrv/arch/x86-64/`,
+  `cmake/arch/x86-64.cmake`), added portable `kernel/include/kernel/arch.h` and
+  trapframe accessors, and parameterized CMake (`-DMICROKERNEL_ARCH=x86-64`),
+  `scripts/env.sh`, `tests/test_runner.py`, and POSIX audit gates (`--target`
+  and `AArch64`-ready relocation/branch regexes).
 - `<sys/select.h>` (`select`, `pselect`, `fd_set`, `FD_*`), kernel zombie
   reclamation, and cross-subsystem zero-leak stress suite (`TSK_0020`,
   `SWR_DOCS_0004`, `ADR_0023`, `ICD_IPC_0014`, `COMP_IPC_0014`,
