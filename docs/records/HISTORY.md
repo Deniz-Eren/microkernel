@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0028 — Mount writable on-disk file system in vfsserv over /dev/blk
+
+```{task} Mount writable on-disk file system in vfsserv over /dev/blk
+:id: TSK_0028
+:status: done
+:traces: ADR_0003, ADR_0016, SWR_IPC_0011
+
+Mount a writable on-disk file system (such as `ext2`) inside `vfsserv` over
+`/dev/blk` so files and directories stay across QEMU restarts
+({need}`SWR_IPC_0011`).
+```
+
 ### TSK_0024 — Add MMIO/DMA syscalls and Ring 3 PCI virtio-blk driver
 
 ```{task} Add MMIO/DMA syscalls and Ring 3 PCI virtio-blk driver

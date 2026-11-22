@@ -7,4 +7,4 @@
 # SPDX-License-Identifier: MIT
 #
 
-microkernel_add_user_executable(vfsserv main.c)
+microkernel_add_user_executable(vfsserv main.c ext2.c)

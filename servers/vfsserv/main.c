@@ -22,13 +22,15 @@
 #include <sys/vfs.h>
 #include <time.h>
 #include <unistd.h>
+#include "ext2.h"
 
-/* need:: COMP_IPC_0008 */
+/* need:: COMP_IPC_0008 COMP_IPC_0016 */
 
 #define VFS_NAME_MAX 128u
 #define VFS_MAX_HANDLES 128u
 #define VFS_DEV_TMPFS 1ULL
 #define VFS_DEV_BOOTFS 2ULL
+#define VFS_DEV_EXT2 3ULL
 
 typedef struct vfs_node vfs_node_t;
 
@@ -40,6 +42,7 @@ typedef struct {
 struct vfs_node {
     uint64_t dev;
     uint64_t ino;
+    uint32_t ext2_ino;
     uint32_t mode;
     uint32_t nlink;
     uint8_t readonly;
@@ -65,6 +68,7 @@ typedef struct {
 } vfs_file_t;
 
 static vfs_node_t *g_root;
+static vfs_node_t *g_mnt;
 static uint64_t g_next_ino = 1ULL;
 static vfs_file_t g_files[VFS_MAX_HANDLES];
 
@@ -252,6 +256,9 @@ static void release_handle(uint32_t handle) {
     if (n && n->open_refs > 0u) {
         n->open_refs--;
         if (n->nlink == 0u && n->open_refs == 0u && !n->readonly) {
+            if (n->dev == VFS_DEV_EXT2 && n->ext2_ino != 0u) {
+                (void)ext2_free_inode_and_blocks(n->ext2_ino);
+            }
             node_destroy(n);
         }
     }
@@ -445,11 +452,24 @@ static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
             return;
         }
         if ((req->flags & (uint32_t)O_TRUNC) && S_ISREG(node->mode)) {
-            free(node->data);
-            node->data = NULL;
-            node->size = 0u;
-            node->cap = 0u;
-            get_now(&node->mtime_sec, &node->mtime_nsec);
+            int64_t sec = 0;
+            int64_t nsec = 0;
+            get_now(&sec, &nsec);
+            if (node->dev == VFS_DEV_EXT2) {
+                int tr = ext2_truncate_inode(node->ext2_ino, 0u, (uint32_t)sec);
+                if (tr < 0) {
+                    rep->err = tr;
+                    return;
+                }
+                node->size = 0u;
+            } else {
+                free(node->data);
+                node->data = NULL;
+                node->size = 0u;
+                node->cap = 0u;
+            }
+            node->mtime_sec = sec;
+            node->mtime_nsec = nsec;
         }
     } else if (r == -ENOENT && (req->flags & (uint32_t)O_CREAT) && parent &&
                leaf[0] != '\0') {
@@ -462,13 +482,35 @@ static void handle_open(const vfs_req_t *req, vfs_rep_t *rep) {
             return;
         }
         uint32_t fmode = S_IFREG | (req->mode & 0777u);
-        node = node_new(VFS_DEV_TMPFS, fmode, 0u, parent);
+        uint32_t new_eino = 0u;
+        if (parent->dev == VFS_DEV_EXT2) {
+            int64_t sec = 0;
+            int64_t nsec = 0;
+            get_now(&sec, &nsec);
+            int cr = ext2_create_file(parent->ext2_ino, leaf,
+                                      (uint16_t)(req->mode & 0777u),
+                                      (uint32_t)sec, &new_eino);
+            if (cr < 0) {
+                rep->err = cr;
+                return;
+            }
+        }
+        node = node_new(parent->dev, fmode, 0u, parent);
         if (!node) {
+            if (new_eino != 0u) {
+                (void)ext2_unlink_entry(parent->ext2_ino, leaf, 0, 0u, NULL);
+                (void)ext2_free_inode_and_blocks(new_eino);
+            }
             rep->err = -ENOMEM;
             return;
         }
+        node->ext2_ino = new_eino;
         int ar = dir_add_child(parent, leaf, node);
         if (ar < 0) {
+            if (new_eino != 0u) {
+                (void)ext2_unlink_entry(parent->ext2_ino, leaf, 0, 0u, NULL);
+                (void)ext2_free_inode_and_blocks(new_eino);
+            }
             node_destroy(node);
             rep->err = ar;
             return;
@@ -507,6 +549,18 @@ static void handle_read(const vfs_req_t *req, vfs_rep_t *rep) {
     if (f->offset >= f->node->size || want == 0u) {
         rep->err = 0;
         rep->len = 0u;
+        return;
+    }
+    if (f->node->dev == VFS_DEV_EXT2) {
+        long got =
+            ext2_read_data(f->node->ext2_ino, f->offset, rep->u.data, want);
+        if (got < 0) {
+            rep->err = (int32_t)got;
+            return;
+        }
+        f->offset += (size_t)got;
+        rep->err = 0;
+        rep->len = (uint32_t)got;
         return;
     }
     size_t avail = f->node->size - f->offset;
@@ -566,6 +620,26 @@ static void handle_write(const vfs_req_t *req, vfs_rep_t *rep) {
         f->offset = f->node->size;
     }
     if (take > 0u) {
+        if (f->node->dev == VFS_DEV_EXT2) {
+            int64_t sec = 0;
+            int64_t nsec = 0;
+            get_now(&sec, &nsec);
+            long put = ext2_write_data(f->node->ext2_ino, f->offset,
+                                       req->u.data, take, (uint32_t)sec);
+            if (put < 0) {
+                rep->err = (int32_t)put;
+                return;
+            }
+            f->offset += (size_t)put;
+            if (f->offset > f->node->size) {
+                f->node->size = f->offset;
+            }
+            f->node->mtime_sec = sec;
+            f->node->mtime_nsec = nsec;
+            rep->err = 0;
+            rep->len = (uint32_t)put;
+            return;
+        }
         if (f->offset > ((size_t)-1) - take) {
             rep->err = -EFBIG;
             return;
@@ -641,6 +715,21 @@ static void handle_ftruncate(const vfs_req_t *req, vfs_rep_t *rep) {
         return;
     }
     size_t nlen = (size_t)req->offset;
+    if (f->node->dev == VFS_DEV_EXT2) {
+        int64_t sec = 0;
+        int64_t nsec = 0;
+        get_now(&sec, &nsec);
+        int tr = ext2_truncate_inode(f->node->ext2_ino, nlen, (uint32_t)sec);
+        if (tr < 0) {
+            rep->err = tr;
+            return;
+        }
+        f->node->size = nlen;
+        f->node->mtime_sec = sec;
+        f->node->mtime_nsec = nsec;
+        rep->err = 0;
+        return;
+    }
     if (nlen == 0u) {
         free(f->node->data);
         f->node->data = NULL;
@@ -702,14 +791,36 @@ static void handle_mkdir(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->err = -EROFS;
         return;
     }
+    uint32_t new_eino = 0u;
+    if (parent->dev == VFS_DEV_EXT2) {
+        int64_t sec = 0;
+        int64_t nsec = 0;
+        get_now(&sec, &nsec);
+        int cr = ext2_create_dir(parent->ext2_ino, leaf,
+                                 (uint16_t)(req->mode & 0777u), (uint32_t)sec,
+                                 &new_eino);
+        if (cr < 0) {
+            rep->err = cr;
+            return;
+        }
+    }
     vfs_node_t *nd =
-        node_new(VFS_DEV_TMPFS, S_IFDIR | (req->mode & 0777u), 0u, parent);
+        node_new(parent->dev, S_IFDIR | (req->mode & 0777u), 0u, parent);
     if (!nd) {
+        if (new_eino != 0u) {
+            (void)ext2_unlink_entry(parent->ext2_ino, leaf, 1, 0u, NULL);
+            (void)ext2_free_inode_and_blocks(new_eino);
+        }
         rep->err = -ENOMEM;
         return;
     }
+    nd->ext2_ino = new_eino;
     int ar = dir_add_child(parent, leaf, nd);
     if (ar < 0) {
+        if (new_eino != 0u) {
+            (void)ext2_unlink_entry(parent->ext2_ino, leaf, 1, 0u, NULL);
+            (void)ext2_free_inode_and_blocks(new_eino);
+        }
         node_destroy(nd);
         rep->err = ar;
         return;
@@ -733,7 +844,8 @@ static void handle_unlink(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->err = r < 0 ? r : -ENOENT;
         return;
     }
-    if (node == g_root || strcmp(leaf, ".") == 0 || strcmp(leaf, "..") == 0) {
+    if (node == g_root || node == g_mnt || strcmp(leaf, ".") == 0 ||
+        strcmp(leaf, "..") == 0) {
         rep->err = -EBUSY;
         return;
     }
@@ -761,6 +873,18 @@ static void handle_unlink(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->err = -ENOENT;
         return;
     }
+    if (parent->dev == VFS_DEV_EXT2) {
+        int64_t sec = 0;
+        int64_t nsec = 0;
+        get_now(&sec, &nsec);
+        int ur =
+            ext2_unlink_entry(parent->ext2_ino, leaf,
+                              S_ISDIR(node->mode) ? 1 : 0, (uint32_t)sec, NULL);
+        if (ur < 0) {
+            rep->err = ur;
+            return;
+        }
+    }
     parent->children[idx] = parent->children[parent->child_count - 1u];
     parent->child_count--;
     if (S_ISDIR(node->mode) && parent->nlink > 2u) {
@@ -769,6 +893,9 @@ static void handle_unlink(const vfs_req_t *req, vfs_rep_t *rep) {
     get_now(&parent->mtime_sec, &parent->mtime_nsec);
     node->nlink = 0u;
     if (node->open_refs == 0u) {
+        if (node->dev == VFS_DEV_EXT2 && node->ext2_ino != 0u) {
+            (void)ext2_free_inode_and_blocks(node->ext2_ino);
+        }
         node_destroy(node);
     }
     rep->err = 0;
@@ -869,7 +996,7 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->err = r1 < 0 ? r1 : -ENOENT;
         return;
     }
-    if (old_node == g_root || strcmp(old_leaf, ".") == 0 ||
+    if (old_node == g_root || old_node == g_mnt || strcmp(old_leaf, ".") == 0 ||
         strcmp(old_leaf, "..") == 0) {
         rep->err = -EBUSY;
         return;
@@ -894,6 +1021,10 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
     }
     if (new_parent->readonly) {
         rep->err = -EROFS;
+        return;
+    }
+    if (old_parent->dev != new_parent->dev) {
+        rep->err = -EXDEV;
         return;
     }
     if (old_node == new_node) {
@@ -951,6 +1082,19 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
         return;
     }
 
+    if (old_parent->dev == VFS_DEV_EXT2) {
+        int64_t sec = 0;
+        int64_t nsec = 0;
+        get_now(&sec, &nsec);
+        int rr = ext2_rename_entry(
+            old_parent->ext2_ino, old_leaf, new_parent->ext2_ino, new_leaf,
+            S_ISDIR(old_node->mode) ? 1 : 0, (uint32_t)sec, NULL);
+        if (rr < 0) {
+            rep->err = rr;
+            return;
+        }
+    }
+
     if (replaced) {
         new_parent->children[nidx].node = old_node;
         if (S_ISDIR(old_node->mode)) {
@@ -968,6 +1112,9 @@ static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
         }
         replaced->nlink = 0u;
         if (replaced->open_refs == 0u) {
+            if (replaced->dev == VFS_DEV_EXT2 && replaced->ext2_ino != 0u) {
+                (void)ext2_free_inode_and_blocks(replaced->ext2_ino);
+            }
             node_destroy(replaced);
         }
         rep->err = 0;
@@ -1018,6 +1165,55 @@ static int register_name(int chanid, const char *path) {
     return -1;
 }
 
+static int populate_ext2_cb(const char *name, uint32_t ino, uint8_t ftype,
+                            void *ctx) {
+    (void)ftype;
+    vfs_node_t *parent = (vfs_node_t *)ctx;
+    ext2_inode_info_t info = {0};
+    if (ext2_stat_inode(ino, &info) < 0) {
+        return 0;
+    }
+    vfs_node_t *child = node_new(VFS_DEV_EXT2, info.mode, 0u, parent);
+    if (!child) {
+        return -ENOMEM;
+    }
+    child->ext2_ino = ino;
+    child->size = info.size;
+    child->mtime_sec = (int64_t)info.mtime;
+    if (dir_add_child(parent, name, child) != 0) {
+        node_destroy(child);
+        return 0;
+    }
+    if (S_ISDIR(info.mode)) {
+        (void)ext2_iterate_dir(ino, populate_ext2_cb, child);
+    }
+    return 0;
+}
+
+static void mount_ext2_on_mnt(void) {
+    int formatted = 0;
+    uint32_t total_blocks = 0u;
+    if (ext2_init(&formatted, &total_blocks) != 0) {
+        return;
+    }
+    vfs_node_t *mnt_dir = node_new(VFS_DEV_EXT2, S_IFDIR | 0755u, 0u, g_root);
+    if (!mnt_dir || dir_add_child(g_root, "mnt", mnt_dir) != 0) {
+        node_destroy(mnt_dir);
+        return;
+    }
+    mnt_dir->ext2_ino = EXT2_ROOT_INO;
+    g_mnt = mnt_dir;
+    if (!formatted) {
+        (void)ext2_iterate_dir(EXT2_ROOT_INO, populate_ext2_cb, mnt_dir);
+        printf("[OK] vfsserv mounted existing ext2 on /mnt (%u blocks,"
+               " %zu entries)\n",
+               total_blocks, mnt_dir->child_count);
+    } else {
+        printf("[OK] vfsserv formatted and mounted ext2 on /mnt (%u blocks)\n",
+               total_blocks);
+    }
+}
+
 int main(void) {
     g_root = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, NULL);
     if (!g_root) {
@@ -1038,6 +1234,7 @@ int main(void) {
         return 1;
     }
     populate_bootfs(boot_dir);
+    mount_ext2_on_mnt();
 
     int chanid = (int)CreateChannel();
     if (chanid < 0) {

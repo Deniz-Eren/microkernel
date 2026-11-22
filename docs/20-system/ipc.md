@@ -128,7 +128,7 @@ sector read and write I/O over IOAPIC IRQ pulses ({need}`SYS_IPC_0001`).
 
 ```{swr} Mount a writable on-disk file system in vfsserv over /dev/blk
 :id: SWR_IPC_0011
-:status: draft
+:status: active
 :derives: SYS_IPC_0001
 :traces: ADR_0003, ADR_0016
 

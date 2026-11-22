@@ -1134,6 +1134,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "mathtest", 100, 0);
     /* Ring 3 CAP_SYS_INTR MMIO/DMA/PCI EPERM and /dev/blk persistence test. */
     spawn_image(tar_phys, tar_size, "blktest", 98, 0);
+    /* Ring 3 /mnt ext2 writable on-disk filesystem persistence test. */
+    spawn_image(tar_phys, tar_size, "ext2test", 95, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

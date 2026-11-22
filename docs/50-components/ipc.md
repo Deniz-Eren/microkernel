@@ -193,3 +193,16 @@ checks and `POLLNVAL` to `EBADF` mapping ({need}`ICD_IPC_0005`,
 (`/dev/blk`) over MMIO BARs, contiguous DMA virtqueues, and IOAPIC IRQ pulses
 ({need}`ICD_IPC_0002`, {need}`ICD_IPC_0015`, {need}`SWR_IPC_0010`).
 ```
+
+```{comp} Writable ext2 on-disk filesystem mounted in vfsserv over /dev/blk
+:id: COMP_IPC_0016
+:status: active
+:refines: ARC_IPC_0001, ICD_IPC_0007, ICD_IPC_0015
+:satisfies: SWR_IPC_0011
+
+`servers/vfsserv/ext2.c` and `servers/vfsserv/main.c` format and mount a rev-1
+`ext2` filesystem on `/mnt` over `/dev/blk`. They support direct and
+single-indirect data blocks, write-through `open`/`read`/`write`/`ftruncate`,
+`mkdir`, `unlink`, `rmdir`, `rename`, `EXDEV`, and open-unlinked inode cleanup
+({need}`ICD_IPC_0007`, {need}`ICD_IPC_0015`, {need}`SWR_IPC_0011`).
+```

@@ -104,3 +104,17 @@ The headless QEMU harness `tests/test_runner.py` runs `blkdrv` and `blktest`
 IRQ pulses. CTest `ipc.blk_persist` (`tests/boot/test_blk_persist.py`) checks
 sector persistence across two cold QEMU restarts ({need}`SWR_IPC_0010`).
 ```
+
+```{ver} Verify writable ext2 /mnt persistence across QEMU cold restarts
+:id: VER_IPC_0009
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0011
+
+The headless QEMU harness `tests/test_runner.py` runs `ext2test`
+(`tests/ext2test/test_ext2.c`). It checks `/mnt` directory creation, 16 KiB
+multi-block writes and reads, `ftruncate`, `rename`, `EXDEV`, `unlink`, `rmdir`,
+and `readdir`. CTest `ipc.vfs_persist` (`tests/boot/test_ext2_persist.py`)
+checks the on-disk `ext2` superblock and verifies file and directory persistence
+across two cold QEMU restarts ({need}`SWR_IPC_0011`).
+```

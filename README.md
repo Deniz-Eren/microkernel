@@ -275,7 +275,8 @@ subset available at this time:
 - **Filesystem and directories (`<sys/stat.h>`, `<dirent.h>`):** `stat`,
   `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, `umask`, `opendir`,
   `fdopendir`, `readdir`, `rewinddir`, `closedir`, and `dirfd` backed by Ring 3
-  `vfsserv` (`/boot` read-only `bootfs` and `/tmp` writable `tmpfs`)
+  `vfsserv` (`/boot` read-only `bootfs`, `/tmp` writable `tmpfs`, and `/mnt`
+  writable persistent `ext2` over `/dev/blk`)
 - **Asynchronous I/O (`<aio.h>`):** `aio_read`, `aio_write`, `aio_fsync`,
   `aio_cancel`, `lio_listio` (`LIO_WAIT`/`LIO_NOWAIT`, `SIGEV_SIGNAL`), and
   async-signal-safe `aio_error`, `aio_return`, and `aio_suspend` backed by a
@@ -383,9 +384,8 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): writable on-disk file system mount in
-`vfsserv` over `/dev/blk`, and ACPI `MADT` SMP bring-up. See
-[docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (planned next): ACPI `MADT` SMP bring-up and kernel
+lock hardening. See [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -436,7 +436,7 @@ command shell (`sh`) with job control, and `<sys/select.h>` leak-freedom stress
 tests. They also added ACPI `MADT`/`SPCR` driver discovery, `x86-64` HAL
 isolation, and opt-in LLVM coverage (`./scripts/env.sh coverage`). The newest
 milestones enforce `x86-64-v3` with `XSAVE`/`XRSTOR`, add `<fenv.h>` and
-`<math.h>` with `FMA`, and add `CAP_SYS_INTR` MMIO/DMA/PCI syscalls with Ring 3
+`<math.h>` with `FMA`, and mount persistent `ext2` (`/mnt`) over Ring 3
 `virtio-blk` (`/dev/blk`).
 
 ## Documentation

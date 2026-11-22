@@ -145,7 +145,9 @@ int main(void) {
         return 1;
     }
 
-    /* 4. Multi-sector (4 sectors = 2048 bytes) write/readback at LBA 16..19. */
+    /* 4. Multi-sector (4 sectors = 2048 bytes) write/readback at tail LBA
+     *    (outside the ext2 filesystem region mounted on /mnt). */
+    uint64_t scratch_lba = rep.num_sectors - 8u;
     static uint8_t pattern[BLK_MAX_BYTES];
     for (size_t i = 0; i < sizeof(pattern); i++) {
         pattern[i] = (uint8_t)((i * 73u + next_gen * 19u + 7u) & 0xFFu);
@@ -153,7 +155,7 @@ int main(void) {
     memset(&req, 0, sizeof(req));
     memset(&rep, 0, sizeof(rep));
     req.op = BLK_OP_WRITE;
-    req.lba = 16u;
+    req.lba = scratch_lba;
     req.count = BLK_MAX_SECTORS;
     memcpy(req.data, pattern, sizeof(pattern));
     if (SendMsg(conn, &req, offsetof(blk_req_t, data) + sizeof(pattern), &rep,
@@ -167,7 +169,7 @@ int main(void) {
     memset(&req, 0, sizeof(req));
     memset(&rep, 0, sizeof(rep));
     req.op = BLK_OP_READ;
-    req.lba = 16u;
+    req.lba = scratch_lba;
     req.count = BLK_MAX_SECTORS;
     if (SendMsg(conn, &req, offsetof(blk_req_t, data), &rep, sizeof(rep)) < 0 ||
         rep.err != 0 || rep.bytes != sizeof(pattern) ||

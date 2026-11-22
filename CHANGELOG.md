@@ -21,6 +21,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Mounted a writable rev-1 `ext2` on-disk filesystem at `/mnt` inside Ring 3
+  `vfsserv` over `/dev/blk` (`servers/vfsserv/ext2.{h,c}`,
+  `servers/vfsserv/main.c`) supporting automatic format/mount, direct and
+  single-indirect blocks, write-through `open`/`read`/`write`/`ftruncate`,
+  `mkdir`, `unlink`, `rmdir`, `rename`, `EXDEV`, and unlinked-open inode
+  reclamation, with Ring 3 `tests/ext2test/` and CTest `ipc.vfs_persist`
+  (`tests/boot/test_ext2_persist.py`) (`SWR_IPC_0011`, `COMP_IPC_0016`,
+  `VER_IPC_0009`, `TSK_0028`).
 - Added `CAP_SYS_INTR`-gated `SYS_VM_MAP_MMIO`, `SYS_DMA_ALLOC`, and
   `SYS_PCI_CFG` syscalls (`kernel/core/vmm.c`, `kernel/core/intr.c`,
   `kernel/arch/x86-64/arch.c`), Ring 3 wrappers in `libc/include/sys/intr.h`,

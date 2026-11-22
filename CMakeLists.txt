@@ -208,6 +208,7 @@ add_subdirectory(tests/jobtest)
 add_subdirectory(tests/simdtest)
 add_subdirectory(tests/mathtest)
 add_subdirectory(tests/blktest)
+add_subdirectory(tests/ext2test)
 add_subdirectory(tests/stresstest)
 
 #------------------------------------------------------------------------------
@@ -418,5 +419,17 @@ if(MICROKERNEL_ARCH STREQUAL "x86-64" AND NOT MICROKERNEL_COVERAGE)
     set_tests_properties(
         ipc.blk_persist
         PROPERTIES LABELS "ipc;blk"
+    )
+    add_test(
+        NAME ipc.vfs_persist
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            "${CMAKE_SOURCE_DIR}/tests/boot/test_ext2_persist.py"
+            --iso "${CMAKE_BINARY_DIR}/microkernel.iso"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+    set_tests_properties(
+        ipc.vfs_persist
+        PROPERTIES LABELS "ipc;vfs"
     )
 endif()
