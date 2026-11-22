@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added business decision `BDR_0004` (`docs/10-product/bdr/BDR_0004.md`) and
+  updated `CNV_0004` to keep public user-space headers, `libc`, and utilities
+  within POSIX.1-2024 and require explicit `BDR_`/`ADR_` records for any future
+  non-POSIX exception, and queued the full dependency-ordered POSIX.1-2024 Base
+  backlog (`TSK_0031` to `TSK_0044`) in `docs/records/TASKS.md`.
 - Implemented multi-core SMP bring-up and kernel lock hardening (`TSK_0025`,
   `SWR_PROC_0009`, `ADR_0027`, `COMP_PROC_0008`, `VER_PROC_0007`): parsed ACPI
   `MADT` Processor Local APIC entries (`kernel/core/acpi.c`), added portable

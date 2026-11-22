@@ -74,13 +74,15 @@ lines on `Containerfile` and `grub.cfg`. Exempt Markdown, `.gitignore`,
 ```{con} POSIX.1-2024 header hygiene and two-tier traceability
 :id: CNV_0004
 :status: active
-:traces: ADR_0003, WDR_0002
+:traces: ADR_0003, BDR_0004, WDR_0002
 
 Write POSIX.1-2024 Sphinx-Needs items at the header, contract, or subsystem
 level with `:posix:` refs and `9799919799` URLs. Use the `issue8-manifest.tsv`
 gate instead of per-function Markdown. Scope `ICD_` and `COMP_` by header or
 feature group. Reserve internal names under `__` or `_[A-Z]`, and never clear
-`errno` on success.
+`errno` on success. Keep user-space interfaces within POSIX.1-2024, and record
+any non-POSIX exception in a `BDR_` or `ADR_` before work starts
+({need}`BDR_0004`).
 ```
 
 ### CNV_0005 — File Naming and Documentation Rules

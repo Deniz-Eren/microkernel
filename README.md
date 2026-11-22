@@ -386,8 +386,11 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): ACPI `MADT` SMP bring-up and kernel
-lock hardening. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (planned next): POSIX.1-2024 Base `ps`, `sysconf`,
+`getconf`, credentials, VFS links, and full C17 headers. Ring 3 TCP/IP
+networking and remaining XCU utilities follow under
+[BDR_0004](docs/10-product/bdr/BDR_0004.md). See
+[docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
