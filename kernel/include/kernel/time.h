@@ -28,3 +28,4 @@ long sys_timer_settime(uint64_t timerid, uint64_t flags, uint64_t val_va,
                        uint64_t oval_va);
 long sys_timer_gettime(uint64_t timerid, uint64_t val_va);
 long sys_timer_getoverrun(uint64_t timerid);
+long sys_alarm(uint64_t seconds);

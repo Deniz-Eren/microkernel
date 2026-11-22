@@ -26,7 +26,7 @@ flowchart TD
     AGENT["AI Engineering Agent (AGENTS.md + docs/skills)"]
     BLUEPRINT["Blueprint & Traceability (POSIX.1-2024 + Sphinx-Needs + MyST)"]
     FABRICATOR["Fabricator (Podman + LLVM/Clang + CMake/Ninja + GRUB ISO)"]
-    TESTBED["Testbed (Headless QEMU x86-64 q35 + COM1 serial + Python)"]
+    TESTBED["Testbed (Headless QEMU + Serial Console + Python)"]
     GATES["Quality Gates (clang-format, STE, clang-tidy, CTest, Sphinx -W)"]
 
     AGENT -->|"Predict and update specs, headers, and code"| BLUEPRINT
@@ -65,7 +65,7 @@ define the system contract inside the Sphinx-Needs traceability model (`docs/`):
 
 **LLVM** (`clang`, `ld.lld`, `llvm-objdump`) with **CMake** and **Ninja**
 (`cmake/clang-x86-64.cmake`, `cmake/arch/x86-64.cmake`) cross-compiles
-freestanding C17 and x86-64 assembly. The build runs inside the
+freestanding C17 and platform assembly. The build runs inside the
 `microkernel-dev` Podman image (`Containerfile`) with no host headers or host
 libraries in four stages:
 
@@ -109,12 +109,14 @@ gates:
 5. **Hardware testbed:** Headless QEMU serial suite (`[OK]` assertions).
 6. **Static analysis:** `clang-tidy` across all C sources and headers using
    `build/compile_commands.json`.
-7. **CTest:** `posix.headers` (standalone C17 matrix under
-   `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800`), `posix.symbol_diff`
-   (Clang AST and `llvm-nm` diff against `issue8-manifest.tsv`),
-   `posix.async_signal_safe` and `posix.cancellation` (`llvm-objdump -dr`
-   call-graph audits on `libc.a`), `traceability.unit`, `docs.html`,
-   `docs.needs`, and `docs.audit`.
+7. **CTest:** `posix.headers` checks standalone C17 headers under
+   `_POSIX_C_SOURCE=202405L` and `_XOPEN_SOURCE=800`. `posix.symbol_diff` runs a
+   Clang AST and `llvm-nm` diff against `issue8-manifest.tsv` and writes
+   `build/posix-symbol-diff.txt`. That report lists implemented and missing
+   POSIX.1-2024 Base headers and interfaces, active option groups, and exported
+   `libc.a` symbols. `posix.async_signal_safe`, `posix.cancellation`,
+   `coverage.unit`, `traceability.unit`, `docs.html`, `docs.needs`, and
+   `docs.audit` complete the suite.
 
 ## Containerized workflow and commands
 
@@ -133,6 +135,9 @@ Your host needs only Podman. The first `./scripts/env.sh` run builds the pinned
     --expect 'errno thread-local and preserved across success' \
     --expect 'signal handler entered'
 ./scripts/env.sh ctest --test-dir build --output-on-failure
+
+# Inspect the generated POSIX.1-2024 header and interface progress report
+head -n 20 build/posix-symbol-diff.txt
 
 # Boot Microkernel interactively into the Ring 3 command shell (Ctrl-A X exits)
 ./scripts/env.sh run
@@ -225,7 +230,7 @@ flowchart TD
         SOCK ~~~ RTC
     end
 
-    subgraph R0["Ring 0: Minimal x86-64 Microkernel"]
+    subgraph R0["Ring 0: Minimal Microkernel"]
         K["Scheduler | IPC & Pulses | W^X & COW VMM | Signals | IOAPIC IRQs"]
     end
 
@@ -244,8 +249,9 @@ subset available at this time:
   `_POSIX2_VERSION` (`202405L`), `fork` (COW), `execve`/`execv`/`execvp` (`PATH`
   lookup and bootfs `argv`/`envp`), `getpid`, `getppid`, and `getentropy`. Also
   `pipe`/`pipe2`, `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`,
-  `ftruncate`, `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, `getcwd`,
-  `access`, `isatty`, `_exit`, `sleep`, `environ`, and `STD*_FILENO`
+  `ftruncate`, `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, and `getcwd`.
+  Also `access`, `isatty`, `getopt`, `alarm`, `_exit`, `sleep`, `environ`, and
+  `STD*_FILENO`
 - **Descriptor control and multiplexing (`<fcntl.h>`, `<poll.h>`,
   `<sys/select.h>`):** `open`, `openat`, `creat`, and `fcntl` (`F_DUPFD`,
   `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`). Also
@@ -302,12 +308,18 @@ subset available at this time:
   locks (`flockfile`, `ftrylockfile`, `funlockfile`). Formatted output covers
   `printf`/`vprintf`, `fprintf`/`vfprintf`, `snprintf`/`vsnprintf`,
   `sprintf`/`vsprintf`, `puts`, `fputs`, `putchar`/`putchar_unlocked`, `fputc`,
-  `putc`/`putc_unlocked`, and `perror`
-- **Heap, environment, and exit (`<stdlib.h>`):** `mmap`/`munmap`-backed
-  thread-safe coalescing `malloc`, `free`, `calloc`, `realloc`, and
-  `reallocarray`. Also `getenv`, `secure_getenv`, `setenv`, `unsetenv`, `exit`,
-  `_Exit`, `abort`, `strtol`/`strtoul`/`strtoll`/`strtoull`,
-  `atoi`/`atol`/`atoll`, and `abs`/`labs`/`llabs`
+  `putc`/`putc_unlocked`, `perror`, `rename`, and `renameat`
+- **Heap, sorting, paths, environment, and exit (`<stdlib.h>`):**
+  `mmap`/`munmap`-backed thread-safe coalescing `malloc`, `free`, `calloc`,
+  `realloc`, and `reallocarray`. Also `atexit`, `qsort`, `bsearch`, `realpath`,
+  `getenv`, `secure_getenv`, `setenv`, `unsetenv`, `exit`, `_Exit`, `abort`,
+  `strtol`/`strtoul`/`strtoll`/`strtoull`, `atoi`/`atol`/`atoll`, and
+  `abs`/`labs`/`llabs`
+- **System info, jumps, scheduling, byte order, and matching (`<sys/utsname.h>`,
+  `<endian.h>`, `<sched.h>`, `<setjmp.h>`, `<sys/times.h>`, `<fnmatch.h>`):**
+  `uname`, `htobe*`/`be*toh`/`htole*`/`le*toh`, `sched_yield`,
+  `setjmp`/`longjmp`, `sigsetjmp`/`siglongjmp`, `times`, and `fnmatch`
+  (`FNM_PATHNAME`, `FNM_PERIOD`, `FNM_NOESCAPE`, `FNM_IGNORECASE`)
 - **Memory, strings, and character classes (`<string.h>`, `<strings.h>`,
   `<ctype.h>`):** `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`, `strlen`,
   `strnlen`, `strcmp`, `strncmp`, `strcasecmp`, `strncasecmp`, `strcpy`,
@@ -315,11 +327,12 @@ subset available at this time:
   `strrchr`, `strstr`, `strspn`, `strcspn`, `strpbrk`, `strtok`, `strtok_r`,
   `strdup`, `strndup`, `strerror`, and C locale `<ctype.h>` helpers
 - **Freestanding C17, limits, and Unicode headers:** `<stdint.h>`, `<stddef.h>`,
-  `<stdbool.h>`, `<stdarg.h>`, `<assert.h>`, `<inttypes.h>` (`PRI*`/`SCN*`,
-  `imaxabs`, `imaxdiv`, `strtoimax`, `strtoumax`), `<limits.h>` (C17 and POSIX
-  `PATH_MAX`, `NAME_MAX`, `OPEN_MAX`, `PIPE_BUF`, `ARG_MAX`, `SSIZE_MAX`),
-  `<stdatomic.h>`, `<stdalign.h>`, and `<uchar.h>` (`mbrtoc16`, `c16rtomb`,
-  `mbrtoc32`, `c32rtomb`)
+  `<stdbool.h>`, `<stdarg.h>`, `<stdnoreturn.h>`, `<float.h>`, `<iso646.h>`,
+  `<assert.h>`, `<inttypes.h>` (`PRI*`/`SCN*`, `imaxabs`, `imaxdiv`,
+  `strtoimax`, `strtoumax`), `<limits.h>` (C17 and POSIX `PATH_MAX`, `NAME_MAX`,
+  `OPEN_MAX`, `PIPE_BUF`, `ARG_MAX`, `SSIZE_MAX`), `<stdatomic.h>`,
+  `<stdalign.h>`, and `<uchar.h>` (`mbrtoc16`, `c16rtomb`, `mbrtoc32`,
+  `c32rtomb`)
 - **Synchronous IPC (`<sys/ipc.h>`):** `CreateChannel`, `DestroyChannel`,
   `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
   `ReadMsgV`, `WriteMsgV`, `SendPulse`, and `sysproc` name registry
@@ -353,15 +366,14 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): additional `libc` Base headers
-(`<sys/utsname.h>`, `<setjmp.h>`, `<fnmatch.h>`), TTY job control (`ISIG`), Ring
-3 `virtio-blk` disk storage, and ACPI `MADT` SMP bring-up. See
+Not available at this time (planned next): TTY job control (`ISIG`) and process
+groups, Ring 3 `virtio-blk` disk storage, and ACPI `MADT` SMP bring-up. See
 [docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
 
-- `kernel/` — Ring 0 kernel: boot code, x86-64 architecture, and core subsystems
+- `kernel/` — Ring 0 kernel: boot code, platform HAL, and core subsystems
 - `libc/` — freestanding C17 and POSIX.1-2024 user-space C library
 - `servers/` — Ring 3 system servers (`sysproc`, `pipeserv`, `vfsserv`,
   `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`)

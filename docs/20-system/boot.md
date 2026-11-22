@@ -3,13 +3,12 @@
 Domain `BOOT`: hardware startup, Multiboot2 higher-half entry, boot archive
 load, and PID 1 initialization.
 
-```{sys} Boot x86-64 kernel and start PID 1
+```{sys} Boot 64-bit kernel and start PID 1
 :id: SYS_BOOT_0001
 :status: active
 
-The system must boot the x86-64 kernel in the higher half with Multiboot2. It
-must initialize core CPU tables and timers, and start PID 1 (`sysproc`) in Ring
-3.
+The system must boot the 64-bit kernel in the higher half. It must initialize
+core CPU tables and timers, and start PID 1 (`sysproc`) in Ring 3.
 ```
 
 ```{swr} Initialize x86-64 platform tables and timer

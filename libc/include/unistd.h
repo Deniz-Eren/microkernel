@@ -11,7 +11,7 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H
 
-/* need:: ICD_LIBC_0002 ICD_LIBC_0005 */
+/* need:: ICD_LIBC_0002 ICD_LIBC_0005 ICD_LIBC_0006 */
 
 #include <stddef.h>
 #include <stdint.h>
@@ -40,7 +40,13 @@
 #define GETENTROPY_MAX 256
 
 extern char **environ;
+extern char *optarg;
+extern int opterr;
+extern int optind;
+extern int optopt;
 
+unsigned int alarm(unsigned int seconds);
+int getopt(int argc, char *const argv[], const char *optstring);
 ssize_t write(int fd, const void *buf, size_t n);
 ssize_t read(int fd, void *buf, size_t n);
 off_t lseek(int fildes, off_t offset, int whence);

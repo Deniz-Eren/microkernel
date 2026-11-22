@@ -61,6 +61,11 @@ AF_UNIX SOCK_DGRAM sendto/recvfrom and multi-server ppoll
 sh pipelines, redirections, and core utilities
 sh Issue 8 ANSI-C quoting, set -o pipefail, and built-ins
 sh Issue 8 read -d custom and NUL delimiters verified
+uname, endian\.h, sched_yield, and times verified
+setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
+fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified
+atexit LIFO, qsort/bsearch, strtol/strtoul, and getopt verified
+alarm SIGALRM, rename/renameat, and realpath verified
 <sys/select\.h> select, pselect, multi-server FDs, and sigmask
 cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,
 zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks

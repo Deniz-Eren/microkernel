@@ -107,7 +107,7 @@ follow Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d`
 
 ```{swr} Supply additional POSIX.1-2024 Base headers and standard C utilities
 :id: SWR_LIBC_0008
-:status: draft
+:status: active
 :posix: XBD/sys/utsname.h (BASE), XBD/endian.h (BASE), XBD/sched.h (BASE)
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003

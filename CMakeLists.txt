@@ -109,7 +109,7 @@ if(MICROKERNEL_COVERAGE)
         endif()
     endforeach()
 endif()
-add_library(c STATIC ${LIBC_SRCS})
+add_library(c STATIC ${LIBC_SRCS} ${MICROKERNEL_LIBC_ASM_SRCS})
 target_compile_options(c PRIVATE ${USER_CFLAGS})
 target_include_directories(c SYSTEM PRIVATE
     ${SYSROOT_DIR}/usr/include
@@ -202,6 +202,7 @@ add_subdirectory(tests/ttytest)
 add_subdirectory(tests/stdiotest)
 add_subdirectory(tests/socktest)
 add_subdirectory(tests/shtest)
+add_subdirectory(tests/utilstest)
 add_subdirectory(tests/stresstest)
 
 #------------------------------------------------------------------------------

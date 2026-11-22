@@ -227,10 +227,44 @@ void sched_tick(void) {
     if (!cur || cur->state != THREAD_RUNNING) {
         return;
     }
+    if (cur->proc) {
+        cur->proc->utime_ticks++;
+    }
     cur->slice_ticks++;
     if (cur->slice_ticks >= SLICE_TICKS && !ready_empty()) {
         schedule();
     }
+}
+
+long sys_sched_yield(void) {
+    tcb_t *cur = g_current;
+    if (!cur || cur->state != THREAD_RUNNING) {
+        return 0;
+    }
+    if (!ready_empty()) {
+        schedule();
+    }
+    return 0;
+}
+
+long sys_proc_times(uint64_t ubuf) {
+    pcb_t *p = proc_current();
+    if (!p) {
+        return -EPERM;
+    }
+    if (!ubuf) {
+        return -EFAULT;
+    }
+    struct __k_tms kt = {
+        .utime = (int64_t)p->utime_ticks,
+        .stime = (int64_t)p->stime_ticks,
+        .cutime = (int64_t)p->cutime_ticks,
+        .cstime = (int64_t)p->cstime_ticks,
+    };
+    if (copy_to_user(ubuf, &kt, sizeof(kt)) < 0) {
+        return -EFAULT;
+    }
+    return (long)(time_monotonic_ns() / 1000000ULL);
 }
 
 /* ---- processes ---- */

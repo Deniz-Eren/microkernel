@@ -114,6 +114,13 @@ struct pcb {
     /* Per-process file descriptor table. */
     struct __k_fd_entry fds[PROC_MAX_FDS];
 
+    /* Process CPU tick accounting and alarm(2) deadline (monotonic ns). */
+    uint64_t utime_ticks;
+    uint64_t stime_ticks;
+    uint64_t cutime_ticks;
+    uint64_t cstime_ticks;
+    uint64_t alarm_expire_ns;
+
 #ifdef MICROKERNEL_COVERAGE
     struct __k_cov_desc cov;
     uint8_t cov_registered;
@@ -182,6 +189,8 @@ long sys_proc_getpid(void);
 long sys_proc_getppid(void);
 long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4);
 long sys_sys_stats(uint64_t ubuf);
+long sys_sched_yield(void);
+long sys_proc_times(uint64_t ubuf);
 void thread_exit_current(int status) __attribute__((noreturn));
 void proc_exit_current(int status) __attribute__((noreturn));
 void proc_exit_signal(int sig) __attribute__((noreturn));

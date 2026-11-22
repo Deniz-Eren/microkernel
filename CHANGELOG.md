@@ -100,6 +100,18 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Additional POSIX.1-2024 Base headers and standard C utilities (`TSK_0023`,
+  `SWR_LIBC_0008`, `ICD_LIBC_0006`, `COMP_LIBC_0006`, `VER_LIBC_0008`):
+  registered 7 compiler freestanding headers (`<float.h>`, `<iso646.h>`,
+  `<stdarg.h>`, `<stdbool.h>`, `<stddef.h>`, `<stdint.h>`, `<stdnoreturn.h>`)
+  and added `<sys/utsname.h>` (`uname`), `<endian.h>` (`htobe*`/`be*toh`/
+  `htole*`/`le*toh`), `<sched.h>` (`sched_yield` via `SYS_SCHED_YIELD`),
+  `<setjmp.h>` (`setjmp`/`longjmp` in `libc/arch/x86-64/setjmp.S`,
+  `sigsetjmp`/`siglongjmp`), `<sys/times.h>` (`times` via `SYS_PROC_TIMES`),
+  `<fnmatch.h>` (`fnmatch`), `atexit`, `qsort`, `bsearch`, `getopt`, `alarm`
+  (via `SYS_ALARM`), `rename`/`renameat` (via `VFS_OP_RENAME`), `realpath`, and
+  QEMU test `tests/utilstest/test_utils.c` (bringing Gate 1–2 Base headers from
+  29/70 to 42/70).
 - Opt-in automated LLVM source-based code coverage pipeline (`TSK_0027`,
   `SWR_DOCS_0005`, `ADR_0025`, `ICD_DOCS_0002`, `COMP_DOCS_0004`,
   `VER_DOCS_0006`): added `-DMICROKERNEL_COVERAGE=ON` instrumentation for Ring 0

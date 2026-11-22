@@ -9,10 +9,10 @@
 
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
-# need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_SIG_0003
-# need:: VER_MEM_0002 VER_MEM_0004 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
-# need:: VER_PROC_0005 VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006
-# need:: VER_IPC_0007 VER_DOCS_0004 VER_BOOT_0003
+# need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_LIBC_0008
+# need:: VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002 VER_PROC_0003
+# need:: VER_PROC_0004 VER_PROC_0005 VER_IPC_0003 VER_IPC_0004 VER_IPC_0005
+# need:: VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004 VER_BOOT_0003
 
 from __future__ import annotations
 
@@ -31,18 +31,29 @@ POSIX_HEADERS: tuple[str, ...] = (
     "assert.h",
     "ctype.h",
     "dirent.h",
+    "endian.h",
     "errno.h",
     "fcntl.h",
+    "float.h",
+    "fnmatch.h",
     "inttypes.h",
+    "iso646.h",
     "limits.h",
     "poll.h",
     "pthread.h",
+    "sched.h",
     "semaphore.h",
+    "setjmp.h",
     "signal.h",
     "stdalign.h",
+    "stdarg.h",
     "stdatomic.h",
+    "stdbool.h",
+    "stddef.h",
+    "stdint.h",
     "stdio.h",
     "stdlib.h",
+    "stdnoreturn.h",
     "string.h",
     "strings.h",
     "termios.h",
@@ -53,8 +64,10 @@ POSIX_HEADERS: tuple[str, ...] = (
     "sys/select.h",
     "sys/socket.h",
     "sys/stat.h",
+    "sys/times.h",
     "sys/types.h",
     "sys/un.h",
+    "sys/utsname.h",
     "sys/wait.h",
 )
 
@@ -724,6 +737,76 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"sys/select.h check failed:\n{err}")
+
+    def test_high_leverage_base_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <endian.h>",
+                "#include <float.h>",
+                "#include <fnmatch.h>",
+                "#include <iso646.h>",
+                "#include <sched.h>",
+                "#include <setjmp.h>",
+                "#include <stdarg.h>",
+                "#include <stdbool.h>",
+                "#include <stddef.h>",
+                "#include <stdint.h>",
+                "#include <stdio.h>",
+                "#include <stdlib.h>",
+                "#include <stdnoreturn.h>",
+                "#include <sys/times.h>",
+                "#include <sys/utsname.h>",
+                "#include <unistd.h>",
+                "#ifdef SYS_SCHED_YIELD",
+                '#error "sched.h leaked SYS_SCHED_YIELD"',
+                "#endif",
+                "#ifdef SYS_PROC_TIMES",
+                '#error "sys/times.h leaked SYS_PROC_TIMES"',
+                "#endif",
+                "#ifdef SYS_ALARM",
+                '#error "unistd.h leaked SYS_ALARM"',
+                "#endif",
+                "static void __noop_exit(void) {}",
+                "static int __noop_cmp(const void *a, const void *b) {",
+                "    return (a > b) - (a < b);",
+                "}",
+                "static int __check_base_utils(int ac, char *const av[]) {",
+                "    struct utsname u;",
+                "    struct tms t;",
+                "    struct sched_param sp = {0};",
+                "    jmp_buf jb;",
+                "    sigjmp_buf sjb;",
+                "    int x = 1;",
+                "    (void)uname(&u);",
+                "    (void)times(&t);",
+                "    (void)sched_yield();",
+                "    (void)htobe16((uint16_t)1u);",
+                "    (void)be64toh(htobe64(1u));",
+                "    (void)le32toh(htole32(1u));",
+                "    if (setjmp(jb) != 0) { longjmp(jb, 1); }",
+                "    if (sigsetjmp(sjb, 1) != 0) { siglongjmp(sjb, 1); }",
+                "    (void)fnmatch(\"*\", \"a\", FNM_PATHNAME | FNM_PERIOD |",
+                "                  FNM_NOESCAPE | FNM_IGNORECASE);",
+                "    (void)atexit(__noop_exit);",
+                "    qsort(&x, 1u, sizeof(x), __noop_cmp);",
+                "    (void)bsearch(&x, &x, 1u, sizeof(x), __noop_cmp);",
+                "    (void)getopt(ac, av, \"a:\");",
+                "    (void)alarm(0u);",
+                "    (void)rename(\"/tmp/a\", \"/tmp/b\");",
+                "    (void)renameat(-1, \"a\", -1, \"b\");",
+                "    (void)realpath(\"/tmp\", (char *)0);",
+                "    return BYTE_ORDER + sp.sched_priority + optind + opterr +",
+                "           optopt + (optarg != (char *)0);",
+                "}",
+                "int (*__utils_fn_ref)(int, char *const[]) =",
+                "    __check_base_utils;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"base utils check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

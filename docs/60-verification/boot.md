@@ -1,6 +1,6 @@
 # Verification — BOOT
 
-Domain `BOOT`: Verification items covering x86-64 boot, platform tables, and PID
+Domain `BOOT`: Verification items covering kernel boot, platform tables, and PID
 1 startup.
 
 ```{ver} Verify higher-half boot and PID 1 launch

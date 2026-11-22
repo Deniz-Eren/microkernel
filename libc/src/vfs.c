@@ -11,8 +11,10 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/fd.h>
@@ -26,7 +28,7 @@
 #include "fd_internal.h"
 #include "tls_internal.h"
 
-/* need:: COMP_IPC_0009 */
+/* need:: COMP_IPC_0009 COMP_LIBC_0006 */
 
 struct __dirstream {
     int fd;
@@ -733,4 +735,84 @@ int closedir(DIR *dirp) {
     int fd = dirp->fd;
     free(dirp);
     return close(fd);
+}
+
+int renameat(int oldfd, const char *oldpath, int newfd, const char *newpath) {
+    char old_buf[VFS_PATH_MAX];
+    char new_buf[VFS_PATH_MAX];
+    uint32_t old_h = 0u;
+    uint32_t new_h = 0u;
+
+    int r1 = build_req_path(oldfd, oldpath, &old_h, old_buf);
+    if (r1 < 0) {
+        errno = -r1;
+        return -1;
+    }
+    int r2 = build_req_path(newfd, newpath, &new_h, new_buf);
+    if (r2 < 0) {
+        errno = -r2;
+        return -1;
+    }
+    if (strlen(old_buf) >= VFS_RENAME_PATH_MAX ||
+        strlen(new_buf) >= VFS_RENAME_PATH_MAX) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_RENAME;
+    req.handle = old_h;
+    req.u.ren.new_handle = new_h;
+    (void)strlcpy(req.u.ren.old_path, old_buf, sizeof(req.u.ren.old_path));
+    (void)strlcpy(req.u.ren.new_path, new_buf, sizeof(req.u.ren.new_path));
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int rename(const char *oldpath, const char *newpath) {
+    return renameat(AT_FDCWD, oldpath, AT_FDCWD, newpath);
+}
+
+char *realpath(const char *restrict file_name, char *restrict resolved_name) {
+    if (!file_name) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (file_name[0] == '\0') {
+        errno = ENOENT;
+        return NULL;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    req.op = VFS_OP_RESOLVE;
+    int pr = build_req_path(AT_FDCWD, file_name, &req.handle, req.u.path);
+    if (pr < 0) {
+        errno = -pr;
+        return NULL;
+    }
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return NULL;
+    }
+    size_t len = strlen(rep.u.path);
+    if (len >= PATH_MAX) {
+        errno = ENAMETOOLONG;
+        return NULL;
+    }
+    char *dst = resolved_name;
+    if (!dst) {
+        dst = (char *)malloc(len + 1u);
+        if (!dst) {
+            errno = ENOMEM;
+            return NULL;
+        }
+    }
+    memcpy(dst, rep.u.path, len + 1u);
+    return dst;
 }

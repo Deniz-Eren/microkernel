@@ -90,3 +90,17 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`. It invokes
 `false`, `test`, `$'...'` quoting, `set -o pipefail`, built-ins, and `read -d`
 with custom and NUL delimiters ({need}`SWR_LIBC_0006`).
 ```
+
+```{ver} Verify additional POSIX.1-2024 Base headers and C utilities in QEMU
+:id: VER_LIBC_0008
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0008
+
+The headless QEMU harness `tests/test_runner.py` runs `utilstest`
+(`tests/utilstest/test_utils.c`). It checks `uname`, `<endian.h>`,
+`sched_yield`, `times`, `setjmp`/`sigsetjmp`, `fnmatch`, `atexit`,
+`qsort`/`bsearch`, `strtol`/`strtoul`, `getopt`, `alarm`, `rename`/`renameat`,
+and `realpath`. CTest Gates 1 to 3 verify all 42 Base headers and
+async-signal-safety ({need}`SWR_LIBC_0008`).
+```

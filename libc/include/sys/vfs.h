@@ -31,6 +31,9 @@
 #define VFS_OP_READDIR 12u
 #define VFS_OP_RESOLVE 13u
 #define VFS_OP_STATS 14u
+#define VFS_OP_RENAME 15u
+
+#define VFS_RENAME_PATH_MAX 188u
 
 typedef struct {
     uint64_t st_dev;
@@ -55,6 +58,11 @@ typedef struct {
     union {
         char path[VFS_PATH_MAX];
         uint8_t data[VFS_DATA_MAX];
+        struct {
+            uint32_t new_handle;
+            char old_path[VFS_RENAME_PATH_MAX];
+            char new_path[VFS_RENAME_PATH_MAX];
+        } ren;
     } u;
 } vfs_req_t;
 

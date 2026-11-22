@@ -824,6 +824,8 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
                 return -EFAULT;
             }
             uint32_t reaped_pid = zombie->pid;
+            parent->cutime_ticks += zombie->utime_ticks + zombie->cutime_ticks;
+            parent->cstime_ticks += zombie->stime_ticks + zombie->cstime_ticks;
             zombie->state = PROC_DEAD;
             vmm_destroy_user_pml4(zombie->pml4_phys);
             zombie->pml4_phys = 0;
@@ -1035,6 +1037,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "socktest", 100, 0);
     /* Command shell (sh) and core utilities test (POSIX.1-2024 XCU target). */
     spawn_image(tar_phys, tar_size, "shtest", 100, 0);
+    /* Additional POSIX.1-2024 Base headers and standard C utilities test. */
+    spawn_image(tar_phys, tar_size, "utilstest", 100, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

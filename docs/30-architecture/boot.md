@@ -1,9 +1,9 @@
 # Architecture — BOOT
 
-Domain `BOOT`: Structural architecture elements for x86-64 boot and ELF
+Domain `BOOT`: Structural architecture elements for kernel boot and ELF
 initialization.
 
-```{arc} Higher-half x86-64 boot and ELF initialization subsystem
+```{arc} Higher-half kernel boot and ELF initialization subsystem
 :id: ARC_BOOT_0001
 :status: active
 :satisfies: SYS_BOOT_0001

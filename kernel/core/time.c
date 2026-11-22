@@ -94,6 +94,10 @@ void time_tick(void) {
         if (p->state != PROC_ALIVE) {
             continue;
         }
+        if (p->alarm_expire_ns != 0ULL && g_mono_ns >= p->alarm_expire_ns) {
+            p->alarm_expire_ns = 0ULL;
+            signal_post_to_proc(p->pid, SIGALRM);
+        }
         for (tcb_t *t = p->threads; t; t = t->proc_next) {
             if (t->state == THREAD_SLEEP_BLOCKED) {
                 uint64_t now = clock_now_ns((clockid_t)t->sleep_clock_id);
@@ -351,4 +355,28 @@ long sys_timer_getoverrun(uint64_t timerid) {
         return -EINVAL;
     }
     return tm->overrun;
+}
+
+long sys_alarm(uint64_t seconds) {
+    pcb_t *p = proc_current();
+    if (!p) {
+        return -EPERM;
+    }
+    uint64_t now = g_mono_ns;
+    uint64_t rem_sec = 0ULL;
+    if (p->alarm_expire_ns > now) {
+        uint64_t rem_ns = p->alarm_expire_ns - now;
+        rem_sec = (rem_ns + NSEC_PER_SEC - 1ULL) / NSEC_PER_SEC;
+        if (rem_sec == 0ULL) {
+            rem_sec = 1ULL;
+        }
+    }
+    if (seconds == 0ULL) {
+        p->alarm_expire_ns = 0ULL;
+    } else {
+        uint64_t cap = (~0ULL - now) / NSEC_PER_SEC;
+        uint64_t clamped = seconds > cap ? cap : seconds;
+        p->alarm_expire_ns = now + clamped * NSEC_PER_SEC;
+    }
+    return (long)rem_sec;
 }

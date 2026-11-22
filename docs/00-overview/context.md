@@ -2,7 +2,7 @@
 
 ## System Overview
 
-`microkernel` is a small x86-64 operating system working toward compatibility
+`microkernel` is a small 64-bit operating system working toward compatibility
 with interfaces from POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE
 9945:2026) in user space. The Ring 0 kernel runs at the higher-half virtual
 address `0xFFFFFFFF80000000`. It supplies preemptive 256-priority scheduling,
@@ -20,7 +20,7 @@ isolated Ring 3 processes.
 ## System Topology
 
 The diagram below shows how user applications, Ring 3 system servers, privileged
-Ring 3 device drivers, the Ring 0 kernel, and x86-64 hardware connect.
+Ring 3 device drivers, the Ring 0 kernel, and platform hardware connect.
 
 ```mermaid
 flowchart TD
@@ -70,9 +70,9 @@ flowchart TD
         MM ~~~ IRQ
     end
 
-    subgraph HW["Hardware / QEMU x86-64 q35 Platform"]
+    subgraph HW["Hardware / QEMU Platform"]
         direction TB
-        CPU["x86-64 CPU (MMU, LAPIC Timer) & GRUB Multiboot2"]
+        CPU["64-Bit CPU (MMU, Timer) & Bootloader"]
         IOAPIC["IOAPIC Interrupt Controller"]
         DEV["COM1 16550A UART (IRQ 4) & CMOS RTC (IRQ 8)"]
         DEV -->|"Hardware IRQs"| IOAPIC
@@ -113,7 +113,7 @@ flowchart TD
 ├── tools/                      <- Traceability audit, POSIX audit, STE gate
 ├── scripts/                    <- Container, build, format, hook, tar scripts
 ├── iso/                        <- GRUB Multiboot2 boot configuration
-├── cmake/                      <- Clang x86-64 cross-compilation toolchain
+├── cmake/                      <- Clang cross-compilation toolchain
 ├── build/, sysroot/            <- Generated out-of-source build outputs
 └── docs/
     ├── index.md                <- Sphinx-Needs documentation root

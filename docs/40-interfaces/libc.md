@@ -63,3 +63,17 @@ and `<limits.h>` with POSIX limits. `<stdio.h>`, `<stdlib.h>`, `<string.h>`, and
 `execvp`, `strdup`, `strstr`, and `strerror` ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0007`).
 ```
+
+```{icd} POSIX.1-2024 Base utility headers and standard C helpers
+:id: ICD_LIBC_0006
+:status: active
+:posix: XBD/sys/utsname.h (BASE), XBD/endian.h (BASE), XBD/sched.h (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0008
+
+`libc/include/` adds `<sys/utsname.h>`, `<endian.h>`, `<sched.h>`, `<setjmp.h>`,
+`<sys/times.h>`, and `<fnmatch.h>`. `<stdlib.h>`, `<unistd.h>`, and `<stdio.h>`
+declare `atexit`, `qsort`, `bsearch`, `realpath`, `getopt`, `alarm`, `rename`,
+and `renameat` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
+{need}`SWR_LIBC_0008`).
+```

@@ -847,6 +847,156 @@ static void handle_resolve(const vfs_req_t *req, vfs_rep_t *rep) {
     rep->flags = node->mode;
 }
 
+static void handle_rename(const vfs_req_t *req, vfs_rep_t *rep) {
+    int err = 0;
+    vfs_node_t *old_start = resolve_start_dir(req->handle, &err);
+    if (!old_start) {
+        rep->err = err;
+        return;
+    }
+    vfs_node_t *new_start = resolve_start_dir(req->u.ren.new_handle, &err);
+    if (!new_start) {
+        rep->err = err;
+        return;
+    }
+
+    vfs_node_t *old_parent = NULL;
+    vfs_node_t *old_node = NULL;
+    char old_leaf[VFS_NAME_MAX] = {0};
+    int r1 = resolve_path(old_start, req->u.ren.old_path, &old_parent, old_leaf,
+                          sizeof(old_leaf), &old_node);
+    if (r1 < 0 || !old_node) {
+        rep->err = r1 < 0 ? r1 : -ENOENT;
+        return;
+    }
+    if (old_node == g_root || strcmp(old_leaf, ".") == 0 ||
+        strcmp(old_leaf, "..") == 0) {
+        rep->err = -EBUSY;
+        return;
+    }
+    if (!old_parent || old_parent->readonly || old_node->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+
+    vfs_node_t *new_parent = NULL;
+    vfs_node_t *new_node = NULL;
+    char new_leaf[VFS_NAME_MAX] = {0};
+    int r2 = resolve_path(new_start, req->u.ren.new_path, &new_parent, new_leaf,
+                          sizeof(new_leaf), &new_node);
+    if ((r2 < 0 && r2 != -ENOENT) || !new_parent || new_leaf[0] == '\0') {
+        rep->err = (r2 < 0 && r2 != -ENOENT) ? r2 : -ENOENT;
+        return;
+    }
+    if (strcmp(new_leaf, ".") == 0 || strcmp(new_leaf, "..") == 0) {
+        rep->err = -EINVAL;
+        return;
+    }
+    if (new_parent->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+    if (old_node == new_node) {
+        rep->err = 0;
+        return;
+    }
+
+    /* Prevent moving a directory into its own subtree. */
+    if (S_ISDIR(old_node->mode)) {
+        for (vfs_node_t *anc = new_parent; anc; anc = anc->parent) {
+            if (anc == old_node) {
+                rep->err = -EINVAL;
+                return;
+            }
+            if (anc == g_root) {
+                break;
+            }
+        }
+    }
+
+    vfs_node_t *replaced = NULL;
+    int nidx = -1;
+    if (new_node) {
+        if (new_node->readonly) {
+            rep->err = -EROFS;
+            return;
+        }
+        if (S_ISDIR(old_node->mode) && !S_ISDIR(new_node->mode)) {
+            rep->err = -ENOTDIR;
+            return;
+        }
+        if (!S_ISDIR(old_node->mode) && S_ISDIR(new_node->mode)) {
+            rep->err = -EISDIR;
+            return;
+        }
+        if (S_ISDIR(new_node->mode) && new_node->child_count > 0u) {
+            rep->err = -ENOTEMPTY;
+            return;
+        }
+        nidx = dir_find_idx(new_parent, new_leaf);
+        if (nidx < 0) {
+            rep->err = -ENOENT;
+            return;
+        }
+        replaced = new_node;
+    }
+
+    int oidx = dir_find_idx(old_parent, old_leaf);
+    if (oidx < 0) {
+        rep->err = -ENOENT;
+        return;
+    }
+    if (!replaced && strlen(new_leaf) >= VFS_NAME_MAX) {
+        rep->err = -ENAMETOOLONG;
+        return;
+    }
+
+    if (replaced) {
+        new_parent->children[nidx].node = old_node;
+        if (S_ISDIR(old_node->mode)) {
+            old_node->parent = new_parent;
+        }
+        old_parent->children[oidx] =
+            old_parent->children[old_parent->child_count - 1u];
+        old_parent->child_count--;
+        if (S_ISDIR(old_node->mode) && old_parent->nlink > 2u) {
+            old_parent->nlink--;
+        }
+        get_now(&new_parent->mtime_sec, &new_parent->mtime_nsec);
+        if (old_parent != new_parent) {
+            get_now(&old_parent->mtime_sec, &old_parent->mtime_nsec);
+        }
+        replaced->nlink = 0u;
+        if (replaced->open_refs == 0u) {
+            node_destroy(replaced);
+        }
+        rep->err = 0;
+        return;
+    }
+
+    if (old_parent == new_parent) {
+        (void)strlcpy(old_parent->children[oidx].name, new_leaf,
+                      sizeof(old_parent->children[oidx].name));
+        get_now(&old_parent->mtime_sec, &old_parent->mtime_nsec);
+        rep->err = 0;
+        return;
+    }
+
+    int ar = dir_add_child(new_parent, new_leaf, old_node);
+    if (ar < 0) {
+        rep->err = ar;
+        return;
+    }
+    old_parent->children[oidx] =
+        old_parent->children[old_parent->child_count - 1u];
+    old_parent->child_count--;
+    if (S_ISDIR(old_node->mode) && old_parent->nlink > 2u) {
+        old_parent->nlink--;
+    }
+    get_now(&old_parent->mtime_sec, &old_parent->mtime_nsec);
+    rep->err = 0;
+}
+
 static int register_name(int chanid, const char *path) {
     for (int tries = 0; tries < 200; tries++) {
         long ns = OpenConnection(1, 1);
@@ -974,6 +1124,9 @@ int main(void) {
             break;
         case VFS_OP_RESOLVE:
             handle_resolve(&req, &rep);
+            break;
+        case VFS_OP_RENAME:
+            handle_rename(&req, &rep);
             break;
         case VFS_OP_STATS: {
             uint32_t open_handles = 0;

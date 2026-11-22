@@ -19,16 +19,53 @@
 #include <sys/bootinfo.h>
 #include <unistd.h>
 
-/* need:: COMP_LIBC_0001 COMP_LIBC_0004 */
+/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0006 */
 
 #define AT_SECURE_KEY 23UL
+#define ATEXIT_CAPACITY 64u
 
 static pthread_mutex_t g_env_lock = PTHREAD_MUTEX_INITIALIZER;
 static char **g_owned_env = 0;
 static size_t g_owned_cap = 0;
 
+static pthread_mutex_t g_atexit_lock = PTHREAD_MUTEX_INITIALIZER;
+static void (*g_atexit_fns[ATEXIT_CAPACITY])(void);
+static size_t g_atexit_count = 0;
+
+int atexit(void (*func)(void)) {
+    if (!func) {
+        errno = EINVAL;
+        return -1;
+    }
+    (void)pthread_mutex_lock(&g_atexit_lock);
+    if (g_atexit_count >= ATEXIT_CAPACITY) {
+        (void)pthread_mutex_unlock(&g_atexit_lock);
+        errno = ENOMEM;
+        return -1;
+    }
+    g_atexit_fns[g_atexit_count++] = func;
+    (void)pthread_mutex_unlock(&g_atexit_lock);
+    return 0;
+}
+
+static void run_atexit_handlers(void) {
+    for (;;) {
+        void (*fn)(void) = 0;
+        (void)pthread_mutex_lock(&g_atexit_lock);
+        if (g_atexit_count > 0u) {
+            fn = g_atexit_fns[--g_atexit_count];
+        }
+        (void)pthread_mutex_unlock(&g_atexit_lock);
+        if (!fn) {
+            break;
+        }
+        fn();
+    }
+}
+
 void exit(int status) {
     extern void __libc_fini_array(void);
+    run_atexit_handlers();
     __libc_fini_array();
     (void)fflush(0);
     _exit(status);
@@ -341,4 +378,68 @@ long labs(long i) {
 
 long long llabs(long long i) {
     return i < 0 ? -i : i;
+}
+
+static void swap_bytes(unsigned char *a, unsigned char *b, size_t width) {
+    for (size_t i = 0; i < width; i++) {
+        unsigned char tmp = a[i];
+        a[i] = b[i];
+        b[i] = tmp;
+    }
+}
+
+static void sift_down(unsigned char *arr, size_t start, size_t end,
+                      size_t width, int (*compar)(const void *, const void *)) {
+    size_t root = start;
+    while (root * 2u + 1u < end) {
+        size_t child = root * 2u + 1u;
+        if (child + 1u < end &&
+            compar(arr + child * width, arr + (child + 1u) * width) < 0) {
+            child++;
+        }
+        if (compar(arr + root * width, arr + child * width) < 0) {
+            swap_bytes(arr + root * width, arr + child * width, width);
+            root = child;
+        } else {
+            return;
+        }
+    }
+}
+
+void qsort(void *base, size_t nel, size_t width,
+           int (*compar)(const void *, const void *)) {
+    if (!base || !compar || nel < 2u || width == 0u) {
+        return;
+    }
+    unsigned char *arr = (unsigned char *)base;
+    for (size_t start = nel / 2u; start > 0u; start--) {
+        sift_down(arr, start - 1u, nel, width, compar);
+    }
+    for (size_t end = nel - 1u; end > 0u; end--) {
+        swap_bytes(arr, arr + end * width, width);
+        sift_down(arr, 0u, end, width, compar);
+    }
+}
+
+void *bsearch(const void *key, const void *base, size_t nel, size_t width,
+              int (*compar)(const void *, const void *)) {
+    if (!key || !base || !compar || nel == 0u || width == 0u) {
+        return 0;
+    }
+    const unsigned char *arr = (const unsigned char *)base;
+    size_t lo = 0u;
+    size_t hi = nel;
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2u;
+        const void *elem = arr + mid * width;
+        int cmp = compar(key, elem);
+        if (cmp < 0) {
+            hi = mid;
+        } else if (cmp > 0) {
+            lo = mid + 1u;
+        } else {
+            return (void *)elem;
+        }
+    }
+    return 0;
 }

@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0023 — Add high-leverage libc Base headers and standard C utilities
+
+```{task} Add high-leverage libc Base headers and standard C utilities
+:id: TSK_0023
+:status: done
+:traces: ADR_0003, WDR_0002, SWR_LIBC_0008
+
+Register compiler freestanding headers in Gate 2 and add `<sys/utsname.h>`,
+`<endian.h>`, `<sched.h>`, `<setjmp.h>`, `<sys/times.h>`, and `<fnmatch.h>`. Add
+`atexit`, `qsort`, `bsearch`, `strtol`, `strtoul`, `getopt`, `alarm`, `rename`,
+and `realpath` ({need}`SWR_LIBC_0008`).
+```
+
 ### TSK_0027 — Add opt-in automated LLVM code coverage pipeline
 
 ```{task} Add opt-in automated LLVM code coverage pipeline

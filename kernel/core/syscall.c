@@ -259,6 +259,15 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_COV_WRITE:
         ret = sys_cov_write(a0, a1);
         break;
+    case SYS_SCHED_YIELD:
+        ret = sys_sched_yield();
+        break;
+    case SYS_PROC_TIMES:
+        ret = sys_proc_times(a0);
+        break;
+    case SYS_ALARM:
+        ret = sys_alarm(a0);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (a0 > 255) {

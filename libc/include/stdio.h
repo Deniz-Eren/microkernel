@@ -11,7 +11,7 @@
 #ifndef _STDIO_H
 #define _STDIO_H
 
-/* need:: ICD_LIBC_0001 ICD_LIBC_0005 */
+/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0006 */
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -89,6 +89,9 @@ int snprintf(char *restrict buf, size_t n, const char *restrict fmt, ...)
 int sprintf(char *restrict buf, const char *restrict fmt, ...)
     __attribute__((format(printf, 2, 3)));
 void perror(const char *s);
+
+int rename(const char *oldpath, const char *newpath);
+int renameat(int oldfd, const char *oldpath, int newfd, const char *newpath);
 
 void flockfile(FILE *file);
 int ftrylockfile(FILE *file);

@@ -11,10 +11,12 @@
 #include <errno.h>
 #include <stdint.h>
 #include <sys/microkernel.h>
+#include <sys/times.h>
 #include <time.h>
+#include <unistd.h>
 #include "tls_internal.h"
 
-/* need:: COMP_PROC_0004 */
+/* need:: COMP_PROC_0004 COMP_LIBC_0006 */
 
 int clock_getres(clockid_t clock_id, struct timespec *res) {
     long r = __sys2(SYS_CLOCK_GETRES, (long)clock_id, (long)(uintptr_t)res);
@@ -111,4 +113,27 @@ int timer_settime(timer_t timerid, int flags,
         return -1;
     }
     return 0;
+}
+
+clock_t times(struct tms *buffer) {
+    if (!buffer) {
+        errno = EFAULT;
+        return (clock_t)-1;
+    }
+    struct __k_tms kt = {0};
+    long r = __sys1(SYS_PROC_TIMES, (long)(uintptr_t)&kt);
+    if (r < 0) {
+        errno = (int)(-r);
+        return (clock_t)-1;
+    }
+    buffer->tms_utime = (clock_t)kt.utime;
+    buffer->tms_stime = (clock_t)kt.stime;
+    buffer->tms_cutime = (clock_t)kt.cutime;
+    buffer->tms_cstime = (clock_t)kt.cstime;
+    return (clock_t)r;
+}
+
+unsigned int alarm(unsigned int seconds) {
+    long r = __sys1(SYS_ALARM, (long)seconds);
+    return (r < 0) ? 0u : (unsigned int)r;
 }

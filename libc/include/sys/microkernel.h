@@ -71,6 +71,9 @@
 #define SYS_VM_MLOCK 51
 #define SYS_SYS_STATS 52
 #define SYS_COV_WRITE 53
+#define SYS_SCHED_YIELD 54
+#define SYS_PROC_TIMES 55
+#define SYS_ALARM 56
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1
@@ -86,6 +89,13 @@ struct __k_cov_desc {
     uint64_t names_begin;
     uint64_t names_end;
     char name[32];
+};
+
+struct __k_tms {
+    int64_t utime;
+    int64_t stime;
+    int64_t cutime;
+    int64_t cstime;
 };
 
 #include <sys/arch/syscall.h>

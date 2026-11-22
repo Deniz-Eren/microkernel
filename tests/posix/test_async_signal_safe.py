@@ -111,6 +111,12 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "getpeername",
     "getsockopt",
     "setsockopt",
+    "alarm",
+    "rename",
+    "renameat",
+    "sched_yield",
+    "times",
+    "uname",
     "__errno_location",
 )
 

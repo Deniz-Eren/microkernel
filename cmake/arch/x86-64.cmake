@@ -28,6 +28,10 @@ set(MICROKERNEL_CRT0_SRC
     ${CMAKE_SOURCE_DIR}/libc/arch/x86-64/crt0.S
 )
 
+set(MICROKERNEL_LIBC_ASM_SRCS
+    ${CMAKE_SOURCE_DIR}/libc/arch/x86-64/setjmp.S
+)
+
 set(MICROKERNEL_USER_LINKER_SCRIPT
     ${CMAKE_SOURCE_DIR}/libc/arch/x86-64/user.ld
 )

@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0023 — Add high-leverage libc Base headers and standard C utilities
-
-```{task} Add high-leverage libc Base headers and standard C utilities
-:id: TSK_0023
-:status: open
-:traces: ADR_0003, WDR_0002, SWR_LIBC_0008
-
-Register compiler freestanding headers in Gate 2 and add `<sys/utsname.h>`,
-`<endian.h>`, `<sched.h>`, `<setjmp.h>`, `<sys/times.h>`, and `<fnmatch.h>`. Add
-`atexit`, `qsort`, `bsearch`, `strtol`, `strtoul`, `getopt`, `alarm`, `rename`,
-and `realpath` ({need}`SWR_LIBC_0008`).
-```
-
 ### TSK_0022 — Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
 
 ```{task} Add TTY job control, ISIG (Ctrl-C), process groups, and utilities
