@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-BASE_CONFORMANCE_GROUPS: frozenset[str] = frozenset({"BASE", "CX", "OB"})
+BASE_TARGET_GROUPS: frozenset[str] = frozenset({"BASE", "CX", "OB"})
 
 OPTION_GROUP_MACROS: dict[str, tuple[str, ...]] = {
     "ADV": ("_POSIX_ADVISORY_INFO",),
@@ -75,14 +75,14 @@ class PosixManifest:
         return {
             name
             for name, entry in self.headers.items()
-            if entry.group in BASE_CONFORMANCE_GROUPS
+            if entry.group in BASE_TARGET_GROUPS
         }
 
     def base_interfaces(self) -> set[str]:
         return {
             name
             for name, entry in self.interfaces.items()
-            if entry.group in BASE_CONFORMANCE_GROUPS
+            if entry.group in BASE_TARGET_GROUPS
         }
 
 

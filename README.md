@@ -1,16 +1,16 @@
-# Microkernel — POSIX.1-2024 x86-64 Microkernel
+# Microkernel — x86-64 Microkernel
 
 Microkernel is a preemptive, message-passing x86-64 operating system written in
-freestanding C17. It targets **POSIX.1-2024 (IEEE Std 1003.1-2024, Issue 8)
-Base** compliance in user space. The Ring 0 kernel stays minimal, while system
-servers and applications run as isolated Ring 3 processes that communicate over
-synchronous IPC channels.
+freestanding C17. It is working toward compatibility with interfaces from
+**POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026)** in user space.
+The Ring 0 kernel stays minimal, while system servers and applications run as
+isolated Ring 3 processes that communicate over synchronous IPC channels.
 
 The project uses a closed **Blueprint -> Fabricator -> Testbed -> Gates** loop
 driven by AI engineering agents inside a deterministic **Podman** container
 (`microkernel-dev`). Every change moves from traceable specifications to
 cross-compiled ISO images, headless QEMU execution, static analysis, and
-automated conformance tests with zero host toolchain drift.
+automated compatibility checks with zero host toolchain drift.
 
 ## Development architecture: the closed loop
 
@@ -57,7 +57,7 @@ define the system contract inside the Sphinx-Needs traceability model (`docs/`):
   IDs in source code. See [WDR_0002](docs/00-overview/wdr/WDR_0002.md),
   [BDR_0003](docs/10-product/bdr/BDR_0003.md),
   [ADR_0003](docs/30-architecture/adr/ADR_0003.md), and the [traceability and
-  POSIX.1-2024 compliance matrix](docs/60-verification/traceability.md).
+  POSIX.1-2024 progress matrix](docs/60-verification/traceability.md).
 
 ### 2. The Fabricator (Podman, LLVM, and four-stage build)
 
@@ -131,7 +131,7 @@ Your host needs only Podman. The first `./scripts/env.sh` run builds the pinned
     --expect 'signal handler entered'
 ./scripts/env.sh ctest --test-dir build --output-on-failure
 
-# Boot Microkernel interactively into the Ring 3 POSIX shell (Ctrl-A X to exit)
+# Boot Microkernel interactively into the Ring 3 command shell (Ctrl-A X exits)
 ./scripts/env.sh run
 
 # Open a development bash shell inside the Podman container
@@ -141,7 +141,7 @@ Your host needs only Podman. The first `./scripts/env.sh` run builds the pinned
 ### Running Microkernel interactively in QEMU
 
 Build the OS image once and launch an interactive serial session straight into
-the Ring 3 POSIX shell (`/boot/sh`):
+the Ring 3 command shell (`/boot/sh`):
 
 ```bash
 ./scripts/env.sh build
@@ -199,7 +199,7 @@ of the system. Servers (`pipeserv`, `vfsserv`, `ttyserv`, `sockserv`, `ipcserv`,
 flowchart TD
     subgraph R3_APP["Ring 3: Userland Shell & Applications"]
         direction TB
-        SH["bin/ POSIX Shell (sh) & Core Utilities (echo, cat, ls, test)"]
+        SH["bin/ Command Shell (sh) & Core Utilities (echo, cat, ls, test)"]
         APP["User Programs & Tests (linked with libc.a + crt0.o)"]
         SH ~~~ APP
     end
@@ -230,63 +230,63 @@ flowchart TD
 ## User-space functionality (current support)
 
 Developers can build Ring 3 C17 servers and applications packed into `boot.tar`.
-The headers below show all user-space functions available at this time:
+User-space libraries and utilities are an ongoing effort working toward
+POSIX.1-2024 (IEEE Std 1003.1-2024) compatibility. The headers below list the
+subset available at this time:
 
-- **POSIX core (`<unistd.h>`):** `_POSIX_VERSION` and `_POSIX2_VERSION`
-  (`202405L`), `fork` (COW), `execve`/`execv`/`execvp` (`PATH` lookup and bootfs
-  `argv`/`envp`), `getpid`, `getppid`, and `getentropy`. Also `pipe`/`pipe2`,
-  `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`, `ftruncate`,
-  `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, `getcwd`, `access`, `isatty`,
-  `_exit`, `sleep`, `environ`, and `STD*_FILENO`
-- **POSIX descriptors and polling (`<fcntl.h>`, `<poll.h>`):** `open`, `openat`,
-  `creat`, and `fcntl` (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`,
-  `F_GETFL`, `F_SETFL`). Also `O_CLOEXEC`, `O_NONBLOCK`, `O_DIRECTORY`,
-  `O_SYNC`, `O_DSYNC`, `poll`, and multi-server `ppoll` backed by Ring 3
-  `pipeserv`, `vfsserv`, `ttyserv`, and `sockserv`
-- **POSIX local sockets (`<sys/socket.h>`, `<sys/un.h>`):** `AF_UNIX`
-  `SOCK_STREAM` and `SOCK_DGRAM` sockets (`socket`, `socketpair`, `bind`,
-  `listen`, `accept`, `accept4`, `connect`, `send`, `recv`). Also `sendto`,
-  `recvfrom`, `shutdown`, `getsockname`, `getpeername`, `getsockopt`, and
-  `setsockopt` with atomic `SOCK_CLOEXEC` and `SOCK_NONBLOCK` over `sockserv`
-  (`/dev/sock`)
-- **POSIX terminal I/O (`<termios.h>`):** `tcgetattr`, `tcsetattr`, `tcflush`,
+- **Core process and descriptor calls (`<unistd.h>`):** `_POSIX_VERSION` and
+  `_POSIX2_VERSION` (`202405L`), `fork` (COW), `execve`/`execv`/`execvp` (`PATH`
+  lookup and bootfs `argv`/`envp`), `getpid`, `getppid`, and `getentropy`. Also
+  `pipe`/`pipe2`, `dup`/`dup2`/`dup3`, `close`, `write`, `read`, `lseek`,
+  `ftruncate`, `unlink`/`unlinkat`, `rmdir`, `chdir`/`fchdir`, `getcwd`,
+  `access`, `isatty`, `_exit`, `sleep`, `environ`, and `STD*_FILENO`
+- **Descriptor control and polling (`<fcntl.h>`, `<poll.h>`):** `open`,
+  `openat`, `creat`, and `fcntl` (`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`,
+  `F_SETFD`, `F_GETFL`, `F_SETFL`). Also `O_CLOEXEC`, `O_NONBLOCK`,
+  `O_DIRECTORY`, `O_SYNC`, `O_DSYNC`, `poll`, and multi-server `ppoll` backed by
+  Ring 3 `pipeserv`, `vfsserv`, `ttyserv`, and `sockserv`
+- **Local sockets (`<sys/socket.h>`, `<sys/un.h>`):** `AF_UNIX` `SOCK_STREAM`
+  and `SOCK_DGRAM` sockets (`socket`, `socketpair`, `bind`, `listen`, `accept`,
+  `accept4`, `connect`, `send`, `recv`). Also `sendto`, `recvfrom`, `shutdown`,
+  `getsockname`, `getpeername`, `getsockopt`, and `setsockopt` with atomic
+  `SOCK_CLOEXEC` and `SOCK_NONBLOCK` over `sockserv` (`/dev/sock`)
+- **Terminal I/O (`<termios.h>`):** `tcgetattr`, `tcsetattr`, `tcflush`,
   `tcdrain`, `tcflow`, `tcsendbreak`, `cfgetispeed`/`cfsetispeed`,
   `cfgetospeed`/`cfsetospeed`, canonical line editing (`ICANON`, `VERASE`,
   `VKILL`, `ICRNL`, `VEOF`), and raw mode backed by COM1 IRQ 4 `ttyserv`
-- **POSIX filesystem and directories (`<sys/stat.h>`, `<dirent.h>`):** `stat`,
+- **Filesystem and directories (`<sys/stat.h>`, `<dirent.h>`):** `stat`,
   `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, `umask`, `opendir`,
   `fdopendir`, `readdir`, `rewinddir`, `closedir`, and `dirfd` backed by Ring 3
   `vfsserv` (`/boot` read-only `bootfs` and `/tmp` writable `tmpfs`)
-- **POSIX asynchronous I/O (`<aio.h>`):** `aio_read`, `aio_write`, `aio_fsync`,
+- **Asynchronous I/O (`<aio.h>`):** `aio_read`, `aio_write`, `aio_fsync`,
   `aio_cancel`, `lio_listio` (`LIO_WAIT`/`LIO_NOWAIT`, `SIGEV_SIGNAL`), and
   async-signal-safe `aio_error`, `aio_return`, and `aio_suspend` backed by a
   Ring 3 worker thread over `SYS_FUTEX`
 - **Thread-local errors (`<errno.h>`):** O(1) `FS.base` TLS `errno`
   (`__errno_location`, with lock-free fallback) and POSIX.1-2024 `E*` constants
-- **POSIX signals (`<signal.h>`):** async-signal-safe `sigaction`,
-  `sigprocmask`, `sigpending`, `pthread_sigmask`, `kill`, `pthread_kill`,
-  `raise`, `signal`, `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`,
-  `sigismember`, `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across
-  `SYS_SIGRETURN`
-- **POSIX memory mapping (`<sys/mman.h>`):** W^X-enforced `mmap` (`MAP_PRIVATE`,
+- **Signals (`<signal.h>`):** async-signal-safe `sigaction`, `sigprocmask`,
+  `sigpending`, `pthread_sigmask`, `kill`, `pthread_kill`, `raise`, `signal`,
+  `sigemptyset`, `sigfillset`, `sigaddset`, `sigdelset`, `sigismember`,
+  `SIGKILL`/`SIGSTOP` `EINVAL`, and mask reload across `SYS_SIGRETURN`
+- **Memory mapping (`<sys/mman.h>`):** W^X-enforced `mmap` (`MAP_PRIVATE`,
   `MAP_SHARED`, `MAP_ANONYMOUS`, `MAP_FIXED`), `mprotect`, `msync`, `munmap`,
   option-gated `shm_open`/`shm_unlink` (`SHM`), and
   `mlock`/`munlock`/`mlockall`/`munlockall` (`ML`/`MLR`, `MCL_CURRENT`,
   `MCL_FUTURE`)
-- **POSIX process wait (`<sys/wait.h>`):** async-signal-safe `wait`, `waitpid`
+- **Process wait (`<sys/wait.h>`):** async-signal-safe `wait`, `waitpid`
   (`WNOHANG`), and exit/signal status macros (`WIFEXITED`, `WEXITSTATUS`,
   `WIFSIGNALED`, `WTERMSIG`)
-- **POSIX clocks and timers (`<time.h>`):** `CLOCK_MONOTONIC`, `CLOCK_REALTIME`,
+- **Clocks and timers (`<time.h>`):** `CLOCK_MONOTONIC`, `CLOCK_REALTIME`,
   `TIMER_ABSTIME`, `clock_getres`, `clock_gettime`, `clock_settime`,
   `clock_nanosleep`, `nanosleep`, `timer_create`, `timer_settime`,
   `timer_gettime`, `timer_getoverrun`, and `timer_delete`
-- **POSIX threads and semaphores (`<pthread.h>`, `<semaphore.h>`):**
-  `pthread_create`, `pthread_join`, `pthread_detach`, `pthread_exit`,
-  `pthread_once`, TSD keys, deferred cancellation (`pthread_cancel`,
-  `pthread_setcancelstate`, `pthread_setcanceltype`, `pthread_testcancel`,
-  `pthread_cleanup_push`/`pop`), mutexes (`NORMAL`/`ERRORCHECK`/`RECURSIVE`),
-  `pthread_cond_*`, `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, and
-  `sem_*` (with async-signal-safe `sem_post`)
+- **Threads and semaphores (`<pthread.h>`, `<semaphore.h>`):** `pthread_create`,
+  `pthread_join`, `pthread_detach`, `pthread_exit`, `pthread_once`, TSD keys,
+  deferred cancellation (`pthread_cancel`, `pthread_setcancelstate`,
+  `pthread_setcanceltype`, `pthread_testcancel`, `pthread_cleanup_push`/`pop`),
+  mutexes (`NORMAL`/`ERRORCHECK`/`RECURSIVE`), `pthread_cond_*`,
+  `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, and `sem_*` (with
+  async-signal-safe `sem_post`)
 - **Buffered and formatted I/O (`<stdio.h>`):** `FILE`
   (`stdin`/`stdout`/`stderr`), `fopen`, `fdopen`, `fclose`, `fread`, `fwrite`,
   `fgets`, `fgetc`, `getc`/`getc_unlocked`, `getchar`/`getchar_unlocked`, and
@@ -320,12 +320,12 @@ The headers below show all user-space functions available at this time:
 - **Hardware IRQs and port I/O (`<sys/intr.h>`):** `AttachIntrEvent` (IOAPIC
   IRQ-to-IPC pulses), `IntrUnmask`, `IOPLSet` (`CAP_SYS_INTR` guarded), and Ring
   3 `port_in*`/`port_out*` helpers
-- **POSIX XCU shell and core utilities (`bin/`):** Ring 3 `/boot/sh` (`-c`,
-  script files, interactive `isatty()` input, pipelines, redirections `<`/`>`/
-  `>>`/`2>&1`, `&&`/`||`/`;`, `$VAR`/`$?`, `$'...'` ANSI-C quoting, `set -o
-  pipefail`, `read -d` custom/NUL delimiters, and built-ins `cd`/`pwd`/`export`/
-  `unset`/`exit`). Standalone `/boot/` utilities: `echo`, `cat`, `ls`, `true`,
-  `false`, and `test`
+- **Command shell and core utilities (`bin/`):** Ring 3 `/boot/sh` targeting
+  POSIX.1-2024 XCU features (`-c`, script files, interactive `isatty()` input,
+  pipelines, redirections `<`/`>`/`>>`/`2>&1`, `&&`/`||`/`;`, `$VAR`/`$?`,
+  `$'...'` ANSI-C quoting, `set -o pipefail`, `read -d` custom/NUL delimiters,
+  and built-ins `cd`/`pwd`/`export`/`unset`/`exit`). Standalone `/boot/`
+  utilities: `echo`, `cat`, `ls`, `true`, `false`, and `test`
 - **Native processes and VM (`<sys/proc.h>`, `<sys/vm.h>`):** `ProcCreate` (from
   `boot.tar`), `ProcWait`, `VMMap`, `VMUnmap`, `VMProtect`, and `VMCloneCow`
   (copy-on-write page sharing between parent and child)
@@ -357,8 +357,8 @@ and cross-subsystem stress and leak hardening. See
 - `libc/` — freestanding C17 and POSIX.1-2024 user-space C library
 - `servers/` — Ring 3 system servers (`sysproc`, `pipeserv`, `vfsserv`,
   `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`)
-- `bin/` — Ring 3 POSIX.1-2024 XCU shell (`sh`) and core utilities (`echo`,
-  `cat`, `ls`, `true`, `false`, `test`)
+- `bin/` — Ring 3 command shell (`sh`) and core utilities (`echo`, `cat`, `ls`,
+  `true`, `false`, `test`) targeting POSIX.1-2024 XCU interfaces
 - `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,
   `proctest`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
   `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`, `vfstest`,
@@ -394,10 +394,10 @@ library functions. Recent milestones added the 4-gate POSIX harness,
 `SHM`/`ML`/`MLR`. They also added Ring 3 COM1 TTY (`<termios.h>`), buffered
 `<stdio.h>`, `setenv`/`unsetenv`, `execvp`, and core C17/POSIX headers.
 
-Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`) and Ring 3
-POSIX `sh` with core utilities. They also added ACPI `MADT`/`SPCR` driver
-discovery, Ring 3 `OPOST` TX, and interactive `./scripts/env.sh run` boot. The
-remaining task adds `<sys/select.h>` and cross-subsystem hardening.
+Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`) and the Ring
+3 command shell (`sh`) with core utilities. They also added ACPI `MADT`/`SPCR`
+driver discovery, Ring 3 `OPOST` TX, and interactive `./scripts/env.sh run`
+boot. The remaining task adds `<sys/select.h>` and cross-subsystem hardening.
 
 ## Documentation
 
@@ -429,11 +429,18 @@ remaining task adds `<sys/select.h>` and cross-subsystem hardening.
   - [keepachangelog](docs/skills/keepachangelog/SKILL.md) — the changelog format
   - [create-skill](docs/skills/create-skill/SKILL.md) — new agent skills
 
-## License
+## License and trademarks
 
 The MIT License governs this project. See [LICENSE.md](LICENSE.md).
 
 Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
+
+POSIX® is a registered trademark of the Institute of Electrical and Electronic
+Engineers, Inc.
+
+This project is an independent work in progress aiming to follow interfaces from
+POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026) and is not
+officially certified.
 
 For third-party attributions, see
 [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).

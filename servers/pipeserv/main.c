@@ -1,6 +1,6 @@
 /**
  * @file     main.c
- * @brief    Ring 3 POSIX pipe and ppoll multiplexer server (/dev/pipe)
+ * @brief    Ring 3 pipe and ppoll multiplexer server (/dev/pipe)
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>

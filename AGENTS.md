@@ -132,6 +132,8 @@ skip gates, never check only a hand-picked subset of files, and never pass
   each new decision
 - [ ] `docs/THIRD-PARTY-NOTICES.md` attributes each new third-party component
 - [ ] All new and changed source files have the copyright header
+- [ ] New or changed `POSIX` wording uses goal-oriented `POSIX.1-2024` phrasing
+  with no compliance claims, no `POSIX` product names, and original text only
 - [ ] No IMMUTABLE document was changed
 
 For update procedures, see
@@ -168,6 +170,19 @@ Rules that apply only to this project. Each rule links to its skill or document.
   [ADR_0003](docs/30-architecture/adr/ADR_0003.md), and
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0001`,
   `CNV_0004`).
+- **POSIX wording, originality, and trademark rules:** Frame standard support as
+  ongoing work toward `POSIX.1-2024` (`IEEE Std 1003.1-2024` / `ISO/IEC/IEEE
+  9945:2026`) using goal-oriented phrasing (for example, "working toward
+  POSIX.1-2024 compatibility" or "targets interfaces from IEEE Std
+  1003.1-2024"). Pin references to the 2024 edition unless documenting legacy
+  rejection or compatibility. Never claim completion or certification (avoid
+  "POSIX certified", "POSIX conformant", "POSIX compliant", or "implements
+  POSIX"), never put `POSIX` in OS, project, binary, or component names, and
+  never copy verbatim text from copyrighted IEEE or Open Group specifications.
+  Keep the notice `POSIX® is a registered trademark of the Institute of
+  Electrical and Electronic Engineers, Inc.` in public-facing docs. See
+  [BDR_0003](docs/10-product/bdr/BDR_0003.md) and
+  [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
 - **Keep `README.md` user-space support current:** Whenever you add, change, or
   remove public headers, `libc` functions, syscalls, or Ring 3 system services,
   you must update the user-space functionality breakdown and use-case summary in

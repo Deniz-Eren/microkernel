@@ -1,6 +1,6 @@
 /**
  * @file     main.c
- * @brief    Ring 3 POSIX VFS server (/dev/vfs) with read-only bootfs and tmpfs
+ * @brief    Ring 3 VFS server (/dev/vfs) with read-only bootfs and tmpfs
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>

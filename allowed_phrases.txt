@@ -59,7 +59,9 @@ message queues
 call graph
 test suite
 test suites
-conformance gate
-conformance gates
+compatibility gate
+compatibility gates
+registered trademark
+Institute of Electrical and Electronic Engineers
 black-box
 qemu-system-x86_64

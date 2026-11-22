@@ -29,8 +29,8 @@ other.
 ## Target Result
 
 `microkernel` delivers a verified Ring 0 and Ring 3 microkernel platform. Its
-user-space headers, `libc`, and system services evolve toward IEEE Std
-1003.1-2024 (POSIX.1-2024, Issue 8) Base conformance:
+user-space headers, `libc`, and system services work toward compatibility with
+interfaces from POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026):
 
 - kernel boot, physical and virtual W^X memory management, and LAPIC timing
 - isolated Ring 3 user processes with `syscall`/`sysret`, synchronous IPC,

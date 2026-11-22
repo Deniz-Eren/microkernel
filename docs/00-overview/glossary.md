@@ -22,4 +22,7 @@
 | Bootfs | `boot.tar` ustar archive of Ring 3 executables loaded by GRUB. |
 | Sysroot | `sysroot/usr/` tree holding public headers, `libc.a`, `crt0.o`. |
 | Async-signal-safe | Function safe in a signal handler (no heap or locks). |
-| POSIX.1-2024 | IEEE Std 1003.1-2024 (Issue 8), target Base OS standard. |
+| POSIX.1-2024 | IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026 target. |
+
+POSIX® is a registered trademark of the Institute of Electrical and Electronic
+Engineers, Inc.

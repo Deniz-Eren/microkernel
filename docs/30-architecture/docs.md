@@ -13,11 +13,11 @@ the code-tag checker into CMake and CTest. It also runs the standalone
 `needs.json` auditor ({need}`SYS_DOCS_0001`).
 ```
 
-## Bidirectional Traceability and Four-Gate Conformance Model
+## Bidirectional Traceability and Four-Gate Compatibility Model
 
 Every normative item links down from product decisions to source files and tests
-without per-function boilerplate (`WDR_0002`). Sphinx `-W` and CTest enforce
-both traceability integrity and POSIX.1-2024 conformance on every commit.
+without per-function boilerplate (`WDR_0002`). Sphinx `-W` and CTest run both
+traceability checks and POSIX.1-2024 compatibility checks on every commit.
 
 ```mermaid
 flowchart TD

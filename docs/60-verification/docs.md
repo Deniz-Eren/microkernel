@@ -36,7 +36,7 @@ of active `ICD_`, `COMP_`, and `VER_` items with no code tags
 ({need}`SWR_DOCS_0002`).
 ```
 
-```{ver} Verify 4-gate POSIX.1-2024 conformance harness in CTest
+```{ver} Verify 4-gate POSIX.1-2024 compatibility harness in CTest
 :id: VER_DOCS_0004
 :status: active
 :tags: integration

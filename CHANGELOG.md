@@ -21,6 +21,14 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Audited and updated all `POSIX` references across documentation, headers, code
+  comments, and audit scripts to use work-in-progress, goal-oriented wording
+  targeting `POSIX.1-2024` (`IEEE Std 1003.1-2024` / `ISO/IEC/IEEE 9945:2026`),
+  remove compliance or certification phrasing, keep `POSIX` out of titles and
+  component names, add IEEE trademark attribution to public-facing documentation
+  (`README.md`, `docs/00-overview/glossary.md`,
+  `docs/60-verification/traceability.md`, `docs/THIRD-PARTY-NOTICES.md`), and
+  codify these rules in `AGENTS.md`.
 - Added Mermaid architecture, sequence, and state diagrams across `README.md`,
   `docs/00-overview/context.md`, and all domain architecture pages
   (`docs/30-architecture/{boot,mem,proc,ipc,sig,libc,docs}.md`) illustrating
@@ -71,14 +79,14 @@ Changelog](https://keepachangelog.com).
   16550A `OPOST`/`ONLCR`/`ECHO` TX routing via `/dev/tty` in `libc/src/tty.c`
   and `libc/src/fd.c`, `./scripts/env.sh run` interactive launcher, and user
   instructions in `README.md`.
-- Ring 3 POSIX.1-2024 XCU shell (`sh`) and core utilities (`SWR_LIBC_0006`,
-  `ADR_0021`, `COMP_LIBC_0005`, `VER_LIBC_0007`): added `bin/sh/main.c` (`-c`,
-  script files, interactive `isatty()` prompt, pipelines over `pipe2`/`fork`/
-  `dup2`/`execvp`, redirections `<`/`>`/`>>`/`2>`/`2>&1`, `&&`/`||`/`;`, `$VAR`/
-  `$?`, Issue 8 `$'...'` ANSI-C quoting, `set -o pipefail`, `read -d` custom and
-  NUL delimiters, built-ins `cd`/`pwd`/`export`/`unset`/`exit`), standalone
-  `bin/utils/{echo,cat,ls,true,false,test}.c`, `bin` scanning in formatter and
-  lint scripts, and QEMU `tests/shtest/test_sh.c`.
+- Ring 3 command shell (`sh`) and core utilities targeting `POSIX.1-2024` XCU
+  (`SWR_LIBC_0006`, `ADR_0021`, `COMP_LIBC_0005`, `VER_LIBC_0007`): added
+  `bin/sh/main.c` (`-c`, script files, interactive `isatty()` prompt, pipelines
+  over `pipe2`/`fork`/`dup2`/`execvp`, redirections `<`/`>`/`>>`/`2>`/`2>&1`,
+  `&&`/`||`/`;`, `$VAR`/`$?`, Issue 8 `$'...'` ANSI-C quoting, `set -o
+  pipefail`, `read -d` custom and NUL delimiters, built-ins `cd`/`pwd`/`export`/
+  `unset`/`exit`), standalone `bin/utils/{echo,cat,ls,true,false,test}.c`, `bin`
+  scanning in formatter and lint scripts, and QEMU `tests/shtest/test_sh.c`.
 - Ring 3 `AF_UNIX` local sockets server and POSIX.1-2024 `accept4`
   (`SWR_IPC_0009`, `ADR_0020`, `ICD_IPC_0012`–`0013`, `COMP_IPC_0012`–`0013`,
   `VER_IPC_0007`): added `servers/sockserv/main.c` (`/dev/sock`) serving
@@ -117,7 +125,7 @@ Changelog](https://keepachangelog.com).
   `shm_unlink`, `mlock`, `munlock`, `mlockall`, and `munlockall` in
   `libc/src/mman.c`, `ftruncate`/`fstat` SHM support in `libc/src/vfs.c`, and
   QEMU `tests/shmtest/test_shm.c`.
-- Ring 3 POSIX VFS server (`SWR_IPC_0007`, `ADR_0016`, `ICD_IPC_0007`–`0009`,
+- Ring 3 VFS server (`SWR_IPC_0007`, `ADR_0016`, `ICD_IPC_0007`–`0009`,
   `COMP_IPC_0008`–`0009`, `VER_IPC_0005`): added `servers/vfsserv/main.c`
   (`/dev/vfs`) serving read-only `boot.tar` at `/boot` and writable dynamic
   `tmpfs` at `/` and `/tmp`, read-only `BOOTFS_USER_VA` mapping and
@@ -134,7 +142,7 @@ Changelog](https://keepachangelog.com).
   `mmap`/`munmap` for allocations >= 32 KiB, in-place `realloc` growth and
   splitting, POSIX.1-2024 `errno`-preserving `free`, and QEMU
   `tests/heaptest/test_heap.c`.
-- Complete 4-gate POSIX.1-2024 conformance harness (`SWR_DOCS_0003`,
+- Complete 4-gate POSIX.1-2024 compatibility harness (`SWR_DOCS_0003`,
   `COMP_DOCS_0003`, `VER_DOCS_0004`): added CTest Gate 2 `posix.symbol_diff`
   (`tests/posix/test_symbol_diff.py` comparing Clang JSON AST declarations and
   `llvm-nm` `libc.a` exports against `tests/posix/issue8-manifest.tsv` with diff
@@ -217,13 +225,13 @@ Changelog](https://keepachangelog.com).
   with `llvm-objdump -dr`, plus `<signal.h>` standalone coverage in
   `posix.headers` and QEMU runtime checks in `tests/sigtest/main.c`.
 - Two-tier bidirectional code and POSIX.1-2024 traceability: `:posix:` field and
-  calculated compliance matrix in `docs/60-verification/traceability.md`,
+  calculated progress matrix in `docs/60-verification/traceability.md`,
   bidirectional `ICD_`/`COMP_`/`VER_` coverage check in
   `config/sphinx/need_tag_check.py`, `WDR_0002`, `ICD_`/`COMP_` code tags across
   all active `kernel/`, `libc/`, `servers/`, and traceability tooling files, and
   governance rules in `AGENTS.md`.
 - `<errno.h>` and lock-free TID-indexed thread-local `errno`
-  (`libc/src/errno.c`) with the full POSIX.1-2024 `E*` constant set in
+  (`libc/src/errno.c`) with the target POSIX.1-2024 `E*` constant set in
   `libc/include/sys/errno.h`.
 - Standalone POSIX.1-2024 header compilation and namespace hygiene CTest gate
   (`posix.headers` via `tests/posix/test_headers.py`) and multithreaded `errno`
@@ -233,7 +241,7 @@ Changelog](https://keepachangelog.com).
   specification URLs, plus `ADR_0003`, `CNV_0004`, and `TSK_0003`.
 - Real traceability domains (`BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and
   `DOCS`) across all Sphinx-Needs layers, plus `BDR_0002`, `BDR_0003`
-  (POSIX.1-2024 Base conformance target), `ADR_0002`, and `microkernel` tasks
+  (POSIX.1-2024 Base compatibility target), `ADR_0002`, and `microkernel` tasks
   and roadmap records.
 - The docs-as-code traceability model with the docs-traceability-setup agent
   skill 0.1.0. The configuration is in `.docs-traceability-setup.yml`.
@@ -264,7 +272,7 @@ Changelog](https://keepachangelog.com).
   application use-cases, and an overview of the bidirectional Sphinx-Needs
   traceability setup, and added a rule in `AGENTS.md` requiring agents to keep
   the `README.md` support breakdown up to date.
-- Updated `README.md` to highlight the POSIX.1-2024 (Issue 8) Base compliance
+- Updated `README.md` to highlight the POSIX.1-2024 (Issue 8) Base compatibility
   target, CTest commands, and links to `BDR_0003`, `ADR_0003`, and the
   traceability matrix.
 - Aligned `.clang-format` (`ColumnLimit: 80`) with `.editorconfig`, added

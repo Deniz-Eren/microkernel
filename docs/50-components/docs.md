@@ -35,5 +35,5 @@ tags, untagged tests, or active `ICD_`/`COMP_`/`VER_` items with no code tags
 
 `tools/posix/audit_lib.py` parses `tests/posix/issue8-manifest.tsv`, extracts
 Clang JSON AST declarations and `llvm-nm` exports, and builds `llvm-objdump`
-call graphs for the POSIX conformance gates ({need}`ARC_DOCS_0001`).
+call graphs for the POSIX.1-2024 compatibility gates ({need}`ARC_DOCS_0001`).
 ```

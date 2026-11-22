@@ -1,6 +1,6 @@
 /**
  * @file     errno.h
- * @brief    POSIX.1-2024 compatible kernel and libc error constants
+ * @brief    Kernel and libc error constants targeting POSIX.1-2024
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -13,8 +13,7 @@
 
 /* need:: ICD_LIBC_0003 */
 
-/* Microkernel errno values (Linux x86-64 compatible numbers, POSIX.1-2024 set).
- */
+/* Microkernel errno values (Linux x86-64 numbers, targeting POSIX.1-2024). */
 
 #define EPERM 1
 #define ENOENT 2

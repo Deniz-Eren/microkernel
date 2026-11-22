@@ -3,12 +3,16 @@
 This page presents calculated traceability views generated directly from the
 Sphinx-Needs model.
 
-## POSIX.1-2024 Compliance Matrix
+## POSIX.1-2024 Progress Matrix
 
 All requirements tagged with a `:posix:` Issue 8 manifest reference appear below
-with their implementing design items and verification coverage.
+with their implementing design items and verification coverage. This matrix
+tracks ongoing work toward POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE
+9945:2026) compatibility and does not claim official certification. POSIX® is a
+registered trademark of the Institute of Electrical and Electronic Engineers,
+Inc.
 
-```{needtable} POSIX.1-2024 compliance matrix
+```{needtable} POSIX.1-2024 progress matrix
 ---
 types: sys, swr
 filter: posix

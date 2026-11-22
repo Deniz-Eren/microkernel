@@ -1,6 +1,6 @@
 /**
  * @file     limits.h
- * @brief    ISO C17 integer limits and POSIX.1-2024 implementation limits
+ * @brief    ISO C17 integer limits and target POSIX.1-2024 runtime limits
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -45,7 +45,7 @@
 
 #define MB_LEN_MAX 4
 
-/* POSIX.1-2024 minimum invariant values. */
+/* Target POSIX.1-2024 minimum invariant values. */
 #define _POSIX_ARG_MAX 4096
 #define _POSIX_CHILD_MAX 25
 #define _POSIX_HOST_NAME_MAX 255
@@ -67,7 +67,7 @@
 #define _POSIX_TZNAME_MAX 6
 #define _POSIX2_LINE_MAX 2048
 
-/* Microkernel POSIX.1-2024 runtime limits. */
+/* Microkernel runtime limits targeting POSIX.1-2024. */
 #define SSIZE_MAX LONG_MAX
 #define PATH_MAX 256
 #define NAME_MAX 255

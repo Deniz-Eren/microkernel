@@ -73,11 +73,11 @@ sequenceDiagram
     Drv->>K: IntrUnmask(irq) [re-arm for next interrupt]
 ```
 
-## Multi-Server POSIX Descriptor Routing and `ppoll()`
+## Multi-Server Descriptor Routing and `ppoll()`
 
 The kernel stores only a small per-process descriptor table (`FD_KIND_*` plus
-`(srv_pid, srv_chanid, srv_handle)`). `libc` routes POSIX calls to the right
-Ring 3 server and coordinates multi-server `ppoll()`. The kernel sends
+`(srv_pid, srv_chanid, srv_handle)`). `libc` routes descriptor calls to the
+right Ring 3 server and coordinates multi-server `ppoll()`. The kernel sends
 `PULSE_CODE_FD_CLOSE` automatically on `O_CLOEXEC` `execve` or process exit.
 
 ```mermaid

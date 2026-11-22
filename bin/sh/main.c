@@ -1,6 +1,6 @@
 /**
  * @file     main.c
- * @brief    Ring 3 POSIX.1-2024 XCU shell (sh) with pipelines and Issue 8 APIs
+ * @brief    Ring 3 command shell (sh) targeting POSIX.1-2024 XCU interfaces
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>

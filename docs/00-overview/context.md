@@ -2,12 +2,13 @@
 
 ## System Overview
 
-`microkernel` is a small x86-64 operating system targeting POSIX.1-2024 (Issue
-8) Base conformance in user space. The Ring 0 kernel runs at the higher-half
-virtual address `0xFFFFFFFF80000000`. It supplies preemptive 256-priority
-scheduling, synchronous and scatter-gather IPC, threads, `FS.base` TLS, and
-futexes. It also supplies clocks and timers, signals, W^X and copy-on-write page
-tables, IOAPIC IRQ pulses, and `syscall`/`sysret` dispatch.
+`microkernel` is a small x86-64 operating system working toward compatibility
+with interfaces from POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE
+9945:2026) in user space. The Ring 0 kernel runs at the higher-half virtual
+address `0xFFFFFFFF80000000`. It supplies preemptive 256-priority scheduling,
+synchronous and scatter-gather IPC, threads, `FS.base` TLS, and futexes. It also
+supplies clocks and timers, signals, W^X and copy-on-write page tables, IOAPIC
+IRQ pulses, and `syscall`/`sysret` dispatch.
 
 GRUB boots the kernel with the Multiboot2 protocol. The kernel starts in 32-bit
 mode, builds 64-bit higher-half page tables, and jumps to long mode. The first
@@ -25,16 +26,16 @@ Ring 3 device drivers, the Ring 0 kernel, and x86-64 hardware connect.
 flowchart TD
     subgraph RING3_APP["Ring 3: Userland Shell, Utilities & Test Binaries"]
         direction TB
-        SH["bin/ POSIX.1-2024 sh & Core Utilities (echo, cat, ls, test)"]
+        SH["bin/ Command Shell (sh) & Core Utilities (echo, cat, ls, test)"]
         APPS["User & Test Binaries (linked with crt0.o + libc.a)"]
-        LIBC["POSIX.1-2024 libc (stdio, pthreads, VFS, sockets, termios)"]
+        LIBC["Ring 3 libc (stdio, pthreads, VFS, sockets, termios)"]
         SH --> LIBC
         APPS --> LIBC
     end
 
     subgraph RING3_SRV["Ring 3: Isolated System Servers and Drivers"]
         direction TB
-        subgraph CORE_SRV["Core POSIX & IPC Servers"]
+        subgraph CORE_SRV["Core System & IPC Servers"]
             direction TB
             SYSPROC["sysproc (PID 1, Chan 1: /dev/* name registry)"]
             VFS["vfsserv (/dev/vfs: bootfs + tmpfs)"]
@@ -106,7 +107,7 @@ flowchart TD
 ├── kernel/                     <- Ring 0 kernel (arch, core, include, lib)
 ├── libc/                       <- Freestanding C17 / POSIX.1-2024 user library
 ├── servers/                    <- Ring 3 system servers and device drivers
-├── bin/                        <- Ring 3 POSIX.1-2024 sh and core utilities
+├── bin/                        <- Ring 3 command shell (sh) and core utilities
 ├── tests/                      <- QEMU harness, Ring 3, POSIX, and doc tests
 ├── config/sphinx/              <- Sphinx-Needs model, config, and tag scanner
 ├── tools/                      <- Traceability audit, POSIX audit, STE gate
@@ -145,8 +146,7 @@ flowchart TD
   `string`, `unistd`, and `include/sys/` syscall wrappers).
 - `servers/sysproc/`: First Ring 3 process (PID 1, channel 1). It hosts the
   service name registry for all Ring 3 servers.
-- `servers/pipeserv/`: Ring 3 POSIX pipe and `ppoll` server registered at
-  `/dev/pipe`.
+- `servers/pipeserv/`: Ring 3 pipe and `ppoll` server registered at `/dev/pipe`.
 - `servers/vfsserv/`: Ring 3 virtual filesystem server registered at `/dev/vfs`,
   serving read-only `bootfs` at `/boot` and writable `tmpfs` at `/` and `/tmp`.
 - `servers/ttyserv/`: Privileged Ring 3 COM1 serial TTY server registered at
@@ -157,13 +157,14 @@ flowchart TD
 - `servers/ipcserv/`: Ring 3 reference echo server registered at `/dev/echo`.
 - `servers/rtcdrv/`: Privileged Ring 3 MC146818 CMOS RTC driver registered at
   `/dev/rtc`, using `CAP_SYS_INTR` port I/O and IOAPIC IRQ 8 pulses.
-- `bin/`: Ring 3 POSIX.1-2024 XCU shell (`sh`) and standalone core utilities
-  (`echo`, `cat`, `ls`, `true`, `false`, `test`) packed into `boot.tar`.
+- `bin/`: Ring 3 command shell (`sh`) and standalone core utilities (`echo`,
+  `cat`, `ls`, `true`, `false`, `test`) targeting POSIX.1-2024 XCU interfaces
+  and packed into `boot.tar`.
 - `tests/`: `test_runner.py` (headless QEMU serial assertion harness), Ring 3
   test binaries (`ipccli`, `sigtest`, `proctest`, `procchild`, `drvtest`,
   `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`,
   `canceltest`, `libctest`, `heaptest`, `vfstest`, `shmtest`, `ttytest`,
-  `stdiotest`, `socktest`, `shtest`), `posix/` conformance gates, and
+  `stdiotest`, `socktest`, `shtest`), `posix/` compatibility gates, and
   `traceability/` unit tests.
 - `config/sphinx/`, `tools/`: Sphinx-Needs model (`needs_model.py`), code tag
   checker (`need_tag_check.py`), `check_needs_audit.py`, `audit_lib.py`, and

@@ -127,6 +127,14 @@ SOFTWARE.
 * **Source:** `posix-issue8-os-dev` skill (`references/issue8-manifest.tsv`).
 * **License:** MIT License. Copyright (c) 2026 Deniz Eren.
 
+## 3. Trademarks
+
+* POSIX® is a registered trademark of the Institute of Electrical and Electronic
+  Engineers, Inc.
+* This project is an independent work in progress targeting interfaces from
+  POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026) and makes no
+  claim of official certification.
+
 [cc-src]: https://www.conventionalcommits.org/en/v1.0.0/
 [agentskills-src]:
   https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx

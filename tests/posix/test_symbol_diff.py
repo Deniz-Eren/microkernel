@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "posix"))
 
 from audit_lib import (  # noqa: E402
-    BASE_CONFORMANCE_GROUPS,
+    BASE_TARGET_GROUPS,
     OPTION_GROUP_MACROS,
     PosixManifest,
     detect_clang_include,
@@ -78,7 +78,7 @@ _REPORT: Path | None = None
 
 
 def _is_option_allowed(group: str, active_macros: set[str]) -> bool:
-    if group in BASE_CONFORMANCE_GROUPS:
+    if group in BASE_TARGET_GROUPS:
         return True
     macros = OPTION_GROUP_MACROS.get(group, ())
     return any(m in active_macros for m in macros)
@@ -131,7 +131,7 @@ def _write_diff_report(
     )
 
     lines = [
-        "# POSIX.1-2024 (Issue 8) Symbol Diff Report",
+        "# POSIX.1-2024 (Issue 8) Symbol Diff Report (Work-in-Progress Target)",
         f"headers_base_implemented: {len(impl_hdrs)}/{len(base_hdrs)}",
         f"interfaces_base_implemented: {len(impl_ifaces)}/{len(base_ifaces)}",
         f"header_ast_declarations: {len(ast_symbols)}",

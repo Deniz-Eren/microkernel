@@ -1,7 +1,7 @@
 # System and Software Requirements — DOCS
 
 Domain `DOCS`: docs-as-code traceability build, Sphinx-Needs model audit,
-bidirectional tag checks, and POSIX.1-2024 conformance gates.
+bidirectional tag checks, and POSIX.1-2024 compatibility gates.
 
 ```{sys} Run automated traceability checks in the project build
 :id: SYS_DOCS_0001
@@ -41,9 +41,9 @@ tag ({need}`SYS_DOCS_0001`).
 :derives: SYS_DOCS_0001
 :traces: BDR_0003, ADR_0003, WDR_0002
 
-The test harness must run four POSIX.1-2024 conformance gates: standalone header
-compilation, `issue8-manifest.tsv` symbol diff, async-signal-safety and
-cancellation call-graph checks, and runtime POSIX test suites
+The test harness must run four POSIX.1-2024 compatibility gates: standalone
+header compilation, `issue8-manifest.tsv` symbol diff, async-signal-safety and
+cancellation call-graph checks, and runtime compatibility test suites
 ({need}`SYS_DOCS_0001`).
 ```
 

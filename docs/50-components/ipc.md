@@ -49,7 +49,7 @@ clients with `ReadMsgV` and `WriteMsgV` ({need}`ICD_IPC_0001`,
 {need}`ICD_IPC_0002`, {need}`SWR_IPC_0006`).
 ```
 
-```{comp} Ring 3 POSIX pipe and ppoll server
+```{comp} Ring 3 pipe and ppoll server
 :id: COMP_IPC_0005
 :status: active
 :posix: XSH/pipe2 (BASE), XSH/ppoll (BASE)

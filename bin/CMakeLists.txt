@@ -1,6 +1,6 @@
 ##
 # @file     CMakeLists.txt
-# @brief    Build configuration for Ring 3 POSIX XCU sh and core utilities
+# @brief    Build configuration for Ring 3 command shell (sh) and utilities
 #
 # @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>

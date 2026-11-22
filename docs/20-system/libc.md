@@ -85,9 +85,9 @@ and `secure_getenv`. It must also supply `<stdatomic.h>`, `<stdalign.h>`, and
 :derives: SYS_LIBC_0001
 :traces: BDR_0003, ADR_0003, ADR_0021
 
-A Ring 3 POSIX shell (`sh`) and minimal core utilities must execute pipelines
-and redirections over `fork`/`execvp`/`pipe2`/`dup2`. The shell must support
-Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d`
+A Ring 3 command shell (`sh`) and minimal core utilities must execute pipelines
+and redirections over `fork`/`execvp`/`pipe2`/`dup2`. The shell must aim to
+follow Issue 8 `$'...'` quoting, `set -o pipefail`, and `read -d`
 ({need}`SYS_LIBC_0001`).
 ```
 

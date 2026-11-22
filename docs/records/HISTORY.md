@@ -34,16 +34,17 @@ Parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides (ISOs), plus
 ({need}`SWR_BOOT_0003`).
 ```
 
-### TSK_0017 — Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
+### TSK_0017 — Build Ring 3 command shell (sh) and core utilities
 
-```{task} Build Ring 3 POSIX.1-2024 XCU shell (sh) and core utilities
+```{task} Build Ring 3 command shell (sh) and core utilities
 :id: TSK_0017
 :status: done
 :traces: ADR_0003, SWR_LIBC_0006
 
-Implement Ring 3 POSIX `sh` and minimal core utilities (`echo`, `cat`, `ls`,
-`true`, `false`, `test`) supporting pipelines, file redirections, `$'...'`
-quoting, `set -o pipefail`, and `read -d` ({need}`SWR_LIBC_0006`).
+Add Ring 3 command shell (`sh`) and minimal core utilities (`echo`, `cat`, `ls`,
+`true`, `false`, `test`) targeting POSIX.1-2024 XCU. Support pipelines, file
+redirections, `$'...'` quoting, `set -o pipefail`, and `read -d`
+({need}`SWR_LIBC_0006`).
 ```
 
 ### TSK_0018 — Build Ring 3 AF_UNIX local sockets server and accept4
@@ -122,9 +123,9 @@ Replace the static 1 MiB bump arena in `libc/src/stdlib.c` with a thread-safe
 `reallocarray` ({need}`SWR_MEM_0006`).
 ```
 
-### TSK_0013 — Enforce full 4-gate POSIX.1-2024 conformance harness
+### TSK_0013 — Enforce full 4-gate POSIX.1-2024 compatibility harness
 
-```{task} Enforce full 4-gate POSIX.1-2024 conformance harness
+```{task} Enforce full 4-gate POSIX.1-2024 compatibility harness
 :id: TSK_0013
 :status: done
 :traces: WDR_0002, SWR_DOCS_0003
@@ -134,9 +135,9 @@ call-graph checks into CTest alongside `posix.headers` and
 `posix.async_signal_safe` ({need}`SWR_DOCS_0003`).
 ```
 
-### TSK_0011 — Implement POSIX.1-2024 Base functions and C11/C17 headers
+### TSK_0011 — Add POSIX.1-2024 Base target functions and C11/C17 headers
 
-```{task} Implement POSIX.1-2024 Base functions and C11/C17 headers
+```{task} Add POSIX.1-2024 Base target functions and C11/C17 headers
 :id: TSK_0011
 :status: done
 :traces: ADR_0003, ADR_0014, SWR_LIBC_0005
@@ -158,9 +159,9 @@ Add `pthread_cancel`, `pthread_setcancelstate`, `pthread_setcanceltype`,
 `funlockfile`) with QEMU and CTest verification ({need}`SWR_LIBC_0004`).
 ```
 
-### TSK_0009 — Implement POSIX.1-2024 Base asynchronous I/O (<aio.h>)
+### TSK_0009 — Add POSIX.1-2024 Base target asynchronous I/O (<aio.h>)
 
-```{task} Implement POSIX.1-2024 Base asynchronous I/O (<aio.h>)
+```{task} Add POSIX.1-2024 Base target asynchronous I/O (<aio.h>)
 :id: TSK_0009
 :status: done
 :traces: ADR_0003, ADR_0012, SWR_IPC_0005
@@ -171,9 +172,9 @@ servers. Keep `<mqueue.h>` behind `_POSIX_MESSAGE_PASSING`
 ({need}`SWR_IPC_0005`).
 ```
 
-### TSK_0007 — Implement POSIX.1-2024 fork, execve, and pipe2/dup3/ppoll
+### TSK_0007 — Add POSIX.1-2024 target fork, execve, and pipe2/dup3/ppoll
 
-```{task} Implement POSIX.1-2024 fork, execve, and pipe2/dup3/ppoll
+```{task} Add POSIX.1-2024 target fork, execve, and pipe2/dup3/ppoll
 :id: TSK_0007
 :status: done
 :traces: ADR_0003, ADR_0011, SWR_PROC_0004, SWR_IPC_0004
@@ -196,9 +197,9 @@ Redirect governance and skills, retain `docs/THIRD-PARTY-NOTICES.md`, and remove
 the five legacy files ({need}`WDR_0009`).
 ```
 
-### TSK_0006 — Implement POSIX.1-2024 pthreads, semaphores, and FS.base TLS
+### TSK_0006 — Add POSIX.1-2024 target pthreads, semaphores, and FS.base TLS
 
-```{task} Implement POSIX.1-2024 pthreads, semaphores, and FS.base TLS
+```{task} Add POSIX.1-2024 target pthreads, semaphores, and FS.base TLS
 :id: TSK_0006
 :status: done
 :traces: ADR_0003, ADR_0010, SWR_PROC_0005
@@ -208,9 +209,9 @@ mutexes, `pthread_cond_*`, `pthread_cond_clockwait`), and `<semaphore.h>`
 (`sem_*`) on top of kernel wait queues ({need}`SWR_PROC_0005`).
 ```
 
-### TSK_0005 — Implement POSIX.1-2024 monotonic clocks and timers
+### TSK_0005 — Add POSIX.1-2024 target monotonic clocks and timers
 
-```{task} Implement POSIX.1-2024 monotonic clocks and timers
+```{task} Add POSIX.1-2024 target monotonic clocks and timers
 :id: TSK_0005
 :status: done
 :traces: ADR_0003, ADR_0009, SWR_PROC_0006

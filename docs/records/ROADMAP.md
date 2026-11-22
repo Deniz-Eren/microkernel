@@ -21,9 +21,9 @@ Order roadmap items by priority and link them to affected specifications through
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### RDM_0003 — POSIX.1-2024 (Issue 8) Base conformance
+### RDM_0003 — Work toward POSIX.1-2024 (Issue 8) Base compatibility
 
-```{roadmap} POSIX.1-2024 (Issue 8) Base conformance
+```{roadmap} Work toward POSIX.1-2024 (Issue 8) Base compatibility
 ---
 id: RDM_0003
 status: open
@@ -32,8 +32,9 @@ traces: >
   SYS_MEM_0001, SYS_IPC_0001
 ---
 
-Reach IEEE Std 1003.1-2024 Base conformance across headers, `errno`, signals,
+Work toward compatibility with interfaces from POSIX.1-2024 (IEEE Std
+1003.1-2024 / ISO/IEC/IEEE 9945:2026) across headers, `errno`, signals,
 `pthread_*`, `sem_*`, clocks/timers, `mmap`, `pipe2`/`dup3`/`ppoll`, and
-`aio_*`. Cover future XCU shell utilities (`$'...'`, `set -o pipefail`, `read
--d`) with automated gates ({need}`BDR_0003`, {need}`ADR_0003`).
+`aio_*`. Cover command shell utilities (`$'...'`, `set -o pipefail`, `read -d`)
+with automated compatibility gates ({need}`BDR_0003`, {need}`ADR_0003`).
 ```

@@ -232,6 +232,10 @@ TN: Issue        # proper name (POSIX Issue 8)
 TN: x86-64       # proper name
 TN: C17          # proper name
 TN: C11          # proper name
+TN: trademark    # category 19 — legal attribution notice
+TN: compatibility # category 19 — standard interface alignment
+TN: certification # category 19 — formal compliance assessment
+TN: Inc          # proper name suffix (IEEE corporate designation)
 
 # --- technical verbs (TV category 2c — system operations) -----------------
 boot

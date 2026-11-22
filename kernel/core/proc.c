@@ -905,7 +905,7 @@ void proc_spawn_init(void) {
         tty->caps |= CAP_SYS_INTR;
     }
 
-    /* Ring 3 POSIX pipe, socket, VFS, and reference IPC servers. */
+    /* Ring 3 pipe, socket, VFS, and reference IPC servers. */
     spawn_image(tar_phys, tar_size, "pipeserv", 100, 0);
     spawn_image(tar_phys, tar_size, "sockserv", 100, 0);
     pcb_t *vfs = spawn_image(tar_phys, tar_size, "vfsserv", 100, 0);
@@ -963,7 +963,7 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "stdiotest", 100, 0);
     /* POSIX.1-2024 AF_UNIX local sockets and accept4 test. */
     spawn_image(tar_phys, tar_size, "socktest", 100, 0);
-    /* POSIX.1-2024 XCU shell (sh) and core utilities test. */
+    /* Command shell (sh) and core utilities test (POSIX.1-2024 XCU target). */
     spawn_image(tar_phys, tar_size, "shtest", 100, 0);
 
     sched_activate();
