@@ -43,3 +43,15 @@ The system must parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides
 (`ttyserv`, `rtcdrv`) must accept discovered `argv` port and IRQ arguments and
 own user `OPOST` TX with early boot fallback ({need}`SYS_BOOT_0001`).
 ```
+
+```{swr} Isolate x86-64 platform code behind arch/x86-64 HAL boundaries
+:id: SWR_BOOT_0004
+:status: draft
+:derives: SYS_BOOT_0001
+:traces: ADR_0024
+
+The build system, kernel, `libc`, and hardware drivers must isolate `x86-64`
+code under `x86-64` folders selected by `-DMICROKERNEL_ARCH=x86-64`. Core
+kernel, `libc`, and Ring 3 servers must call portable HAL interfaces so future
+`arm64` support plugs in cleanly ({need}`SYS_BOOT_0001`).
+```

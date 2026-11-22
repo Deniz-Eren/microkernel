@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Defined the platform abstraction architecture (`ADR_0024`), added `RDM_0008`
+  in `docs/records/ROADMAP.md` for future 64-bit ARM (`arm64`) support (no
+  legacy 32-bit `x86`), queued `TSK_0026` (`SWR_BOOT_0004`) to isolate `x86-64`
+  platform code behind `x86-64` HAL folders, and updated `README.md` and
+  `docs/10-product/vision.md` to state `x86-64` as the current active platform.
 - Added a Mermaid documentation guideline to `AGENTS.md` instructing agents to
   include purposeful, vertical (`flowchart TD` / `direction TB`), timeless
   Mermaid diagrams where helpful to illustrate documented systems and concepts.

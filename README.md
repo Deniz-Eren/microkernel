@@ -1,10 +1,12 @@
-# Microkernel — x86-64 Microkernel
+# Microkernel — Freestanding 64-Bit Microkernel
 
-Microkernel is a preemptive, message-passing x86-64 operating system written in
-freestanding C17. It is working toward compatibility with interfaces from
-**POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026)** in user space.
-The Ring 0 kernel stays minimal, while system servers and applications run as
-isolated Ring 3 processes that communicate over synchronous IPC channels.
+Microkernel is a preemptive, message-passing 64-bit operating system written in
+freestanding C17. It currently targets `x86-64`, with future 64-bit ARM
+(`arm64`) planned on the [roadmap](docs/records/ROADMAP.md). It is working
+toward compatibility with interfaces from **POSIX.1-2024 (IEEE Std 1003.1-2024 /
+ISO/IEC/IEEE 9945:2026)** in user space. The Ring 0 kernel stays minimal, while
+system servers and applications run as isolated Ring 3 processes that
+communicate over synchronous IPC channels.
 
 The project uses a closed **Blueprint -> Fabricator -> Testbed -> Gates** loop
 driven by AI engineering agents inside a deterministic **Podman** container

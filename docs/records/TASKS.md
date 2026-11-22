@@ -47,6 +47,19 @@ Register compiler freestanding headers in Gate 2 and add `<sys/utsname.h>`,
 and `realpath` ({need}`SWR_LIBC_0008`).
 ```
 
+### TSK_0026 — Isolate x86-64 platform code behind x86-64 HAL folders
+
+```{task} Isolate x86-64 platform code behind x86-64 HAL folders
+:id: TSK_0026
+:status: open
+:traces: ADR_0024, SWR_BOOT_0004
+
+Move `x86-64` kernel, `libc`, and UART/RTC platform code into `x86-64` folders
+behind a portable HAL. Parameterize CMake, QEMU, and audit scripts on
+`-DMICROKERNEL_ARCH=x86-64` while keeping `x86-64` as the sole active target
+({need}`SWR_BOOT_0004`).
+```
+
 ### TSK_0024 — Build Ring 3 virtio-blk driver and writable disk mount in vfsserv
 
 ```{task} Build Ring 3 virtio-blk driver and writable disk mount in vfsserv

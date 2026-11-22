@@ -2,11 +2,11 @@
 
 ## Mission
 
-`microkernel` is a minimal, verifiable x86-64 microkernel operating system. The
-Ring 0 kernel stays small and supplies only scheduling, synchronous IPC,
-threads, signals, and W^X memory management. All higher-level servers and
-applications run as isolated Ring 3 user processes that send messages to each
-other.
+`microkernel` is a minimal, verifiable 64-bit microkernel operating system
+(currently targeting `x86-64`, with future `arm64` planned). The Ring 0 kernel
+stays small and supplies only scheduling, synchronous IPC, threads, signals, and
+W^X memory management. All higher-level servers and applications run as isolated
+Ring 3 user processes that send messages to each other.
 
 ## Principles
 

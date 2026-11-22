@@ -230,6 +230,8 @@ TN: XCU          # proper name (POSIX Shell and Utilities)
 TN: Base         # proper name (POSIX.1-2024 Base profile)
 TN: Issue        # proper name (POSIX Issue 8)
 TN: x86-64       # proper name
+TN: arm64        # proper name (64-bit ARM architecture)
+TN: HAL          # proper name (Hardware Abstraction Layer)
 TN: C17          # proper name
 TN: C11          # proper name
 TN: trademark    # category 19 — legal attribution notice

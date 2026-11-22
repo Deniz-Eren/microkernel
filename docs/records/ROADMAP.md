@@ -38,3 +38,20 @@ Work toward compatibility with interfaces from POSIX.1-2024 (IEEE Std
 `aio_*`. Cover command shell utilities (`$'...'`, `set -o pipefail`, `read -d`)
 with automated compatibility gates ({need}`BDR_0003`, {need}`ADR_0003`).
 ```
+
+### RDM_0008 — Platform abstraction and future 64-bit ARM (arm64) support
+
+```{roadmap} Platform abstraction and future 64-bit ARM (arm64) support
+---
+id: RDM_0008
+status: open
+traces: >
+  ADR_0024, SYS_BOOT_0001, SYS_MEM_0001, SYS_PROC_0001, SYS_IPC_0001,
+  SYS_LIBC_0001
+---
+
+Keep `x86-64` as the active target while isolating architecture code under
+`x86-64` platform folders. Add future 64-bit ARM (`arm64`) support for QEMU
+`virt` (`EL1`/`EL0`, `TTBR0`/`TTBR1`, GIC, Generic Timer, `svc #0`, `TPIDR_EL0`,
+and MMIO `PL011` UART) with no legacy 32-bit `x86` ({need}`ADR_0024`).
+```
