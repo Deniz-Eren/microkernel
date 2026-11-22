@@ -507,9 +507,18 @@ int main(int argc, char **argv) {
             break;
         case TTY_OP_WRITE: {
             uint32_t len = req.len > TTY_DATA_MAX ? TTY_DATA_MAX : req.len;
+            uint8_t out[TTY_DATA_MAX * 2u];
+            size_t out_len = 0u;
+            int do_onlcr = ((g_tio.c_oflag & OPOST) != 0u &&
+                            (g_tio.c_oflag & ONLCR) != 0u);
             for (uint32_t i = 0; i < len; i++) {
-                tty_tx_byte(req.u.data[i]);
+                uint8_t c = req.u.data[i];
+                if (do_onlcr && c == '\n') {
+                    out[out_len++] = '\r';
+                }
+                out[out_len++] = c;
             }
+            tty_uart_write(out, out_len);
             rep.err = 0;
             rep.len = len;
             (void)ReplyMsg((int)msgid, &rep, sizeof(rep));

@@ -13,8 +13,10 @@
 #include <stdint.h>
 #include <kernel/arch.h>
 #include <kernel/printk.h>
+#include <kernel/spinlock.h>
 
 static int g_quiet;
+static spinlock_t g_console_lock = SPINLOCK_INIT;
 
 void serial_set_quiet(int quiet) {
     g_quiet = quiet;
@@ -144,14 +146,23 @@ static int kvsnprintf(char *buf, size_t n, const char *fmt, va_list ap) {
     return (int)(p - buf);
 }
 
+void console_write_locked(const char *s, size_t n) {
+    uint64_t flags = spin_lock_irqsave(&g_console_lock);
+    arch_console_write(s, n);
+    spin_unlock_irqrestore(&g_console_lock, flags);
+}
+
+void console_write_raw_locked(const char *s, size_t n) {
+    uint64_t flags = spin_lock_irqsave(&g_console_lock);
+    arch_console_write_raw(s, n);
+    spin_unlock_irqrestore(&g_console_lock, flags);
+}
+
 void printk_v(const char *fmt, va_list ap) {
-    static char buf[2048];
-    kvsnprintf(buf, sizeof(buf), fmt, ap);
-    if (!g_quiet) {
-        const char *s = buf;
-        while (*s) {
-            arch_console_putc(*s++);
-        }
+    char buf[512];
+    int len = kvsnprintf(buf, sizeof(buf), fmt, ap);
+    if (!g_quiet && len > 0) {
+        console_write_locked(buf, (size_t)len);
     }
 }
 

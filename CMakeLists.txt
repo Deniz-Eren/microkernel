@@ -209,6 +209,7 @@ add_subdirectory(tests/simdtest)
 add_subdirectory(tests/mathtest)
 add_subdirectory(tests/blktest)
 add_subdirectory(tests/ext2test)
+add_subdirectory(tests/smptest)
 add_subdirectory(tests/stresstest)
 
 #------------------------------------------------------------------------------
@@ -431,5 +432,17 @@ if(MICROKERNEL_ARCH STREQUAL "x86-64" AND NOT MICROKERNEL_COVERAGE)
     set_tests_properties(
         ipc.vfs_persist
         PROPERTIES LABELS "ipc;vfs"
+    )
+    add_test(
+        NAME proc.smp_cores
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            "${CMAKE_SOURCE_DIR}/tests/boot/test_smp_cores.py"
+            --iso "${CMAKE_BINARY_DIR}/microkernel.iso"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+    set_tests_properties(
+        proc.smp_cores
+        PROPERTIES LABELS "proc;smp"
     )
 endif()

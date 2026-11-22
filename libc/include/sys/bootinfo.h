@@ -35,6 +35,7 @@ typedef struct boot_info {
     uint32_t serial_gsi;  /* ACPI SPCR / MADT serial GSI */
     uint32_t rtc_gsi;     /* ACPI MADT RTC GSI */
     uint32_t cpu_features;
+    uint32_t cpu_count; /* online CPU count reported by SMP bring-up */
     char cmdline[128];
 } boot_info_t;
 

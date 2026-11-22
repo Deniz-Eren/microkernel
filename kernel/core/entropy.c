@@ -11,15 +11,17 @@
 #include <kernel/arch.h>
 #include <kernel/entropy.h>
 #include <kernel/sched.h>
+#include <kernel/spinlock.h>
 #include <kernel/time.h>
 #include <kernel/uaccess.h>
 #include <sys/errno.h>
 #include <time.h>
 
-/* need:: COMP_PROC_0002 */
+/* need:: COMP_PROC_0002 COMP_PROC_0008 */
 
 #define ENTROPY_MAX_LEN 256u
 
+static spinlock_t g_entropy_lock = SPINLOCK_INIT;
 static uint64_t g_state[4];
 static int g_seeded;
 
@@ -78,14 +80,15 @@ long sys_getentropy(uint64_t buf_va, uint64_t len) {
         return -EFAULT;
     }
 
-    entropy_seed_if_needed();
+    uint8_t kbuf[ENTROPY_MAX_LEN];
     tcb_t *cur = sched_current();
+    uint64_t flags = spin_lock_irqsave(&g_entropy_lock);
+    entropy_seed_if_needed();
     if (cur) {
         g_state[2] ^= ((uint64_t)cur->pid << 32) | (uint64_t)cur->tid;
     }
     g_state[3] ^= time_clock_now_ns(CLOCK_MONOTONIC);
 
-    uint8_t kbuf[ENTROPY_MAX_LEN];
     size_t done = 0;
     while (done < (size_t)len) {
         uint64_t w = entropy_next64();
@@ -93,6 +96,7 @@ long sys_getentropy(uint64_t buf_va, uint64_t len) {
             kbuf[done++] = (uint8_t)(w >> (b * 8));
         }
     }
+    spin_unlock_irqrestore(&g_entropy_lock, flags);
 
     if (copy_to_user(buf_va, kbuf, (size_t)len) < 0) {
         return -EFAULT;

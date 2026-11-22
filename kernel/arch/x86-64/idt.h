@@ -13,4 +13,5 @@
 #include <kernel/trapframe.h>
 
 void idt_init(void);
+void idt_load_ap(void);
 void interrupt_handler(trapframe_t *tf);

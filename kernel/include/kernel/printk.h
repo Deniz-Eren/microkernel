@@ -14,4 +14,6 @@
 
 void printk(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void printk_v(const char *fmt, va_list ap);
+void console_write_locked(const char *s, size_t n);
+void console_write_raw_locked(const char *s, size_t n);
 void serial_set_quiet(int quiet);

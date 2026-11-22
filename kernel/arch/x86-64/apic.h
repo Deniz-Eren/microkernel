@@ -1,6 +1,6 @@
 /**
  * @file     apic.h
- * @brief    Local APIC timer and interrupt acknowledgment declarations
+ * @brief    Local APIC timer, IPI delivery, and interrupt acknowledgment API
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -11,10 +11,18 @@
 #pragma once
 #include <stdint.h>
 
+#define IPI_RESCHED_VECTOR 0xF0u
+#define IPI_TLB_VECTOR 0xF1u
+
 void apic_init(void);
+void apic_init_ap(void);
 void apic_eoi(void);
 uint64_t timer_ticks(void);
-void apic_irq_dispatch(uint64_t vec);
+void apic_irq_dispatch(uint64_t vec, int from_user);
 int acpi_poweroff(void);
 uint32_t lapic_read(uint32_t reg);
 void lapic_write(uint32_t reg, uint32_t value);
+void apic_send_init(uint32_t lapic_id);
+void apic_send_sipi(uint32_t lapic_id, uint8_t vector);
+void apic_send_ipi(uint32_t lapic_id, uint8_t vector);
+void apic_send_ipi_others(uint8_t vector);

@@ -3,6 +3,7 @@
 # Ordered regex expectations for headless QEMU serial test runs.
 \[OK\] CPU x86-64-v3 verified: XSAVE=.* bytes XCR0=0x
 \[OK\] PMM/VMM/APIC initialized
+\[OK\] SMP online: 2 CPUs ready
 ACPI MADT discovered IOAPIC @ 0x
 name resolved /dev/echo
 sigaction rejects SIGKILL and SIGSTOP with EINVAL
@@ -83,6 +84,11 @@ unprivileged VMMapMMIO, DMAAlloc, and PCIConfig rejected with EPERM
 blktest /dev/blk sector read/write and IOAPIC IRQ pulses verified
 vfsserv .*mounted.* ext2 on /mnt
 ext2test /mnt create, multi-block write/read, truncate, rename, and unlink verified
+SMP SysStats reports 2 online CPUs
+SMP multi-core atomic ping-pong
+SMP concurrent futex, mutex, condvar, and sem
+SMP concurrent PMM, VMM, TLB shootdown, and COW
+SMP concurrent IPC and XSAVE/FMA isolation
 <sys/select\.h> select, pselect, multi-server FDs, and sigmask
 cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,
 zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks

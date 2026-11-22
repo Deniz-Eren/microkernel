@@ -14,3 +14,4 @@
 void serial_init(void);
 void serial_putc(char c);
 void serial_write(const char *s, size_t n);
+void serial_write_raw(const char *s, size_t n);

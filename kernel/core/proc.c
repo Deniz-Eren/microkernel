@@ -20,6 +20,8 @@
 #include <kernel/pmm.h>
 #include <kernel/printk.h>
 #include <kernel/sched.h>
+#include <kernel/smp.h>
+#include <kernel/spinlock.h>
 #include <kernel/string.h>
 #include <kernel/time.h>
 #include <kernel/trapframe.h>
@@ -280,7 +282,7 @@ static pcb_t *proc_spawn_from_bootfs_argv(pcb_t *parent, uint64_t tar_phys,
         return NULL;
     }
     if (precreate_chan) {
-        channel_create(p->pid);
+        channel_precreate_sysproc(p->pid);
     }
     tcb_t *main_t = thread_create(p, entry, user_rsp, prio);
     /* Pre-point FS.base at the zeroed bottom of the main stack so %fs:0 reads
@@ -370,6 +372,10 @@ void proc_close_fds(pcb_t *p, int cloexec_only) {
     if (!p) {
         return;
     }
+    struct __k_fd_entry closed[PROC_MAX_FDS];
+    int nclosed = 0;
+
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
     for (int i = 0; i < PROC_MAX_FDS; i++) {
         if (p->fds[i].kind == FD_KIND_NONE) {
             continue;
@@ -377,15 +383,20 @@ void proc_close_fds(pcb_t *p, int cloexec_only) {
         if (cloexec_only && !(p->fds[i].fd_flags & FD_FLAG_CLOEXEC)) {
             continue;
         }
-        if ((p->fds[i].kind == FD_KIND_SERVER ||
-             p->fds[i].kind == FD_KIND_VFS || p->fds[i].kind == FD_KIND_SOCK) &&
-            p->fds[i].srv_pid && p->fds[i].srv_chanid) {
-            ipc_send_pulse_kernel(p->fds[i].srv_pid, p->fds[i].srv_chanid,
-                                  PULSE_CODE_FD_CLOSE, p->fds[i].srv_handle);
-        } else if (p->fds[i].kind == FD_KIND_SHM) {
-            shm_release_id(p->fds[i].srv_handle);
-        }
+        closed[nclosed++] = p->fds[i];
         memset(&p->fds[i], 0, sizeof(p->fds[i]));
+    }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
+    for (int i = 0; i < nclosed; i++) {
+        if ((closed[i].kind == FD_KIND_SERVER ||
+             closed[i].kind == FD_KIND_VFS || closed[i].kind == FD_KIND_SOCK) &&
+            closed[i].srv_pid && closed[i].srv_chanid) {
+            ipc_send_pulse_kernel(closed[i].srv_pid, closed[i].srv_chanid,
+                                  PULSE_CODE_FD_CLOSE, closed[i].srv_handle);
+        } else if (closed[i].kind == FD_KIND_SHM) {
+            shm_release_id(closed[i].srv_handle);
+        }
     }
 }
 
@@ -422,29 +433,45 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         if (e.kind == FD_KIND_NONE) {
             return -EINVAL;
         }
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         for (int i = (int)min_fd; i < PROC_MAX_FDS; i++) {
             if (p->fds[i].kind == FD_KIND_NONE) {
                 p->fds[i] = e;
+                spin_unlock_irqrestore(&g_proc_lock, pf);
                 return i;
             }
         }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return -EMFILE;
     }
     case FD_OP_GET: {
-        if (a1 >= PROC_MAX_FDS || p->fds[a1].kind == FD_KIND_NONE) {
+        if (a1 >= PROC_MAX_FDS) {
             return -EBADF;
         }
-        if (a2 != 0 && copy_to_user(a2, &p->fds[a1], sizeof(p->fds[a1])) < 0) {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->fds[a1].kind == FD_KIND_NONE) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -EBADF;
+        }
+        struct __k_fd_entry e = p->fds[a1];
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        if (a2 != 0 && copy_to_user(a2, &e, sizeof(e)) < 0) {
             return -EFAULT;
         }
         return 0;
     }
     case FD_OP_CLOSE: {
-        if (a1 >= PROC_MAX_FDS || p->fds[a1].kind == FD_KIND_NONE) {
+        if (a1 >= PROC_MAX_FDS) {
+            return -EBADF;
+        }
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->fds[a1].kind == FD_KIND_NONE) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -EBADF;
         }
         struct __k_fd_entry old = p->fds[a1];
         memset(&p->fds[a1], 0, sizeof(p->fds[a1]));
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         if (old.kind == FD_KIND_SHM) {
             shm_release_id(old.srv_handle);
         }
@@ -454,36 +481,50 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         return 0;
     }
     case FD_OP_DUP: {
-        if (a1 >= PROC_MAX_FDS || p->fds[a1].kind == FD_KIND_NONE) {
+        if (a1 >= PROC_MAX_FDS) {
             return -EBADF;
         }
         if (a2 >= PROC_MAX_FDS) {
             return -EINVAL;
         }
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->fds[a1].kind == FD_KIND_NONE) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -EBADF;
+        }
         for (int i = (int)a2; i < PROC_MAX_FDS; i++) {
             if (p->fds[i].kind == FD_KIND_NONE) {
                 p->fds[i] = p->fds[a1];
                 p->fds[i].fd_flags = (uint8_t)(a3 & FD_FLAG_CLOEXEC);
-                if (p->fds[i].kind == FD_KIND_SHM) {
-                    shm_acquire_id(p->fds[i].srv_handle);
+                uint8_t kind = p->fds[i].kind;
+                uint32_t handle = p->fds[i].srv_handle;
+                spin_unlock_irqrestore(&g_proc_lock, pf);
+                if (kind == FD_KIND_SHM) {
+                    shm_acquire_id(handle);
                 }
                 return i;
             }
         }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return -EMFILE;
     }
     case FD_OP_DUP3: {
-        if (a1 >= PROC_MAX_FDS || p->fds[a1].kind == FD_KIND_NONE) {
+        if (a1 >= PROC_MAX_FDS || a2 >= PROC_MAX_FDS) {
             return -EBADF;
         }
-        if (a2 >= PROC_MAX_FDS) {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->fds[a1].kind == FD_KIND_NONE) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -EBADF;
         }
         struct __k_fd_entry replaced = p->fds[a2];
         p->fds[a2] = p->fds[a1];
         p->fds[a2].fd_flags = (uint8_t)(a3 & FD_FLAG_CLOEXEC);
-        if (p->fds[a2].kind == FD_KIND_SHM) {
-            shm_acquire_id(p->fds[a2].srv_handle);
+        uint8_t kind = p->fds[a2].kind;
+        uint32_t handle = p->fds[a2].srv_handle;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        if (kind == FD_KIND_SHM) {
+            shm_acquire_id(handle);
         }
         if (replaced.kind == FD_KIND_SHM) {
             shm_release_id(replaced.srv_handle);
@@ -494,19 +535,31 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         return (long)a2;
     }
     case FD_OP_SETFD: {
-        if (a1 >= PROC_MAX_FDS || p->fds[a1].kind == FD_KIND_NONE) {
+        if (a1 >= PROC_MAX_FDS) {
+            return -EBADF;
+        }
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->fds[a1].kind == FD_KIND_NONE) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -EBADF;
         }
         p->fds[a1].fd_flags = (uint8_t)(a2 & FD_FLAG_CLOEXEC);
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return 0;
     }
     case FD_OP_SETFL: {
-        if (a1 >= PROC_MAX_FDS || p->fds[a1].kind == FD_KIND_NONE) {
+        if (a1 >= PROC_MAX_FDS) {
+            return -EBADF;
+        }
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        if (p->fds[a1].kind == FD_KIND_NONE) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -EBADF;
         }
         uint16_t acc = (uint16_t)(p->fds[a1].status_flags & O_ACCMODE);
         uint16_t mut = (uint16_t)(a2 & (uint64_t)(O_NONBLOCK | O_APPEND));
         p->fds[a1].status_flags = (uint16_t)(acc | mut);
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return 0;
     }
     case FD_OP_LIST: {
@@ -514,9 +567,14 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         if (max_n > PROC_MAX_FDS) {
             max_n = PROC_MAX_FDS;
         }
-        if (max_n > 0 &&
-            copy_to_user(a1, p->fds, (size_t)max_n * sizeof(p->fds[0])) < 0) {
-            return -EFAULT;
+        struct __k_fd_entry snap[PROC_MAX_FDS];
+        if (max_n > 0) {
+            uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+            memcpy(snap, p->fds, (size_t)max_n * sizeof(p->fds[0]));
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            if (copy_to_user(a1, snap, (size_t)max_n * sizeof(p->fds[0])) < 0) {
+                return -EFAULT;
+            }
         }
         return (long)max_n;
     }
@@ -524,11 +582,15 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         if (a1 == 0u || a2 == 0u) {
             return -EINVAL;
         }
+        char kcwd[PROC_CWD_MAX];
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         size_t len = strlen(p->cwd);
+        memcpy(kcwd, p->cwd, len + 1u);
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         if (len + 1u > a2) {
             return -ERANGE;
         }
-        if (copy_to_user(a1, p->cwd, len + 1u) < 0) {
+        if (copy_to_user(a1, kcwd, len + 1u) < 0) {
             return -EFAULT;
         }
         return (long)len;
@@ -545,15 +607,37 @@ long sys_fd_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3,
         if (len == 0 || kpath[0] != '/') {
             return -EINVAL;
         }
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         memcpy(p->cwd, kpath, (size_t)len + 1u);
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return 0;
     }
     case FD_OP_UMASK: {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         uint32_t old = p->umask;
         if (a2 == 0u) {
             p->umask = (uint32_t)(a1 & 0777u);
         }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return (long)old;
+    }
+    case FD_OP_CONSOLE_TX: {
+        if (!(p->caps & CAP_SYS_INTR)) {
+            return -EPERM;
+        }
+        if (a1 == 0u || a2 == 0u) {
+            return 0;
+        }
+        size_t len = (size_t)a2;
+        if (len > 1024u) {
+            len = 1024u;
+        }
+        char kbuf[1024];
+        if (copy_from_user(kbuf, a1, len) < 0) {
+            return -EFAULT;
+        }
+        console_write_raw_locked(kbuf, len);
+        return (long)len;
     }
     default:
         return -EINVAL;
@@ -835,6 +919,7 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
     for (;;) {
         int has_matching = 0;
         pcb_t *zombie = NULL;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         for (pcb_t *c = proc_list_head(); c; c = c->next) {
             if (c->parent_pid != parent->pid || c->state == PROC_DEAD) {
                 continue;
@@ -851,34 +936,61 @@ long sys_proc_wait(int64_t pid, uint64_t status_va, uint64_t options) {
             has_matching = 1;
             if (c->state == PROC_ZOMBIE) {
                 zombie = c;
+                zombie->state = PROC_DEAD;
                 break;
             }
         }
         if (!has_matching) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -ECHILD;
         }
         if (zombie) {
             int wstatus = zombie->exit_signal
                               ? (zombie->exit_signal & 0x7F)
                               : ((zombie->exit_code & 0xFF) << 8);
+            uint32_t reaped_pid = zombie->pid;
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             if (status_va != 0 &&
                 copy_to_user(status_va, &wstatus, sizeof(wstatus)) < 0) {
+                pf = spin_lock_irqsave(&g_proc_lock);
+                zombie->state = PROC_ZOMBIE;
+                spin_unlock_irqrestore(&g_proc_lock, pf);
                 return -EFAULT;
             }
-            uint32_t reaped_pid = zombie->pid;
-            parent->cutime_ticks += zombie->utime_ticks + zombie->cutime_ticks;
-            parent->cstime_ticks += zombie->stime_ticks + zombie->cstime_ticks;
-            zombie->state = PROC_DEAD;
+            __atomic_fetch_add(&parent->cutime_ticks,
+                               zombie->utime_ticks + zombie->cutime_ticks,
+                               __ATOMIC_RELAXED);
+            __atomic_fetch_add(&parent->cstime_ticks,
+                               zombie->stime_ticks + zombie->cstime_ticks,
+                               __ATOMIC_RELAXED);
+            /* Ensure zombie threads have exited their CPU before destroying
+             * the zombie's PML4. */
+            for (tcb_t *zt = zombie->threads; zt; zt = zt->proc_next) {
+                while (__atomic_load_n(&zt->on_cpu, __ATOMIC_ACQUIRE) != 0u) {
+                    arch_cpu_relax();
+                }
+            }
             vmm_destroy_user_pml4(zombie->pml4_phys);
             zombie->pml4_phys = 0;
             proc_reap_zombie(zombie);
             return (long)reaped_pid;
         }
         if (options & PROC_WAIT_NOHANG) {
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return 0;
         }
-        sched_block_current(THREAD_WAIT_BLOCKED);
-        if (cur->pending_signals & ~cur->blocked_signals) {
+        spin_lock(&g_sched_lock);
+        if (__atomic_load_n(&cur->pending_signals, __ATOMIC_ACQUIRE) &
+            ~cur->blocked_signals) {
+            spin_unlock(&g_sched_lock);
+            spin_unlock_irqrestore(&g_proc_lock, pf);
+            return -EINTR;
+        }
+        cur->state = THREAD_WAIT_BLOCKED;
+        spin_unlock(&g_proc_lock);
+        schedule_with_lock(pf);
+        if (__atomic_load_n(&cur->pending_signals, __ATOMIC_ACQUIRE) &
+            ~cur->blocked_signals) {
             return -EINTR;
         }
     }
@@ -954,7 +1066,9 @@ long sys_sys_stats(uint64_t ubuf) {
     st.pmm_total_bytes = pmm_total_bytes();
     st.pmm_free_bytes = pmm_free_bytes();
     st.active_shm_objs = shm_active_count();
+    st.online_cpus = smp_online_cpus();
 
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
     for (pcb_t *p = proc_list_head(); p; p = p->next) {
         if (p->state == PROC_ALIVE) {
             st.live_procs++;
@@ -970,6 +1084,7 @@ long sys_sys_stats(uint64_t ubuf) {
             st.open_fds++;
         }
     }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
     return copy_to_user(ubuf, &st, sizeof(st)) < 0 ? -EFAULT : 0;
 }
 
@@ -978,53 +1093,73 @@ long sys_proc_pgid(uint64_t op, int64_t pid, int64_t pgid) {
     if (!cur) {
         return -EPERM;
     }
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    long rc = -EINVAL;
     switch (op) {
     case PGID_OP_GETPGID: {
         if (pid < 0) {
-            return -EINVAL;
+            rc = -EINVAL;
+            break;
         }
-        pcb_t *target = (pid == 0) ? cur : proc_find((uint32_t)pid);
+        pcb_t *target = (pid == 0) ? cur : proc_find_locked((uint32_t)pid);
         if (!target || target->state == PROC_DEAD) {
-            return -ESRCH;
+            rc = -ESRCH;
+            break;
         }
-        return (long)target->pgid;
+        rc = (long)target->pgid;
+        break;
     }
     case PGID_OP_GETSID: {
         if (pid < 0) {
-            return -EINVAL;
+            rc = -EINVAL;
+            break;
         }
-        pcb_t *target = (pid == 0) ? cur : proc_find((uint32_t)pid);
+        pcb_t *target = (pid == 0) ? cur : proc_find_locked((uint32_t)pid);
         if (!target || target->state == PROC_DEAD) {
-            return -ESRCH;
+            rc = -ESRCH;
+            break;
         }
-        return (long)target->sid;
+        rc = (long)target->sid;
+        break;
     }
     case PGID_OP_SETSID: {
+        int conflict = 0;
         for (pcb_t *p = proc_list_head(); p; p = p->next) {
             if (p->state == PROC_ALIVE && p->pgid == cur->pid) {
-                return -EPERM;
+                conflict = 1;
+                break;
             }
+        }
+        if (conflict) {
+            rc = -EPERM;
+            break;
         }
         cur->sid = cur->pid;
         cur->pgid = cur->pid;
-        return (long)cur->sid;
+        rc = (long)cur->sid;
+        break;
     }
     case PGID_OP_SETPGID: {
         if (pid < 0 || pgid < 0) {
-            return -EINVAL;
+            rc = -EINVAL;
+            break;
         }
-        pcb_t *target = (pid == 0) ? cur : proc_find((uint32_t)pid);
+        pcb_t *target = (pid == 0) ? cur : proc_find_locked((uint32_t)pid);
         if (!target || target->state == PROC_DEAD) {
-            return -ESRCH;
+            rc = -ESRCH;
+            break;
         }
         if (target != cur && target->parent_pid != cur->pid) {
-            return -ESRCH;
+            rc = -ESRCH;
+            break;
         }
         if (target != cur && target->has_execed) {
-            return -EACCES;
+            rc = -EACCES;
+            break;
         }
         if (target->pid == target->sid) {
-            return -EPERM;
+            rc = -EPERM;
+            break;
         }
         uint32_t new_pgid = (pgid == 0) ? target->pid : (uint32_t)pgid;
         if (new_pgid != target->pid) {
@@ -1037,15 +1172,20 @@ long sys_proc_pgid(uint64_t op, int64_t pid, int64_t pgid) {
                 }
             }
             if (!exists_in_sid) {
-                return -EPERM;
+                rc = -EPERM;
+                break;
             }
         }
         target->pgid = new_pgid;
-        return 0;
+        rc = 0;
+        break;
     }
     default:
-        return -EINVAL;
+        rc = -EINVAL;
+        break;
     }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+    return rc;
 }
 
 void proc_spawn_init(void) {
@@ -1067,6 +1207,7 @@ void proc_spawn_init(void) {
     g_bootinfo.serial_gsi = ai->serial_gsi;
     g_bootinfo.rtc_gsi = ai->rtc_gsi;
     g_bootinfo.cpu_features = arch_cpu_features();
+    g_bootinfo.cpu_count = smp_online_cpus();
     const char *cmd = mb_cmdline();
     memcpy(g_bootinfo.cmdline, cmd,
            strlen(cmd) < sizeof(g_bootinfo.cmdline) - 1
@@ -1173,6 +1314,9 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "blktest", 98, 0);
     /* Ring 3 /mnt ext2 writable on-disk filesystem persistence test. */
     spawn_image(tar_phys, tar_size, "ext2test", 95, 0);
+    /* Multi-core SMP concurrency (parallelism, futex, PMM/VMM/COW, IPC) test.
+     */
+    spawn_image(tar_phys, tar_size, "smptest", 94, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

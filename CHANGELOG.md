@@ -21,6 +21,19 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Implemented multi-core SMP bring-up and kernel lock hardening (`TSK_0025`,
+  `SWR_PROC_0009`, `ADR_0027`, `COMP_PROC_0008`, `VER_PROC_0007`): parsed ACPI
+  `MADT` Processor Local APIC entries (`kernel/core/acpi.c`), added portable
+  spinlocks (`kernel/include/kernel/spinlock.h`), per-CPU state
+  (`kernel/include/kernel/smp.h`, `kernel/core/smp.c`), the `x86-64` 16-bit to
+  64-bit `INIT`/`SIPI` AP trampoline (`kernel/arch/x86-64/ap_trampoline.S`),
+  per-CPU GDT/TSS/`GS.base`/`swapgs` and `x86-64-v3` `XSAVE`/`XCR0` AP init,
+  Reschedule (`0xF0`) and synchronous TLB Shootdown (`0xF1`) IPIs, per-CPU idle
+  threads, and spinlock protection across `sched`, `pmm`, `kheap`, `vmm`, `ipc`,
+  `proc`, `time`, `signal`, `intr`, `shm`, `entropy`, `cov`, and `printk`,
+  exposed `online_cpus`/`cpu_count` in `struct __k_sys_stats`/`boot_info_t`, and
+  added Ring 3 `tests/smptest/` plus 4-core CTest `proc.smp_cores`
+  (`tests/boot/test_smp_cores.py`).
 - Mounted a writable rev-1 `ext2` on-disk filesystem at `/mnt` inside Ring 3
   `vfsserv` over `/dev/blk` (`servers/vfsserv/ext2.{h,c}`,
   `servers/vfsserv/main.c`) supporting automatic format/mount, direct and
@@ -137,6 +150,11 @@ Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- Fixed a multi-core futex self-deadlock in `libc/src/malloc.c` (`heap_lock()`)
+  where `__atomic_exchange_n(&g_heap_lock, 2u)` could acquire an unlocked mutex
+  (`0 -> 2`) and fall through to `FUTEX_WAIT(2)` on its own lock, and reserved
+  well-known `chanid 1` for PID 1 (`sysproc`) in `kernel/core/channel.c` to
+  prevent SMP boot-time channel ID races.
 - Fixed process current working directory (`cwd`) and file creation mask
   (`umask`) persistence across `execve()` and `fork()` by storing `cwd` and
   `umask` in the kernel `pcb_t` (`kernel/include/kernel/sched.h`,

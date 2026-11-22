@@ -48,6 +48,7 @@ struct __k_sys_stats {
     uint32_t live_threads;
     uint32_t open_fds;
     uint32_t active_shm_objs;
+    uint32_t online_cpus;
 };
 
 static inline long SysStats(struct __k_sys_stats *out) {

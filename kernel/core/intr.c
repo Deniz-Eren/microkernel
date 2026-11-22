@@ -1,6 +1,6 @@
 /**
  * @file     intr.c
- * @brief    IOAPIC IRQ routing, IRQ-to-IPC pulse delivery, and Ring 3 IOPL
+ * @brief    SMP-safe IOAPIC IRQ routing, IRQ-to-IPC pulses, and PCI config
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -14,13 +14,14 @@
 #include <kernel/ipc.h>
 #include <kernel/printk.h>
 #include <kernel/sched.h>
+#include <kernel/spinlock.h>
 #include <kernel/uaccess.h>
 #include <kernel/vmm.h>
 #include <sys/errno.h>
 #include <sys/intr.h>
 #include "channel.h"
 
-/* need:: COMP_IPC_0003 COMP_IPC_0015 */
+/* need:: COMP_IPC_0003 COMP_IPC_0015 COMP_PROC_0008 */
 
 #define IOAPIC_PHYS_BASE 0xFEC00000ULL
 #define IOAPIC_VA 0xFFFFFFFF90001000ULL
@@ -44,22 +45,23 @@ typedef struct {
     chan_msg_t pulse_node; /* pre-allocated: IRQ context never calls kmalloc */
 } irq_slot_t;
 
+static spinlock_t g_intr_lock = SPINLOCK_INIT;
 static volatile uint32_t *g_ioapic;
 static uint32_t g_ioapic_max_irq;
 static uint32_t g_bsp_lapic_id;
 static irq_slot_t g_irq_slots[MAX_IRQS];
 
-static uint32_t ioapic_read(uint32_t reg) {
+static uint32_t ioapic_read_locked(uint32_t reg) {
     g_ioapic[IOAPIC_REGSEL / 4] = reg;
     return g_ioapic[IOAPIC_IOWIN / 4];
 }
 
-static void ioapic_write(uint32_t reg, uint32_t val) {
+static void ioapic_write_locked(uint32_t reg, uint32_t val) {
     g_ioapic[IOAPIC_REGSEL / 4] = reg;
     g_ioapic[IOAPIC_IOWIN / 4] = val;
 }
 
-static void ioapic_set_entry(uint32_t irq, uint32_t vector, int masked) {
+static void ioapic_set_entry_locked(uint32_t irq, uint32_t vector, int masked) {
     if (!g_ioapic || irq >= g_ioapic_max_irq) {
         return;
     }
@@ -76,24 +78,24 @@ static void ioapic_set_entry(uint32_t irq, uint32_t vector, int masked) {
         lo |= IOAPIC_MASK_BIT;
     }
     uint32_t hi = (g_bsp_lapic_id & 0xFFu) << 24;
-    ioapic_write(IOAPIC_REDTBL_BASE + 2u * irq + 1u, hi);
-    ioapic_write(IOAPIC_REDTBL_BASE + 2u * irq, lo);
+    ioapic_write_locked(IOAPIC_REDTBL_BASE + 2u * irq + 1u, hi);
+    ioapic_write_locked(IOAPIC_REDTBL_BASE + 2u * irq, lo);
 }
 
-static void ioapic_mask_irq(uint32_t irq) {
+static void ioapic_mask_irq_locked(uint32_t irq) {
     if (!g_ioapic || irq >= g_ioapic_max_irq) {
         return;
     }
     uint32_t reg = IOAPIC_REDTBL_BASE + 2u * irq;
-    ioapic_write(reg, ioapic_read(reg) | IOAPIC_MASK_BIT);
+    ioapic_write_locked(reg, ioapic_read_locked(reg) | IOAPIC_MASK_BIT);
 }
 
-static void ioapic_unmask_irq(uint32_t irq) {
+static void ioapic_unmask_irq_locked(uint32_t irq) {
     if (!g_ioapic || irq >= g_ioapic_max_irq) {
         return;
     }
     uint32_t reg = IOAPIC_REDTBL_BASE + 2u * irq;
-    ioapic_write(reg, ioapic_read(reg) & ~IOAPIC_MASK_BIT);
+    ioapic_write_locked(reg, ioapic_read_locked(reg) & ~IOAPIC_MASK_BIT);
 }
 
 void ioapic_init(void) {
@@ -104,7 +106,7 @@ void ioapic_init(void) {
     vmm_map_page(IOAPIC_VA, ioapic_phys,
                  VMM_PRESENT | VMM_WRITE | VMM_PCD | VMM_NX);
     g_ioapic = (volatile uint32_t *)IOAPIC_VA;
-    uint32_t ver = ioapic_read(IOAPIC_REG_VER);
+    uint32_t ver = ioapic_read_locked(IOAPIC_REG_VER);
     uint32_t pins = ((ver >> 16) & 0xFFu) + 1u;
     if (pins > MAX_IRQS) {
         pins = MAX_IRQS;
@@ -114,7 +116,7 @@ void ioapic_init(void) {
 
     /* Mask all IOAPIC lines until a privileged Ring 3 driver attaches them. */
     for (uint32_t i = 0; i < g_ioapic_max_irq; i++) {
-        ioapic_set_entry(i, IRQ_VECTOR_BASE + i, 1);
+        ioapic_set_entry_locked(i, IRQ_VECTOR_BASE + i, 1);
     }
     printk("[ioapic] mapped @ %llx, %u redirection entries (bsp id=%u)\n",
            (unsigned long long)ioapic_phys, g_ioapic_max_irq, g_bsp_lapic_id);
@@ -125,16 +127,21 @@ int intr_dispatch_irq(uint64_t vec) {
         return 0;
     }
     uint32_t irq = (uint32_t)(vec - IRQ_VECTOR_BASE);
+    uint64_t flags = spin_lock_irqsave(&g_intr_lock);
     irq_slot_t *slot = &g_irq_slots[irq];
     if (!slot->attached) {
+        spin_unlock_irqrestore(&g_intr_lock, flags);
         return 0;
     }
-    /* Mask the line until the Ring 3 driver acknowledges and calls IntrUnmask,
-     * send LAPIC EOI before any potential preemption, then deliver pulse. */
-    ioapic_mask_irq(irq);
+    int chanid = slot->chanid;
+    uint32_t code = slot->pulse_code;
+    uint32_t val = slot->pulse_val;
+    chan_msg_t *node = &slot->pulse_node;
+    ioapic_mask_irq_locked(irq);
+    spin_unlock_irqrestore(&g_intr_lock, flags);
+
     arch_irq_eoi();
-    ipc_deliver_irq_pulse(slot->chanid, &slot->pulse_node, slot->pulse_code,
-                          slot->pulse_val);
+    ipc_deliver_irq_pulse(chanid, node, code, val);
     return 1;
 }
 
@@ -154,8 +161,11 @@ long sys_intr_attach_event(uint64_t irq, uint64_t chanid, uint64_t code,
     if (!ch || ch->owner_pid != p->pid) {
         return -ESRCH;
     }
+
+    uint64_t flags = spin_lock_irqsave(&g_intr_lock);
     irq_slot_t *slot = &g_irq_slots[irq];
     if (slot->attached && slot->owner_pid != p->pid) {
+        spin_unlock_irqrestore(&g_intr_lock, flags);
         return -EBUSY;
     }
     slot->attached = 1;
@@ -166,7 +176,8 @@ long sys_intr_attach_event(uint64_t irq, uint64_t chanid, uint64_t code,
     slot->pulse_node.is_static = 1;
     slot->pulse_node.in_use = 0;
 
-    ioapic_set_entry((uint32_t)irq, IRQ_VECTOR_BASE + (uint32_t)irq, 0);
+    ioapic_set_entry_locked((uint32_t)irq, IRQ_VECTOR_BASE + (uint32_t)irq, 0);
+    spin_unlock_irqrestore(&g_intr_lock, flags);
     return 0;
 }
 
@@ -178,11 +189,14 @@ long sys_intr_unmask(uint64_t irq) {
     if (irq == 0 || irq >= g_ioapic_max_irq) {
         return -EINVAL;
     }
+    uint64_t flags = spin_lock_irqsave(&g_intr_lock);
     irq_slot_t *slot = &g_irq_slots[irq];
     if (!slot->attached || slot->owner_pid != p->pid) {
+        spin_unlock_irqrestore(&g_intr_lock, flags);
         return -EPERM;
     }
-    ioapic_unmask_irq((uint32_t)irq);
+    ioapic_unmask_irq_locked((uint32_t)irq);
+    spin_unlock_irqrestore(&g_intr_lock, flags);
     return 0;
 }
 
@@ -220,14 +234,18 @@ long sys_pci_cfg(uint64_t op, uint64_t bdf, uint64_t offset, uint64_t arg) {
         if (arg == 0ULL) {
             return -EINVAL;
         }
+        uint64_t flags = spin_lock_irqsave(&g_intr_lock);
         uint32_t v = arch_pci_cfg_read32(bus, slot, func, off);
+        spin_unlock_irqrestore(&g_intr_lock, flags);
         if (copy_to_user(arg, &v, sizeof(v)) < 0) {
             return -EFAULT;
         }
         return 0;
     }
     if (op == PCI_CFG_OP_WRITE32) {
+        uint64_t flags = spin_lock_irqsave(&g_intr_lock);
         arch_pci_cfg_write32(bus, slot, func, off, (uint32_t)arg);
+        spin_unlock_irqrestore(&g_intr_lock, flags);
         return 0;
     }
     return -EINVAL;

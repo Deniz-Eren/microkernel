@@ -1,6 +1,6 @@
 /**
  * @file     sched.c
- * @brief    Preemptive 256-priority thread scheduler and thread syscalls
+ * @brief    SMP preemptive 256-priority thread scheduler and thread syscalls
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -10,44 +10,45 @@
 
 #include <kernel/arch.h>
 #include <kernel/cov.h>
-#include <kernel/sched.h>
 #include <kernel/ipc.h>
+#include <kernel/kheap.h>
+#include <kernel/panic.h>
+#include <kernel/pmm.h>
+#include <kernel/printk.h>
+#include <kernel/sched.h>
+#include <kernel/smp.h>
+#include <kernel/spinlock.h>
+#include <kernel/string.h>
 #include <kernel/time.h>
 #include <kernel/trapframe.h>
 #include <kernel/uaccess.h>
-#include <sys/errno.h>
-#include <sys/thread.h>
-#include <kernel/panic.h>
-#include <kernel/printk.h>
-#include <kernel/pmm.h>
 #include <kernel/vmm.h>
-#include <kernel/kheap.h>
-#include <kernel/string.h>
+#include <sys/errno.h>
 #include <sys/microkernel.h>
+#include <sys/thread.h>
 #include <time.h>
 
-/* need:: COMP_PROC_0001 */
+/* need:: COMP_PROC_0001 COMP_PROC_0008 */
 
-/* Maintained by the scheduler for syscall_entry (switch.S). */
-extern unsigned long g_syscall_kstack;
+spinlock_t g_proc_lock = SPINLOCK_INIT;
+spinlock_t g_sched_lock = SPINLOCK_INIT;
+static spinlock_t g_futex_lock = SPINLOCK_INIT;
 
-/* 256-level priority bitmap scheduler. Each level is a FIFO ready queue; the
- * scheduler picks the highest non-empty level (round-robin within it).
- * Invariant: the RUNNING thread is never in a ready queue. schedule()
- * re-enqueues a preempted RUNNING thread and pops the next one. */
-static uint64_t g_ready_bitmap[4]; /* 256 bits, bit set = level non-empty */
+/* Global 256-level priority bitmap scheduler shared across all SMP cores. Each
+ * level is a FIFO ready queue; the scheduler picks the highest non-empty level
+ * (round-robin within it). Invariant: a RUNNING or on_cpu thread is never in a
+ * ready queue; outgoing threads are re-enqueued in sched_post_switch() after
+ * switch_to() has left their stack. */
+static uint64_t g_ready_bitmap[4];
 static tcb_t *g_ready_head[256];
 static tcb_t *g_ready_tail[256];
-static tcb_t *g_current;
-static int g_sched_active;
-static uint64_t g_next_tid = 1;
+static volatile int g_sched_active;
+static uint32_t g_next_tid = 1u;
 static uint8_t *g_fpu_template;
 static size_t g_fpu_size;
 static size_t g_fpu_align;
 
 #define SLICE_TICKS 5
-
-static tcb_t *pick_next(void);
 
 void switch_to(tcb_t *prev, tcb_t *next);
 extern void thread_bootstrap(void);
@@ -60,37 +61,29 @@ static inline void bitmap_clear(unsigned prio) {
     g_ready_bitmap[prio / 64] &= ~(1ULL << (prio % 64));
 }
 
-static int ready_empty(void) {
+static int ready_empty_locked(void) {
     return (g_ready_bitmap[0] | g_ready_bitmap[1] | g_ready_bitmap[2] |
             g_ready_bitmap[3]) == 0ULL;
 }
 
-static tcb_t *pick_next(void) {
+static tcb_t *pick_next_locked(void) {
     for (int word = 3; word >= 0; word--) {
-        if (!g_ready_bitmap[word]) {
-            continue;
+        uint64_t mask = g_ready_bitmap[word];
+        while (mask) {
+            unsigned bit = 63u - (unsigned)__builtin_clzll(mask);
+            unsigned prio = (unsigned)word * 64u + bit;
+            for (tcb_t *t = g_ready_head[prio]; t; t = t->queue_next) {
+                if (__atomic_load_n(&t->on_cpu, __ATOMIC_ACQUIRE) == 0u) {
+                    return t;
+                }
+            }
+            mask &= ~(1ULL << bit);
         }
-        unsigned bit = 63 - __builtin_clzll(g_ready_bitmap[word]);
-        unsigned prio = (unsigned)word * 64 + bit;
-        return g_ready_head[prio];
     }
     return NULL;
 }
 
-void sched_ready(tcb_t *t) {
-    unsigned p = t->effective_priority;
-    t->state = THREAD_READY;
-    t->queue_next = NULL;
-    if (g_ready_tail[p]) {
-        g_ready_tail[p]->queue_next = t;
-    } else {
-        g_ready_head[p] = t;
-    }
-    g_ready_tail[p] = t;
-    bitmap_set(p);
-}
-
-void sched_unready(tcb_t *t) {
+static void ready_remove_locked(tcb_t *t) {
     unsigned p = t->effective_priority;
     tcb_t **pp = &g_ready_head[p];
     tcb_t *prev = NULL;
@@ -111,40 +104,151 @@ void sched_unready(tcb_t *t) {
     }
 }
 
+static void kick_other_cpu_locked(uint8_t prio) {
+    uint32_t total = smp_cpu_count();
+    if (total <= 1u || !__atomic_load_n(&g_sched_active, __ATOMIC_ACQUIRE)) {
+        return;
+    }
+    uint32_t self_idx = arch_cpu_index();
+    uint32_t target = SMP_MAX_CPUS;
+    uint8_t lowest_prio = prio;
+
+    for (uint32_t i = 0; i < total; i++) {
+        if (i == self_idx) {
+            continue;
+        }
+        cpu_local_t *c = smp_cpu(i);
+        if (!c || !__atomic_load_n(&c->online, __ATOMIC_ACQUIRE)) {
+            continue;
+        }
+        if (__atomic_load_n(&c->is_idle, __ATOMIC_ACQUIRE)) {
+            target = i;
+            break;
+        }
+        tcb_t *ct = c->current;
+        if (ct && !ct->is_idle && ct->effective_priority < lowest_prio) {
+            lowest_prio = ct->effective_priority;
+            target = i;
+        }
+    }
+    if (target < SMP_MAX_CPUS) {
+        arch_smp_send_resched_ipi(target);
+    }
+}
+
+void sched_ready_locked(tcb_t *t) {
+    if (t->is_idle || t->state == THREAD_ZOMBIE) {
+        return;
+    }
+    unsigned p = t->effective_priority;
+    t->state = THREAD_READY;
+    t->queue_next = NULL;
+    if (g_ready_tail[p]) {
+        g_ready_tail[p]->queue_next = t;
+    } else {
+        g_ready_head[p] = t;
+    }
+    g_ready_tail[p] = t;
+    bitmap_set(p);
+    kick_other_cpu_locked(t->effective_priority);
+}
+
+void sched_ready(tcb_t *t) {
+    uint64_t flags = spin_lock_irqsave(&g_sched_lock);
+    sched_ready_locked(t);
+    spin_unlock_irqrestore(&g_sched_lock, flags);
+}
+
+void sched_unready(tcb_t *t) {
+    uint64_t flags = spin_lock_irqsave(&g_sched_lock);
+    ready_remove_locked(t);
+    spin_unlock_irqrestore(&g_sched_lock, flags);
+}
+
 tcb_t *sched_current(void) {
-    return g_current;
+    cpu_local_t *cpu = smp_current_cpu();
+    return cpu ? cpu->current : NULL;
 }
 
 void sched_activate(void) {
-    g_sched_active = 1;
+    __atomic_store_n(&g_sched_active, 1, __ATOMIC_RELEASE);
+    uint32_t total = smp_cpu_count();
+    for (uint32_t i = 1u; i < total; i++) {
+        arch_smp_send_resched_ipi(i);
+    }
 }
 
 void sched_block_current(thread_state_t state) {
-    tcb_t *t = g_current;
-    if (!t) {
-        panic("sched: block without current thread");
+    uint64_t flags = spin_lock_irqsave(&g_sched_lock);
+    tcb_t *t = sched_current();
+    if (!t || t->is_idle) {
+        spin_unlock_irqrestore(&g_sched_lock, flags);
+        panic("sched: block without current user thread");
     }
-    t->state = state; /* not RUNNING: schedule() will not re-enqueue us */
-    schedule();
-    /* Returns when sched_unblock() made this thread runnable again and the
-     * scheduler picked it; the caller resumes on its own kernel stack. */
+    t->state = state;
+    schedule_with_lock(flags);
+}
+
+void sched_unblock_locked(tcb_t *t) {
+    if (!t || t->is_idle || t->state == THREAD_RUNNING ||
+        t->state == THREAD_READY || t->state == THREAD_ZOMBIE ||
+        t->state == THREAD_EMBRYO) {
+        return;
+    }
+    sched_ready_locked(t);
+}
+
+int sched_unblock_nolock_preempt(tcb_t *t) {
+    uint64_t flags = spin_lock_irqsave(&g_sched_lock);
+    int need_preempt = 0;
+    if (t && !t->is_idle && t->state != THREAD_RUNNING &&
+        t->state != THREAD_READY && t->state != THREAD_ZOMBIE &&
+        t->state != THREAD_EMBRYO) {
+        sched_ready_locked(t);
+        tcb_t *cur = sched_current();
+        if (cur && !cur->is_idle && cur->state == THREAD_RUNNING &&
+            t->effective_priority > cur->effective_priority) {
+            need_preempt = 1;
+        }
+    }
+    spin_unlock_irqrestore(&g_sched_lock, flags);
+    return need_preempt;
 }
 
 void sched_unblock(tcb_t *t) {
-    if (t->state == THREAD_RUNNING || t->state == THREAD_READY) {
-        return; /* already runnable; callers must not pre-mark READY */
-    }
-    sched_ready(t); /* sets t->state = THREAD_READY and enqueues */
-    tcb_t *cur = g_current;
-    if (cur && cur->state == THREAD_RUNNING &&
-        t->effective_priority > cur->effective_priority) {
-        schedule(); /* preempt: the woken thread outranks us */
+    if (sched_unblock_nolock_preempt(t)) {
+        schedule();
     }
 }
 
 /* switch.S accesses the TCB at fixed offsets; fail the build if they drift. */
 _Static_assert(offsetof(tcb_t, kernel_rsp) == 32, "switch.S TCB_KRSP mismatch");
 _Static_assert(offsetof(tcb_t, fpu_area) == 40, "switch.S TCB_FPU mismatch");
+
+void sched_init_cpu_idle(cpu_local_t *cpu) {
+    tcb_t *idle = kzalloc(sizeof(tcb_t));
+    uint8_t *fpu_raw = kmalloc(g_fpu_size + g_fpu_align);
+    if (!idle || !fpu_raw) {
+        panic("sched: out of memory for per-CPU idle TCB");
+    }
+    uintptr_t mask = (uintptr_t)(g_fpu_align - 1u);
+    uint8_t *fpu = (uint8_t *)(((uintptr_t)fpu_raw + mask) & ~mask);
+    memcpy(fpu, g_fpu_template, g_fpu_size);
+
+    idle->tid = 0u;
+    idle->pid = 0u;
+    idle->state = THREAD_RUNNING;
+    idle->is_idle = 1u;
+    idle->on_cpu = 1u;
+    idle->proc = NULL;
+    idle->fpu_area = fpu;
+    idle->fpu_raw = fpu_raw;
+
+    cpu->idle_tcb = idle;
+    cpu->current = idle;
+    cpu->is_idle = 1u;
+    arch_fpu_restore_current(fpu);
+}
 
 void sched_init(void) {
     g_fpu_size = arch_fpu_state_size();
@@ -159,12 +263,14 @@ void sched_init(void) {
     uintptr_t mask = (uintptr_t)(g_fpu_align - 1u);
     g_fpu_template = (uint8_t *)(((uintptr_t)raw + mask) & ~mask);
     arch_fpu_init_template(g_fpu_template);
-    printk("[sched] 256-level bitmap scheduler ready (fpu=%llu align=%llu)\n",
+    sched_init_cpu_idle(smp_current_cpu());
+    printk("[sched] 256-level SMP bitmap scheduler ready (fpu=%llu align=%llu)"
+           "\n",
            (unsigned long long)g_fpu_size, (unsigned long long)g_fpu_align);
 }
 
 void sched_reset_current_fpu(void) {
-    tcb_t *t = g_current;
+    tcb_t *t = sched_current();
     if (!t || !t->fpu_area || !g_fpu_template) {
         return;
     }
@@ -172,98 +278,163 @@ void sched_reset_current_fpu(void) {
     arch_fpu_restore_current(t->fpu_area);
 }
 
-static void apply_switch(tcb_t *next) {
-    if (g_current && next->proc &&
-        g_current->proc->pml4_phys != next->proc->pml4_phys) {
-        vmm_set_cr3(next->proc->pml4_phys);
-    } else if (!g_current && next->proc) {
-        vmm_set_cr3(next->proc->pml4_phys);
+static void apply_switch(cpu_local_t *cpu, tcb_t *next) {
+    uint64_t target_cr3 =
+        next->proc ? next->proc->pml4_phys : vmm_kernel_pml4();
+    if (vmm_get_cr3() != target_cr3) {
+        vmm_set_cr3(target_cr3);
     }
-    arch_set_kernel_stack(next->kstack_top);
-    g_syscall_kstack = next->kstack_top;
-    arch_set_tls_base(next->fs_base);
+    if (next->proc) {
+        arch_set_kernel_stack(next->kstack_top);
+        cpu->syscall_kstack = next->kstack_top;
+        arch_set_tls_base(next->fs_base);
+        __atomic_store_n(&cpu->is_idle, 0u, __ATOMIC_RELEASE);
+    } else {
+        __atomic_store_n(&cpu->is_idle, 1u, __ATOMIC_RELEASE);
+    }
     next->state = THREAD_RUNNING;
     next->slice_ticks = 0;
-    g_current = next;
+    cpu->current = next;
+}
+
+void sched_post_switch(void) {
+    cpu_local_t *cpu = smp_current_cpu();
+    tcb_t *prev = cpu->prev_switch;
+    cpu->prev_switch = NULL;
+    if (prev) {
+        if (!prev->is_idle && prev->state == THREAD_READY) {
+            sched_ready_locked(prev);
+        }
+        __atomic_store_n(&prev->on_cpu, 0u, __ATOMIC_RELEASE);
+    }
+    spin_unlock(&g_sched_lock);
+}
+
+void schedule_with_lock(uint64_t saved_flags) {
+    cpu_local_t *cpu = smp_current_cpu();
+    tcb_t *prev = cpu->current;
+    if (!prev) {
+        spin_unlock_irqrestore(&g_sched_lock, saved_flags);
+        return;
+    }
+
+    if (!prev->is_idle &&
+        __atomic_load_n(&prev->kill_pending, __ATOMIC_ACQUIRE)) {
+        prev->state = THREAD_ZOMBIE;
+    }
+
+    tcb_t *next = pick_next_locked();
+
+    if (prev->is_idle) {
+        if (!next) {
+            spin_unlock_irqrestore(&g_sched_lock, saved_flags);
+            return;
+        }
+    } else if (prev->state == THREAD_RUNNING) {
+        if (!next || next->effective_priority < prev->effective_priority) {
+            prev->slice_ticks = 0;
+            spin_unlock_irqrestore(&g_sched_lock, saved_flags);
+            return;
+        }
+        /* Mark READY; sched_post_switch() enqueues after leaving prev stack. */
+        prev->state = THREAD_READY;
+    } else {
+        /* prev is blocked or ZOMBIE: switch to next runnable or idle_tcb. */
+        if (!next) {
+            next = cpu->idle_tcb;
+        }
+    }
+
+    if (next != cpu->idle_tcb) {
+        ready_remove_locked(next);
+    }
+    if (next == prev) {
+        prev->state = THREAD_RUNNING;
+        prev->slice_ticks = 0;
+        spin_unlock_irqrestore(&g_sched_lock, saved_flags);
+        return;
+    }
+
+    __atomic_store_n(&next->on_cpu, 1u, __ATOMIC_RELEASE);
+    cpu->prev_switch = prev;
+    apply_switch(cpu, next);
+
+    switch_to(prev, next);
+    sched_post_switch();
+    arch_irq_restore(saved_flags);
 }
 
 void schedule(void) {
-    tcb_t *next = pick_next();
-    while (!next) {
-        if (g_current && g_current->state == THREAD_RUNNING) {
-            return; /* nothing else ready: keep running */
-        }
-        /* Nothing runnable and the current thread cannot continue (blocked or
-         * reaped): enable interrupts and halt until a timer/IRQ wakes runnable
-         * work. */
+    uint64_t flags = spin_lock_irqsave(&g_sched_lock);
+    schedule_with_lock(flags);
+}
+
+void sched_idle_loop(void) {
+    for (;;) {
+        schedule();
         arch_cpu_idle_wait();
-        next = pick_next();
-    }
-
-    /* Strict priority scheduling: never preempt a RUNNING thread for a
-     * lower-priority ready thread on a round-robin tick. */
-    if (g_current && g_current->state == THREAD_RUNNING &&
-        next->effective_priority < g_current->effective_priority) {
-        g_current->slice_ticks = 0;
-        return;
-    }
-
-    /* Pop `next` from its level queue. */
-    unsigned p = next->effective_priority;
-    g_ready_head[p] = next->queue_next;
-    if (!g_ready_head[p]) {
-        g_ready_tail[p] = NULL;
-        bitmap_clear(p);
-    }
-    next->queue_next = NULL;
-
-    if (next == g_current) {
-        g_current->state = THREAD_RUNNING;
-        g_current->slice_ticks = 0;
-        return;
-    }
-
-    /* Re-enqueue the preempted current (READY while it waits). */
-    if (g_current && g_current->state == THREAD_RUNNING) {
-        sched_ready(g_current);
-    }
-
-    tcb_t *prev = g_current;
-    apply_switch(next);
-
-    if (prev) {
-        switch_to(prev, next);
-    } else {
-        arch_fpu_restore_current(next->fpu_area);
-        arch_first_switch(next->kernel_rsp);
     }
 }
 
-void sched_tick(void) {
-    if (!g_sched_active) {
+void sched_ap_enter_idle(void) {
+    while (!__atomic_load_n(&g_sched_active, __ATOMIC_ACQUIRE)) {
+        arch_cpu_relax();
+    }
+    sched_idle_loop();
+}
+
+void sched_tick(int from_user) {
+    if (!__atomic_load_n(&g_sched_active, __ATOMIC_ACQUIRE)) {
         return;
     }
-    tcb_t *cur = g_current;
-    if (!cur || cur->state != THREAD_RUNNING) {
+    if (!from_user) {
+        return;
+    }
+    tcb_t *cur = sched_current();
+    if (!cur || cur->is_idle || cur->state != THREAD_RUNNING) {
         return;
     }
     if (cur->proc) {
-        cur->proc->utime_ticks++;
+        __atomic_fetch_add(&cur->proc->utime_ticks, 1ULL, __ATOMIC_RELAXED);
+    }
+    if (__atomic_load_n(&cur->kill_pending, __ATOMIC_ACQUIRE)) {
+        schedule();
+        return;
     }
     cur->slice_ticks++;
-    if (cur->slice_ticks >= SLICE_TICKS && !ready_empty()) {
-        schedule();
+    if (cur->slice_ticks >= SLICE_TICKS) {
+        uint64_t flags = spin_lock_irqsave(&g_sched_lock);
+        if (!ready_empty_locked()) {
+            schedule_with_lock(flags);
+            return;
+        }
+        cur->slice_ticks = 0;
+        spin_unlock_irqrestore(&g_sched_lock, flags);
     }
 }
 
+void sched_resched_ipi(int from_user) {
+    if (!__atomic_load_n(&g_sched_active, __ATOMIC_ACQUIRE)) {
+        return;
+    }
+    if (!from_user) {
+        return;
+    }
+    schedule();
+}
+
 long sys_sched_yield(void) {
-    tcb_t *cur = g_current;
-    if (!cur || cur->state != THREAD_RUNNING) {
+    uint64_t flags = spin_lock_irqsave(&g_sched_lock);
+    tcb_t *cur = sched_current();
+    if (!cur || cur->is_idle || cur->state != THREAD_RUNNING) {
+        spin_unlock_irqrestore(&g_sched_lock, flags);
         return 0;
     }
-    if (!ready_empty()) {
-        schedule();
+    if (!ready_empty_locked()) {
+        schedule_with_lock(flags);
+        return 0;
     }
+    spin_unlock_irqrestore(&g_sched_lock, flags);
     return 0;
 }
 
@@ -276,10 +447,10 @@ long sys_proc_times(uint64_t ubuf) {
         return -EFAULT;
     }
     struct __k_tms kt = {
-        .utime = (int64_t)p->utime_ticks,
-        .stime = (int64_t)p->stime_ticks,
-        .cutime = (int64_t)p->cutime_ticks,
-        .cstime = (int64_t)p->cstime_ticks,
+        .utime = (int64_t)__atomic_load_n(&p->utime_ticks, __ATOMIC_RELAXED),
+        .stime = (int64_t)__atomic_load_n(&p->stime_ticks, __ATOMIC_RELAXED),
+        .cutime = (int64_t)__atomic_load_n(&p->cutime_ticks, __ATOMIC_RELAXED),
+        .cstime = (int64_t)__atomic_load_n(&p->cstime_ticks, __ATOMIC_RELAXED),
     };
     if (copy_to_user(ubuf, &kt, sizeof(kt)) < 0) {
         return -EFAULT;
@@ -290,13 +461,13 @@ long sys_proc_times(uint64_t ubuf) {
 /* ---- processes ---- */
 
 static pcb_t *g_proc_list;
-static uint32_t g_next_pid = 1;
+static uint32_t g_next_pid = 1u;
 
 uint32_t proc_alloc_pid(void) {
-    return g_next_pid++;
+    return __atomic_fetch_add(&g_next_pid, 1u, __ATOMIC_RELAXED);
 }
 
-pcb_t *proc_find(uint32_t pid) {
+pcb_t *proc_find_locked(uint32_t pid) {
     for (pcb_t *p = g_proc_list; p; p = p->next) {
         if (p->pid == pid && p->state != PROC_DEAD) {
             return p;
@@ -305,8 +476,16 @@ pcb_t *proc_find(uint32_t pid) {
     return NULL;
 }
 
+pcb_t *proc_find(uint32_t pid) {
+    uint64_t flags = spin_lock_irqsave(&g_proc_lock);
+    pcb_t *p = proc_find_locked(pid);
+    spin_unlock_irqrestore(&g_proc_lock, flags);
+    return p;
+}
+
 pcb_t *proc_current(void) {
-    return g_current ? g_current->proc : NULL;
+    tcb_t *cur = sched_current();
+    return (cur && cur->proc) ? cur->proc : NULL;
 }
 
 pcb_t *proc_list_head(void) {
@@ -333,6 +512,7 @@ pcb_t *proc_create(pcb_t *parent) {
     }
     p->conn_table = kzalloc(CONN_TABLE_SIZE * sizeof(*p->conn_table));
     if (!p->conn_table) {
+        vmm_destroy_user_pml4(p->pml4_phys);
         kfree(p);
         return NULL;
     }
@@ -344,15 +524,21 @@ pcb_t *proc_create(pcb_t *parent) {
     p->fds[2].kind = FD_KIND_CONSOLE;
     p->fds[2].status_flags = 1; /* O_WRONLY */
     if (parent && parent->cwd[0] == '/') {
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
         memcpy(p->cwd, parent->cwd, sizeof(p->cwd));
         p->umask = parent->umask;
+        p->next = g_proc_list;
+        g_proc_list = p;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
     } else {
         p->cwd[0] = '/';
         p->cwd[1] = '\0';
         p->umask = 0022u;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        p->next = g_proc_list;
+        g_proc_list = p;
+        spin_unlock_irqrestore(&g_proc_lock, pf);
     }
-    p->next = g_proc_list;
-    g_proc_list = p;
     return p;
 }
 
@@ -367,7 +553,7 @@ tcb_t *thread_create_embryo(pcb_t *p, uint8_t priority) {
     uint8_t *fpu = (uint8_t *)(((uintptr_t)fpu_raw + mask) & ~mask);
     memcpy(fpu, g_fpu_template, g_fpu_size);
 
-    t->tid = (uint32_t)g_next_tid++;
+    t->tid = __atomic_fetch_add(&g_next_tid, 1u, __ATOMIC_RELAXED);
     t->pid = p->pid;
     t->state = THREAD_EMBRYO;
     t->base_priority = priority;
@@ -377,9 +563,11 @@ tcb_t *thread_create_embryo(pcb_t *p, uint8_t priority) {
     t->fpu_area = fpu;
     t->fpu_raw = fpu_raw;
 
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
     t->proc_next = p->threads;
     p->threads = t;
     p->nthreads++;
+    spin_unlock_irqrestore(&g_proc_lock, pf);
     return t;
 }
 
@@ -425,86 +613,156 @@ tcb_t *thread_create(pcb_t *p, uint64_t entry_rip, uint64_t user_rsp,
 }
 
 tcb_t *thread_find(pcb_t *p, uint32_t tid) {
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    tcb_t *found = NULL;
     for (tcb_t *t = p->threads; t; t = t->proc_next) {
         if (t->tid == tid && t->state != THREAD_ZOMBIE) {
-            return t;
+            found = t;
+            break;
         }
     }
-    return NULL;
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+    return found;
 }
 
-static void reap_thread(tcb_t *t) {
+static void stop_remote_thread(tcb_t *t) {
+    __atomic_store_n(&t->kill_pending, 1u, __ATOMIC_RELEASE);
     sched_unready(t);
-    ipc_detach_thread(t); /* drop any channel queues / in-flight messages */
+    ipc_detach_thread(t);
+
+    /* If running on another core, nudge all other cores and wait until off-CPU.
+     */
+    while (__atomic_load_n(&t->on_cpu, __ATOMIC_ACQUIRE) != 0u) {
+        uint32_t total = smp_cpu_count();
+        uint32_t self = arch_cpu_index();
+        for (uint32_t i = 0; i < total; i++) {
+            if (i != self) {
+                arch_smp_send_resched_ipi(i);
+            }
+        }
+        arch_cpu_relax();
+    }
+
+    uint64_t sf = spin_lock_irqsave(&g_sched_lock);
+    ready_remove_locked(t);
     t->state = THREAD_ZOMBIE;
-    /* Kernel stack and FPU area are reclaimed when the process is reaped. */
+    spin_unlock_irqrestore(&g_sched_lock, sf);
 }
 
 void thread_exit_current(int status) {
-    tcb_t *t = g_current;
+    tcb_t *t = sched_current();
     pcb_t *p = t->proc;
-    reap_thread(t);
-    p->nthreads--;
-    if (p->nthreads == 0) {
+
+    ipc_detach_thread(t);
+
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    int last_thread = 0;
+    if (p->nthreads > 0u) {
+        p->nthreads--;
+    }
+    if (p->nthreads == 0u) {
+        last_thread = 1;
+    }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
+    if (last_thread) {
         cov_dump_proc(p);
         time_cleanup_proc(p->pid);
         proc_close_fds(p, 0);
+
+        pf = spin_lock_irqsave(&g_proc_lock);
         p->state = PROC_ZOMBIE;
         p->exit_code = status;
-        printk("[proc] pid %u became zombie (exit %d)\n", p->pid, status);
-        pcb_t *parent = p->parent_pid ? proc_find(p->parent_pid) : NULL;
+        pcb_t *parent = p->parent_pid ? proc_find_locked(p->parent_pid) : NULL;
         if (parent) {
+            uint64_t sf = spin_lock_irqsave(&g_sched_lock);
             for (tcb_t *wt = parent->threads; wt; wt = wt->proc_next) {
                 if (wt->state == THREAD_WAIT_BLOCKED) {
-                    sched_ready(wt);
+                    sched_ready_locked(wt);
                 }
             }
+            spin_unlock_irqrestore(&g_sched_lock, sf);
         }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        printk("[proc] pid %u became zombie (exit %d)\n", p->pid, status);
     }
-    schedule();
+
+    uint64_t sf = spin_lock_irqsave(&g_sched_lock);
+    t->state = THREAD_ZOMBIE;
+    schedule_with_lock(sf);
     panic("thread_exit_current: returned to zombie");
 }
 
 void proc_kill_other_threads(pcb_t *p, tcb_t *keep) {
-    for (tcb_t *x = p->threads; x; x = x->proc_next) {
-        if (x != keep && x->state != THREAD_ZOMBIE) {
-            reap_thread(x);
+    for (;;) {
+        tcb_t *victim = NULL;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        for (tcb_t *x = p->threads; x; x = x->proc_next) {
+            if (x != keep && x->state != THREAD_ZOMBIE) {
+                victim = x;
+                break;
+            }
         }
+        spin_unlock_irqrestore(&g_proc_lock, pf);
+        if (!victim) {
+            break;
+        }
+        stop_remote_thread(victim);
     }
-    p->nthreads = 1;
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    p->nthreads = 1u;
+    spin_unlock_irqrestore(&g_proc_lock, pf);
 }
 
 void proc_reap_zombie_threads(pcb_t *p) {
     if (!p) {
         return;
     }
+    tcb_t *cur = sched_current();
+    tcb_t *reaped_head = NULL;
+
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
     tcb_t **pp = &p->threads;
     while (*pp) {
         tcb_t *t = *pp;
-        if (t != g_current && t->state == THREAD_ZOMBIE) {
+        if (t != cur && t->state == THREAD_ZOMBIE &&
+            __atomic_load_n(&t->on_cpu, __ATOMIC_ACQUIRE) == 0u) {
             *pp = t->proc_next;
-            if (t->user_stack_base && p->pml4_phys) {
-                for (uint64_t off = 0; off < 0x10000ULL; off += 4096ULL) {
-                    uint64_t phys = vmm_unmap_page_to(p->pml4_phys,
-                                                      t->user_stack_base + off);
-                    if (phys) {
-                        pmm_free_frame(phys);
-                    }
-                    if (p->pml4_phys == vmm_get_cr3()) {
-                        vmm_invlpg(t->user_stack_base + off);
-                    }
-                }
-            }
-            if (t->kstack_top) {
-                kfree((void *)(t->kstack_top - KERNEL_STACK_SIZE));
-            }
-            if (t->fpu_raw) {
-                kfree(t->fpu_raw);
-            }
-            kfree(t);
+            t->proc_next = reaped_head;
+            reaped_head = t;
             continue;
         }
         pp = &t->proc_next;
+    }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
+    while (reaped_head) {
+        tcb_t *t = reaped_head;
+        reaped_head = t->proc_next;
+        if (t->user_stack_base && p->pml4_phys) {
+            uint64_t freed[16];
+            size_t nfreed = 0u;
+            for (uint64_t off = 0; off < 0x10000ULL; off += 4096ULL) {
+                uint64_t phys =
+                    vmm_unmap_page_to(p->pml4_phys, t->user_stack_base + off);
+                if (phys && nfreed < 16u) {
+                    freed[nfreed++] = phys;
+                }
+            }
+            if (nfreed > 0u) {
+                vmm_tlb_shootdown(p->pml4_phys, 0ULL);
+                for (size_t i = 0; i < nfreed; i++) {
+                    pmm_free_frame(freed[i]);
+                }
+            }
+        }
+        if (t->kstack_top) {
+            kfree((void *)(t->kstack_top - KERNEL_STACK_SIZE));
+        }
+        if (t->fpu_raw) {
+            kfree(t->fpu_raw);
+        }
+        kfree(t);
     }
 }
 
@@ -512,6 +770,24 @@ void proc_reap_zombie(pcb_t *zombie) {
     if (!zombie) {
         return;
     }
+    /* Wait until the zombie's final thread has switched off its CPU stack. */
+    for (tcb_t *t = zombie->threads; t; t = t->proc_next) {
+        while (__atomic_load_n(&t->on_cpu, __ATOMIC_ACQUIRE) != 0u) {
+            arch_cpu_relax();
+        }
+    }
+
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    pcb_t **pp = &g_proc_list;
+    while (*pp) {
+        if (*pp == zombie) {
+            *pp = zombie->next;
+            break;
+        }
+        pp = &(*pp)->next;
+    }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
     tcb_t *t = zombie->threads;
     while (t) {
         tcb_t *next = t->proc_next;
@@ -529,31 +805,18 @@ void proc_reap_zombie(pcb_t *zombie) {
         kfree(zombie->conn_table);
         zombie->conn_table = NULL;
     }
-    pcb_t **pp = &g_proc_list;
-    while (*pp) {
-        if (*pp == zombie) {
-            *pp = zombie->next;
-            break;
-        }
-        pp = &(*pp)->next;
-    }
     kfree(zombie);
 }
 
 void proc_exit_current(int status) {
-    tcb_t *t = g_current;
+    tcb_t *t = sched_current();
     pcb_t *p = t->proc;
-    for (tcb_t *x = p->threads; x; x = x->proc_next) {
-        if (x != t && x->state != THREAD_ZOMBIE) {
-            reap_thread(x);
-        }
-    }
-    p->nthreads = 1; /* only the current thread remains to reap below */
+    proc_kill_other_threads(p, t);
     thread_exit_current(status);
 }
 
 void proc_exit_signal(int sig) {
-    tcb_t *t = g_current;
+    tcb_t *t = sched_current();
     t->proc->exit_signal = sig;
     proc_exit_current(128 + sig);
 }
@@ -660,13 +923,8 @@ long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
     }
 
     if (op == FUTEX_WAIT) {
-        uint32_t cur_val = 0;
-        if (copy_from_user(&cur_val, uaddr, sizeof(cur_val)) < 0) {
-            return -EFAULT;
-        }
-        if (cur_val != (uint32_t)val) {
-            return -EAGAIN;
-        }
+        uint8_t has_timeout = 0u;
+        uint64_t deadline = 0ULL;
         if (timeout_va != 0) {
             if (clock_id != CLOCK_REALTIME && clock_id != CLOCK_MONOTONIC) {
                 return -EINVAL;
@@ -678,27 +936,44 @@ long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
             if (ts.tv_sec < 0 || ts.tv_nsec < 0 || ts.tv_nsec >= 1000000000L) {
                 return -EINVAL;
             }
-            uint64_t deadline =
+            deadline =
                 (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
             if (time_clock_now_ns((int)clock_id) >= deadline) {
                 return -ETIMEDOUT;
             }
-            cur->futex_has_timeout = 1;
-            cur->sleep_clock_id = (uint8_t)clock_id;
-            cur->sleep_deadline_ns = deadline;
-        } else {
-            cur->futex_has_timeout = 0;
+            has_timeout = 1u;
         }
 
+        /* Hold g_futex_lock while verifying *uaddr == val and transitioning
+         * into THREAD_FUTEX_BLOCKED under g_sched_lock to prevent lost wakeups
+         * against concurrent FUTEX_WAKE on another core. */
+        uint64_t ff = spin_lock_irqsave(&g_futex_lock);
+        uint32_t cur_val = 0;
+        if (copy_from_user(&cur_val, uaddr, sizeof(cur_val)) < 0) {
+            spin_unlock_irqrestore(&g_futex_lock, ff);
+            return -EFAULT;
+        }
+        if (cur_val != (uint32_t)val) {
+            spin_unlock_irqrestore(&g_futex_lock, ff);
+            return -EAGAIN;
+        }
+        spin_lock(&g_sched_lock);
+        cur->futex_has_timeout = has_timeout;
+        cur->sleep_clock_id = (uint8_t)clock_id;
+        cur->sleep_deadline_ns = deadline;
         cur->futex_addr = uaddr;
         cur->futex_woken = 0;
-        sched_block_current(THREAD_FUTEX_BLOCKED);
+        cur->state = THREAD_FUTEX_BLOCKED;
+        spin_unlock(&g_futex_lock);
+        schedule_with_lock(ff);
+
         cur->futex_addr = 0;
         cur->futex_has_timeout = 0;
         if (cur->futex_woken) {
             return 0;
         }
-        if (cur->pending_signals & ~cur->blocked_signals) {
+        if (__atomic_load_n(&cur->pending_signals, __ATOMIC_ACQUIRE) &
+            ~cur->blocked_signals) {
             return -EINTR;
         }
         return -ETIMEDOUT;
@@ -707,18 +982,24 @@ long sys_futex(uint64_t uaddr, uint64_t op, uint64_t val, uint64_t timeout_va,
     if (op == FUTEX_WAKE) {
         uint64_t woken = 0;
         int need_preempt = 0;
+        uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+        spin_lock(&g_futex_lock);
+        spin_lock(&g_sched_lock);
         for (tcb_t *t = p->threads; t && woken < val; t = t->proc_next) {
             if (t->state == THREAD_FUTEX_BLOCKED && t->futex_addr == uaddr) {
                 t->futex_addr = 0;
                 t->futex_has_timeout = 0;
                 t->futex_woken = 1;
-                sched_ready(t);
+                sched_ready_locked(t);
                 if (t->effective_priority > cur->effective_priority) {
                     need_preempt = 1;
                 }
                 woken++;
             }
         }
+        spin_unlock(&g_sched_lock);
+        spin_unlock(&g_futex_lock);
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         if (need_preempt) {
             schedule();
         }

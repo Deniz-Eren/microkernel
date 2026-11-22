@@ -76,3 +76,17 @@ The headless QEMU harness `tests/test_runner.py` runs `jobtest`
 `SIGINT`, and `mkdir`, `rm`, `cp`, `mv`, `uname`, `env`, `wc`, and `head`. CTest
 Gates 1 to 3 verify headers and async-signal-safety ({need}`SWR_PROC_0008`).
 ```
+
+```{ver} Verify multi-core SMP bring-up and concurrent kernel locks in QEMU
+:id: VER_PROC_0007
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0009
+
+The headless QEMU harness `tests/test_runner.py` runs `smptest`
+(`tests/smptest/test_smp.c`) under `-smp 2`. It checks multi-core atomic
+ping-pong, `futex`/mutex/condvar/sem contention, parallel `PMM`/`VMM`/COW/TLB
+shootdowns, and concurrent IPC with `XSAVE`/`FMA` isolation. CTest
+`proc.smp_cores` (`tests/boot/test_smp_cores.py`) verifies 4-core `-smp 4` boot
+and execution ({need}`SWR_PROC_0009`).
+```

@@ -90,3 +90,17 @@ sessions, `waitpid(0)`/`-pgid`, `kill(-pgid)`, `ISIG` `SIGINT`/`SIGQUIT`, and
 foreground job control. `bin/utils/` supplies `mkdir`, `rm`, `cp`, `mv`,
 `uname`, `env`, `wc`, and `head` ({need}`ICD_PROC_0008`, {need}`SWR_PROC_0008`).
 ```
+
+```{comp} SMP secondary CPU bring-up, per-CPU state, and kernel spinlocks
+:id: COMP_PROC_0008
+:status: active
+:refines: ARC_PROC_0001, ICD_BOOT_0002
+:satisfies: SWR_PROC_0009
+
+`kernel/core/smp.c`, `kernel/include/kernel/spinlock.h`, and
+`kernel/arch/x86-64/ap_trampoline.S` start secondary CPUs via ACPI `MADT` and
+keep per-CPU `GS.base` state and idle threads. SMP-hardened `sched.c`, `pmm.c`,
+`kheap.c`, `vmm.c`, `ipc.c`, `proc.c`, `time.c`, `signal.c`, `intr.c`, and
+`shm.c` serialize shared kernel state across cores ({need}`ARC_PROC_0001`,
+{need}`ICD_BOOT_0002`, {need}`SWR_PROC_0009`).
+```

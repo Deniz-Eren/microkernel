@@ -12,6 +12,7 @@
 #include <kernel/kheap.h>
 #include <kernel/pmm.h>
 #include <kernel/sched.h>
+#include <kernel/spinlock.h>
 #include <kernel/string.h>
 #include <kernel/uaccess.h>
 #include <kernel/vmm.h>
@@ -40,6 +41,7 @@ typedef struct {
     size_t npages;
 } shm_obj_t;
 
+static spinlock_t g_shm_lock = SPINLOCK_INIT;
 static shm_obj_t g_shm[SHM_MAX_OBJS];
 
 static void shm_free_frames(shm_obj_t *obj) {
@@ -67,19 +69,23 @@ void shm_acquire_id(uint32_t id) {
     if (id == 0u || id > SHM_MAX_OBJS) {
         return;
     }
+    uint64_t sf = spin_lock_irqsave(&g_shm_lock);
     shm_obj_t *obj = &g_shm[id - 1u];
     if (obj->used) {
         obj->refs++;
     }
+    spin_unlock_irqrestore(&g_shm_lock, sf);
 }
 
 uint32_t shm_active_count(void) {
+    uint64_t sf = spin_lock_irqsave(&g_shm_lock);
     uint32_t n = 0;
     for (uint32_t i = 0; i < SHM_MAX_OBJS; i++) {
         if (g_shm[i].used) {
             n++;
         }
     }
+    spin_unlock_irqrestore(&g_shm_lock, sf);
     return n;
 }
 
@@ -87,11 +93,13 @@ void shm_release_id(uint32_t id) {
     if (id == 0u || id > SHM_MAX_OBJS) {
         return;
     }
+    uint64_t sf = spin_lock_irqsave(&g_shm_lock);
     shm_obj_t *obj = &g_shm[id - 1u];
     if (obj->used && obj->refs > 0u) {
         obj->refs--;
         shm_destroy_if_dead(obj);
     }
+    spin_unlock_irqrestore(&g_shm_lock, sf);
 }
 
 static long copy_shm_name(uint64_t name_va, char dst[SHM_NAME_MAX]) {
@@ -152,21 +160,29 @@ static long shm_do_open(pcb_t *p, uint64_t name_va, uint64_t oflag,
         return -EINVAL;
     }
 
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    spin_lock(&g_shm_lock);
     uint32_t obj_id = 0u;
     shm_obj_t *obj = shm_find_named(name, &obj_id);
     if (obj) {
         if ((oflag & (uint64_t)(O_CREAT | O_EXCL)) ==
             (uint64_t)(O_CREAT | O_EXCL)) {
+            spin_unlock(&g_shm_lock);
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -EEXIST;
         }
         if (oflag & (uint64_t)O_TRUNC) {
             if (acc != (uint64_t)O_RDWR) {
+                spin_unlock(&g_shm_lock);
+                spin_unlock_irqrestore(&g_proc_lock, pf);
                 return -EACCES;
             }
             shm_free_frames(obj);
         }
     } else {
         if (!(oflag & (uint64_t)O_CREAT)) {
+            spin_unlock(&g_shm_lock);
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -ENOENT;
         }
         for (uint32_t i = 0u; i < SHM_MAX_OBJS; i++) {
@@ -181,6 +197,8 @@ static long shm_do_open(pcb_t *p, uint64_t name_va, uint64_t oflag,
             }
         }
         if (!obj) {
+            spin_unlock(&g_shm_lock);
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return -ENOSPC;
         }
     }
@@ -194,12 +212,16 @@ static long shm_do_open(pcb_t *p, uint64_t name_va, uint64_t oflag,
             p->fds[fd].srv_chanid = 0u;
             p->fds[fd].srv_handle = obj_id;
             obj->refs++;
+            spin_unlock(&g_shm_lock);
+            spin_unlock_irqrestore(&g_proc_lock, pf);
             return fd;
         }
     }
     if (obj->refs == 0u && (oflag & (uint64_t)O_CREAT)) {
         memset(obj, 0, sizeof(*obj));
     }
+    spin_unlock(&g_shm_lock);
+    spin_unlock_irqrestore(&g_proc_lock, pf);
     return -EMFILE;
 }
 
@@ -209,44 +231,57 @@ static long shm_do_unlink(uint64_t name_va) {
     if (nr < 0) {
         return nr;
     }
+    uint64_t sf = spin_lock_irqsave(&g_shm_lock);
     shm_obj_t *obj = shm_find_named(name, NULL);
     if (!obj) {
+        spin_unlock_irqrestore(&g_shm_lock, sf);
         return -ENOENT;
     }
     obj->unlinked = 1u;
     shm_destroy_if_dead(obj);
+    spin_unlock_irqrestore(&g_shm_lock, sf);
     return 0;
 }
 
 static long shm_do_truncate(pcb_t *p, uint64_t fd, int64_t length) {
-    if (fd >= PROC_MAX_FDS || p->fds[fd].kind != FD_KIND_SHM) {
+    if (fd >= PROC_MAX_FDS || length < 0) {
+        return fd >= PROC_MAX_FDS ? -EBADF : -EINVAL;
+    }
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    if (p->fds[fd].kind != FD_KIND_SHM) {
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return -EBADF;
     }
     if ((p->fds[fd].status_flags & O_ACCMODE) != O_RDWR) {
-        return -EINVAL;
-    }
-    if (length < 0) {
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return -EINVAL;
     }
     uint32_t id = p->fds[fd].srv_handle;
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
+    uint64_t sf = spin_lock_irqsave(&g_shm_lock);
     if (id == 0u || id > SHM_MAX_OBJS || !g_shm[id - 1u].used) {
+        spin_unlock_irqrestore(&g_shm_lock, sf);
         return -EBADF;
     }
     shm_obj_t *obj = &g_shm[id - 1u];
     uint64_t ulen = (uint64_t)length;
     size_t want_pages = (size_t)((ulen + SHM_PAGE_SIZE - 1ULL) / SHM_PAGE_SIZE);
     if (want_pages > SHM_MAX_PAGES) {
+        spin_unlock_irqrestore(&g_shm_lock, sf);
         return -ENOMEM;
     }
 
     if (want_pages == 0u) {
         shm_free_frames(obj);
+        spin_unlock_irqrestore(&g_shm_lock, sf);
         return 0;
     }
 
     if (want_pages > obj->npages) {
         uint64_t *nf = (uint64_t *)kzalloc(want_pages * sizeof(uint64_t));
         if (!nf) {
+            spin_unlock_irqrestore(&g_shm_lock, sf);
             return -ENOMEM;
         }
         for (size_t i = 0; i < obj->npages; i++) {
@@ -259,6 +294,7 @@ static long shm_do_truncate(pcb_t *p, uint64_t fd, int64_t length) {
                     pmm_free_frame(nf[j]);
                 }
                 kfree(nf);
+                spin_unlock_irqrestore(&g_shm_lock, sf);
                 return -ENOMEM;
             }
             memset(phys_to_virt(fr), 0, SHM_PAGE_SIZE);
@@ -284,15 +320,25 @@ static long shm_do_truncate(pcb_t *p, uint64_t fd, int64_t length) {
         memset(pg + tail_off, 0, SHM_PAGE_SIZE - tail_off);
     }
     obj->size = ulen;
+    spin_unlock_irqrestore(&g_shm_lock, sf);
     return 0;
 }
 
 static long shm_do_stat(pcb_t *p, uint64_t fd, uint64_t stat_va) {
-    if (fd >= PROC_MAX_FDS || p->fds[fd].kind != FD_KIND_SHM) {
+    if (fd >= PROC_MAX_FDS) {
+        return -EBADF;
+    }
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    if (p->fds[fd].kind != FD_KIND_SHM) {
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return -EBADF;
     }
     uint32_t id = p->fds[fd].srv_handle;
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
+    uint64_t sf = spin_lock_irqsave(&g_shm_lock);
     if (id == 0u || id > SHM_MAX_OBJS || !g_shm[id - 1u].used) {
+        spin_unlock_irqrestore(&g_shm_lock, sf);
         return -EBADF;
     }
     const shm_obj_t *obj = &g_shm[id - 1u];
@@ -301,6 +347,7 @@ static long shm_do_stat(pcb_t *p, uint64_t fd, uint64_t stat_va) {
         .mode = obj->mode,
         .id = id,
     };
+    spin_unlock_irqrestore(&g_shm_lock, sf);
     if (copy_to_user(stat_va, &ks, sizeof(ks)) < 0) {
         return -EFAULT;
     }
@@ -341,17 +388,26 @@ long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
     if ((prot & VM_PROT_WRITE) && (prot & VM_PROT_EXEC)) {
         return -EACCES; /* W^X policy */
     }
-    if (fd >= PROC_MAX_FDS || p->fds[fd].kind != FD_KIND_SHM) {
+    if (fd >= PROC_MAX_FDS) {
+        return -EBADF;
+    }
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    if (p->fds[fd].kind != FD_KIND_SHM) {
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return -EBADF;
     }
     int is_shared = (flags & (uint64_t)MAP_SHARED) != 0ULL;
     if (is_shared && (prot & VM_PROT_WRITE) &&
         (p->fds[fd].status_flags & O_ACCMODE) == O_RDONLY) {
+        spin_unlock_irqrestore(&g_proc_lock, pf);
         return -EACCES;
     }
-
     uint32_t id = p->fds[fd].srv_handle;
+    spin_unlock_irqrestore(&g_proc_lock, pf);
+
+    uint64_t sf = spin_lock_irqsave(&g_shm_lock);
     if (id == 0u || id > SHM_MAX_OBJS || !g_shm[id - 1u].used) {
+        spin_unlock_irqrestore(&g_shm_lock, sf);
         return -EBADF;
     }
     shm_obj_t *obj = &g_shm[id - 1u];
@@ -359,6 +415,7 @@ long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
     uint64_t npages = (len + SHM_PAGE_SIZE - 1ULL) / SHM_PAGE_SIZE;
     if (npages == 0ULL || first_page > obj->npages ||
         npages > obj->npages - first_page) {
+        spin_unlock_irqrestore(&g_shm_lock, sf);
         return -EINVAL;
     }
 
@@ -368,6 +425,7 @@ long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
         if ((va_hint & 0xFFFULL) != 0ULL || va_hint < SHM_USER_VA_MIN ||
             va_hint > SHM_USER_MMAP_LIMIT ||
             bytes > SHM_USER_MMAP_LIMIT - va_hint) {
+            spin_unlock_irqrestore(&g_shm_lock, sf);
             return -EINVAL;
         }
         if (flags & (uint64_t)MAP_FIXED) {
@@ -383,10 +441,12 @@ long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
     }
     if (!base) {
         if (flags & (uint64_t)MAP_FIXED) {
+            spin_unlock_irqrestore(&g_shm_lock, sf);
             return -EINVAL;
         }
         base = vmm_alloc_mmap_va(p->pml4_phys, &p->next_mmap_va, npages);
         if (!base) {
+            spin_unlock_irqrestore(&g_shm_lock, sf);
             return -ENOMEM;
         }
     }
@@ -415,6 +475,7 @@ long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
                         pmm_free_frame(old);
                     }
                 }
+                spin_unlock_irqrestore(&g_shm_lock, sf);
                 return -ENOMEM;
             }
             memcpy(phys_to_virt(pa), phys_to_virt(backing), SHM_PAGE_SIZE);
@@ -429,8 +490,13 @@ long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
                     pmm_free_frame(old);
                 }
             }
+            spin_unlock_irqrestore(&g_shm_lock, sf);
             return -ENOMEM;
         }
+    }
+    spin_unlock_irqrestore(&g_shm_lock, sf);
+    if (flags & (uint64_t)MAP_FIXED) {
+        vmm_tlb_shootdown(p->pml4_phys, 0ULL);
     }
     return (long)base;
 }

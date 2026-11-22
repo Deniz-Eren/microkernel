@@ -110,9 +110,9 @@ must manage foreground process groups, and Ring 3 must supply `mkdir`, `rm`,
 
 ```{swr} Boot secondary CPUs via ACPI MADT and run SMP scheduling
 :id: SWR_PROC_0009
-:status: draft
+:status: active
 :derives: SYS_PROC_0001
-:traces: ADR_0003, ADR_0022, ADR_0024
+:traces: ADR_0003, ADR_0022, ADR_0024, ADR_0026, ADR_0027
 
 The kernel must start secondary CPUs behind portable HAL hooks (`INIT`/`SIPI`
 and `GS.base` on `x86-64`, `PSCI` and `TPIDR_EL1` for future `arm64`). Kernel

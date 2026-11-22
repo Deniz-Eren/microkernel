@@ -39,6 +39,7 @@
 #define FD_OP_GETCWD 9u
 #define FD_OP_SETCWD 10u
 #define FD_OP_UMASK 11u
+#define FD_OP_CONSOLE_TX 12u
 
 /* Kernel-to-server pulse sent on execve O_CLOEXEC close or process exit. */
 #define PULSE_CODE_FD_CLOSE 0x4644u

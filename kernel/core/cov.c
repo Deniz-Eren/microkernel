@@ -17,10 +17,14 @@
 #ifdef MICROKERNEL_COVERAGE
 
 #include <kernel/arch.h>
+#include <kernel/printk.h>
+#include <kernel/spinlock.h>
 #include <kernel/string.h>
 #include <kernel/uaccess.h>
 #include <stddef.h>
 #include <sys/microkernel.h>
+
+static spinlock_t g_cov_lock = SPINLOCK_INIT;
 
 /* LLVM 14 Raw Profile v8 constants (InstrProfData.inc). */
 #define LLVM_PROF_RAW_MAGIC_64 0xFF6C70726F667281ULL
@@ -249,6 +253,11 @@ void cov_dump_proc(pcb_t *p) {
     if (!validate_desc(&p->cov, 1)) {
         return;
     }
+    uint64_t cf = spin_lock_irqsave(&g_cov_lock);
+    if (p->cov_dumped) {
+        spin_unlock_irqrestore(&g_cov_lock, cf);
+        return;
+    }
     p->cov_dumped = 1;
 
     struct llvm_prof_raw_hdr hdr;
@@ -273,6 +282,7 @@ void cov_dump_proc(pcb_t *p) {
     }
     b64_finish(&st);
     emit_frame_end();
+    spin_unlock_irqrestore(&g_cov_lock, cf);
 }
 
 void cov_dump_kernel(void) {

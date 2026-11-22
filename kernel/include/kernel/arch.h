@@ -14,6 +14,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/arch/cpu.h>
 
 #ifndef MICROKERNEL_ARCH
 #define MICROKERNEL_ARCH "x86-64"
@@ -23,13 +24,27 @@
 #define ARCH_ELF_MACHINE 62 /* EM_X86_64 */
 #endif
 
+struct cpu_local;
+
 void arch_early_init(void);
 void arch_cpu_init(void);
 void arch_timer_init(void);
 void arch_user_entry_init(void);
 
+void arch_set_cpu_local(struct cpu_local *cpu);
+struct cpu_local *arch_get_cpu_local(void);
+uint32_t arch_cpu_index(void);
+uint32_t arch_cpu_hw_id(void);
+uint64_t arch_irq_save_disable(void);
+void arch_irq_restore(uint64_t flags);
+void arch_ap_cpu_init(uint32_t cpu_index, struct cpu_local *cpu);
+uint32_t arch_smp_boot_aps(void (*ap_entry)(uint32_t cpu_index));
+void arch_smp_send_resched_ipi(uint32_t cpu_index);
+void arch_smp_send_tlb_shootdown_ipi(void);
+
 void arch_console_putc(char c);
 void arch_console_write(const char *s, size_t n);
+void arch_console_write_raw(const char *s, size_t n);
 
 void arch_set_kernel_stack(uint64_t kstack_top);
 void arch_set_tls_base(uint64_t base);

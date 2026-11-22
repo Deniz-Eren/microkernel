@@ -11,12 +11,16 @@
 #pragma once
 #include <stdint.h>
 #include <kernel/ipc.h>
+#include <kernel/spinlock.h>
 
 /* Kernel-owned channel objects (synchronous IPC endpoints). */
 #define MAX_CHANNELS 256
 
+extern spinlock_t g_ipc_lock;
+
 typedef struct channel {
     uint32_t used;
+    uint32_t precreated;
     uint32_t owner_pid;
     uint32_t chanid;
 
@@ -37,7 +41,9 @@ typedef struct channel {
 } channel_t;
 
 int channel_create(uint32_t owner_pid);
+int channel_precreate_sysproc(uint32_t owner_pid);
 int channel_destroy(uint32_t owner_pid, int chanid);
+channel_t *channel_get_locked(int chanid);
 channel_t *channel_get(int chanid);
 
 /* Priority-ordered queue helpers (implemented in channel.c). */

@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0025 — Boot secondary CPUs via ACPI MADT and harden SMP locks
+
+```{task} Boot secondary CPUs via ACPI MADT and harden SMP locks
+:id: TSK_0025
+:status: done
+:traces: ADR_0003, ADR_0022, ADR_0024, SWR_PROC_0009
+
+Start secondary CPUs under `-smp 2` behind portable HAL hooks (`INIT`/`SIPI` and
+`GS.base` on `x86-64`). Harden `pmm`, `vmm`, `sched`, `ipc`, and `futex` locks
+under concurrent multi-core QEMU tests ({need}`SWR_PROC_0009`).
+```
+
 ### TSK_0028 — Mount writable on-disk file system in vfsserv over /dev/blk
 
 ```{task} Mount writable on-disk file system in vfsserv over /dev/blk

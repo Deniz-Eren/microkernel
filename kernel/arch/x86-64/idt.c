@@ -10,6 +10,7 @@
 
 #include "idt.h"
 #include <stddef.h>
+#include <kernel/arch.h>
 #include <kernel/printk.h>
 #include <kernel/signal.h>
 #include <kernel/vmm.h>
@@ -58,6 +59,10 @@ void idt_init(void) {
     __asm__ volatile("lidt %0" : : "m"(g_idtr) : "memory");
 }
 
+void idt_load_ap(void) {
+    __asm__ volatile("lidt %0" : : "m"(g_idtr) : "memory");
+}
+
 static const char *exc_name(unsigned v) {
     static const char *names[32] = {
         "DE divide error",
@@ -97,8 +102,8 @@ static const char *exc_name(unsigned v) {
 }
 
 static void dump_trap(trapframe_t *tf) {
-    printk("\n!!! kernel exception: vec=%llu %s err=0x%llx\n",
-           (unsigned long long)tf->vec, exc_name(tf->vec),
+    printk("\n!!! kernel exception (cpu %u): vec=%llu %s err=0x%llx\n",
+           arch_cpu_index(), (unsigned long long)tf->vec, exc_name(tf->vec),
            (unsigned long long)tf->err);
     printk("  rip=%llx rsp=%llx rflags=%llx cs=%llx ss=%llx\n",
            (unsigned long long)tf->rip, (unsigned long long)tf->rsp,
@@ -128,10 +133,18 @@ static void dump_trap(trapframe_t *tf) {
 
 void interrupt_handler(trapframe_t *tf) {
     uint64_t vec = tf->vec;
+    int from_user = (tf->cs & 3ULL) == 3ULL;
     if (vec == 14) {
         uint64_t cr2;
         __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
-        if (vmm_handle_page_fault(cr2, tf->err) == 0) {
+        if (from_user) {
+            __asm__ volatile("sti" : : : "memory");
+        }
+        int handled = vmm_handle_page_fault(cr2, tf->err);
+        if (from_user) {
+            __asm__ volatile("cli" : : : "memory");
+        }
+        if (handled == 0) {
             signal_deliver_check(tf);
             return;
         }
@@ -139,10 +152,9 @@ void interrupt_handler(trapframe_t *tf) {
     if (vec < 32) {
         dump_trap(tf);
     }
-    apic_irq_dispatch(vec);
+    apic_irq_dispatch(vec, from_user);
     /* Return-to-user boundary for interrupt frames. If the tick's schedule()
      * switched away, this frame stays parked on the kernel stack and this check
-     * runs when the thread finally resumes — g_current is correct in both
-     * cases. */
+     * runs when the thread finally resumes. */
     signal_deliver_check(tf);
 }

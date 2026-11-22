@@ -9,21 +9,50 @@
  */
 
 #include <stdio.h>
+#include <sys/fd.h>
 #include <sys/intr.h>
 #include <sys/ipc.h>
+#include <sys/microkernel.h>
 #include "uart_backend.h"
 
 /* need:: COMP_IPC_0010 */
 
 static uint16_t g_uart_port = 0x3F8u;
 
-void tty_uart_putc(uint8_t c) {
-    for (uint32_t spin = 0; spin < 100000u; spin++) {
-        if (port_inb((uint16_t)(g_uart_port + 5u)) & 0x20u) {
-            break;
-        }
+void tty_uart_write(const uint8_t *buf, size_t len) {
+    if (!buf || len == 0u) {
+        return;
     }
-    port_outb(g_uart_port, c);
+    /* Serialize COM1 TX against Ring 0 printk() under the kernel console lock
+     * when running on the default COM1 port, preserving Ring 3 OPOST/ONLCR. */
+    if (g_uart_port == 0x3F8u) {
+        size_t off = 0u;
+        while (off < len) {
+            size_t chunk = len - off;
+            if (chunk > 1024u) {
+                chunk = 1024u;
+            }
+            long r = __sys5(SYS_FD_OP, FD_OP_CONSOLE_TX,
+                            (long)(uintptr_t)(buf + off), (long)chunk, 0, 0);
+            if (r <= 0) {
+                break;
+            }
+            off += (size_t)r;
+        }
+        return;
+    }
+    for (size_t i = 0; i < len; i++) {
+        for (uint32_t spin = 0; spin < 100000u; spin++) {
+            if (port_inb((uint16_t)(g_uart_port + 5u)) & 0x20u) {
+                break;
+            }
+        }
+        port_outb(g_uart_port, buf[i]);
+    }
+}
+
+void tty_uart_putc(uint8_t c) {
+    tty_uart_write(&c, 1u);
 }
 
 int tty_uart_getc(uint8_t *out) {

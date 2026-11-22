@@ -51,10 +51,20 @@ isr_stub_\vec:
         pushq $0
     .endif
     pushq $\vec
+    testq $3, 24(%rsp)
+    jz 1f
+    swapgs
+1:
     PUSHALL
     movq %rsp, %rdi
+    cld
     callq interrupt_handler
+    cli
     POPALL
+    testq $3, 24(%rsp)
+    jz 2f
+    swapgs
+2:
     addq $16, %rsp
     iretq
 .endm

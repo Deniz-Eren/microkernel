@@ -56,22 +56,18 @@ static struct block_hdr *g_free_head;
 static size_t g_empty_slabs;
 
 static void heap_lock(void) {
-    uint32_t expected = 0u;
-    if (__atomic_compare_exchange_n(&g_heap_lock, &expected, 1u, 0,
-                                    __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+    uint32_t c = 0u;
+    if (__atomic_compare_exchange_n(&g_heap_lock, &c, 1u, 0, __ATOMIC_ACQUIRE,
+                                    __ATOMIC_RELAXED)) {
         return;
     }
-    for (;;) {
-        if (expected == 2u ||
-            __atomic_exchange_n(&g_heap_lock, 2u, __ATOMIC_ACQUIRE) != 0u) {
-            (void)__sys5(SYS_FUTEX, (long)(uintptr_t)&g_heap_lock, FUTEX_WAIT,
-                         2, 0, 0);
-        }
-        expected = 0u;
-        if (__atomic_compare_exchange_n(&g_heap_lock, &expected, 2u, 0,
-                                        __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-            return;
-        }
+    if (c != 2u) {
+        c = __atomic_exchange_n(&g_heap_lock, 2u, __ATOMIC_ACQUIRE);
+    }
+    while (c != 0u) {
+        (void)__sys5(SYS_FUTEX, (long)(uintptr_t)&g_heap_lock, FUTEX_WAIT, 2, 0,
+                     0);
+        c = __atomic_exchange_n(&g_heap_lock, 2u, __ATOMIC_ACQUIRE);
     }
 }
 

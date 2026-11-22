@@ -1,6 +1,6 @@
 /**
  * @file     sched.h
- * @brief    Process, thread, and preemptive scheduler interface
+ * @brief    Process, thread, and SMP preemptive scheduler interface
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -11,6 +11,8 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <kernel/smp.h>
+#include <kernel/spinlock.h>
 #include <sys/fd.h>
 #include <sys/microkernel.h>
 
@@ -72,6 +74,11 @@ typedef struct tcb {
     uint64_t futex_addr;      /* user VA this thread is FUTEX_WAIT-blocked on */
     uint8_t *fpu_raw;         /* unaligned kmalloc pointer for fpu_area */
     uint64_t user_stack_base; /* kernel-allocated 64 KiB thread stack base VA */
+
+    /* SMP execution and cross-CPU teardown state. */
+    uint8_t is_idle;
+    volatile uint8_t on_cpu;
+    volatile uint8_t kill_pending;
 } tcb_t;
 
 /* switch.S reads these fields at fixed offsets. */
@@ -139,10 +146,22 @@ struct pcb {
 
 #define KERNEL_STACK_SIZE 16384UL
 
+/* Global process-table and scheduler spinlocks (ordering: g_proc_lock ->
+ * g_ipc_lock -> g_sched_lock). */
+extern spinlock_t g_proc_lock;
+extern spinlock_t g_sched_lock;
+
 void sched_init(void);
-void sched_tick(void);
+void sched_init_cpu_idle(cpu_local_t *cpu);
+void sched_ap_enter_idle(void) __attribute__((noreturn));
+void sched_idle_loop(void) __attribute__((noreturn));
+void sched_post_switch(void);
+void sched_tick(int from_user);
+void sched_resched_ipi(int from_user);
 void schedule(void);
+void schedule_with_lock(uint64_t saved_flags);
 void sched_ready(tcb_t *t);
+void sched_ready_locked(tcb_t *t);
 void sched_unready(tcb_t *t);
 void sched_activate(void);
 void sched_reset_current_fpu(void);
@@ -153,12 +172,16 @@ tcb_t *sched_current(void);
  * made runnable again and picked. */
 void sched_block_current(thread_state_t state);
 
-/* Make a blocked thread runnable again; preempts the current thread when the
- * woken thread has higher effective priority. */
+/* Make a blocked thread runnable again; kicks an idle/lower CPU via IPI and
+ * returns 1 if the caller should preempt itself once outer locks are dropped.
+ */
+int sched_unblock_nolock_preempt(tcb_t *t);
 void sched_unblock(tcb_t *t);
+void sched_unblock_locked(tcb_t *t);
 
 pcb_t *proc_current(void);
 pcb_t *proc_find(uint32_t pid);
+pcb_t *proc_find_locked(uint32_t pid);
 pcb_t *proc_list_head(void);
 pcb_t *proc_create(pcb_t *parent);
 uint32_t proc_alloc_pid(void);

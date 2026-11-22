@@ -14,12 +14,37 @@
 #include <kernel/string.h>
 #include <kernel/sched.h>
 
-/* need:: COMP_IPC_0001 */
+/* need:: COMP_IPC_0001 COMP_PROC_0008 */
 
+spinlock_t g_ipc_lock = SPINLOCK_INIT;
 static channel_t g_channels[MAX_CHANNELS];
 
+int channel_precreate_sysproc(uint32_t owner_pid) {
+    uint64_t flags = spin_lock_irqsave(&g_ipc_lock);
+    channel_t *ch = &g_channels[1];
+    memset(ch, 0, sizeof(*ch));
+    ch->used = 1;
+    ch->precreated = 1;
+    ch->owner_pid = owner_pid;
+    ch->chanid = 1u;
+    ch->refcount = 1;
+    spin_unlock_irqrestore(&g_ipc_lock, flags);
+    return 1;
+}
+
 int channel_create(uint32_t owner_pid) {
-    for (int i = 0; i < MAX_CHANNELS; i++) {
+    uint64_t flags = spin_lock_irqsave(&g_ipc_lock);
+    if (owner_pid == 1u && g_channels[1].used && g_channels[1].precreated &&
+        g_channels[1].owner_pid == 1u) {
+        g_channels[1].precreated = 0;
+        spin_unlock_irqrestore(&g_ipc_lock, flags);
+        return 1;
+    }
+    /* Slot 0 is reserved as the NULL channel sentinel; slot 1 is sysproc. */
+    for (int i = 1; i < MAX_CHANNELS; i++) {
+        if (i == 1 && owner_pid != 1u) {
+            continue;
+        }
         if (!g_channels[i].used) {
             channel_t *ch = &g_channels[i];
             memset(ch, 0, sizeof(*ch));
@@ -27,30 +52,41 @@ int channel_create(uint32_t owner_pid) {
             ch->owner_pid = owner_pid;
             ch->chanid = (uint32_t)i;
             ch->refcount = 1;
+            spin_unlock_irqrestore(&g_ipc_lock, flags);
             return i;
         }
     }
+    spin_unlock_irqrestore(&g_ipc_lock, flags);
     return -ENOMEM;
 }
 
 int channel_destroy(uint32_t owner_pid, int chanid) {
+    uint64_t flags = spin_lock_irqsave(&g_ipc_lock);
     if (chanid < 0 || chanid >= MAX_CHANNELS || !g_channels[chanid].used) {
+        spin_unlock_irqrestore(&g_ipc_lock, flags);
         return -ESRCH;
     }
     if (g_channels[chanid].owner_pid != owner_pid) {
+        spin_unlock_irqrestore(&g_ipc_lock, flags);
         return -EPERM;
     }
-    /* M3: channels are only destroyed when idle. Wake logic for blocked
-     * senders/receivers arrives with process teardown hardening. */
     g_channels[chanid].used = 0;
+    spin_unlock_irqrestore(&g_ipc_lock, flags);
     return 0;
 }
 
-channel_t *channel_get(int chanid) {
+channel_t *channel_get_locked(int chanid) {
     if (chanid < 0 || chanid >= MAX_CHANNELS || !g_channels[chanid].used) {
         return NULL;
     }
     return &g_channels[chanid];
+}
+
+channel_t *channel_get(int chanid) {
+    uint64_t flags = spin_lock_irqsave(&g_ipc_lock);
+    channel_t *ch = channel_get_locked(chanid);
+    spin_unlock_irqrestore(&g_ipc_lock, flags);
+    return ch;
 }
 
 /* Insert into a priority-ordered singly-linked queue: before the first entry

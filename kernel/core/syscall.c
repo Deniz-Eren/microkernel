@@ -88,13 +88,21 @@ static long sys_debug_log(uint64_t ubuf, uint64_t len) {
     if (len > 4096) {
         len = 4096;
     }
-    static char buf[4096];
-    long r = copy_from_user(buf, ubuf, len);
-    if (r < 0) {
-        return r;
+    char buf[512];
+    uint64_t done = 0;
+    while (done < len) {
+        size_t chunk = (size_t)(len - done);
+        if (chunk > sizeof(buf)) {
+            chunk = sizeof(buf);
+        }
+        long r = copy_from_user(buf, ubuf + done, chunk);
+        if (r < 0) {
+            return done > 0 ? (long)done : r;
+        }
+        console_write_locked(buf, (size_t)r);
+        done += (uint64_t)r;
     }
-    arch_console_write(buf, (size_t)r);
-    return r;
+    return (long)done;
 }
 
 void syscall_handler(trapframe_t *tf) {
@@ -288,8 +296,10 @@ void syscall_handler(trapframe_t *tf) {
         if (a0 > 255) {
             ret = -EINVAL;
         } else {
+            uint64_t sf = spin_lock_irqsave(&g_sched_lock);
             t->base_priority = (uint8_t)a0;
             t->effective_priority = (uint8_t)a0;
+            spin_unlock_irqrestore(&g_sched_lock, sf);
             ret = 0;
         }
         break;

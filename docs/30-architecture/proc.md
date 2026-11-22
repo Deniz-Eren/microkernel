@@ -47,3 +47,30 @@ stateDiagram-v2
     RUNNING --> DEAD : _exit / pthread_exit / fatal signal
     DEAD --> [*]
 ```
+
+## SMP Multi-Core Scheduling and Lock Hierarchy
+
+Every online CPU owns a cache-line-aligned `cpu_local_t` block (`GS.base` on
+`x86-64`) and a private `idle_tcb`. All cores dispatch from the global 256-level
+priority runqueue under `g_sched_lock` and coordinate wakeups with Reschedule
+IPIs (`0xF0`). Synchronous TLB Shootdown IPIs (`0xF1`) synchronize address-space
+unmaps and COW splits across cores.
+
+```mermaid
+flowchart TD
+    L1["1. g_proc_lock (PCB list, FDs, cwd, umask, waitpid, signals)"]
+    L2["2. g_ipc_lock / g_time_lock / g_shm_lock / g_intr_lock"]
+    L3["3. g_kheap_lock (kernel heap free list)"]
+    L4["4. g_vmm_lock (PML4/PTE updates and COW)"]
+    L5["5. g_pmm_lock (frame bitmap and refcounts)"]
+    L6["Leaf: g_sched_lock (runqueue, switch_to, futex)"]
+    L7["Leaf: g_console_lock (printk, debug log, coverage)"]
+
+    L1 --> L2
+    L1 --> L3
+    L2 --> L3
+    L3 --> L4
+    L4 --> L5
+    L1 --> L6
+    L2 --> L6
+```

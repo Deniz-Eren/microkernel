@@ -54,6 +54,13 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     madt_entry_hdr_t hdr;
+    uint8_t acpi_processor_id;
+    uint8_t apic_id;
+    uint32_t flags;
+} madt_lapic_t;
+
+typedef struct __attribute__((packed)) {
+    madt_entry_hdr_t hdr;
     uint8_t ioapic_id;
     uint8_t reserved;
     uint32_t ioapic_addr;
@@ -167,7 +174,12 @@ static void parse_madt(const acpi_sdt_hdr_t *hdr) {
             off + eh->length > hdr->length) {
             break;
         }
-        if (eh->type == 1u && eh->length >= sizeof(madt_ioapic_t)) {
+        if (eh->type == 0u && eh->length >= sizeof(madt_lapic_t)) {
+            const madt_lapic_t *la = (const madt_lapic_t *)eh;
+            if ((la->flags & 0x03u) != 0u && g_acpi.cpu_count < ACPI_MAX_CPUS) {
+                g_acpi.cpu_lapic_ids[g_acpi.cpu_count++] = la->apic_id;
+            }
+        } else if (eh->type == 1u && eh->length >= sizeof(madt_ioapic_t)) {
             const madt_ioapic_t *io = (const madt_ioapic_t *)eh;
             if (!have_ioapic || io->gsi_base == 0u) {
                 g_acpi.ioapic_phys = (uint64_t)io->ioapic_addr;
@@ -277,11 +289,11 @@ void acpi_init(void) {
     g_acpi.rtc_gsi = g_acpi.irq_gsi[8];
 
     if (g_acpi.madt_found) {
-        printk("[OK] ACPI MADT discovered IOAPIC @ 0x%llx (%u ISOs, "
+        printk("[OK] ACPI MADT discovered IOAPIC @ 0x%llx (%u CPUs, %u ISOs, "
                "serial=0x%x gsi=%u, rtc gsi=%u, spcr=%u)\n",
-               (unsigned long long)g_acpi.ioapic_phys, g_acpi.iso_count,
-               (unsigned)g_acpi.serial_port, g_acpi.serial_gsi, g_acpi.rtc_gsi,
-               (unsigned)g_acpi.spcr_found);
+               (unsigned long long)g_acpi.ioapic_phys, g_acpi.cpu_count,
+               g_acpi.iso_count, (unsigned)g_acpi.serial_port,
+               g_acpi.serial_gsi, g_acpi.rtc_gsi, (unsigned)g_acpi.spcr_found);
     } else {
         printk("[acpi] RSDP @ 0x%llx without MADT; using defaults\n",
                (unsigned long long)rsdp_phys);

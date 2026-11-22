@@ -1,6 +1,6 @@
 /**
  * @file     gdt.h
- * @brief    x86-64 segment selectors, GDT, and TSS declarations
+ * @brief    x86-64 segment selectors, per-CPU GDT, and TSS declarations
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -32,6 +32,8 @@ typedef struct {
 } __attribute__((packed)) tss_t;
 
 void gdt_init(void);
-void gdt_install_tss(uint64_t tss_vaddr, uint32_t tss_limit);
+void gdt_init_cpu(uint32_t cpu_idx);
 void tss_init(void);
+void tss_init_cpu(uint32_t cpu_idx);
 void tss_set_rsp0(uint64_t rsp0);
+void tss_set_rsp0_cpu(uint32_t cpu_idx, uint64_t rsp0);

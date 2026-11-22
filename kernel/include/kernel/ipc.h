@@ -43,6 +43,8 @@ typedef struct chan_msg {
     uint32_t len;           /* inline-staged payload length */
     uint8_t is_static;      /* 1 = pre-allocated IRQ node (do not kfree) */
     uint8_t in_use;         /* 1 = static IRQ node currently queued */
+    uint8_t detached;       /* 1 = sender detached while readv/writev active */
+    uint32_t in_op;         /* active ReadMsgV/WriteMsgV users on this node */
     uint8_t data[IPC_MSG_MAX];
 } chan_msg_t;
 

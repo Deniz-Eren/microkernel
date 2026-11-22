@@ -1,6 +1,6 @@
 /**
  * @file     kheap.c
- * @brief    Kernel virtual heap first-fit dynamic memory allocator
+ * @brief    SMP-safe kernel virtual heap first-fit dynamic memory allocator
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -9,15 +9,16 @@
  */
 
 #include <kernel/kheap.h>
+#include <kernel/panic.h>
 #include <kernel/pmm.h>
+#include <kernel/printk.h>
+#include <kernel/spinlock.h>
 #include <kernel/string.h>
 #include <kernel/vmm.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <kernel/printk.h>
-#include <kernel/panic.h>
 
-/* need:: COMP_MEM_0001 */
+/* need:: COMP_MEM_0001 COMP_PROC_0008 */
 
 /* First-fit free-list allocator growing over a kernel VA window at
  * KERNEL_HEAP_BASE. Pages are mapped on demand from the PMM. */
@@ -33,11 +34,12 @@ typedef struct kblock {
     uint64_t used;
 } kblock_t;
 
+static spinlock_t g_kheap_lock = SPINLOCK_INIT;
 static uint8_t *g_heap_cursor;
 static kblock_t *g_free_head;
 static uint64_t g_heap_mapped;
 
-static void heap_grow(size_t need) {
+static void heap_grow_locked(size_t need) {
     while (g_heap_mapped < HEAP_MAX_SIZE &&
            (g_heap_cursor + need) >
                (uint8_t *)(KERNEL_HEAP_BASE + g_heap_mapped)) {
@@ -46,7 +48,8 @@ static void heap_grow(size_t need) {
             panic("kheap: out of memory");
         }
         uint64_t va = KERNEL_HEAP_BASE + g_heap_mapped;
-        vmm_map_page(va, frame, VMM_PRESENT | VMM_WRITE | VMM_NX);
+        vmm_map_page_to(vmm_kernel_pml4(), va, frame,
+                        VMM_PRESENT | VMM_WRITE | VMM_NX);
         g_heap_mapped += 4096;
     }
     if ((g_heap_cursor + need) >
@@ -59,6 +62,10 @@ void kheap_init(void) {
     g_heap_cursor = (uint8_t *)KERNEL_HEAP_BASE;
     g_free_head = NULL;
     g_heap_mapped = 0;
+    /* Pre-populate the PML4 entry covering KERNEL_HEAP_BASE in g_kernel_pml4
+     * before any user PML4 is cloned so all processes share kernel heap PDPTs.
+     */
+    heap_grow_locked(4096);
     printk("[kheap] heap window at %llx\n",
            (unsigned long long)KERNEL_HEAP_BASE);
 }
@@ -71,6 +78,8 @@ void *kmalloc(size_t n) {
     if (total < MIN_BLOCK) {
         total = MIN_BLOCK;
     }
+
+    uint64_t flags = spin_lock_irqsave(&g_kheap_lock);
 
     /* First fit in the free list. */
     kblock_t **prev = &g_free_head;
@@ -91,18 +100,20 @@ void *kmalloc(size_t n) {
             }
             b->used = 1;
             b->next_free = NULL;
+            spin_unlock_irqrestore(&g_kheap_lock, flags);
             return (uint8_t *)b + sizeof(kblock_t);
         }
     }
 
     /* Bump-allocate a fresh block. */
-    heap_grow(total);
+    heap_grow_locked(total);
     kblock_t *b = (kblock_t *)g_heap_cursor;
     g_heap_cursor += total;
     b->magic = HEAP_MAGIC;
     b->size = total;
     b->used = 1;
     b->next_free = NULL;
+    spin_unlock_irqrestore(&g_kheap_lock, flags);
     return (uint8_t *)b + sizeof(kblock_t);
 }
 
@@ -118,8 +129,10 @@ void kfree(void *p) {
     if (!p) {
         return;
     }
+    uint64_t flags = spin_lock_irqsave(&g_kheap_lock);
     kblock_t *b = (kblock_t *)((uint8_t *)p - sizeof(kblock_t));
     if (b->magic != HEAP_MAGIC || !b->used) {
+        spin_unlock_irqrestore(&g_kheap_lock, flags);
         panic("kheap: kfree of bad pointer %p", p);
     }
     b->used = 0;
@@ -146,4 +159,5 @@ void kfree(void *p) {
         prevb->size += b->size;
         prevb->next_free = b->next_free;
     }
+    spin_unlock_irqrestore(&g_kheap_lock, flags);
 }

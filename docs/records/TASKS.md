@@ -21,14 +21,5 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0025 — Boot secondary CPUs via ACPI MADT and harden SMP locks
-
-```{task} Boot secondary CPUs via ACPI MADT and harden SMP locks
-:id: TSK_0025
-:status: open
-:traces: ADR_0003, ADR_0022, ADR_0024, SWR_PROC_0009
-
-Start secondary CPUs under `-smp 2` behind portable HAL hooks (`INIT`/`SIPI` and
-`GS.base` on `x86-64`). Harden `pmm`, `vmm`, `sched`, `ipc`, and `futex` locks
-under concurrent multi-core QEMU tests ({need}`SWR_PROC_0009`).
-```
+No active tasks are currently queued. See [HISTORY.md](HISTORY.md) for completed
+tasks and [ROADMAP.md](ROADMAP.md) for planned future work.

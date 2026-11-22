@@ -10,8 +10,10 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 int tty_uart_init(uint32_t base, uint32_t irq, int chan);
 void tty_uart_putc(uint8_t c);
+void tty_uart_write(const uint8_t *buf, size_t len);
 int tty_uart_getc(uint8_t *out);

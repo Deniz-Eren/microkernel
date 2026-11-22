@@ -1,6 +1,6 @@
 /**
  * @file     pmm.c
- * @brief    Bitmap physical 4 KiB frame memory allocator
+ * @brief    SMP-safe bitmap physical 4 KiB frame memory allocator
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -10,12 +10,13 @@
 
 #include <kernel/pmm.h>
 #include <kernel/multiboot.h>
+#include <kernel/printk.h>
+#include <kernel/spinlock.h>
 #include <kernel/vmm.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <kernel/printk.h>
 
-/* need:: COMP_MEM_0001 */
+/* need:: COMP_MEM_0001 COMP_PROC_0008 */
 
 /* Bitmap frame allocator: bit 1 = free, bit 0 = reserved/allocated.
  * Covers up to 4 GiB of physical memory (QEMU tests use 256 MiB). */
@@ -23,6 +24,7 @@
 #define FRAME_SIZE 4096ULL
 #define BITMAP_WORDS (PMM_MAX_BYTES / FRAME_SIZE / 64)
 
+static spinlock_t g_pmm_lock = SPINLOCK_INIT;
 static uint64_t g_bitmap[BITMAP_WORDS];
 static uint16_t *g_refcount;
 static uint64_t g_total_frames;
@@ -45,12 +47,14 @@ void pmm_reserve(uint64_t base, uint64_t len) {
     if (len == 0) {
         return;
     }
+    uint64_t flags = spin_lock_irqsave(&g_pmm_lock);
     uint64_t start = base / FRAME_SIZE;
     uint64_t end = (base + len + FRAME_SIZE - 1) / FRAME_SIZE;
     if (end > g_total_frames) {
         end = g_total_frames;
     }
     if (start >= end) {
+        spin_unlock_irqrestore(&g_pmm_lock, flags);
         return;
     }
     uint64_t first_w = start / 64ULL;
@@ -65,6 +69,7 @@ void pmm_reserve(uint64_t base, uint64_t len) {
             g_bitmap[w] &= ~mask;
         }
     }
+    spin_unlock_irqrestore(&g_pmm_lock, flags);
 }
 
 uint64_t pmm_total_bytes(void) {
@@ -72,7 +77,10 @@ uint64_t pmm_total_bytes(void) {
 }
 
 uint64_t pmm_free_bytes(void) {
-    return g_free_frames * FRAME_SIZE;
+    uint64_t flags = spin_lock_irqsave(&g_pmm_lock);
+    uint64_t bytes = g_free_frames * FRAME_SIZE;
+    spin_unlock_irqrestore(&g_pmm_lock, flags);
+    return bytes;
 }
 
 void pmm_init(void) {
@@ -130,7 +138,7 @@ void pmm_init(void) {
     pmm_reserve((uint64_t)(uintptr_t)__kernel_phys_start,
                 (uint64_t)(uintptr_t)__kernel_phys_end -
                     (uint64_t)(uintptr_t)__kernel_phys_start);
-    pmm_reserve(0, 0x100000); /* low memory: BIOS, real-mode IVT, EBDA */
+    pmm_reserve(0, 0x100000); /* low memory: BIOS, real-mode IVT, EBDA, AP */
 
     /* The Multiboot2 info structure itself (64 KiB window). */
     uint64_t mbi = multiboot_mbi_phys();
@@ -160,7 +168,9 @@ void pmm_init(void) {
 }
 
 uint64_t pmm_alloc_frame(void) {
+    uint64_t flags = spin_lock_irqsave(&g_pmm_lock);
     if (g_free_frames == 0) {
+        spin_unlock_irqrestore(&g_pmm_lock, flags);
         return 0;
     }
     for (uint64_t w = 0; w < BITMAP_WORDS; w++) {
@@ -179,13 +189,17 @@ uint64_t pmm_alloc_frame(void) {
         }
         g_free_frames--;
         g_rover = (idx / 64 + 1) % BITMAP_WORDS;
+        spin_unlock_irqrestore(&g_pmm_lock, flags);
         return idx * FRAME_SIZE;
     }
+    spin_unlock_irqrestore(&g_pmm_lock, flags);
     return 0;
 }
 
 int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
+    uint64_t flags = spin_lock_irqsave(&g_pmm_lock);
     if (count == 0 || count > g_free_frames) {
+        spin_unlock_irqrestore(&g_pmm_lock, flags);
         return -1;
     }
     uint64_t run = 0;
@@ -209,6 +223,7 @@ int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
                     }
                     g_free_frames -= count;
                     *out_base = base * FRAME_SIZE;
+                    spin_unlock_irqrestore(&g_pmm_lock, flags);
                     return 0;
                 }
                 run += 64ULL;
@@ -228,6 +243,7 @@ int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
                 }
                 g_free_frames -= count;
                 *out_base = base * FRAME_SIZE;
+                spin_unlock_irqrestore(&g_pmm_lock, flags);
                 return 0;
             }
         } else {
@@ -235,6 +251,7 @@ int pmm_alloc_contiguous(size_t count, uint64_t *out_base) {
         }
         i++;
     }
+    spin_unlock_irqrestore(&g_pmm_lock, flags);
     return -1;
 }
 
@@ -243,9 +260,11 @@ void pmm_frame_inc(uint64_t phys) {
     if (!g_refcount || (phys % FRAME_SIZE) || idx >= g_total_frames) {
         return;
     }
+    uint64_t flags = spin_lock_irqsave(&g_pmm_lock);
     if (g_refcount[idx] < UINT16_MAX) {
         g_refcount[idx]++;
     }
+    spin_unlock_irqrestore(&g_pmm_lock, flags);
 }
 
 uint16_t pmm_frame_refcount(uint64_t phys) {
@@ -253,16 +272,25 @@ uint16_t pmm_frame_refcount(uint64_t phys) {
     if (!g_refcount || (phys % FRAME_SIZE) || idx >= g_total_frames) {
         return 0;
     }
-    return g_refcount[idx];
+    uint64_t flags = spin_lock_irqsave(&g_pmm_lock);
+    uint16_t rc = g_refcount[idx];
+    spin_unlock_irqrestore(&g_pmm_lock, flags);
+    return rc;
 }
 
 void pmm_free_frame(uint64_t phys) {
     uint64_t idx = phys / FRAME_SIZE;
-    if (phys % FRAME_SIZE || idx >= g_total_frames || bit_test(idx)) {
+    if (phys % FRAME_SIZE || idx >= g_total_frames) {
+        return;
+    }
+    uint64_t flags = spin_lock_irqsave(&g_pmm_lock);
+    if (bit_test(idx)) {
+        spin_unlock_irqrestore(&g_pmm_lock, flags);
         return;
     }
     if (g_refcount && g_refcount[idx] > 1) {
         g_refcount[idx]--;
+        spin_unlock_irqrestore(&g_pmm_lock, flags);
         return;
     }
     if (g_refcount) {
@@ -270,4 +298,5 @@ void pmm_free_frame(uint64_t phys) {
     }
     bit_set(idx);
     g_free_frames++;
+    spin_unlock_irqrestore(&g_pmm_lock, flags);
 }

@@ -48,3 +48,11 @@ SERIAL_EARLY_FN void serial_write(const char *s, size_t n) {
         serial_putc(s[i]);
     }
 }
+
+void serial_write_raw(const char *s, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        while (!(inb(COM1 + 5) & 0x20)) {
+        }
+        outb(COM1, (uint8_t)s[i]);
+    }
+}

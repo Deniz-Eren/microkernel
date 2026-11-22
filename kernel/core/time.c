@@ -1,6 +1,6 @@
 /**
  * @file     time.c
- * @brief    POSIX.1-2024 CLOCK_MONOTONIC, CLOCK_REALTIME, nanosleep, and timers
+ * @brief    SMP-safe POSIX.1-2024 clocks, nanosleep, alarm, and timers
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -11,13 +11,14 @@
 #include <kernel/time.h>
 #include <kernel/sched.h>
 #include <kernel/signal.h>
+#include <kernel/spinlock.h>
 #include <kernel/uaccess.h>
 #include <limits.h>
 #include <sys/errno.h>
 #include <sys/signal.h>
 #include <time.h>
 
-/* need:: COMP_PROC_0004 */
+/* need:: COMP_PROC_0004 COMP_PROC_0008 */
 
 #define TICK_NS 1000000ULL /* 1 ms LAPIC periodic tick */
 #define NSEC_PER_SEC 1000000000ULL
@@ -35,8 +36,9 @@ typedef struct {
     int overrun;
 } ktimer_t;
 
+static spinlock_t g_time_lock = SPINLOCK_INIT;
 static volatile uint64_t g_mono_ns;
-static int64_t g_realtime_offset_ns;
+static volatile int64_t g_realtime_offset_ns;
 static ktimer_t g_timers[MAX_POSIX_TIMERS];
 
 static int valid_clock(uint64_t clock_id) {
@@ -44,9 +46,10 @@ static int valid_clock(uint64_t clock_id) {
 }
 
 static uint64_t clock_now_ns(clockid_t clock_id) {
-    uint64_t mono = g_mono_ns;
+    uint64_t mono = __atomic_load_n(&g_mono_ns, __ATOMIC_ACQUIRE);
     if (clock_id == CLOCK_REALTIME) {
-        int64_t rt = (int64_t)mono + g_realtime_offset_ns;
+        int64_t off = __atomic_load_n(&g_realtime_offset_ns, __ATOMIC_ACQUIRE);
+        int64_t rt = (int64_t)mono + off;
         return rt > 0 ? (uint64_t)rt : 0ULL;
     }
     return mono;
@@ -69,7 +72,7 @@ static struct timespec ns_to_ts(uint64_t ns) {
 }
 
 uint64_t time_monotonic_ns(void) {
-    return g_mono_ns;
+    return __atomic_load_n(&g_mono_ns, __ATOMIC_ACQUIRE);
 }
 
 uint64_t time_clock_now_ns(int clock_id) {
@@ -77,32 +80,46 @@ uint64_t time_clock_now_ns(int clock_id) {
 }
 
 void time_cleanup_proc(uint32_t pid) {
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
     for (int i = 0; i < MAX_POSIX_TIMERS; i++) {
         if (g_timers[i].used && g_timers[i].owner_pid == pid) {
             g_timers[i].used = 0;
             g_timers[i].armed = 0;
         }
     }
+    spin_unlock_irqrestore(&g_time_lock, tf);
 }
 
-/* Called on every 1 ms LAPIC timer interrupt (before sched_tick). */
+/* Called on every 1 ms BSP LAPIC timer interrupt (before sched_tick). */
 void time_tick(void) {
-    g_mono_ns += TICK_NS;
+    uint64_t mono = __atomic_add_fetch(&g_mono_ns, TICK_NS, __ATOMIC_ACQ_REL);
+
+    struct {
+        uint32_t pid;
+        int signo;
+    } sigs[32];
+    size_t nsigs = 0;
 
     /* Wake sleeping threads whose deadline has expired. */
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    spin_lock(&g_sched_lock);
     for (pcb_t *p = proc_list_head(); p; p = p->next) {
         if (p->state != PROC_ALIVE) {
             continue;
         }
-        if (p->alarm_expire_ns != 0ULL && g_mono_ns >= p->alarm_expire_ns) {
+        if (p->alarm_expire_ns != 0ULL && mono >= p->alarm_expire_ns) {
             p->alarm_expire_ns = 0ULL;
-            signal_post_to_proc(p->pid, SIGALRM);
+            if (nsigs < 32u) {
+                sigs[nsigs].pid = p->pid;
+                sigs[nsigs].signo = SIGALRM;
+                nsigs++;
+            }
         }
         for (tcb_t *t = p->threads; t; t = t->proc_next) {
             if (t->state == THREAD_SLEEP_BLOCKED) {
                 uint64_t now = clock_now_ns((clockid_t)t->sleep_clock_id);
                 if (now >= t->sleep_deadline_ns) {
-                    sched_ready(t);
+                    sched_ready_locked(t);
                 }
             } else if (t->state == THREAD_FUTEX_BLOCKED &&
                        t->futex_has_timeout) {
@@ -110,13 +127,16 @@ void time_tick(void) {
                 if (now >= t->sleep_deadline_ns) {
                     t->futex_addr = 0;
                     t->futex_has_timeout = 0;
-                    sched_ready(t);
+                    sched_ready_locked(t);
                 }
             }
         }
     }
+    spin_unlock(&g_sched_lock);
+    spin_unlock_irqrestore(&g_proc_lock, pf);
 
     /* Fire expired POSIX interval timers. */
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
     for (int i = 0; i < MAX_POSIX_TIMERS; i++) {
         ktimer_t *tm = &g_timers[i];
         if (!tm->used || !tm->armed) {
@@ -136,9 +156,16 @@ void time_tick(void) {
         } else {
             tm->armed = 0;
         }
-        if (tm->notify == SIGEV_SIGNAL) {
-            signal_post_to_proc(tm->owner_pid, tm->signo);
+        if (tm->notify == SIGEV_SIGNAL && nsigs < 32u) {
+            sigs[nsigs].pid = tm->owner_pid;
+            sigs[nsigs].signo = tm->signo;
+            nsigs++;
         }
+    }
+    spin_unlock_irqrestore(&g_time_lock, tf);
+
+    for (size_t i = 0; i < nsigs; i++) {
+        signal_post_to_proc(sigs[i].pid, sigs[i].signo);
     }
 }
 
@@ -161,8 +188,11 @@ long sys_clock_settime(uint64_t clock_id, uint64_t tp_va) {
     if (!valid_timespec(&ts)) {
         return -EINVAL;
     }
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
     int64_t target_ns = (int64_t)ts_to_ns(&ts);
-    g_realtime_offset_ns = target_ns - (int64_t)g_mono_ns;
+    int64_t off = target_ns - (int64_t)time_monotonic_ns();
+    __atomic_store_n(&g_realtime_offset_ns, off, __ATOMIC_RELEASE);
+    spin_unlock_irqrestore(&g_time_lock, tf);
     return 0;
 }
 
@@ -204,11 +234,17 @@ long sys_clock_nanosleep(uint64_t clock_id, uint64_t flags, uint64_t rqtp_va,
     if (!cur) {
         return -EPERM;
     }
-    cur->sleep_clock_id = (uint8_t)clock_id;
-    cur->sleep_deadline_ns = deadline;
 
-    while (clock_now_ns((clockid_t)clock_id) < deadline) {
-        if (cur->pending_signals & ~cur->blocked_signals) {
+    for (;;) {
+        uint64_t sf = spin_lock_irqsave(&g_sched_lock);
+        uint64_t cur_now = clock_now_ns((clockid_t)clock_id);
+        if (cur_now >= deadline) {
+            spin_unlock_irqrestore(&g_sched_lock, sf);
+            return 0;
+        }
+        if (__atomic_load_n(&cur->pending_signals, __ATOMIC_ACQUIRE) &
+            ~cur->blocked_signals) {
+            spin_unlock_irqrestore(&g_sched_lock, sf);
             if (!(flags & TIMER_ABSTIME) && rmtp_va != 0) {
                 uint64_t rem = deadline - clock_now_ns((clockid_t)clock_id);
                 struct timespec rts = ns_to_ts(rem);
@@ -216,9 +252,11 @@ long sys_clock_nanosleep(uint64_t clock_id, uint64_t flags, uint64_t rqtp_va,
             }
             return -EINTR;
         }
-        sched_block_current(THREAD_SLEEP_BLOCKED);
+        cur->sleep_clock_id = (uint8_t)clock_id;
+        cur->sleep_deadline_ns = deadline;
+        cur->state = THREAD_SLEEP_BLOCKED;
+        schedule_with_lock(sf);
     }
-    return 0;
 }
 
 long sys_timer_create(uint64_t clock_id, uint64_t sevp_va, uint64_t tid_va) {
@@ -248,12 +286,10 @@ long sys_timer_create(uint64_t clock_id, uint64_t sevp_va, uint64_t tid_va) {
         }
     }
 
+    int slot = -1;
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
     for (int i = 0; i < MAX_POSIX_TIMERS; i++) {
         if (!g_timers[i].used) {
-            timer_t tid = (timer_t)i;
-            if (copy_to_user(tid_va, &tid, sizeof(tid)) < 0) {
-                return -EFAULT;
-            }
             ktimer_t *tm = &g_timers[i];
             tm->used = 1;
             tm->armed = 0;
@@ -264,14 +300,26 @@ long sys_timer_create(uint64_t clock_id, uint64_t sevp_va, uint64_t tid_va) {
             tm->expire_ns = 0;
             tm->interval_ns = 0;
             tm->overrun = 0;
-            return 0;
+            slot = i;
+            break;
         }
     }
-    return -EAGAIN;
+    spin_unlock_irqrestore(&g_time_lock, tf);
+
+    if (slot < 0) {
+        return -EAGAIN;
+    }
+    timer_t tid = (timer_t)slot;
+    if (copy_to_user(tid_va, &tid, sizeof(tid)) < 0) {
+        tf = spin_lock_irqsave(&g_time_lock);
+        g_timers[slot].used = 0;
+        spin_unlock_irqrestore(&g_time_lock, tf);
+        return -EFAULT;
+    }
+    return 0;
 }
 
-static ktimer_t *lookup_timer(uint64_t timerid) {
-    pcb_t *p = proc_current();
+static ktimer_t *lookup_timer_locked(pcb_t *p, uint64_t timerid) {
     if (!p || timerid >= MAX_POSIX_TIMERS) {
         return NULL;
     }
@@ -283,19 +331,23 @@ static ktimer_t *lookup_timer(uint64_t timerid) {
 }
 
 long sys_timer_delete(uint64_t timerid) {
-    ktimer_t *tm = lookup_timer(timerid);
+    pcb_t *p = proc_current();
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
+    ktimer_t *tm = lookup_timer_locked(p, timerid);
     if (!tm) {
+        spin_unlock_irqrestore(&g_time_lock, tf);
         return -EINVAL;
     }
     tm->used = 0;
     tm->armed = 0;
+    spin_unlock_irqrestore(&g_time_lock, tf);
     return 0;
 }
 
 long sys_timer_settime(uint64_t timerid, uint64_t flags, uint64_t val_va,
                        uint64_t oval_va) {
-    ktimer_t *tm = lookup_timer(timerid);
-    if (!tm || (flags & ~(uint64_t)TIMER_ABSTIME)) {
+    pcb_t *p = proc_current();
+    if (!p || (flags & ~(uint64_t)TIMER_ABSTIME)) {
         return -EINVAL;
     }
     struct itimerspec nv = {0};
@@ -306,19 +358,19 @@ long sys_timer_settime(uint64_t timerid, uint64_t flags, uint64_t val_va,
         return -EINVAL;
     }
 
-    uint64_t now = clock_now_ns(tm->clock_id);
-    if (oval_va != 0) {
-        struct itimerspec ov = {0};
-        if (tm->armed) {
-            uint64_t rem = (tm->expire_ns > now) ? (tm->expire_ns - now) : 0ULL;
-            ov.it_value = ns_to_ts(rem);
-            ov.it_interval = ns_to_ts(tm->interval_ns);
-        }
-        if (copy_to_user(oval_va, &ov, sizeof(ov)) < 0) {
-            return -EFAULT;
-        }
+    struct itimerspec ov = {0};
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
+    ktimer_t *tm = lookup_timer_locked(p, timerid);
+    if (!tm) {
+        spin_unlock_irqrestore(&g_time_lock, tf);
+        return -EINVAL;
     }
-
+    uint64_t now = clock_now_ns(tm->clock_id);
+    if (oval_va != 0 && tm->armed) {
+        uint64_t rem = (tm->expire_ns > now) ? (tm->expire_ns - now) : 0ULL;
+        ov.it_value = ns_to_ts(rem);
+        ov.it_interval = ns_to_ts(tm->interval_ns);
+    }
     uint64_t val_ns = ts_to_ns(&nv.it_value);
     uint64_t int_ns = ts_to_ns(&nv.it_interval);
     tm->overrun = 0;
@@ -331,30 +383,44 @@ long sys_timer_settime(uint64_t timerid, uint64_t flags, uint64_t val_va,
         tm->interval_ns = int_ns;
         tm->armed = 1;
     }
+    spin_unlock_irqrestore(&g_time_lock, tf);
+
+    if (oval_va != 0 && copy_to_user(oval_va, &ov, sizeof(ov)) < 0) {
+        return -EFAULT;
+    }
     return 0;
 }
 
 long sys_timer_gettime(uint64_t timerid, uint64_t val_va) {
-    ktimer_t *tm = lookup_timer(timerid);
+    pcb_t *p = proc_current();
+    struct itimerspec cur = {0};
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
+    ktimer_t *tm = lookup_timer_locked(p, timerid);
     if (!tm) {
+        spin_unlock_irqrestore(&g_time_lock, tf);
         return -EINVAL;
     }
-    struct itimerspec cur = {0};
     if (tm->armed) {
         uint64_t now = clock_now_ns(tm->clock_id);
         uint64_t rem = (tm->expire_ns > now) ? (tm->expire_ns - now) : 0ULL;
         cur.it_value = ns_to_ts(rem);
         cur.it_interval = ns_to_ts(tm->interval_ns);
     }
+    spin_unlock_irqrestore(&g_time_lock, tf);
     return copy_to_user(val_va, &cur, sizeof(cur)) < 0 ? -EFAULT : 0;
 }
 
 long sys_timer_getoverrun(uint64_t timerid) {
-    ktimer_t *tm = lookup_timer(timerid);
+    pcb_t *p = proc_current();
+    uint64_t tf = spin_lock_irqsave(&g_time_lock);
+    ktimer_t *tm = lookup_timer_locked(p, timerid);
     if (!tm) {
+        spin_unlock_irqrestore(&g_time_lock, tf);
         return -EINVAL;
     }
-    return tm->overrun;
+    int ov = tm->overrun;
+    spin_unlock_irqrestore(&g_time_lock, tf);
+    return ov;
 }
 
 long sys_alarm(uint64_t seconds) {
@@ -362,7 +428,8 @@ long sys_alarm(uint64_t seconds) {
     if (!p) {
         return -EPERM;
     }
-    uint64_t now = g_mono_ns;
+    uint64_t pf = spin_lock_irqsave(&g_proc_lock);
+    uint64_t now = time_monotonic_ns();
     uint64_t rem_sec = 0ULL;
     if (p->alarm_expire_ns > now) {
         uint64_t rem_ns = p->alarm_expire_ns - now;
@@ -378,5 +445,6 @@ long sys_alarm(uint64_t seconds) {
         uint64_t clamped = seconds > cap ? cap : seconds;
         p->alarm_expire_ns = now + clamped * NSEC_PER_SEC;
     }
+    spin_unlock_irqrestore(&g_proc_lock, pf);
     return (long)rem_sec;
 }

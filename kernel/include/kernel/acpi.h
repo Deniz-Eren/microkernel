@@ -15,6 +15,7 @@
 #include <stdint.h>
 
 #define ACPI_MAX_ISA_IRQS 16u
+#define ACPI_MAX_CPUS 16u
 
 typedef struct {
     uint64_t rsdp_phys;
@@ -24,6 +25,8 @@ typedef struct {
     uint32_t irq_gsi[ACPI_MAX_ISA_IRQS];
     uint16_t irq_flags[ACPI_MAX_ISA_IRQS];
     uint32_t iso_count;
+    uint8_t cpu_lapic_ids[ACPI_MAX_CPUS];
+    uint32_t cpu_count;
     uint16_t serial_port;
     uint32_t serial_gsi;
     uint32_t rtc_gsi;

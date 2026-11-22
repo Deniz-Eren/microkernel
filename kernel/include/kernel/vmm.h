@@ -78,4 +78,7 @@ uint64_t vmm_alloc_mmap_va(uint64_t pml4_phys, uint64_t *next_va,
 uint64_t vmm_prot_to_pte_flags(uint64_t prot);
 void vmm_set_cr3(uint64_t pml4_phys);
 uint64_t vmm_get_cr3(void);
+uint64_t vmm_kernel_pml4(void);
 void vmm_invlpg(uint64_t vaddr);
+void vmm_tlb_shootdown(uint64_t pml4_phys, uint64_t vaddr);
+void vmm_tlb_shootdown_handler(void);

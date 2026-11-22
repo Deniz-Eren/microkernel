@@ -190,7 +190,9 @@ skill](docs/skills/dev-environment/SKILL.md).
 
 The kernel supplies these services:
 
-- preemptive scheduling of threads with 256 priority levels
+- preemptive multi-core SMP scheduling of threads with 256 priority levels, ACPI
+  `MADT` secondary CPU bring-up, per-CPU `GS.base` state, ticket spinlocks, and
+  reschedule plus TLB shootdown IPIs
 - synchronous and scatter-gather IPC with channels, connections, replies, and
   pulses
 - threads, `FS.base` TLS, futexes, monotonic/realtime clocks, interval timers,

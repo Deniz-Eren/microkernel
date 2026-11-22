@@ -48,6 +48,7 @@ set(MICROKERNEL_KERNEL_LINKER_SCRIPT
 
 set(MICROKERNEL_KERNEL_ASM_SRCS
     ${CMAKE_SOURCE_DIR}/kernel/arch/x86-64/boot.S
+    ${CMAKE_SOURCE_DIR}/kernel/arch/x86-64/ap_trampoline.S
     ${CMAKE_SOURCE_DIR}/kernel/arch/x86-64/isr.S
     ${CMAKE_SOURCE_DIR}/kernel/arch/x86-64/switch.S
 )

@@ -10,7 +10,7 @@
 # need:: VER_BOOT_0001 VER_BOOT_0002 VER_BOOT_0003 VER_BOOT_0004
 # need:: VER_MEM_0001 VER_MEM_0002 VER_MEM_0003 VER_MEM_0004
 # need:: VER_PROC_0001 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
-# need:: VER_PROC_0005 VER_PROC_0006 VER_IPC_0001 VER_IPC_0002
+# need:: VER_PROC_0005 VER_PROC_0006 VER_PROC_0007 VER_IPC_0001 VER_IPC_0002
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_IPC_0008 VER_IPC_0009
 # need:: VER_SIG_0001 VER_SIG_0002 VER_LIBC_0001 VER_LIBC_0003 VER_LIBC_0004
@@ -49,7 +49,6 @@ ARCH_QEMU_PROFILES = {
         "flags": [
             "-machine", "q35",
             "-m", "256M",
-            "-smp", "2",
         ],
     },
 }
@@ -64,7 +63,7 @@ def build_cmd(args):
     cmd = (
         shlex.split(qemu_bin)
         + list(profile["flags"])
-        + ["-cpu", cpu_model]
+        + ["-smp", str(args.smp), "-cpu", cpu_model]
         + [
             "-cdrom", args.iso,
             "-serial", "stdio",
@@ -114,6 +113,7 @@ def main() -> int:
         default=str(_ROOT / "build" / "test-blk.img"),
     )
     ap.add_argument("--cpu", default=None)
+    ap.add_argument("--smp", type=int, default=2)
     ap.add_argument("--qemu", default=None)
     args = ap.parse_args()
 
