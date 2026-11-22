@@ -60,3 +60,17 @@ verify zero PMM frame, descriptor, or server handle leaks across `sh`, VFS,
 pipes, TTY, sockets, and `SHM`. It must check exact kernel frame counts and Ring
 3 server handle counts before and after stress loops ({need}`SYS_DOCS_0001`).
 ```
+
+```{swr} Generate automated Ring 0 and Ring 3 LLVM code coverage on demand
+:id: SWR_DOCS_0005
+:status: draft
+:derives: SYS_DOCS_0001
+:traces: ADR_0025
+
+With `-DMICROKERNEL_COVERAGE=ON`, the build and QEMU harness must collect LLVM
+Raw Profile v8 coverage across Ring 0 and Ring 3. Profiles must stream as
+base64-framed records over `arch_console_write()` with no file system or
+x86-only device dependency. `./scripts/env.sh coverage` must run `llvm-profdata`
+and `llvm-cov` in `build-cov/` to produce HTML, LCOV, and text reports while
+default builds stay uninstrumented ({need}`SYS_DOCS_0001`).
+```

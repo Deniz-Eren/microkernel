@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Recorded the opt-in automated LLVM code coverage architecture (`ADR_0025`,
+  draft `SWR_DOCS_0005`) and queued `TSK_0027` as the next task in
+  `docs/records/TASKS.md` (using freestanding Raw Profile v8 over portable
+  `arch_console_write()` base64 framing and `./scripts/env.sh coverage` in
+  isolated `build-cov/`).
 - Reordered `docs/records/TASKS.md` by dependency (`TSK_0026` -> `TSK_0023` ->
   `TSK_0022` -> `TSK_0024` -> `TSK_0025`) and refined `SWR_PROC_0008`
   (`waitpid(0)`/`-pgid`, `kill(-pgid)`) and `SWR_IPC_0010` (`CAP_SYS_INTR`
