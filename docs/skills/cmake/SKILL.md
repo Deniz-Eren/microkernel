@@ -60,6 +60,9 @@ matched before the timeout:
 - A kernel panic or a missing pattern gives exit code 1.
 - A milestone is complete only when its test gives exit code 0 (see
   [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md), `CNV_0006`).
+- For harness details and failure diagnosis, see
+  [docs/60-verification/qemu-harness.md](../../60-verification/qemu-harness.md)
+  and the [qemu-debug skill](../qemu-debug/SKILL.md).
 
 ## Add a user program
 

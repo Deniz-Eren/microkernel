@@ -395,8 +395,12 @@ milestones enforce `x86-64-v3` with `XSAVE`/`XRSTOR`, add `<fenv.h>` and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md), and
   [docs/records/HISTORY.md](docs/records/HISTORY.md): active tasks, roadmap, and
   completed milestones
+- [docs/60-verification/qemu-harness.md](docs/60-verification/qemu-harness.md):
+  headless QEMU test harness architecture, boot modes, and failure triage
 - Skills:
   - [cmake](docs/skills/cmake/SKILL.md) — build, test, and user programs
+  - [qemu-debug](docs/skills/qemu-debug/SKILL.md) — QEMU failure triage, monitor
+    inspection, and kernel symbolization
   - [clang-format](docs/skills/clang-format/SKILL.md) — code formatting
   - [clang-tidy](docs/skills/clang-tidy/SKILL.md) — static analysis
   - [dev-environment](docs/skills/dev-environment/SKILL.md) — the container

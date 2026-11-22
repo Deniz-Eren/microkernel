@@ -28,6 +28,10 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Documented the headless QEMU test harness architecture, boot modes, and
+  failure triage model in `docs/60-verification/qemu-harness.md`, and added the
+  `qemu-debug` agent skill (`docs/skills/qemu-debug/SKILL.md`) for monitor
+  register inspection, LLVM kernel symbolization, and SMP race isolation.
 - Implemented POSIX.1-2024 Base signals, `waitid`, `_Fork`, `popen`/`system`,
   ISO C17 `<threads.h>`, named `MAP_SHARED` semaphores, and XCU utilities
   `sleep`, `time`, `timeout`, `nohup`, and `sh` `wait` (`TSK_0034`,

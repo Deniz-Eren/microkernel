@@ -161,12 +161,14 @@ flowchart TD
 - `bin/`: Ring 3 command shell (`sh`) and standalone core utilities (`echo`,
   `cat`, `ls`, `true`, `false`, `test`) targeting POSIX.1-2024 XCU interfaces
   and packed into `boot.tar`.
-- `tests/`: `test_runner.py` (headless QEMU serial assertion harness), Ring 3
-  test binaries (`ipccli`, `sigtest`, `proctest`, `procchild`, `drvtest`,
-  `timetest`, `pthreadtest`, `forkpipetest`, `exechelper`, `aiotest`,
-  `canceltest`, `libctest`, `heaptest`, `vfstest`, `shmtest`, `ttytest`,
-  `stdiotest`, `socktest`, `shtest`), `posix/` compatibility gates, and
-  `traceability/` unit tests.
+- `tests/`: `test_runner.py` (headless QEMU serial assertion harness, documented
+  in `docs/60-verification/qemu-harness.md` and
+  `docs/skills/qemu-debug/SKILL.md`), Ring 3 test binaries (`ipccli`, `sigtest`,
+  `proctest`, `procchild`, `drvtest`, `timetest`, `pthreadtest`, `forkpipetest`,
+  `exechelper`, `aiotest`, `canceltest`, `libctest`, `heaptest`, `vfstest`,
+  `shmtest`, `ttytest`, `stdiotest`, `socktest`, `shtest`, `utilstest`,
+  `jobtest`, `simdtest`, `mathtest`, `blktest`, `ext2test`, `smptest`,
+  `stresstest`), `posix/` compatibility gates, and `traceability/` unit tests.
 - `config/sphinx/`, `tools/`: Sphinx-Needs model (`needs_model.py`), code tag
   checker (`need_tag_check.py`), `check_needs_audit.py`, `audit_lib.py`, and
   `check_ste.py`.
