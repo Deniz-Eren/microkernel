@@ -16,15 +16,16 @@ protocol ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0001`, {need}`SWR_IPC_0002`,
 {need}`SWR_IPC_0003`, {need}`SWR_IPC_0006`).
 ```
 
-```{icd} Interrupt event, IOPL, and Ring 3 port I/O interface
+```{icd} Interrupt event, IOPL, MMIO, DMA, PCI, and Ring 3 port I/O interface
 :id: ICD_IPC_0002
 :status: active
 :refines: ARC_IPC_0001
-:satisfies: SWR_IPC_0006
+:satisfies: SWR_IPC_0006, SWR_IPC_0010
 
 `libc/include/sys/intr.h` and `kernel/include/kernel/intr.h` specify
 `CAP_SYS_INTR`, `PULSE_CODE_IRQ`, `AttachIntrEvent`, `IntrUnmask`, `IOPLSet`,
-and Ring 3 port I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`).
+`VMMapMMIO`, `DMAAlloc`, `PCIConfigRead32`/`PCIConfigWrite32`, and Ring 3 port
+I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
 ```
 
 ```{icd} Kernel FD table ABI and Ring 3 /dev/pipe protocol
@@ -171,4 +172,15 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 `libc/include/sys/select.h` declares `struct timeval`, `fd_set`, `FD_SETSIZE`,
 `FD_CLR`, `FD_ISSET`, `FD_SET`, `FD_ZERO`, `select`, and `pselect` with no
 `<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_DOCS_0004`).
+```
+
+```{icd} Ring 3 block device IPC protocol (/dev/blk)
+:id: ICD_IPC_0015
+:status: active
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0010
+
+`libc/include/sys/blk.h` defines `BLK_SECTOR_SIZE` (`512`), `BLK_MAX_SECTORS`,
+`BLK_OP_INFO`, `BLK_OP_READ`, `BLK_OP_WRITE`, `blk_req_t`, and `blk_rep_t` for
+Ring 3 `/dev/blk` IPC ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0010`).
 ```

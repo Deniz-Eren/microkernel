@@ -169,7 +169,7 @@ long ipc_msg_send(int connid, uint64_t smsg, uint64_t sbytes, uint64_t rmsg,
     if (!ch) {
         return -ESRCH;
     }
-    if (sbytes > IPC_MSG_MAX) {
+    if (sbytes > IPC_MSG_LARGE_MAX) {
         return -EINVAL;
     }
 
@@ -180,10 +180,14 @@ long ipc_msg_send(int connid, uint64_t smsg, uint64_t sbytes, uint64_t rmsg,
     memset(m, 0, sizeof(*m));
     m->sender = t;
     m->sender_pml4 = t->proc->pml4_phys;
+    m->send_src = smsg;
+    m->send_len = sbytes;
     m->reply_dst = rmsg;
     m->reply_max = rbytes;
-    m->len = (uint32_t)sbytes;
-    long r = copy_from_user(m->data, smsg, sbytes);
+    uint32_t stage_len =
+        (sbytes > IPC_MSG_MAX) ? IPC_MSG_MAX : (uint32_t)sbytes;
+    m->len = stage_len;
+    long r = copy_from_user(m->data, smsg, stage_len);
     if (r < 0) {
         kfree(m);
         return r;
@@ -257,6 +261,9 @@ long ipc_msg_reply(int msgid, uint64_t rmsg, uint64_t rbytes) {
     }
 
     tcb_t *client = m->sender;
+    if (rbytes > IPC_MSG_MAX) {
+        return -EINVAL;
+    }
     if (rbytes > m->reply_max) {
         rbytes = m->reply_max;
     }
@@ -307,29 +314,50 @@ long ipc_msg_readv(int msgid, uint64_t offset, uint64_t iov_va,
     if (m->receiver != srv) {
         return -EPERM;
     }
-    if (iovcnt == 0 || offset >= m->len) {
+    uint64_t avail_len = m->send_len ? m->send_len : (uint64_t)m->len;
+    if (iovcnt == 0 || offset >= avail_len) {
         return 0;
     }
     ipc_iov_t iov[IPC_IOV_MAX];
     if (copy_from_user(iov, iov_va, iovcnt * sizeof(ipc_iov_t)) < 0) {
         return -EFAULT;
     }
+    uint8_t stage[256];
     uint64_t cur = offset;
     uint64_t total = 0;
-    for (uint64_t i = 0; i < iovcnt && cur < m->len; i++) {
-        size_t chunk = iov[i].len;
-        if (chunk == 0) {
-            continue;
+    for (uint64_t i = 0; i < iovcnt && cur < avail_len; i++) {
+        uint64_t seg_off = 0;
+        uint64_t seg_len = iov[i].len;
+        if (seg_len > avail_len - cur) {
+            seg_len = avail_len - cur;
         }
-        if (chunk > (size_t)(m->len - cur)) {
-            chunk = (size_t)(m->len - cur);
+        while (seg_off < seg_len) {
+            size_t n = (size_t)(seg_len - seg_off);
+            if (cur < m->len) {
+                if (n > (size_t)(m->len - cur)) {
+                    n = (size_t)(m->len - cur);
+                }
+                if (copy_to_user((uint64_t)(uintptr_t)iov[i].base + seg_off,
+                                 m->data + cur, n) < 0) {
+                    return -EFAULT;
+                }
+            } else {
+                if (n > sizeof(stage)) {
+                    n = sizeof(stage);
+                }
+                if (copy_from_user_pml4(m->sender_pml4, stage,
+                                        m->send_src + cur, n) < 0) {
+                    return -EFAULT;
+                }
+                if (copy_to_user((uint64_t)(uintptr_t)iov[i].base + seg_off,
+                                 stage, n) < 0) {
+                    return -EFAULT;
+                }
+            }
+            seg_off += n;
+            cur += n;
+            total += n;
         }
-        if (copy_to_user((uint64_t)(uintptr_t)iov[i].base, m->data + cur,
-                         chunk) < 0) {
-            return -EFAULT;
-        }
-        cur += chunk;
-        total += chunk;
     }
     return (long)total;
 }

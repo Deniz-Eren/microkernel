@@ -91,3 +91,16 @@ also checks `SOCK_DGRAM` `sendto`/`recvfrom` and multi-server `ppoll()`. CTest
 POSIX gates check `<sys/socket.h>`, `<sys/un.h>`, async-signal-safety, and
 cancellation points ({need}`SWR_IPC_0009`).
 ```
+
+```{ver} Verify CAP_SYS_INTR MMIO/DMA/PCI EPERM and /dev/blk persistence
+:id: VER_IPC_0008
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0010
+
+The headless QEMU harness `tests/test_runner.py` runs `blkdrv` and `blktest`
+(`tests/blktest/test_blk.c`). It checks unprivileged `EPERM` on `VMMapMMIO`,
+`DMAAlloc`, and `PCIConfig*`, multi-sector `/dev/blk` read/write I/O, and IOAPIC
+IRQ pulses. CTest `ipc.blk_persist` (`tests/boot/test_blk_persist.py`) checks
+sector persistence across two cold QEMU restarts ({need}`SWR_IPC_0010`).
+```

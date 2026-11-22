@@ -1077,6 +1077,12 @@ void proc_spawn_init(void) {
         drv->caps |= CAP_SYS_INTR;
     }
 
+    /* Ring 3 PCI virtio-blk storage driver (/dev/blk) with CAP_SYS_INTR. */
+    pcb_t *blk = spawn_image(tar_phys, tar_size, "blkdrv", 102, 0);
+    if (blk) {
+        blk->caps |= CAP_SYS_INTR;
+    }
+
     if (kstrstr(cmd, "init=sh") != NULL) {
         printk("[OK] interactive boot mode (init=sh): spawning /boot/sh\n");
         spawn_image(tar_phys, tar_size, "sh", 95, 0);
@@ -1126,6 +1132,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "simdtest", 100, 0);
     /* POSIX.1-2024 <fenv.h> and <math.h> (FMA/trig/exp/log/pow) test. */
     spawn_image(tar_phys, tar_size, "mathtest", 100, 0);
+    /* Ring 3 CAP_SYS_INTR MMIO/DMA/PCI EPERM and /dev/blk persistence test. */
+    spawn_image(tar_phys, tar_size, "blktest", 98, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

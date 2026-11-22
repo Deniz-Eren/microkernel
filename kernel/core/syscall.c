@@ -274,6 +274,15 @@ void syscall_handler(trapframe_t *tf) {
     case SYS_KILL:
         ret = sys_kill((int64_t)a0, a1);
         break;
+    case SYS_VM_MAP_MMIO:
+        ret = sys_vm_map_mmio(a0, a1, a2);
+        break;
+    case SYS_DMA_ALLOC:
+        ret = sys_dma_alloc(a0, a1);
+        break;
+    case SYS_PCI_CFG:
+        ret = sys_pci_cfg(a0, a1, a2, a3);
+        break;
     case SYS_SCHED_SET_PRIO: {
         tcb_t *t = sched_current();
         if (a0 > 255) {

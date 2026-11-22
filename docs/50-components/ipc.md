@@ -180,3 +180,16 @@ queues, deferred blocking `accept`/`send`/`recv`/`ppoll` requests, and
 checks and `POLLNVAL` to `EBADF` mapping ({need}`ICD_IPC_0005`,
 {need}`ICD_IPC_0014`, {need}`SWR_DOCS_0004`).
 ```
+
+```{comp} CAP_SYS_INTR MMIO/DMA/PCI syscalls and Ring 3 virtio-blk driver
+:id: COMP_IPC_0015
+:status: active
+:refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0002, ICD_IPC_0015
+:satisfies: SWR_IPC_0010
+
+`kernel/core/vmm.c` and `kernel/core/intr.c` implement `CAP_SYS_INTR`
+`SYS_VM_MAP_MMIO`, `SYS_DMA_ALLOC`, and `SYS_PCI_CFG` syscalls.
+`servers/blkdrv/main.c` runs a Ring 3 Modern VirtIO 1.0 PCI block driver
+(`/dev/blk`) over MMIO BARs, contiguous DMA virtqueues, and IOAPIC IRQ pulses
+({need}`ICD_IPC_0002`, {need}`ICD_IPC_0015`, {need}`SWR_IPC_0010`).
+```

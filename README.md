@@ -351,9 +351,11 @@ subset available at this time:
   `OpenConnection`, `CloseConnection`, `SendMsg`, `ReceiveMsg`, `ReplyMsg`,
   `ReadMsgV`, `WriteMsgV`, `SendPulse`, and `sysproc` name registry
   (`NAME_MSG_ATTACH`, `NAME_MSG_QUERY`)
-- **Hardware IRQs and port I/O (`<sys/intr.h>`):** `AttachIntrEvent` (IOAPIC
-  IRQ-to-IPC pulses), `IntrUnmask`, `IOPLSet` (`CAP_SYS_INTR` guarded), and Ring
-  3 `port_in*`/`port_out*` helpers
+- **Hardware IRQs, MMIO, DMA, PCI, and block I/O (`<sys/intr.h>`,
+  `<sys/blk.h>`):** `AttachIntrEvent` (IOAPIC IRQ-to-IPC pulses), `IntrUnmask`,
+  `IOPLSet`, `VMMapMMIO`, `DMAAlloc`, `PCIConfigRead32`/`PCIConfigWrite32`
+  (`CAP_SYS_INTR` guarded), Ring 3 `port_in*`/`port_out*` helpers, and Ring 3
+  PCI `virtio-blk` sector I/O over `/dev/blk` (`blkdrv`)
 - **Command shell and core utilities (`bin/`):** Ring 3 `/boot/sh` targeting
   POSIX.1-2024 XCU features (`-c`, script files, interactive `isatty()` input
   with foreground job control, pipelines, redirections `<`/`>`/`>>`/`2>&1`,
@@ -381,9 +383,9 @@ What you can build today:
   clocks/timers and signals
 - freestanding C17 console tools and protocol services packed into `boot.tar`
 
-Not available at this time (planned next): `CAP_SYS_INTR` MMIO/DMA syscalls and
-Ring 3 `virtio-blk` driver, writable on-disk file system mount in `vfsserv`, and
-ACPI `MADT` SMP bring-up. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+Not available at this time (planned next): writable on-disk file system mount in
+`vfsserv` over `/dev/blk`, and ACPI `MADT` SMP bring-up. See
+[docs/records/TASKS.md](docs/records/TASKS.md) and
 [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -433,8 +435,9 @@ Latest milestones added Ring 3 `AF_UNIX` local sockets (`accept4`), the Ring 3
 command shell (`sh`) with job control, and `<sys/select.h>` leak-freedom stress
 tests. They also added ACPI `MADT`/`SPCR` driver discovery, `x86-64` HAL
 isolation, and opt-in LLVM coverage (`./scripts/env.sh coverage`). The newest
-milestones enforce the `x86-64-v3` boot gate with `XSAVE`/`XRSTOR` and optional
-`AVX-512` and add `<fenv.h>` and `<math.h>` with hardware `FMA`.
+milestones enforce `x86-64-v3` with `XSAVE`/`XRSTOR`, add `<fenv.h>` and
+`<math.h>` with `FMA`, and add `CAP_SYS_INTR` MMIO/DMA/PCI syscalls with Ring 3
+`virtio-blk` (`/dev/blk`).
 
 ## Documentation
 

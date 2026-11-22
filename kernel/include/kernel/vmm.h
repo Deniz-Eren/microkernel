@@ -65,6 +65,8 @@ long sys_vm_unmap(uint64_t va, uint64_t len);
 long sys_vm_protect(uint64_t va, uint64_t len, uint64_t prot);
 long sys_vm_clone_cow(uint64_t dst_pid, uint64_t va, uint64_t len);
 long sys_vm_mlock(uint64_t op, uint64_t a1, uint64_t a2);
+long sys_vm_map_mmio(uint64_t phys_addr, uint64_t len, uint64_t flags);
+long sys_dma_alloc(uint64_t len, uint64_t phys_out_va);
 long sys_shm_op(uint64_t op, uint64_t a1, uint64_t a2, uint64_t a3);
 long sys_shm_map(uint64_t va_hint, uint64_t len, uint64_t prot, uint64_t flags,
                  uint64_t fd, uint64_t off);

@@ -76,6 +76,10 @@ preemptive XSAVE/XRSTOR YMM and MXCSR thread isolation verified
 <math\.h> classification, hardware FMA, sqrt, cbrt, and hypot verified
 <math\.h> exp, log, pow, erf/erfc, and tgamma verified
 <math\.h> trig, inverse trig \(acos/asin/atan2\), and hyperbolic verified
+blkdrv virtio-blk ready: slot=.* irq=.* gsi=.* sectors=
+blkdrv registered /dev/blk
+unprivileged VMMapMMIO, DMAAlloc, and PCIConfig rejected with EPERM
+blktest /dev/blk sector read/write and IOAPIC IRQ pulses verified
 <sys/select\.h> select, pselect, multi-server FDs, and sigmask
 cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,
 zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks

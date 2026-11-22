@@ -21,6 +21,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added `CAP_SYS_INTR`-gated `SYS_VM_MAP_MMIO`, `SYS_DMA_ALLOC`, and
+  `SYS_PCI_CFG` syscalls (`kernel/core/vmm.c`, `kernel/core/intr.c`,
+  `kernel/arch/x86-64/arch.c`), Ring 3 wrappers in `libc/include/sys/intr.h`,
+  the `/dev/blk` IPC protocol (`libc/include/sys/blk.h`), the Ring 3 Modern
+  VirtIO 1.0 PCI block driver (`servers/blkdrv/`), the Ring 3 test
+  `tests/blktest/`, and the CTest cross-reboot persistence test
+  `ipc.blk_persist` (`tests/boot/test_blk_persist.py`) (`SWR_IPC_0010`,
+  `ICD_IPC_0015`, `COMP_IPC_0015`, `VER_IPC_0008`, `TSK_0024`).
 - Added POSIX.1-2024 `<fenv.h>` (`libc/arch/x86-64/fenv.c`: `MXCSR` and x87
   rounding modes and exception flags) and `<math.h>`
   (`libc/src/math_{basic,round,exp,trig}.c`: IEEE-754 classification/comparison

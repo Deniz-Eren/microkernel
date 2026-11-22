@@ -25,7 +25,8 @@
 #include <stdint.h>
 #include <kernel/sched.h>
 
-#define IPC_MSG_MAX 512 /* largest stageable message payload */
+#define IPC_MSG_MAX 512            /* largest inline-staged message payload */
+#define IPC_MSG_LARGE_MAX 65536ULL /* max scatter-gather ReadMsgV payload */
 
 /* Kernel-side message node: one per in-flight send or pulse. */
 typedef struct chan_msg {
@@ -33,11 +34,13 @@ typedef struct chan_msg {
     tcb_t *sender;          /* blocked client (NULL for pulses) */
     tcb_t *receiver;        /* server tcb that accepted it */
     uint64_t sender_pml4;   /* client address space for the reply copy */
+    uint64_t send_src;      /* client send buffer (user VA) for ReadMsgV */
+    uint64_t send_len;      /* full client send length */
     uint64_t reply_dst;     /* client reply buffer (user VA) */
     uint64_t reply_max;     /* client reply buffer capacity */
     uint64_t reply_written; /* high-water bytes written via WriteMsgV */
     uint32_t msgid;         /* 0 for pulses */
-    uint32_t len;           /* staged payload length */
+    uint32_t len;           /* inline-staged payload length */
     uint8_t is_static;      /* 1 = pre-allocated IRQ node (do not kfree) */
     uint8_t in_use;         /* 1 = static IRQ node currently queued */
     uint8_t data[IPC_MSG_MAX];

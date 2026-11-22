@@ -12,14 +12,16 @@
 #include <kernel/pmm.h>
 #include <kernel/sched.h>
 #include <kernel/string.h>
+#include <kernel/uaccess.h>
 #include <stddef.h>
 #include <kernel/printk.h>
 #include <kernel/panic.h>
 #include <sys/errno.h>
+#include <sys/intr.h>
 #include <sys/mman.h>
 #include <sys/vm.h>
 
-/* need:: COMP_MEM_0002 */
+/* need:: COMP_MEM_0002 COMP_IPC_0015 */
 
 extern char __bss_start[];
 extern char __kboot_stack_top[];
@@ -586,6 +588,97 @@ long sys_vm_mlock(uint64_t op, uint64_t a1, uint64_t a2) {
         }
     }
     return 0;
+}
+
+long sys_vm_map_mmio(uint64_t phys_addr, uint64_t len, uint64_t flags) {
+    pcb_t *p = proc_current();
+    if (!p || !(p->caps & CAP_SYS_INTR)) {
+        return -EPERM;
+    }
+    if (flags != 0ULL || len == 0ULL || (phys_addr & 0xFFFULL) != 0ULL) {
+        return -EINVAL;
+    }
+    uint64_t npages = (len + PAGE_SIZE - 1ULL) / PAGE_SIZE;
+    if (npages == 0ULL || npages > 256ULL) {
+        return -EINVAL;
+    }
+    /* Reject mapping kernel or PMM-managed RAM through the MMIO path. */
+    uint64_t ram_top = pmm_total_bytes();
+    if (phys_addr < ram_top) {
+        return -EACCES;
+    }
+    uint64_t base = find_mmap_region(p, npages);
+    if (!base) {
+        return -ENOMEM;
+    }
+    uint64_t pte_flags = VMM_PRESENT | VMM_USER | VMM_WRITE | VMM_PCD |
+                         VMM_PWT | VMM_NX | VMM_SHARED;
+    for (uint64_t i = 0; i < npages; i++) {
+        if (vmm_map_page_to(p->pml4_phys, base + i * PAGE_SIZE,
+                            phys_addr + i * PAGE_SIZE, pte_flags) != 0) {
+            for (uint64_t j = 0; j < i; j++) {
+                (void)vmm_unmap_page_to(p->pml4_phys, base + j * PAGE_SIZE);
+            }
+            return -ENOMEM;
+        }
+    }
+    return (long)base;
+}
+
+long sys_dma_alloc(uint64_t len, uint64_t phys_out_va) {
+    pcb_t *p = proc_current();
+    if (!p || !(p->caps & CAP_SYS_INTR)) {
+        return -EPERM;
+    }
+    if (len == 0ULL || phys_out_va == 0ULL) {
+        return -EINVAL;
+    }
+    uint64_t npages = (len + PAGE_SIZE - 1ULL) / PAGE_SIZE;
+    if (npages == 0ULL || npages > 64ULL) {
+        return -EINVAL;
+    }
+    uint64_t phys_base = 0ULL;
+    if (pmm_alloc_contiguous((size_t)npages, &phys_base) != 0) {
+        return -ENOMEM;
+    }
+    memset(phys_to_virt(phys_base), 0, (size_t)(npages * PAGE_SIZE));
+
+    uint64_t base = find_mmap_region(p, npages);
+    if (!base) {
+        for (uint64_t i = 0; i < npages; i++) {
+            pmm_free_frame(phys_base + i * PAGE_SIZE);
+        }
+        return -ENOMEM;
+    }
+    uint64_t pte_flags =
+        VMM_PRESENT | VMM_USER | VMM_WRITE | VMM_NX | VMM_LOCKED | VMM_SHARED;
+    for (uint64_t i = 0; i < npages; i++) {
+        if (vmm_map_page_to(p->pml4_phys, base + i * PAGE_SIZE,
+                            phys_base + i * PAGE_SIZE, pte_flags) != 0) {
+            for (uint64_t j = 0; j < i; j++) {
+                uint64_t old =
+                    vmm_unmap_page_to(p->pml4_phys, base + j * PAGE_SIZE);
+                if (old) {
+                    pmm_free_frame(old);
+                }
+            }
+            for (uint64_t j = i; j < npages; j++) {
+                pmm_free_frame(phys_base + j * PAGE_SIZE);
+            }
+            return -ENOMEM;
+        }
+    }
+    if (copy_to_user(phys_out_va, &phys_base, sizeof(phys_base)) < 0) {
+        for (uint64_t j = 0; j < npages; j++) {
+            uint64_t old =
+                vmm_unmap_page_to(p->pml4_phys, base + j * PAGE_SIZE);
+            if (old) {
+                pmm_free_frame(old);
+            }
+        }
+        return -EFAULT;
+    }
+    return (long)base;
 }
 
 static int clone_cow_page(uint64_t src_pml4, uint64_t dst_pml4, uint64_t page) {

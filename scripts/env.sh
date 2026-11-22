@@ -78,8 +78,13 @@ EOF
             cp build/boot.tar build/iso-sh/boot/boot.tar
             grub-mkrescue -o build/microkernel-shell.iso build/iso-sh \
                 >/dev/null 2>&1
+            if [ ! -f build/disk.img ]; then
+                dd if=/dev/zero of=build/disk.img bs=1M count=4 status=none
+            fi
             exec qemu-system-x86_64 -machine q35 -cpu max \
                 -m 256M -smp 2 -cdrom build/microkernel-shell.iso \
+                -drive id=hd0,file=build/disk.img,if=none,format=raw \
+                -device virtio-blk-pci,drive=hd0,disable-legacy=on \
                 -serial mon:stdio -display none -no-reboot "$@"
         ' -- "$@"
         ;;

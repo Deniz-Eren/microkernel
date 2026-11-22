@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0024 — Add MMIO/DMA syscalls and Ring 3 PCI virtio-blk driver
-
-```{task} Add MMIO/DMA syscalls and Ring 3 PCI virtio-blk driver
-:id: TSK_0024
-:status: open
-:traces: ADR_0003, ADR_0008, ADR_0016, SWR_IPC_0010
-
-Add `CAP_SYS_INTR` MMIO device mapping, PCI configuration, and DMA buffer
-syscalls. Build a Ring 3 PCI `virtio-blk` driver (`/dev/blk`) using IOAPIC IRQ
-pulses, and verify sector persistence across QEMU restarts
-({need}`SWR_IPC_0010`).
-```
-
 ### TSK_0028 — Mount writable on-disk file system in vfsserv over /dev/blk
 
 ```{task} Mount writable on-disk file system in vfsserv over /dev/blk

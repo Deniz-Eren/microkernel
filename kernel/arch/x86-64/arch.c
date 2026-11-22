@@ -15,6 +15,7 @@
 #include "apic.h"
 #include "gdt.h"
 #include "idt.h"
+#include "io.h"
 #include "msr.h"
 #include "serial.h"
 
@@ -324,6 +325,28 @@ void arch_irq_eoi(void) {
 
 uint32_t arch_bsp_cpu_id(void) {
     return (lapic_read(0x020) >> 24) & 0xFFu;
+}
+
+#define PCI_CFG_ADDR_PORT 0x0CF8u
+#define PCI_CFG_DATA_PORT 0x0CFCu
+
+static uint32_t pci_cfg_addr(uint8_t bus, uint8_t slot, uint8_t func,
+                             uint8_t offset) {
+    return 0x80000000u | ((uint32_t)bus << 16) |
+           (((uint32_t)slot & 0x1Fu) << 11) | (((uint32_t)func & 0x7u) << 8) |
+           ((uint32_t)offset & 0xFCu);
+}
+
+uint32_t arch_pci_cfg_read32(uint8_t bus, uint8_t slot, uint8_t func,
+                             uint8_t offset) {
+    outd(PCI_CFG_ADDR_PORT, pci_cfg_addr(bus, slot, func, offset));
+    return ind(PCI_CFG_DATA_PORT);
+}
+
+void arch_pci_cfg_write32(uint8_t bus, uint8_t slot, uint8_t func,
+                          uint8_t offset, uint32_t val) {
+    outd(PCI_CFG_ADDR_PORT, pci_cfg_addr(bus, slot, func, offset));
+    outd(PCI_CFG_DATA_PORT, val);
 }
 
 void arch_cpu_idle_wait(void) {

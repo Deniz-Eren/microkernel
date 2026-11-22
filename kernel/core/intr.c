@@ -14,12 +14,13 @@
 #include <kernel/ipc.h>
 #include <kernel/printk.h>
 #include <kernel/sched.h>
+#include <kernel/uaccess.h>
 #include <kernel/vmm.h>
 #include <sys/errno.h>
 #include <sys/intr.h>
 #include "channel.h"
 
-/* need:: COMP_IPC_0003 */
+/* need:: COMP_IPC_0003 COMP_IPC_0015 */
 
 #define IOAPIC_PHYS_BASE 0xFEC00000ULL
 #define IOAPIC_VA 0xFFFFFFFF90001000ULL
@@ -64,10 +65,11 @@ static void ioapic_set_entry(uint32_t irq, uint32_t vector, int masked) {
     }
     uint32_t lo = vector & 0xFFu;
     uint16_t iso_flags = acpi_gsi_flags(irq);
-    if ((iso_flags & 0x03u) == 0x03u) {
+    if ((iso_flags & 0x03u) == 0x03u || (iso_flags == 0u && irq >= 16u)) {
         lo |= IOAPIC_POLARITY_LOW;
     }
-    if (((iso_flags >> 2) & 0x03u) == 0x03u) {
+    if (((iso_flags >> 2) & 0x03u) == 0x03u ||
+        (iso_flags == 0u && irq >= 16u)) {
         lo |= IOAPIC_TRIGGER_LEVEL;
     }
     if (masked) {
@@ -199,4 +201,34 @@ long sys_iopl_set(trapframe_t *tf, uint64_t level) {
     t->iopl = (uint8_t)level;
     tf->rflags = (tf->rflags & ~(3ULL << 12)) | ((level & 3ULL) << 12);
     return 0;
+}
+
+long sys_pci_cfg(uint64_t op, uint64_t bdf, uint64_t offset, uint64_t arg) {
+    pcb_t *p = proc_current();
+    if (!p || !(p->caps & CAP_SYS_INTR)) {
+        return -EPERM;
+    }
+    if (bdf > 0xFFFFULL || offset >= 256ULL || (offset & 3ULL) != 0ULL) {
+        return -EINVAL;
+    }
+    uint8_t bus = (uint8_t)((bdf >> 8) & 0xFFu);
+    uint8_t slot = (uint8_t)((bdf >> 3) & 0x1Fu);
+    uint8_t func = (uint8_t)(bdf & 0x7u);
+    uint8_t off = (uint8_t)offset;
+
+    if (op == PCI_CFG_OP_READ32) {
+        if (arg == 0ULL) {
+            return -EINVAL;
+        }
+        uint32_t v = arch_pci_cfg_read32(bus, slot, func, off);
+        if (copy_to_user(arg, &v, sizeof(v)) < 0) {
+            return -EFAULT;
+        }
+        return 0;
+    }
+    if (op == PCI_CFG_OP_WRITE32) {
+        arch_pci_cfg_write32(bus, slot, func, off, (uint32_t)arg);
+        return 0;
+    }
+    return -EINVAL;
 }

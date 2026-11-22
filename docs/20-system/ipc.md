@@ -117,7 +117,7 @@ streams (`socket`, `socketpair`, `bind`, `listen`, `accept`, `accept4`,
 
 ```{swr} Supply CAP_SYS_INTR MMIO/DMA syscalls and Ring 3 virtio-blk driver
 :id: SWR_IPC_0010
-:status: draft
+:status: active
 :derives: SYS_IPC_0001
 :traces: ADR_0003, ADR_0008, ADR_0016
 

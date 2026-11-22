@@ -12,6 +12,7 @@
 # need:: VER_PROC_0001 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
 # need:: VER_PROC_0005 VER_PROC_0006 VER_IPC_0001 VER_IPC_0002
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
+# need:: VER_IPC_0008
 # need:: VER_SIG_0001 VER_SIG_0002 VER_LIBC_0001 VER_LIBC_0003 VER_LIBC_0004
 # need:: VER_LIBC_0005 VER_LIBC_0006 VER_LIBC_0007 VER_LIBC_0008 VER_LIBC_0009
 # need:: VER_DOCS_0005 VER_DOCS_0006
@@ -73,6 +74,15 @@ def build_cmd(args):
             "-monitor", "none",
         ]
     )
+    if args.arch == "x86-64" and args.blk_img != "none":
+        blk_path = Path(args.blk_img)
+        if not blk_path.exists():
+            blk_path.parent.mkdir(parents=True, exist_ok=True)
+            blk_path.write_bytes(b"\x00" * (2 * 1024 * 1024))
+        cmd.extend([
+            "-drive", f"id=hd0,file={blk_path},if=none,format=raw",
+            "-device", "virtio-blk-pci,drive=hd0,disable-legacy=on",
+        ])
     for extra in args.extra_qemu_arg:
         cmd.extend(shlex.split(extra))
     return cmd
@@ -99,6 +109,10 @@ def main() -> int:
     ap.add_argument("--cov-out", default=None)
     ap.add_argument("--wait-cov", action="store_true")
     ap.add_argument("--extra-qemu-arg", action="append", default=[])
+    ap.add_argument(
+        "--blk-img",
+        default=str(_ROOT / "build" / "test-blk.img"),
+    )
     ap.add_argument("--cpu", default=None)
     ap.add_argument("--qemu", default=None)
     args = ap.parse_args()

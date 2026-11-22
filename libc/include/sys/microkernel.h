@@ -76,6 +76,12 @@
 #define SYS_ALARM 56
 #define SYS_PROC_PGID 57
 #define SYS_KILL 58
+#define SYS_VM_MAP_MMIO 59
+#define SYS_DMA_ALLOC 60
+#define SYS_PCI_CFG 61
+
+#define PCI_CFG_OP_READ32 0u
+#define PCI_CFG_OP_WRITE32 1u
 
 #define FUTEX_WAIT 0
 #define FUTEX_WAKE 1

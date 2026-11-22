@@ -42,6 +42,10 @@ void arch_fpu_save_current(uint8_t *fpu_area);
 void arch_fpu_restore_current(const uint8_t *fpu_area);
 void arch_irq_eoi(void);
 uint32_t arch_bsp_cpu_id(void);
+uint32_t arch_pci_cfg_read32(uint8_t bus, uint8_t slot, uint8_t func,
+                             uint8_t offset);
+void arch_pci_cfg_write32(uint8_t bus, uint8_t slot, uint8_t func,
+                          uint8_t offset, uint32_t val);
 void arch_cpu_idle_wait(void);
 void arch_first_switch(uint64_t kernel_rsp) __attribute__((noreturn));
 void arch_cpu_halt(void) __attribute__((noreturn));

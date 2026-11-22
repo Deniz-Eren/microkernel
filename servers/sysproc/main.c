@@ -21,7 +21,7 @@
 
 /* need:: COMP_IPC_0002 */
 
-#define NAME_TABLE_MAX 8
+#define NAME_TABLE_MAX 16
 
 typedef struct {
     char path[NAME_MAX_PATH];
