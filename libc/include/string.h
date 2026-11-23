@@ -11,7 +11,7 @@
 #ifndef _STRING_H
 #define _STRING_H
 
-/* need:: ICD_LIBC_0001 ICD_LIBC_0005 */
+/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0009 */
 
 #include <stddef.h>
 
@@ -20,12 +20,16 @@ void *memcpy(void *dst, const void *src, size_t n);
 void *memmove(void *dst, const void *src, size_t n);
 int memcmp(const void *a, const void *b, size_t n);
 void *memchr(const void *s, int c, size_t n);
+void *memmem(const void *haystack, size_t haystacklen, const void *needle,
+             size_t needlelen);
 size_t strlen(const char *s);
 size_t strnlen(const char *s, size_t maxlen);
 int strcmp(const char *a, const char *b);
 int strncmp(const char *a, const char *b, size_t n);
 char *strcpy(char *restrict dst, const char *restrict src);
 char *strncpy(char *restrict dst, const char *restrict src, size_t n);
+char *stpcpy(char *restrict dst, const char *restrict src);
+char *stpncpy(char *restrict dst, const char *restrict src, size_t n);
 char *strcat(char *restrict s1, const char *restrict s2);
 char *strncat(char *restrict s1, const char *restrict s2, size_t n);
 size_t strlcpy(char *restrict dst, const char *restrict src, size_t dstsize);
@@ -42,6 +46,7 @@ char *strtok_r(char *restrict s, const char *restrict sep,
 char *strdup(const char *s);
 char *strndup(const char *s, size_t size);
 char *strerror(int errnum);
+int strerror_r(int errnum, char *strerrbuf, size_t buflen);
 char *strsignal(int sig);
 
 #endif /* _STRING_H */

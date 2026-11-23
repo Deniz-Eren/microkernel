@@ -15,7 +15,7 @@
 #include <sys/microkernel.h>
 #include <sys/mman.h>
 
-/* need:: COMP_MEM_0004 */
+/* need:: COMP_MEM_0004 COMP_LIBC_0009 */
 
 #define HEAP_PAGE_SIZE 4096u
 #define HEAP_ALIGN 16u
@@ -25,6 +25,7 @@
 
 #define BLK_FLAG_FREE (1u << 0)
 #define BLK_FLAG_LARGE (1u << 1)
+#define BLK_FLAG_ALIGNED (1u << 2)
 
 struct arena_slab {
     size_t map_size;
@@ -249,6 +250,13 @@ void free(void *p) {
         errno = saved_errno;
         return;
     }
+    if (blk->flags & BLK_FLAG_ALIGNED) {
+        void *raw = (void *)blk->prev_phys;
+        blk->magic = 0u;
+        free(raw);
+        errno = saved_errno;
+        return;
+    }
     if (blk->flags & BLK_FLAG_LARGE) {
         size_t map_size = sizeof(struct block_hdr) + blk->size;
         blk->magic = 0u;
@@ -343,6 +351,18 @@ void *realloc(void *ptr, size_t size) {
     }
     size_t old_req = blk->req_size;
 
+    if (blk->flags & BLK_FLAG_ALIGNED) {
+        void *np = malloc(size);
+        if (!np) {
+            return NULL;
+        }
+        size_t copy_n = (old_req < size) ? old_req : size;
+        if (copy_n > 0u) {
+            memcpy(np, ptr, copy_n);
+        }
+        free(ptr);
+        return np;
+    }
     if (blk->flags & BLK_FLAG_LARGE) {
         if (size <= blk->size && size >= (LARGE_THRESHOLD / 2u)) {
             blk->req_size = size;
@@ -400,4 +420,38 @@ void *reallocarray(void *ptr, size_t nelem, size_t elsize) {
         return NULL;
     }
     return realloc(ptr, nelem * elsize);
+}
+
+void *aligned_alloc(size_t alignment, size_t size) {
+    if (alignment == 0u || (alignment & (alignment - 1u)) != 0u) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (alignment <= HEAP_ALIGN) {
+        return malloc(size);
+    }
+    if (alignment > ((size_t)-1) - sizeof(struct block_hdr)) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    size_t extra = (alignment - 1u) + sizeof(struct block_hdr);
+    if (size > ((size_t)-1) - extra) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    void *raw = malloc(size + extra);
+    if (!raw) {
+        return NULL;
+    }
+    uintptr_t base = (uintptr_t)raw + sizeof(struct block_hdr);
+    uintptr_t aligned =
+        (base + (uintptr_t)(alignment - 1u)) & ~(uintptr_t)(alignment - 1u);
+    struct block_hdr *hdr = ((struct block_hdr *)aligned) - 1;
+    memset(hdr, 0, sizeof(*hdr));
+    hdr->magic = BLOCK_MAGIC;
+    hdr->flags = BLK_FLAG_ALIGNED;
+    hdr->size = size;
+    hdr->req_size = size;
+    hdr->prev_phys = (struct block_hdr *)raw;
+    return (void *)aligned;
 }

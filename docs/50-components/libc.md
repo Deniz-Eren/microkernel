@@ -109,3 +109,20 @@ functions ({need}`ICD_LIBC_0007`, {need}`SWR_LIBC_0009`).
 `sched_*`, and `MAP_SHARED` named semaphores ({need}`ICD_LIBC_0008`,
 {need}`SWR_PROC_0012`).
 ```
+
+```{comp} Base stdio memory/scan streams, strtod*, aligned heap, and time
+:id: COMP_LIBC_0009
+:status: active
+:posix: XBD/stdio.h (CX), XBD/stdlib.h (CX), XBD/string.h (CX), XBD/time.h (CX)
+:refines: ARC_LIBC_0001, ICD_LIBC_0009
+:satisfies: SWR_LIBC_0010
+
+`libc/src/stdio.c` and `stdio_scanf.c` implement `scanf*`, `getline`/`getdelim`,
+`dprintf*`, `asprintf*`, `fmemopen`, `open_memstream`, `freopen`, and
+`fgetpos`/`fsetpos`. `stdlib.c`, `stdlib_float.c`, `malloc.c`, and `string.c`
+implement `strtod*`, `atof`, `aligned_alloc`, `quick_exit`/`at_quick_exit`,
+`div*`, `rand`/`srand`, `qsort_r`, `getsubopt`, `stpcpy`, `stpncpy`, `memmem`,
+and `strerror_r`. `time.c` and `time_cal.c` implement `time`, `difftime`,
+`clock`, `timespec_get`, `gmtime*`, `localtime*`, `mktime`, `asctime*`,
+`ctime*`, and `strftime` ({need}`ICD_LIBC_0009`, {need}`SWR_LIBC_0010`).
+```

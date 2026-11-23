@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include "tls_internal.h"
 
-/* need:: COMP_PROC_0004 COMP_LIBC_0006 */
+/* need:: COMP_PROC_0004 COMP_LIBC_0006 COMP_LIBC_0009 */
 
 int clock_getres(clockid_t clock_id, struct timespec *res) {
     long r = __sys2(SYS_CLOCK_GETRES, (long)clock_id, (long)(uintptr_t)res);
@@ -136,4 +136,38 @@ clock_t times(struct tms *buffer) {
 unsigned int alarm(unsigned int seconds) {
     long r = __sys1(SYS_ALARM, (long)seconds);
     return (r < 0) ? 0u : (unsigned int)r;
+}
+
+time_t time(time_t *tloc) {
+    struct timespec ts = {0, 0};
+    if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+        return (time_t)-1;
+    }
+    if (tloc) {
+        *tloc = ts.tv_sec;
+    }
+    return ts.tv_sec;
+}
+
+double difftime(time_t time1, time_t time0) {
+    return (double)time1 - (double)time0;
+}
+
+clock_t clock(void) {
+    struct tms t = {0};
+    if (times(&t) == (clock_t)-1) {
+        return (clock_t)-1;
+    }
+    clock_t ticks = t.tms_utime + t.tms_stime;
+    return ticks * (CLOCKS_PER_SEC / 1000L);
+}
+
+int timespec_get(struct timespec *ts, int base) {
+    if (!ts || base != TIME_UTC) {
+        return 0;
+    }
+    if (clock_gettime(CLOCK_REALTIME, ts) != 0) {
+        return 0;
+    }
+    return TIME_UTC;
 }

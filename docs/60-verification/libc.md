@@ -119,3 +119,19 @@ trigonometric, inverse trigonometric, and hyperbolic functions. CTest Gates 1
 and 2 check standalone compilation and Base/CX symbol export
 ({need}`SWR_LIBC_0009`).
 ```
+
+```{ver} Verify Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h> completion
+:id: VER_LIBC_0010
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0010
+
+The headless QEMU harness `tests/test_runner.py` runs `stdiotest`
+(`tests/stdiotest/test_stdio.c`) and `timetest` (`tests/timetest/main.c`). They
+check `scanf*`, `getline`/`getdelim`, `dprintf*`, `asprintf*`, `fmemopen`,
+`open_memstream`, `freopen`, and `fgetpos`/`fsetpos`. They also check `strtod*`,
+`aligned_alloc`, `quick_exit`/`at_quick_exit`, `div*`, `rand`/`srand`,
+`qsort_r`, `getsubopt`, `stpcpy`/`stpncpy`, `memmem`, `strerror_r`, and
+`<time.h>` calendar functions. CTest Gates 1 to 3 check standalone headers,
+Base/CX exports, and async-signal-safety ({need}`SWR_LIBC_0010`).
+```

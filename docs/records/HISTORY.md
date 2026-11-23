@@ -20,6 +20,23 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0035 — Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>
+
+```{task} Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>
+:id: TSK_0035
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0032, SWR_LIBC_0010
+
+Add Base `<stdio.h>` `scanf*`, `getline`, `getdelim`, `dprintf`, `vdprintf`,
+`asprintf`, `vasprintf`, `fmemopen`, `open_memstream`, `freopen`, `fgetpos`, and
+`fsetpos`. Add `<stdlib.h>` `strtod`/`strtof`/`strtold`/`atof`, `aligned_alloc`,
+`quick_exit`/`at_quick_exit`, `div`/`ldiv`/`lldiv`, `rand`/`srand`, `qsort_r`,
+and `getsubopt`. Add `stpcpy`, `stpncpy`, `memmem`, `strerror_r`, `time`,
+`difftime`, `gmtime*`, `localtime*`, `mktime`, `asctime*`, `ctime*`, `strftime`,
+`clock`, and `timespec_get` ({need}`BDR_0004`, {need}`SWR_LIBC_0010`,
+{need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0034 — Add Base signals, waitid, _Fork, popen/system, and <threads.h>
 
 ```{task} Add Base signals, waitid, _Fork, popen/system, and <threads.h>

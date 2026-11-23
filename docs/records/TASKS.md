@@ -21,22 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0035 — Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>
-
-```{task} Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>
-:id: TSK_0035
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001
-
-Add Base `<stdio.h>` `scanf*`, `getline`, `getdelim`, `dprintf`, `vdprintf`,
-`asprintf`, `vasprintf`, `fmemopen`, `open_memstream`, `freopen`, `fgetpos`, and
-`fsetpos`. Add `<stdlib.h>` `strtod`/`strtof`/`strtold`/`atof`, `aligned_alloc`,
-`quick_exit`/`at_quick_exit`, `div`/`ldiv`/`lldiv`, `rand`/`srand`, `qsort_r`,
-and `getsubopt`. Add `stpcpy`, `stpncpy`, `memmem`, `strerror_r`, `time`,
-`difftime`, `gmtime*`, `localtime*`, `mktime`, `asctime*`, `ctime*`, `strftime`,
-`clock`, and `timespec_get` ({need}`BDR_0004`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0036 — Add ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h>
 
 ```{task} Add ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h>

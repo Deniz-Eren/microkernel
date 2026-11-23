@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* need:: COMP_LIBC_0001 COMP_LIBC_0004 */
+/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0009 */
 
 typedef uint64_t __attribute__((may_alias, aligned(1))) libc_u64_unaligned_t;
 
@@ -162,6 +162,25 @@ void *memchr(const void *s, int c, size_t n) {
     return 0;
 }
 
+void *memmem(const void *haystack, size_t haystacklen, const void *needle,
+             size_t needlelen) {
+    if (needlelen == 0u) {
+        return (void *)haystack;
+    }
+    if (needlelen > haystacklen) {
+        return 0;
+    }
+    const unsigned char *h = (const unsigned char *)haystack;
+    const unsigned char *n = (const unsigned char *)needle;
+    size_t limit = haystacklen - needlelen;
+    for (size_t i = 0; i <= limit; i++) {
+        if (h[i] == n[0] && memcmp(h + i, n, needlelen) == 0) {
+            return (void *)(h + i);
+        }
+    }
+    return 0;
+}
+
 size_t strlen(const char *s) {
     size_t n = 0;
     while (s[n]) {
@@ -211,6 +230,26 @@ char *strncpy(char *restrict dst, const char *restrict src, size_t n) {
         dst[i] = 0;
     }
     return dst;
+}
+
+char *stpcpy(char *restrict dst, const char *restrict src) {
+    while ((*dst = *src) != '\0') {
+        dst++;
+        src++;
+    }
+    return dst;
+}
+
+char *stpncpy(char *restrict dst, const char *restrict src, size_t n) {
+    size_t i = 0;
+    for (; i < n && src[i]; i++) {
+        dst[i] = src[i];
+    }
+    char *end = dst + i;
+    for (; i < n; i++) {
+        dst[i] = '\0';
+    }
+    return end;
 }
 
 char *strcat(char *restrict s1, const char *restrict s2) {
@@ -369,102 +408,133 @@ char *strndup(const char *s, size_t size) {
     return copy;
 }
 
-char *strerror(int errnum) {
+static const char *strerror_lookup(int errnum, int *valid) {
+    *valid = 1;
     switch (errnum) {
     case 0:
-        return (char *)"No error";
+        return "No error";
     case EPERM:
-        return (char *)"Operation not permitted";
+        return "Operation not permitted";
     case ENOENT:
-        return (char *)"No such file or directory";
+        return "No such file or directory";
     case ESRCH:
-        return (char *)"No such process";
+        return "No such process";
     case EINTR:
-        return (char *)"Interrupted system call";
+        return "Interrupted system call";
     case EIO:
-        return (char *)"I/O error";
+        return "I/O error";
     case ENXIO:
-        return (char *)"No such device or address";
+        return "No such device or address";
     case E2BIG:
-        return (char *)"Argument list too long";
+        return "Argument list too long";
     case ENOEXEC:
-        return (char *)"Exec format error";
+        return "Exec format error";
     case EBADF:
-        return (char *)"Bad file descriptor";
+        return "Bad file descriptor";
     case ECHILD:
-        return (char *)"No child processes";
+        return "No child processes";
     case EAGAIN:
-        return (char *)"Resource temporarily unavailable";
+        return "Resource temporarily unavailable";
     case ENOMEM:
-        return (char *)"Cannot allocate memory";
+        return "Cannot allocate memory";
     case EACCES:
-        return (char *)"Permission denied";
+        return "Permission denied";
     case EFAULT:
-        return (char *)"Bad address";
+        return "Bad address";
     case EBUSY:
-        return (char *)"Device or resource busy";
+        return "Device or resource busy";
     case EEXIST:
-        return (char *)"File exists";
+        return "File exists";
     case EXDEV:
-        return (char *)"Invalid cross-device link";
+        return "Invalid cross-device link";
     case ENODEV:
-        return (char *)"No such device";
+        return "No such device";
     case ENOTDIR:
-        return (char *)"Not a directory";
+        return "Not a directory";
     case EISDIR:
-        return (char *)"Is a directory";
+        return "Is a directory";
     case EINVAL:
-        return (char *)"Invalid argument";
+        return "Invalid argument";
     case ENFILE:
-        return (char *)"Too many open files in system";
+        return "Too many open files in system";
     case EMFILE:
-        return (char *)"Too many open files";
+        return "Too many open files";
     case ENOTTY:
-        return (char *)"Inappropriate ioctl for device";
+        return "Inappropriate ioctl for device";
     case ETXTBSY:
-        return (char *)"Text file busy";
+        return "Text file busy";
     case EFBIG:
-        return (char *)"File too large";
+        return "File too large";
     case ENOSPC:
-        return (char *)"No space left on device";
+        return "No space left on device";
     case ESPIPE:
-        return (char *)"Illegal seek";
+        return "Illegal seek";
     case EROFS:
-        return (char *)"Read-only file system";
+        return "Read-only file system";
     case EMLINK:
-        return (char *)"Too many links";
+        return "Too many links";
     case EPIPE:
-        return (char *)"Broken pipe";
+        return "Broken pipe";
     case EDOM:
-        return (char *)"Numerical argument out of domain";
+        return "Numerical argument out of domain";
     case ERANGE:
-        return (char *)"Result too large";
+        return "Result too large";
     case EDEADLK:
-        return (char *)"Resource deadlock avoided";
+        return "Resource deadlock avoided";
     case ENAMETOOLONG:
-        return (char *)"File name too long";
+        return "File name too long";
     case ENOLCK:
-        return (char *)"No locks available";
+        return "No locks available";
     case ENOSYS:
-        return (char *)"Function not implemented";
+        return "Function not implemented";
     case ENOTEMPTY:
-        return (char *)"Directory not empty";
+        return "Directory not empty";
     case ELOOP:
-        return (char *)"Too many levels of symbolic links";
+        return "Too many levels of symbolic links";
     case EOVERFLOW:
-        return (char *)"Value too large for defined data type";
+        return "Value too large for defined data type";
     case EILSEQ:
-        return (char *)"Illegal byte sequence";
+        return "Illegal byte sequence";
     case ENOTSOCK:
-        return (char *)"Socket operation on non-socket";
+        return "Socket operation on non-socket";
     case EOPNOTSUPP:
-        return (char *)"Operation not supported";
+        return "Operation not supported";
     case ETIMEDOUT:
-        return (char *)"Connection timed out";
+        return "Connection timed out";
     case ECANCELED:
-        return (char *)"Operation canceled";
+        return "Operation canceled";
     default:
-        errno = EINVAL;
-        return (char *)"Unknown error";
+        *valid = 0;
+        return "Unknown error";
     }
+}
+
+char *strerror(int errnum) {
+    int valid = 1;
+    const char *msg = strerror_lookup(errnum, &valid);
+    if (!valid) {
+        errno = EINVAL;
+    }
+    return (char *)msg;
+}
+
+int strerror_r(int errnum, char *strerrbuf, size_t buflen) {
+    int valid = 1;
+    const char *msg = strerror_lookup(errnum, &valid);
+    size_t len = strlen(msg);
+    if (!strerrbuf || buflen == 0u) {
+        return valid ? ERANGE : EINVAL;
+    }
+    size_t copy = len < (buflen - 1u) ? len : (buflen - 1u);
+    if (copy > 0u) {
+        memcpy(strerrbuf, msg, copy);
+    }
+    strerrbuf[copy] = '\0';
+    if (!valid) {
+        return EINVAL;
+    }
+    if (len >= buflen) {
+        return ERANGE;
+    }
+    return 0;
 }

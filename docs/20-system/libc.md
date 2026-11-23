@@ -131,6 +131,22 @@ logarithmic, power, and trigonometric functions) compiled for `x86-64-v3` with
 hardware `FMA` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>
+:id: SWR_LIBC_0010
+:status: active
+:posix: XBD/stdio.h (CX), XBD/stdlib.h (CX), XBD/string.h (CX), XBD/time.h (CX)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0032
+
+`libc` must supply Base `<stdio.h>` scanning, line input, descriptor and string
+format helpers, memory streams, `freopen`, and `fgetpos`/`fsetpos` in Ring 3. It
+must supply `<stdlib.h>` `strtod`/`strtof`/`strtold`/`atof`, `aligned_alloc`,
+`quick_exit`/`at_quick_exit`, `div`/`ldiv`/`lldiv`, `rand`/`srand`, `qsort_r`,
+and `getsubopt`. It must supply `stpcpy`, `stpncpy`, `memmem`, `strerror_r`, and
+Base `<time.h>` calendar, `strftime`, `clock`, and `timespec_get` interfaces
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

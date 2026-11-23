@@ -21,7 +21,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0006 */
+/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0006 COMP_LIBC_0009 */
 
 int system(const char *command) {
     if (!command) {
@@ -83,6 +83,10 @@ static pthread_mutex_t g_atexit_lock = PTHREAD_MUTEX_INITIALIZER;
 static void (*g_atexit_fns[ATEXIT_CAPACITY])(void);
 static size_t g_atexit_count = 0;
 
+static pthread_mutex_t g_quick_exit_lock = PTHREAD_MUTEX_INITIALIZER;
+static void (*g_quick_exit_fns[ATEXIT_CAPACITY])(void);
+static size_t g_quick_exit_count = 0;
+
 int atexit(void (*func)(void)) {
     if (!func) {
         errno = EINVAL;
@@ -96,6 +100,22 @@ int atexit(void (*func)(void)) {
     }
     g_atexit_fns[g_atexit_count++] = func;
     (void)pthread_mutex_unlock(&g_atexit_lock);
+    return 0;
+}
+
+int at_quick_exit(void (*func)(void)) {
+    if (!func) {
+        errno = EINVAL;
+        return -1;
+    }
+    (void)pthread_mutex_lock(&g_quick_exit_lock);
+    if (g_quick_exit_count >= ATEXIT_CAPACITY) {
+        (void)pthread_mutex_unlock(&g_quick_exit_lock);
+        errno = ENOMEM;
+        return -1;
+    }
+    g_quick_exit_fns[g_quick_exit_count++] = func;
+    (void)pthread_mutex_unlock(&g_quick_exit_lock);
     return 0;
 }
 
@@ -120,6 +140,22 @@ void exit(int status) {
     __libc_fini_array();
     (void)fflush(0);
     _exit(status);
+}
+
+void quick_exit(int status) {
+    for (;;) {
+        void (*fn)(void) = 0;
+        (void)pthread_mutex_lock(&g_quick_exit_lock);
+        if (g_quick_exit_count > 0u) {
+            fn = g_quick_exit_fns[--g_quick_exit_count];
+        }
+        (void)pthread_mutex_unlock(&g_quick_exit_lock);
+        if (!fn) {
+            break;
+        }
+        fn();
+    }
+    _Exit(status);
 }
 
 void _Exit(int status) {
@@ -431,6 +467,37 @@ long long llabs(long long i) {
     return i < 0 ? -i : i;
 }
 
+div_t div(int numer, int denom) {
+    div_t r = {numer / denom, numer % denom};
+    return r;
+}
+
+ldiv_t ldiv(long numer, long denom) {
+    ldiv_t r = {numer / denom, numer % denom};
+    return r;
+}
+
+lldiv_t lldiv(long long numer, long long denom) {
+    lldiv_t r = {numer / denom, numer % denom};
+    return r;
+}
+
+static uint64_t g_rand_state = 1ULL;
+
+void srand(unsigned int seed) {
+    __atomic_store_n(&g_rand_state, (uint64_t)seed, __ATOMIC_RELAXED);
+}
+
+int rand(void) {
+    uint64_t cur = __atomic_load_n(&g_rand_state, __ATOMIC_RELAXED);
+    uint64_t next = 0ULL;
+    do {
+        next = cur * 6364136223846793005ULL + 1ULL;
+    } while (!__atomic_compare_exchange_n(&g_rand_state, &cur, next, 1,
+                                          __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+    return (int)((next >> 33) & 0x7FFFFFFFULL);
+}
+
 static void swap_bytes(unsigned char *a, unsigned char *b, size_t width) {
     for (size_t i = 0; i < width; i++) {
         unsigned char tmp = a[i];
@@ -439,16 +506,18 @@ static void swap_bytes(unsigned char *a, unsigned char *b, size_t width) {
     }
 }
 
-static void sift_down(unsigned char *arr, size_t start, size_t end,
-                      size_t width, int (*compar)(const void *, const void *)) {
+static void sift_down_r(unsigned char *arr, size_t start, size_t end,
+                        size_t width,
+                        int (*compar)(const void *, const void *, void *),
+                        void *arg) {
     size_t root = start;
     while (root * 2u + 1u < end) {
         size_t child = root * 2u + 1u;
         if (child + 1u < end &&
-            compar(arr + child * width, arr + (child + 1u) * width) < 0) {
+            compar(arr + child * width, arr + (child + 1u) * width, arg) < 0) {
             child++;
         }
-        if (compar(arr + root * width, arr + child * width) < 0) {
+        if (compar(arr + root * width, arr + child * width, arg) < 0) {
             swap_bytes(arr + root * width, arr + child * width, width);
             root = child;
         } else {
@@ -457,19 +526,74 @@ static void sift_down(unsigned char *arr, size_t start, size_t end,
     }
 }
 
-void qsort(void *base, size_t nel, size_t width,
-           int (*compar)(const void *, const void *)) {
+void qsort_r(void *base, size_t nel, size_t width,
+             int (*compar)(const void *, const void *, void *), void *arg) {
     if (!base || !compar || nel < 2u || width == 0u) {
         return;
     }
     unsigned char *arr = (unsigned char *)base;
     for (size_t start = nel / 2u; start > 0u; start--) {
-        sift_down(arr, start - 1u, nel, width, compar);
+        sift_down_r(arr, start - 1u, nel, width, compar, arg);
     }
     for (size_t end = nel - 1u; end > 0u; end--) {
         swap_bytes(arr, arr + end * width, width);
-        sift_down(arr, 0u, end, width, compar);
+        sift_down_r(arr, 0u, end, width, compar, arg);
     }
+}
+
+struct qsort_compat_ctx {
+    int (*compar)(const void *, const void *);
+};
+
+static int qsort_compat_cmp(const void *a, const void *b, void *arg) {
+    const struct qsort_compat_ctx *ctx = (const struct qsort_compat_ctx *)arg;
+    return ctx->compar(a, b);
+}
+
+void qsort(void *base, size_t nel, size_t width,
+           int (*compar)(const void *, const void *)) {
+    if (!compar) {
+        return;
+    }
+    struct qsort_compat_ctx ctx = {.compar = compar};
+    qsort_r(base, nel, width, qsort_compat_cmp, &ctx);
+}
+
+int getsubopt(char **optionp, char *const *keylistp, char **valuep) {
+    if (!optionp || !*optionp || !**optionp) {
+        if (valuep) {
+            *valuep = 0;
+        }
+        return -1;
+    }
+    char *tok = *optionp;
+    char *comma = strchr(tok, ',');
+    if (comma) {
+        *comma = '\0';
+        *optionp = comma + 1;
+    } else {
+        *optionp = tok + strlen(tok);
+    }
+
+    char *eq = strchr(tok, '=');
+    size_t klen = eq ? (size_t)(eq - tok) : strlen(tok);
+    char *val = eq ? (eq + 1) : 0;
+
+    if (keylistp) {
+        for (int i = 0; keylistp[i]; i++) {
+            if (strncmp(keylistp[i], tok, klen) == 0 &&
+                keylistp[i][klen] == '\0') {
+                if (valuep) {
+                    *valuep = val;
+                }
+                return i;
+            }
+        }
+    }
+    if (valuep) {
+        *valuep = tok;
+    }
+    return -1;
 }
 
 void *bsearch(const void *key, const void *base, size_t nel, size_t width,

@@ -10,10 +10,10 @@
 """Standalone C17 header compilation and namespace gate for POSIX.1-2024."""
 
 # need:: VER_LIBC_0002 VER_LIBC_0004 VER_LIBC_0005 VER_LIBC_0006 VER_LIBC_0008
-# need:: VER_LIBC_0009 VER_SIG_0003 VER_MEM_0002 VER_MEM_0004 VER_PROC_0002
-# need:: VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006 VER_IPC_0003
-# need:: VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007 VER_DOCS_0004
-# need:: VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
+# need:: VER_LIBC_0009 VER_LIBC_0010 VER_SIG_0003 VER_MEM_0002 VER_MEM_0004
+# need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006
+# need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
+# need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
 
 from __future__ import annotations
 
@@ -1158,6 +1158,89 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"sig/thr/proc check failed:\n{err}")
+
+
+    def test_base_stdio_stdlib_string_time_completion(self) -> None:
+        src = "\n".join(
+            (
+                "#include <stdarg.h>",
+                "#include <stdio.h>",
+                "#include <stdlib.h>",
+                "#include <string.h>",
+                "#include <time.h>",
+                "static void __noop_qe(void) {}",
+                "static int __cmp_r(const void *a, const void *b, void *ctx) {",
+                "    (void)ctx;",
+                "    return (a > b) - (a < b);",
+                "}",
+                "static int __check_base_std(FILE *fp, va_list ap) {",
+                "    char buf[64];",
+                "    char *p = buf;",
+                "    size_t sz = sizeof(buf);",
+                "    fpos_t pos;",
+                "    (void)freopen(\"/tmp/a\", \"r\", fp);",
+                "    (void)fmemopen(buf, sizeof(buf), \"r+\");",
+                "    (void)open_memstream(&p, &sz);",
+                "    (void)getdelim(&p, &sz, ':', fp);",
+                "    (void)getline(&p, &sz, fp);",
+                "    (void)fgetpos(fp, &pos);",
+                "    (void)fsetpos(fp, &pos);",
+                "    (void)dprintf(1, \"%d\", 1);",
+                "    (void)vdprintf(1, \"%d\", ap);",
+                "    (void)asprintf(&p, \"%d\", 1);",
+                "    (void)vasprintf(&p, \"%d\", ap);",
+                "    int x = 0;",
+                "    (void)scanf(\"%d\", &x);",
+                "    (void)fscanf(fp, \"%d\", &x);",
+                "    (void)sscanf(\"1\", \"%d\", &x);",
+                "    (void)vscanf(\"%d\", ap);",
+                "    (void)vfscanf(fp, \"%d\", ap);",
+                "    (void)vsscanf(\"1\", \"%d\", ap);",
+                "    (void)strtod(\"1.0\", &p);",
+                "    (void)strtof(\"1.0\", &p);",
+                "    (void)strtold(\"1.0\", &p);",
+                "    (void)atof(\"1.0\");",
+                "    (void)aligned_alloc(64u, 64u);",
+                "    (void)at_quick_exit(__noop_qe);",
+                "    div_t d1 = div(7, 3);",
+                "    ldiv_t d2 = ldiv(7L, 3L);",
+                "    lldiv_t d3 = lldiv(7LL, 3LL);",
+                "    srand(1u);",
+                "    int r = rand() % RAND_MAX;",
+                "    qsort_r(&x, 1u, sizeof(x), __cmp_r, (void *)0);",
+                "    char *const ks[] = {\"a\", (char *)0};",
+                "    (void)getsubopt(&p, ks, &p);",
+                "    (void)stpcpy(buf, \"a\");",
+                "    (void)stpncpy(buf, \"a\", 2u);",
+                "    (void)memmem(buf, 2u, \"a\", 1u);",
+                "    (void)strerror_r(0, buf, sizeof(buf));",
+                "    time_t t = time((time_t *)0);",
+                "    (void)difftime(t, 0);",
+                "    clock_t cl = clock();",
+                "    struct timespec ts = {0, 0};",
+                "    (void)timespec_get(&ts, TIME_UTC);",
+                "    struct tm tm0 = {0};",
+                "    (void)gmtime(&t);",
+                "    (void)gmtime_r(&t, &tm0);",
+                "    (void)localtime(&t);",
+                "    (void)localtime_r(&t, &tm0);",
+                "    (void)mktime(&tm0);",
+                "    (void)asctime(&tm0);",
+                "    (void)asctime_r(&tm0, buf);",
+                "    (void)ctime(&t);",
+                "    (void)ctime_r(&t, buf);",
+                "    (void)strftime(buf, sizeof(buf), \"%F %z %Z\", &tm0);",
+                "    return x + d1.quot + (int)d2.rem + (int)d3.quot + r +",
+                "           (int)(cl / CLOCKS_PER_SEC) + (int)tm0.tm_gmtoff;",
+                "}",
+                "int (*__base_std_ref)(FILE *, va_list) = __check_base_std;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"base std check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -149,6 +149,9 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "rename",
     "renameat",
     "sched_yield",
+    "stpcpy",
+    "stpncpy",
+    "time",
     "times",
     "uname",
     "setpgid",
@@ -168,6 +171,7 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
 
 FORBIDDEN_CALLEES: frozenset[str] = frozenset(
     {
+        "aligned_alloc",
         "malloc",
         "free",
         "calloc",

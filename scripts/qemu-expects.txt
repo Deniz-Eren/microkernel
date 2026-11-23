@@ -41,6 +41,7 @@ unprivileged IOPLSet and AttachIntrEvent rejected with EPERM
 drvtest ReadMsgV/WriteMsgV /dev/rtc round trip succeeded
 CLOCK_MONOTONIC, CLOCK_REALTIME, and clock_nanosleep verified
 POSIX timer_create/timer_settime fired .* SIGUSR1 ticks
+Base time\.h calendar, mktime, asctime/ctime, strftime, clock, and timespec_get verified
 pthreads FS\.base TLS, mutex, spinlock, barrier, rwlock
 pthread_cond_clockwait and sem_wait/sem_clockwait verified
 threads\.h thrd_create, thrd_join, and thrd_equal verified
@@ -82,6 +83,8 @@ raw mode and multi-server ppoll \(TTY \+ pipe\) verified
 buffered stdio fopen, fread/fwrite, fgets, ungetc, fseek, and
 setenv/unsetenv and execvp PATH lookup with environ
 ctype, strings, inttypes, limits, assert, strdup, strstr, and
+Base stdio scanf\*, getline/getdelim, dprintf, asprintf, fmemopen, open_memstream, freopen, and fgetpos/fsetpos verified
+Base stdlib strtod\*, aligned_alloc, quick_exit, div\*, rand, qsort_r, getsubopt, and string stpcpy/memmem/strerror_r verified
 sockserv registered /dev/sock
 AF_UNIX socketpair, SOCK_CLOEXEC/SOCK_NONBLOCK, MSG_PEEK, and
 AF_UNIX bind, listen, connect, and accept4 atomic flags

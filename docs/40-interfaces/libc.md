@@ -107,3 +107,21 @@ and `system`. `<pthread.h>`, `<sched.h>`, and `<semaphore.h>` declare robust
 mutexes, `pthread_atfork`, `sched_*`, and named `sem_*` ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0002`, {need}`SWR_PROC_0012`).
 ```
+
+```{icd} Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h> completion
+:id: ICD_LIBC_0009
+:status: active
+:posix: XBD/stdio.h (CX), XBD/stdlib.h (CX), XBD/string.h (CX), XBD/time.h (CX)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0010
+
+`<stdio.h>` declares `fpos_t`, `scanf*`, `getline`, `getdelim`, `dprintf*`,
+`asprintf*`, `fmemopen`, `open_memstream`, `freopen`, and `fgetpos`/`fsetpos`.
+`<stdlib.h>` declares `RAND_MAX`, `div_t`/`ldiv_t`/`lldiv_t`, `strtod*`, `atof`,
+`aligned_alloc`, `quick_exit`/`at_quick_exit`, `div*`, `rand`/`srand`,
+`qsort_r`, and `getsubopt`. `<string.h>` declares `stpcpy`, `stpncpy`, `memmem`,
+and `strerror_r`. `<time.h>` declares `struct tm`, `CLOCKS_PER_SEC`, `TIME_UTC`,
+`time`, `difftime`, `clock`, `timespec_get`, `gmtime*`, `localtime*`, `mktime`,
+`asctime*`, `ctime*`, and `strftime` ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0010`).
+```

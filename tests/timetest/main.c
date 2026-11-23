@@ -9,9 +9,12 @@
  */
 
 #include <errno.h>
+#include <math.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -145,5 +148,97 @@ int main(void) {
     }
     printf("[OK] POSIX timer_create/timer_settime fired %d SIGUSR1 ticks\n",
            (int)g_timer_hits);
+
+    /* 6. Verify Base <time.h>: time, difftime, clock, timespec_get, gmtime*,
+     * localtime*, mktime, asctime*, ctime*, and strftime. */
+    time_t now_arg = 0;
+    time_t now_ret = time(&now_arg);
+    struct timespec utc_ts = {0, 0};
+    if (now_ret != now_arg || now_ret < 1700000000L ||
+        timespec_get(&utc_ts, TIME_UTC) != TIME_UTC ||
+        timespec_get(&utc_ts, 0) != 0 ||
+        fabs(difftime(now_ret + 15L, now_ret) - 15.0) > 1e-9) {
+        printf("[FAIL] timetest time/difftime/timespec_get failed\n");
+        return 1;
+    }
+    clock_t c0 = clock();
+    if (c0 == (clock_t)-1 || c0 < 0) {
+        printf("[FAIL] timetest clock() failed c0=%ld\n", (long)c0);
+        return 1;
+    }
+
+    time_t epoch0 = 0;
+    struct tm tm0 = {0};
+    if (!gmtime_r(&epoch0, &tm0) || tm0.tm_year != 70 || tm0.tm_mon != 0 ||
+        tm0.tm_mday != 1 || tm0.tm_wday != 4 || tm0.tm_yday != 0 ||
+        tm0.tm_hour != 0 || tm0.tm_min != 0 || tm0.tm_sec != 0 ||
+        tm0.tm_gmtoff != 0L) {
+        printf("[FAIL] timetest gmtime_r(0) mismatch\n");
+        return 1;
+    }
+
+    /* Leap day 2024-02-29 12:34:56 UTC = 1709210096. */
+    time_t leap_t = 1709210096L;
+    struct tm *tmg = gmtime(&leap_t);
+    if (!tmg || tmg->tm_year != 124 || tmg->tm_mon != 1 || tmg->tm_mday != 29 ||
+        tmg->tm_wday != 4 || tmg->tm_yday != 59 || tmg->tm_hour != 12 ||
+        tmg->tm_min != 34 || tmg->tm_sec != 56) {
+        printf("[FAIL] timetest gmtime(2024-02-29) mismatch\n");
+        return 1;
+    }
+
+    /* Pre-1970 negative time_t: -86400 = Wed 1969-12-31 00:00:00 UTC. */
+    time_t neg_t = -86400L;
+    struct tm tmn = {0};
+    if (!gmtime_r(&neg_t, &tmn) || tmn.tm_year != 69 || tmn.tm_mon != 11 ||
+        tmn.tm_mday != 31 || tmn.tm_wday != 3 || tmn.tm_yday != 364) {
+        printf("[FAIL] timetest gmtime_r(-86400) mismatch\n");
+        return 1;
+    }
+
+    /* localtime_r + mktime with POSIX TZ offset (EST5 = UTC-5). */
+    (void)setenv("TZ", "EST5", 1);
+    struct tm tml = {0};
+    if (!localtime_r(&leap_t, &tml) || tml.tm_hour != 7 ||
+        tml.tm_gmtoff != -18000L || !tml.tm_zone ||
+        strcmp(tml.tm_zone, "EST") != 0) {
+        printf("[FAIL] timetest localtime_r(EST5) hour=%d off=%ld\n",
+               tml.tm_hour, tml.tm_gmtoff);
+        return 1;
+    }
+    struct tm norm = tml;
+    norm.tm_mday += 1; /* Feb 29 + 1 -> Mar 1 */
+    time_t mk_res = mktime(&norm);
+    if (mk_res != leap_t + 86400L || norm.tm_mon != 2 || norm.tm_mday != 1) {
+        printf("[FAIL] timetest mktime normalization mismatch\n");
+        return 1;
+    }
+    (void)unsetenv("TZ");
+
+    char abuf[32] = {0};
+    char cbuf[32] = {0};
+    if (!asctime_r(&tm0, abuf) ||
+        strcmp(abuf, "Thu Jan  1 00:00:00 1970\n") != 0 ||
+        strcmp(asctime(&tm0), abuf) != 0 || !ctime_r(&epoch0, cbuf) ||
+        strcmp(cbuf, abuf) != 0 || strcmp(ctime(&epoch0), abuf) != 0) {
+        printf("[FAIL] timetest asctime/ctime got '%s'\n", abuf);
+        return 1;
+    }
+
+    char sfbuf[128] = {0};
+    size_t sfn = strftime(sfbuf, sizeof(sfbuf),
+                          "%Y-%m-%d %H:%M:%S %a %b %j %u %G-W%V %z %Z %%", tmg);
+    if (sfn == 0u ||
+        strcmp(sfbuf, "2024-02-29 12:34:56 Thu Feb 060 4 2024-W09 +0000 UTC "
+                      "%") != 0) {
+        printf("[FAIL] timetest strftime got '%s'\n", sfbuf);
+        return 1;
+    }
+    if (strftime(sfbuf, 4u, "%Y-%m-%d", tmg) != 0u) {
+        printf("[FAIL] timetest strftime overflow did not return 0\n");
+        return 1;
+    }
+    printf("[OK] Base time.h calendar, mktime, asctime/ctime, strftime, clock, "
+           "and timespec_get verified\n");
     return 0;
 }

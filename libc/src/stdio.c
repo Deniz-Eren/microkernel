@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <math.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -21,8 +22,9 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "stdio_internal.h"
 
-/* need:: COMP_LIBC_0001 COMP_LIBC_0004 */
+/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0009 */
 
 #define STDIO_FLAG_READ 0x01u
 #define STDIO_FLAG_WRITE 0x02u
@@ -31,9 +33,16 @@
 #define STDIO_FLAG_ERR 0x10u
 #define STDIO_FLAG_STATIC 0x20u
 #define STDIO_FLAG_OWNBUF 0x40u
+#define STDIO_FLAG_MEM_OWN 0x80u
+#define STDIO_FLAG_BINARY 0x100u
+
+#define STDIO_KIND_FD 0
+#define STDIO_KIND_MEM 1
+#define STDIO_KIND_MEMSTREAM 2
 
 struct __microkernel_file {
     int fd;
+    int kind;
     pthread_mutex_t lock;
     unsigned int flags;
     int buf_mode;
@@ -43,6 +52,12 @@ struct __microkernel_file {
     size_t rlen;
     size_t wlen;
     int unget_char;
+    unsigned char *mem_buf;
+    size_t mem_cap;
+    size_t mem_size;
+    size_t mem_pos;
+    char **ms_bufp;
+    size_t *ms_sizep;
     unsigned char inline_buf[BUFSIZ];
     struct __microkernel_file *next;
 };
@@ -122,6 +137,10 @@ static void stdio_unlock_cleanup(void *arg) {
     funlockfile((FILE *)arg);
 }
 
+void __stdio_unlock_cleanup(void *arg) {
+    funlockfile((FILE *)arg);
+}
+
 static int parse_mode(const char *mode, int *oflags_out,
                       unsigned int *sflags_out) {
     if (!mode || !*mode) {
@@ -133,12 +152,13 @@ static int parse_mode(const char *mode, int *oflags_out,
     char base = mode[0];
     int plus = 0;
     int excl = 0;
+    int bin = 0;
 
     for (size_t i = 1; mode[i]; i++) {
         if (mode[i] == '+') {
             plus = 1;
         } else if (mode[i] == 'b') {
-            continue;
+            bin = 1;
         } else if (mode[i] == 'x') {
             excl = 1;
         } else {
@@ -164,6 +184,9 @@ static int parse_mode(const char *mode, int *oflags_out,
     } else {
         errno = EINVAL;
         return -1;
+    }
+    if (bin) {
+        sflags |= STDIO_FLAG_BINARY;
     }
 
     *oflags_out = oflags;
@@ -209,8 +232,66 @@ static int write_all_fd(int fd, const unsigned char *src, size_t n) {
     return 0;
 }
 
+static int memstream_ensure(FILE *f, size_t need) {
+    if (need == SIZE_MAX) {
+        errno = ENOMEM;
+        f->flags |= STDIO_FLAG_ERR;
+        return -1;
+    }
+    if (need + 1u <= f->mem_cap) {
+        return 0;
+    }
+    size_t ncap = f->mem_cap ? f->mem_cap : 64u;
+    while (ncap < need + 1u) {
+        if (ncap > SIZE_MAX / 2u) {
+            ncap = need + 1u;
+            break;
+        }
+        ncap *= 2u;
+    }
+    unsigned char *nb = (unsigned char *)realloc(f->mem_buf, ncap);
+    if (!nb) {
+        errno = ENOMEM;
+        f->flags |= STDIO_FLAG_ERR;
+        return -1;
+    }
+    f->mem_buf = nb;
+    f->mem_cap = ncap;
+    return 0;
+}
+
 static int flush_write_unlocked(FILE *f) {
-    if (!f || f->wlen == 0) {
+    if (!f) {
+        return 0;
+    }
+    if (f->kind == STDIO_KIND_MEM) {
+        if ((f->flags & STDIO_FLAG_WRITE) && f->mem_buf && f->mem_cap > 0u) {
+            if (f->mem_pos < f->mem_cap) {
+                f->mem_buf[f->mem_pos] = '\0';
+            } else if (!(f->flags & STDIO_FLAG_BINARY)) {
+                f->mem_buf[f->mem_cap - 1u] = '\0';
+            }
+        }
+        return 0;
+    }
+    if (f->kind == STDIO_KIND_MEMSTREAM) {
+        if (memstream_ensure(f, f->mem_pos) != 0) {
+            return EOF;
+        }
+        if (f->mem_pos > f->mem_size) {
+            memset(f->mem_buf + f->mem_size, 0, f->mem_pos - f->mem_size);
+            f->mem_size = f->mem_pos;
+        }
+        f->mem_buf[f->mem_pos] = '\0';
+        if (f->ms_bufp) {
+            *f->ms_bufp = (char *)f->mem_buf;
+        }
+        if (f->ms_sizep) {
+            *f->ms_sizep = f->mem_pos;
+        }
+        return 0;
+    }
+    if (f->wlen == 0) {
         return 0;
     }
     size_t n = f->wlen;
@@ -232,6 +313,47 @@ static size_t fwrite_unlocked_body(FILE *f, const unsigned char *src,
     f->rpos = 0;
     f->rlen = 0;
     f->unget_char = -1;
+
+    if (f->kind == STDIO_KIND_MEM) {
+        if (f->flags & STDIO_FLAG_APPEND) {
+            f->mem_pos = f->mem_size;
+        }
+        size_t avail = f->mem_pos < f->mem_cap ? (f->mem_cap - f->mem_pos) : 0u;
+        size_t take = total < avail ? total : avail;
+        if (take > 0u && f->mem_buf) {
+            memcpy(f->mem_buf + f->mem_pos, src, take);
+            f->mem_pos += take;
+            if (f->mem_pos > f->mem_size) {
+                f->mem_size = f->mem_pos;
+            }
+            if (f->mem_pos < f->mem_cap) {
+                f->mem_buf[f->mem_pos] = '\0';
+            }
+        }
+        if (take < total) {
+            errno = ENOSPC;
+            f->flags |= STDIO_FLAG_ERR;
+        }
+        return take;
+    }
+    if (f->kind == STDIO_KIND_MEMSTREAM) {
+        if (total > SIZE_MAX - f->mem_pos ||
+            memstream_ensure(f, f->mem_pos + total) != 0) {
+            return 0;
+        }
+        if (f->mem_pos > f->mem_size) {
+            memset(f->mem_buf + f->mem_size, 0, f->mem_pos - f->mem_size);
+        }
+        if (total > 0u) {
+            memcpy(f->mem_buf + f->mem_pos, src, total);
+            f->mem_pos += total;
+        }
+        if (f->mem_pos > f->mem_size) {
+            f->mem_size = f->mem_pos;
+            f->mem_buf[f->mem_size] = '\0';
+        }
+        return total;
+    }
 
     if (f->buf_mode == _IONBF || !f->buf || f->buf_cap == 0) {
         if (write_all_fd(f->fd, src, total) != 0) {
@@ -283,6 +405,13 @@ static int fgetc_unlocked_body(FILE *f) {
         f->flags &= ~STDIO_FLAG_EOF;
         return c;
     }
+    if (f->kind == STDIO_KIND_MEM) {
+        if (!f->mem_buf || f->mem_pos >= f->mem_size) {
+            f->flags |= STDIO_FLAG_EOF;
+            return EOF;
+        }
+        return (int)f->mem_buf[f->mem_pos++];
+    }
     if (f->wlen > 0 && flush_write_unlocked(f) != 0) {
         return EOF;
     }
@@ -314,6 +443,30 @@ static int fgetc_unlocked_body(FILE *f) {
     f->rlen = (size_t)r;
     f->rpos = 1;
     return (int)f->buf[0];
+}
+
+int __stdio_fgetc_unlocked(FILE *stream) {
+    if (!stream) {
+        return EOF;
+    }
+    return fgetc_unlocked_body(stream);
+}
+
+int __stdio_ungetc_unlocked(int c, FILE *stream) {
+    if (c == EOF || !stream) {
+        return EOF;
+    }
+    if (stream->kind == STDIO_KIND_FD && stream->rpos > 0 && stream->buf) {
+        stream->buf[--stream->rpos] = (unsigned char)c;
+        stream->flags &= ~STDIO_FLAG_EOF;
+        return (unsigned char)c;
+    }
+    if (stream->unget_char == -1) {
+        stream->unget_char = (unsigned char)c;
+        stream->flags &= ~STDIO_FLAG_EOF;
+        return (unsigned char)c;
+    }
+    return EOF;
 }
 
 FILE *fopen(const char *restrict pathname, const char *restrict mode) {
@@ -352,6 +505,181 @@ FILE *fdopen(int fildes, const char *mode) {
     return alloc_stream(fildes, sflags);
 }
 
+FILE *freopen(const char *restrict pathname, const char *restrict mode,
+              FILE *restrict stream) {
+    if (!stream || !mode) {
+        errno = EINVAL;
+        return 0;
+    }
+    int oflags = 0;
+    unsigned int sflags = 0;
+    if (parse_mode(mode, &oflags, &sflags) != 0) {
+        return 0;
+    }
+
+    FILE *res = 0;
+    int free_on_fail = 0;
+    int saved_errno = 0;
+
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    (void)flush_write_unlocked(stream);
+
+    if (!pathname) {
+        if (stream->kind != STDIO_KIND_FD || stream->fd < 0) {
+            saved_errno = EBADF;
+        } else {
+            stream->rpos = 0;
+            stream->rlen = 0;
+            stream->wlen = 0;
+            stream->unget_char = -1;
+            stream->flags =
+                (stream->flags & (STDIO_FLAG_STATIC | STDIO_FLAG_OWNBUF)) |
+                sflags;
+            res = stream;
+        }
+    } else {
+        if (stream->kind == STDIO_KIND_FD && stream->fd >= 0) {
+            (void)close(stream->fd);
+            stream->fd = -1;
+        }
+        if (stream->kind == STDIO_KIND_MEM &&
+            (stream->flags & STDIO_FLAG_MEM_OWN) && stream->mem_buf) {
+            free(stream->mem_buf);
+        }
+        stream->mem_buf = 0;
+        stream->mem_cap = 0;
+        stream->mem_size = 0;
+        stream->mem_pos = 0;
+        stream->ms_bufp = 0;
+        stream->ms_sizep = 0;
+        stream->kind = STDIO_KIND_FD;
+        stream->rpos = 0;
+        stream->rlen = 0;
+        stream->wlen = 0;
+        stream->unget_char = -1;
+
+        int new_fd = open(pathname, oflags, (mode_t)0666u);
+        if (new_fd < 0) {
+            saved_errno = errno;
+            free_on_fail = !(stream->flags & STDIO_FLAG_STATIC);
+        } else {
+            stream->fd = new_fd;
+            stream->flags =
+                (stream->flags & (STDIO_FLAG_STATIC | STDIO_FLAG_OWNBUF)) |
+                sflags;
+            res = stream;
+        }
+    }
+    pthread_cleanup_pop(1);
+
+    if (!res) {
+        if (free_on_fail) {
+            (void)pthread_mutex_lock(&g_stream_list_lock);
+            FILE **pp = &g_stream_head;
+            while (*pp) {
+                if (*pp == stream) {
+                    *pp = stream->next;
+                    break;
+                }
+                pp = &(*pp)->next;
+            }
+            (void)pthread_mutex_unlock(&g_stream_list_lock);
+            if ((stream->flags & STDIO_FLAG_OWNBUF) && stream->buf) {
+                free(stream->buf);
+            }
+            free(stream);
+        }
+        errno = saved_errno;
+    }
+    return res;
+}
+
+FILE *fmemopen(void *restrict buf, size_t size, const char *restrict mode) {
+    int oflags = 0;
+    unsigned int sflags = 0;
+    if (parse_mode(mode, &oflags, &sflags) != 0) {
+        return 0;
+    }
+    if (!buf && !((sflags & STDIO_FLAG_READ) && (sflags & STDIO_FLAG_WRITE))) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    unsigned char *mbuf = (unsigned char *)buf;
+    unsigned char *owned = 0;
+    if (!mbuf && size > 0u) {
+        owned = (unsigned char *)calloc(1u, size);
+        if (!owned) {
+            return 0;
+        }
+        mbuf = owned;
+        sflags |= STDIO_FLAG_MEM_OWN;
+    }
+
+    FILE *f = alloc_stream(-1, sflags);
+    if (!f) {
+        free(owned);
+        return 0;
+    }
+    f->kind = STDIO_KIND_MEM;
+    f->buf_mode = _IONBF;
+    f->buf = 0;
+    f->buf_cap = 0;
+    f->mem_buf = mbuf;
+    f->mem_cap = size;
+
+    if (mode[0] == 'r') {
+        f->mem_pos = 0u;
+        f->mem_size = buf ? size : 0u;
+    } else if (mode[0] == 'w') {
+        f->mem_pos = 0u;
+        f->mem_size = 0u;
+        if (mbuf && size > 0u) {
+            mbuf[0] = '\0';
+        }
+    } else {
+        size_t pos = 0u;
+        if (mbuf) {
+            while (pos < size && mbuf[pos] != '\0') {
+                pos++;
+            }
+        }
+        f->mem_pos = pos;
+        f->mem_size = pos;
+    }
+    return f;
+}
+
+FILE *open_memstream(char **bufp, size_t *sizep) {
+    if (!bufp || !sizep) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned char *mbuf = (unsigned char *)calloc(1u, 64u);
+    if (!mbuf) {
+        return 0;
+    }
+    FILE *f = alloc_stream(-1, STDIO_FLAG_WRITE);
+    if (!f) {
+        free(mbuf);
+        return 0;
+    }
+    f->kind = STDIO_KIND_MEMSTREAM;
+    f->buf_mode = _IONBF;
+    f->buf = 0;
+    f->buf_cap = 0;
+    f->mem_buf = mbuf;
+    f->mem_cap = 64u;
+    f->mem_size = 0u;
+    f->mem_pos = 0u;
+    f->ms_bufp = bufp;
+    f->ms_sizep = sizep;
+    *bufp = (char *)mbuf;
+    *sizep = 0u;
+    return f;
+}
+
 int fclose(FILE *stream) {
     if (!stream) {
         errno = EINVAL;
@@ -375,11 +703,17 @@ int fclose(FILE *stream) {
     flockfile(stream);
     pthread_cleanup_push(stdio_unlock_cleanup, stream);
     flush_err = flush_write_unlocked(stream);
-    close_res = close(stream->fd);
+    if (stream->kind == STDIO_KIND_FD && stream->fd >= 0) {
+        close_res = close(stream->fd);
+    }
     stream->fd = -1;
     pthread_cleanup_pop(1);
 
     if (!(stream->flags & STDIO_FLAG_STATIC)) {
+        if (stream->kind == STDIO_KIND_MEM &&
+            (stream->flags & STDIO_FLAG_MEM_OWN) && stream->mem_buf) {
+            free(stream->mem_buf);
+        }
         if ((stream->flags & STDIO_FLAG_OWNBUF) && stream->buf) {
             free(stream->buf);
         }
@@ -415,6 +749,19 @@ size_t fread(void *restrict ptr, size_t size, size_t nitems,
                 dst[got++] = (unsigned char)stream->unget_char;
                 stream->unget_char = -1;
                 stream->flags &= ~STDIO_FLAG_EOF;
+                continue;
+            }
+            if (stream->kind == STDIO_KIND_MEM) {
+                if (!stream->mem_buf || stream->mem_pos >= stream->mem_size) {
+                    stream->flags |= STDIO_FLAG_EOF;
+                    break;
+                }
+                size_t avail = stream->mem_size - stream->mem_pos;
+                size_t want = total - got;
+                size_t take = avail < want ? avail : want;
+                memcpy(dst + got, stream->mem_buf + stream->mem_pos, take);
+                stream->mem_pos += take;
+                got += take;
                 continue;
             }
             if (stream->rpos < stream->rlen) {
@@ -513,15 +860,7 @@ int ungetc(int c, FILE *stream) {
     }
     int res = EOF;
     flockfile(stream);
-    if (stream->rpos > 0 && stream->buf) {
-        stream->buf[--stream->rpos] = (unsigned char)c;
-        stream->flags &= ~STDIO_FLAG_EOF;
-        res = (unsigned char)c;
-    } else if (stream->unget_char == -1) {
-        stream->unget_char = (unsigned char)c;
-        stream->flags &= ~STDIO_FLAG_EOF;
-        res = (unsigned char)c;
-    }
+    res = __stdio_ungetc_unlocked(c, stream);
     funlockfile(stream);
     return res;
 }
@@ -551,6 +890,71 @@ char *fgets(char *restrict s, int n, FILE *restrict stream) {
     return s;
 }
 
+ssize_t getdelim(char **restrict lineptr, size_t *restrict n, int delimiter,
+                 FILE *restrict stream) {
+    if (!lineptr || !n || !stream) {
+        errno = EINVAL;
+        return -1;
+    }
+    ssize_t result = -1;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+
+    if (!*lineptr || *n == 0u) {
+        size_t init_cap = 128u;
+        char *buf = (char *)malloc(init_cap);
+        if (!buf) {
+            stream->flags |= STDIO_FLAG_ERR;
+            errno = ENOMEM;
+            goto out;
+        }
+        *lineptr = buf;
+        *n = init_cap;
+    }
+
+    size_t len = 0u;
+    for (;;) {
+        int c = fgetc_unlocked_body(stream);
+        if (c == EOF) {
+            if (len == 0u || (stream->flags & STDIO_FLAG_ERR)) {
+                goto out;
+            }
+            break;
+        }
+        if (len + 2u > *n) {
+            if (*n > SIZE_MAX / 2u || len >= (size_t)SSIZE_MAX - 1u) {
+                stream->flags |= STDIO_FLAG_ERR;
+                errno = EOVERFLOW;
+                goto out;
+            }
+            size_t ncap = (*n) * 2u;
+            char *nb = (char *)realloc(*lineptr, ncap);
+            if (!nb) {
+                stream->flags |= STDIO_FLAG_ERR;
+                errno = ENOMEM;
+                goto out;
+            }
+            *lineptr = nb;
+            *n = ncap;
+        }
+        (*lineptr)[len++] = (char)c;
+        if (c == (unsigned char)delimiter) {
+            break;
+        }
+    }
+    (*lineptr)[len] = '\0';
+    result = (ssize_t)len;
+
+out:
+    pthread_cleanup_pop(1);
+    return result;
+}
+
+ssize_t getline(char **restrict lineptr, size_t *restrict n,
+                FILE *restrict stream) {
+    return getdelim(lineptr, n, '\n', stream);
+}
+
 int fseeko(FILE *stream, off_t offset, int whence) {
     if (!stream) {
         errno = EINVAL;
@@ -563,7 +967,25 @@ int fseeko(FILE *stream, off_t offset, int whence) {
     int res = -1;
     flockfile(stream);
     pthread_cleanup_push(stdio_unlock_cleanup, stream);
-    if (flush_write_unlocked(stream) == 0) {
+    if (stream->kind == STDIO_KIND_MEM ||
+        stream->kind == STDIO_KIND_MEMSTREAM) {
+        off_t base = 0;
+        if (whence == SEEK_CUR) {
+            base = (off_t)stream->mem_pos - (stream->unget_char != -1 ? 1 : 0);
+        } else if (whence == SEEK_END) {
+            base = (off_t)stream->mem_size;
+        }
+        off_t target = base + offset;
+        if (target < 0 || (stream->kind == STDIO_KIND_MEM &&
+                           (size_t)target > stream->mem_cap)) {
+            errno = EINVAL;
+        } else {
+            stream->mem_pos = (size_t)target;
+            stream->unget_char = -1;
+            stream->flags &= ~STDIO_FLAG_EOF;
+            res = 0;
+        }
+    } else if (flush_write_unlocked(stream) == 0) {
         off_t adj = offset;
         if (whence == SEEK_CUR) {
             off_t buffered = (off_t)(stream->rlen - stream->rpos) +
@@ -594,14 +1016,19 @@ off_t ftello(FILE *stream) {
     }
     off_t res = (off_t)-1;
     flockfile(stream);
-    off_t pos = lseek(stream->fd, 0, SEEK_CUR);
-    if (pos >= 0) {
-        if (stream->wlen > 0) {
-            res = pos + (off_t)stream->wlen;
-        } else {
-            off_t buffered = (off_t)(stream->rlen - stream->rpos) +
-                             (stream->unget_char != -1 ? 1 : 0);
-            res = pos - buffered;
+    if (stream->kind == STDIO_KIND_MEM ||
+        stream->kind == STDIO_KIND_MEMSTREAM) {
+        res = (off_t)stream->mem_pos - (stream->unget_char != -1 ? 1 : 0);
+    } else {
+        off_t pos = lseek(stream->fd, 0, SEEK_CUR);
+        if (pos >= 0) {
+            if (stream->wlen > 0) {
+                res = pos + (off_t)stream->wlen;
+            } else {
+                off_t buffered = (off_t)(stream->rlen - stream->rpos) +
+                                 (stream->unget_char != -1 ? 1 : 0);
+                res = pos - buffered;
+            }
         }
     }
     funlockfile(stream);
@@ -611,6 +1038,27 @@ off_t ftello(FILE *stream) {
 long ftell(FILE *stream) {
     off_t pos = ftello(stream);
     return pos < 0 ? -1L : (long)pos;
+}
+
+int fgetpos(FILE *restrict stream, fpos_t *restrict pos) {
+    if (!stream || !pos) {
+        errno = EINVAL;
+        return -1;
+    }
+    off_t cur = ftello(stream);
+    if (cur < 0) {
+        return -1;
+    }
+    pos->__pos = cur;
+    return 0;
+}
+
+int fsetpos(FILE *stream, const fpos_t *pos) {
+    if (!stream || !pos) {
+        errno = EINVAL;
+        return -1;
+    }
+    return fseeko(stream, pos->__pos, SEEK_SET);
 }
 
 void rewind(FILE *stream) {
@@ -803,6 +1251,168 @@ static size_t format_uint_buf(char *tmp, uint64_t v, unsigned base, int upper) {
     return i;
 }
 
+static void format_float_body(struct sbuf *b, double val, char spec, int width,
+                              int prec, int left, int zero_pad, int plus_sign,
+                              int space_sign, int alt_form) {
+    int upper = (spec == 'F' || spec == 'E' || spec == 'G' || spec == 'A');
+    int neg = signbit(val) != 0;
+    const char *pfx = neg ? "-" : (plus_sign ? "+" : (space_sign ? " " : ""));
+
+    if (isnan(val)) {
+        emit_padded(b, pfx, upper ? "NAN" : "nan", 3u, width, left, 0);
+        return;
+    }
+    if (isinf(val)) {
+        emit_padded(b, pfx, upper ? "INF" : "inf", 3u, width, left, 0);
+        return;
+    }
+
+    double av = fabs(val);
+    if (prec < 0) {
+        prec = (spec == 'a' || spec == 'A') ? -1 : 6;
+    }
+    if (prec > 18) {
+        prec = 18;
+    }
+
+    char body[128];
+    size_t blen = 0u;
+    int exp10 = 0;
+
+    if (spec == 'a' || spec == 'A') {
+        int exp2 = 0;
+        double m = av == 0.0 ? 0.0 : frexp(av, &exp2);
+        if (av != 0.0) {
+            m *= 2.0;
+            exp2--;
+        }
+        int lead = (int)m;
+        m -= (double)lead;
+        body[blen++] = (char)('0' + lead);
+        char hex_frac[20];
+        int hlen = 0;
+        int want = (prec >= 0) ? prec : 13;
+        for (int i = 0; i < want; i++) {
+            m *= 16.0;
+            int d = (int)m;
+            if (d > 15) {
+                d = 15;
+            }
+            m -= (double)d;
+            hex_frac[hlen++] =
+                upper ? (char)(d < 10 ? '0' + d : 'A' + d - 10) : g_digits[d];
+        }
+        if (prec < 0) {
+            while (hlen > 0 && hex_frac[hlen - 1] == '0') {
+                hlen--;
+            }
+        }
+        if (hlen > 0 || alt_form) {
+            body[blen++] = '.';
+            for (int i = 0; i < hlen; i++) {
+                body[blen++] = hex_frac[i];
+            }
+        }
+        body[blen++] = upper ? 'P' : 'p';
+        body[blen++] = exp2 < 0 ? '-' : '+';
+        int ae = exp2 < 0 ? -exp2 : exp2;
+        char ebuf[16];
+        size_t el = format_uint_buf(ebuf, (uint64_t)ae, 10u, 0);
+        memcpy(body + blen, ebuf, el);
+        blen += el;
+        const char *hpfx =
+            neg ? (upper ? "-0X" : "-0x")
+                : (plus_sign ? (upper ? "+0X" : "+0x")
+                             : (space_sign ? (upper ? " 0X" : " 0x")
+                                           : (upper ? "0X" : "0x")));
+        emit_padded(b, hpfx, body, blen, width, left, zero_pad);
+        return;
+    }
+
+    int use_exp = (spec == 'e' || spec == 'E');
+    int is_g = (spec == 'g' || spec == 'G');
+    double norm = av;
+    if (av != 0.0) {
+        while (norm >= 10.0) {
+            norm /= 10.0;
+            exp10++;
+        }
+        while (norm < 1.0) {
+            norm *= 10.0;
+            exp10--;
+        }
+    }
+    if (is_g) {
+        int p = prec == 0 ? 1 : prec;
+        if (exp10 < -4 || exp10 >= p) {
+            use_exp = 1;
+            prec = p - 1;
+        } else {
+            use_exp = 0;
+            prec = p - 1 - exp10;
+            if (prec < 0) {
+                prec = 0;
+            }
+        }
+    }
+
+    double v = use_exp ? norm : av;
+    double p10 = 1.0;
+    for (int i = 0; i < prec; i++) {
+        p10 *= 10.0;
+    }
+    double scaled = v + 0.5 / p10;
+    if (use_exp && scaled >= 10.0) {
+        scaled /= 10.0;
+        exp10++;
+    }
+
+    double ipart = floor(scaled);
+    double fpart = scaled - ipart;
+    uint64_t iv = (ipart < 18446744073709551616.0) ? (uint64_t)ipart : 0ULL;
+    if (ipart < 18446744073709551616.0) {
+        blen += format_uint_buf(body + blen, iv, 10u, 0);
+    } else {
+        body[blen++] = '0';
+    }
+
+    char frac[24];
+    int flen = prec;
+    for (int i = 0; i < flen; i++) {
+        fpart *= 10.0;
+        int d = (int)fpart;
+        if (d > 9) {
+            d = 9;
+        }
+        fpart -= (double)d;
+        frac[i] = (char)('0' + d);
+    }
+    if (is_g && !alt_form) {
+        while (flen > 0 && frac[flen - 1] == '0') {
+            flen--;
+        }
+    }
+    if (flen > 0 || alt_form) {
+        body[blen++] = '.';
+        for (int i = 0; i < flen; i++) {
+            body[blen++] = frac[i];
+        }
+    }
+    if (use_exp) {
+        body[blen++] = upper ? 'E' : 'e';
+        body[blen++] = exp10 < 0 ? '-' : '+';
+        int ae = exp10 < 0 ? -exp10 : exp10;
+        if (ae < 10) {
+            body[blen++] = '0';
+        }
+        char ebuf[16];
+        size_t el = format_uint_buf(ebuf, (uint64_t)ae, 10u, 0);
+        memcpy(body + blen, ebuf, el);
+        blen += el;
+    }
+    emit_padded(b, pfx, body, blen, width, left, zero_pad);
+}
+
 static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
     for (const char *f = fmt; *f; f++) {
         if (*f != '%') {
@@ -814,6 +1424,7 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
         int zero_pad = 0;
         int plus_sign = 0;
         int space_sign = 0;
+        int alt_form = 0;
         while (*f == '-' || *f == '0' || *f == '+' || *f == ' ' || *f == '#') {
             if (*f == '-') {
                 left = 1;
@@ -823,6 +1434,8 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
                 plus_sign = 1;
             } else if (*f == ' ') {
                 space_sign = 1;
+            } else if (*f == '#') {
+                alt_form = 1;
             }
             f++;
         }
@@ -858,18 +1471,25 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
         }
 
         int longs = 0;
+        int shorts = 0;
         int is_z = 0;
         int is_j = 0;
         int is_t = 0;
-        while (*f == 'l' || *f == 'h' || *f == 'z' || *f == 'j' || *f == 't') {
+        int is_cap_l = 0;
+        while (*f == 'l' || *f == 'h' || *f == 'z' || *f == 'j' || *f == 't' ||
+               *f == 'L') {
             if (*f == 'l') {
                 longs++;
+            } else if (*f == 'h') {
+                shorts++;
             } else if (*f == 'z') {
                 is_z = 1;
             } else if (*f == 'j') {
                 is_j = 1;
             } else if (*f == 't') {
                 is_t = 1;
+            } else if (*f == 'L') {
+                is_cap_l = 1;
             }
             f++;
         }
@@ -909,6 +1529,10 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
                 v = va_arg(ap, long long);
             } else if (longs == 1 || is_z || is_j || is_t) {
                 v = va_arg(ap, long);
+            } else if (shorts >= 2) {
+                v = (signed char)va_arg(ap, int);
+            } else if (shorts == 1) {
+                v = (short)va_arg(ap, int);
             } else {
                 v = va_arg(ap, int);
             }
@@ -939,13 +1563,27 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
                 v = va_arg(ap, unsigned long long);
             } else if (longs == 1 || is_z || is_j || is_t) {
                 v = va_arg(ap, unsigned long);
+            } else if (shorts >= 2) {
+                v = (unsigned char)va_arg(ap, unsigned int);
+            } else if (shorts == 1) {
+                v = (unsigned short)va_arg(ap, unsigned int);
             } else {
                 v = va_arg(ap, unsigned int);
             }
             unsigned base = (*f == 'u') ? 10u : (*f == 'o' ? 8u : 16u);
+            const char *pfx = "";
+            if (alt_form && v != 0ULL) {
+                if (*f == 'x') {
+                    pfx = "0x";
+                } else if (*f == 'X') {
+                    pfx = "0X";
+                } else if (*f == 'o') {
+                    pfx = "0";
+                }
+            }
             char num[32];
             size_t nlen = format_uint_buf(num, v, base, *f == 'X');
-            emit_padded(b, "", num, nlen, width, left, zero_pad);
+            emit_padded(b, pfx, num, nlen, width, left, zero_pad);
             break;
         }
         case 'p': {
@@ -953,6 +1591,34 @@ static void kvformat(struct sbuf *b, const char *fmt, va_list ap) {
             char num[32];
             size_t nlen = format_uint_buf(num, v, 16, 0);
             emit_padded(b, "0x", num, nlen, width, left, zero_pad);
+            break;
+        }
+        case 'f':
+        case 'F':
+        case 'e':
+        case 'E':
+        case 'g':
+        case 'G':
+        case 'a':
+        case 'A': {
+            double dv =
+                is_cap_l ? (double)va_arg(ap, long double) : va_arg(ap, double);
+            format_float_body(b, dv, *f, width, prec, left, zero_pad, plus_sign,
+                              space_sign, alt_form);
+            break;
+        }
+        case 'n': {
+            if (longs >= 2) {
+                *va_arg(ap, long long *) = (long long)b->written;
+            } else if (longs == 1 || is_z || is_j || is_t) {
+                *va_arg(ap, long *) = (long)b->written;
+            } else if (shorts >= 2) {
+                *va_arg(ap, signed char *) = (signed char)b->written;
+            } else if (shorts == 1) {
+                *va_arg(ap, short *) = (short)b->written;
+            } else {
+                *va_arg(ap, int *) = (int)b->written;
+            }
             break;
         }
         default:
@@ -1063,6 +1729,83 @@ int printf(const char *restrict fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     int r = vfprintf(stdout, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+int vdprintf(int fildes, const char *restrict fmt, va_list ap) {
+    if (!fmt) {
+        errno = EINVAL;
+        return -1;
+    }
+    char stack_buf[1024];
+    va_list ap2;
+    va_copy(ap2, ap);
+    int needed = vsnprintf(stack_buf, sizeof(stack_buf), fmt, ap);
+    if (needed < 0) {
+        va_end(ap2);
+        return -1;
+    }
+    char *out = stack_buf;
+    char *heap_buf = 0;
+    size_t len = (size_t)needed;
+    if (len >= sizeof(stack_buf)) {
+        heap_buf = (char *)malloc(len + 1u);
+        if (!heap_buf) {
+            va_end(ap2);
+            return -1;
+        }
+        (void)vsnprintf(heap_buf, len + 1u, fmt, ap2);
+        out = heap_buf;
+    }
+    va_end(ap2);
+
+    int rc = write_all_fd(fildes, (const unsigned char *)out, len);
+    if (heap_buf) {
+        free(heap_buf);
+    }
+    return rc == 0 ? (int)len : -1;
+}
+
+int dprintf(int fildes, const char *restrict fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vdprintf(fildes, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+int vasprintf(char **restrict ptr, const char *restrict fmt, va_list ap) {
+    if (!ptr || !fmt) {
+        errno = EINVAL;
+        return -1;
+    }
+    va_list ap2;
+    va_copy(ap2, ap);
+    int needed = vsnprintf(0, 0, fmt, ap);
+    if (needed < 0) {
+        va_end(ap2);
+        *ptr = 0;
+        return -1;
+    }
+    size_t len = (size_t)needed;
+    char *buf = (char *)malloc(len + 1u);
+    if (!buf) {
+        va_end(ap2);
+        *ptr = 0;
+        errno = ENOMEM;
+        return -1;
+    }
+    (void)vsnprintf(buf, len + 1u, fmt, ap2);
+    va_end(ap2);
+    *ptr = buf;
+    return needed;
+}
+
+int asprintf(char **restrict ptr, const char *restrict fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vasprintf(ptr, fmt, ap);
     va_end(ap);
     return r;
 }

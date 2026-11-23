@@ -39,6 +39,19 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Completed POSIX.1-2024 Base `<stdio.h>`, `<stdlib.h>`, `<string.h>`, and
+  `<time.h>` in Ring 3 `libc` (`TSK_0035`, `SWR_LIBC_0010`, `ADR_0032`,
+  `ICD_LIBC_0009`, `COMP_LIBC_0009`, `VER_LIBC_0010`): added `scanf*`
+  (`libc/src/stdio_scanf.c`), `getline`/`getdelim`, `dprintf`/`vdprintf`,
+  `asprintf`/`vasprintf`, floating-point `printf` formatting, `fmemopen`,
+  `open_memstream`, `freopen`, and `fgetpos`/`fsetpos`; added IEEE-754
+  `strtod`/`strtof`/`strtold`/`atof` (`libc/src/stdlib_float.c`),
+  `aligned_alloc` (`libc/src/malloc.c`), `quick_exit`/`at_quick_exit`,
+  `div`/`ldiv`/`lldiv`, `rand`/`srand`, `qsort_r`, and `getsubopt`; added
+  `stpcpy`, `stpncpy`, `memmem`, and `strerror_r`; added `time`, `difftime`,
+  `clock`, `timespec_get`, `gmtime*`, `localtime*`, `mktime`, `asctime*`,
+  `ctime*`, and `strftime` (`libc/src/time_cal.c`) with zero Ring 0 expansion,
+  verified in `stdiotest`, `timetest`, and Gates 1 to 3.
 - Elevated the minimal Ring 0 microkernel boundary to top-level governance in
   `AGENTS.md`, codified `CNV_0007` and `WDR_0010` (`SWR_DOCS_0006`,
   `VER_DOCS_0007`), and added the automated CTest gate

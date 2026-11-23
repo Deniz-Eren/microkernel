@@ -12,8 +12,10 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <float.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +25,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0006 */
+/* need:: VER_LIBC_0006 VER_LIBC_0010 */
 
 static_assert(CHAR_BIT == 8, "CHAR_BIT");
 static_assert(PATH_MAX >= _POSIX_PATH_MAX, "PATH_MAX");
@@ -399,6 +401,494 @@ static int test_core_headers_and_strings(void) {
     return 0;
 }
 
+static int vscan_helper(const char *s, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vsscanf(s, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+static int vfscan_helper(FILE *fp, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vfscanf(fp, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+static int vdprintf_helper(int fd, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vdprintf(fd, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+static int vasprintf_helper(char **out, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vasprintf(out, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+static int test_stdio_base_completion(void) {
+    /* 1. sscanf / vsscanf: ints, floats, strings, scansets, %m, %n, width. */
+    int d = 0;
+    int ix = 0;
+    unsigned int u = 0;
+    unsigned int oct = 0;
+    unsigned int hx = 0;
+    double lf = 0.0;
+    float sf = 0.0f;
+    char word[16] = {0};
+    char setbuf_s[16] = {0};
+    char chars[4] = {0};
+    char *mstr = 0;
+    void *ptr = 0;
+    int npos = 0;
+
+    int rc = sscanf(" -42 0x1A 99 077 beef 3.25 -0.5 hello abc123 XY 0x1234 "
+                    "alloc %",
+                    "%d %i %u %o %x %lf %f %4s%*s %[a-z0-9] %2c %p %ms %%%n",
+                    &d, &ix, &u, &oct, &hx, &lf, &sf, word, setbuf_s, chars,
+                    &ptr, &mstr, &npos);
+    if (rc != 12 || d != -42 || ix != 26 || u != 99u || oct != 63u ||
+        hx != 0xBEEFu || fabs(lf - 3.25) > 1e-12 || fabs(sf + 0.5f) > 1e-6f ||
+        strcmp(word, "hell") != 0 || strcmp(setbuf_s, "abc123") != 0 ||
+        chars[0] != 'X' || chars[1] != 'Y' ||
+        (uintptr_t)ptr != (uintptr_t)0x1234u || !mstr ||
+        strcmp(mstr, "alloc") != 0 || npos <= 0) {
+        printf("[FAIL] stdiotest sscanf mismatch rc=%d d=%d ix=%d\n", rc, d,
+               ix);
+        free(mstr);
+        return -1;
+    }
+    free(mstr);
+
+    int v1 = 0;
+    int v2 = 0;
+    if (vscan_helper("  7,11", "%d,%d", &v1, &v2) != 2 || v1 != 7 || v2 != 11 ||
+        sscanf("   ", "%d", &v1) != EOF) {
+        printf("[FAIL] stdiotest vsscanf/EOF failed\n");
+        return -1;
+    }
+
+    /* 2. fmemopen + fscanf / vfscanf + fgetpos / fsetpos + getline / getdelim.
+     */
+    char mbuf[64] = "alpha:100\nbeta:200\n";
+    FILE *mf = fmemopen(mbuf, strlen(mbuf), "r");
+    if (!mf || fileno(mf) != -1) {
+        printf("[FAIL] stdiotest fmemopen(r) failed\n");
+        if (mf) {
+            (void)fclose(mf);
+        }
+        return -1;
+    }
+    char k1[16] = {0};
+    int n1 = 0;
+    fpos_t pos = {0};
+    if (fscanf(mf, "%[^:]:%d\n", k1, &n1) != 2 || strcmp(k1, "alpha") != 0 ||
+        n1 != 100 || fgetpos(mf, &pos) != 0) {
+        printf("[FAIL] stdiotest fscanf/fgetpos failed\n");
+        (void)fclose(mf);
+        return -1;
+    }
+    char k2[16] = {0};
+    int n2 = 0;
+    if (vfscan_helper(mf, "%[^:]:%d\n", k2, &n2) != 2 ||
+        strcmp(k2, "beta") != 0 || n2 != 200) {
+        printf("[FAIL] stdiotest vfscanf failed\n");
+        (void)fclose(mf);
+        return -1;
+    }
+    if (fsetpos(mf, &pos) != 0) {
+        printf("[FAIL] stdiotest fsetpos failed\n");
+        (void)fclose(mf);
+        return -1;
+    }
+    char *gline = 0;
+    size_t gcap = 0u;
+    ssize_t glen = getdelim(&gline, &gcap, ':', mf);
+    if (glen != 5 || !gline || strcmp(gline, "beta:") != 0) {
+        printf("[FAIL] stdiotest getdelim failed glen=%ld\n", (long)glen);
+        free(gline);
+        (void)fclose(mf);
+        return -1;
+    }
+    glen = getline(&gline, &gcap, mf);
+    if (glen != 4 || strcmp(gline, "200\n") != 0 ||
+        getline(&gline, &gcap, mf) != -1) {
+        printf("[FAIL] stdiotest getline failed glen=%ld\n", (long)glen);
+        free(gline);
+        (void)fclose(mf);
+        return -1;
+    }
+    free(gline);
+    (void)fclose(mf);
+
+    /* fmemopen(NULL, 32, "w+") internal buffer round-trip. */
+    FILE *mw = fmemopen(0, 32u, "w+");
+    if (!mw || fprintf(mw, "mem=%d", 77) != 6 || fseek(mw, 0, SEEK_SET) != 0) {
+        printf("[FAIL] stdiotest fmemopen(NULL, w+) write failed\n");
+        if (mw) {
+            (void)fclose(mw);
+        }
+        return -1;
+    }
+    char rmem[16] = {0};
+    if (!fgets(rmem, (int)sizeof(rmem), mw) || strcmp(rmem, "mem=77") != 0) {
+        printf("[FAIL] stdiotest fmemopen(NULL, w+) read got '%s'\n", rmem);
+        (void)fclose(mw);
+        return -1;
+    }
+    (void)fclose(mw);
+
+    /* 3. open_memstream dynamic growth, flush, seek, and close. */
+    char *ms_buf = 0;
+    size_t ms_len = 0u;
+    FILE *ms = open_memstream(&ms_buf, &ms_len);
+    if (!ms) {
+        printf("[FAIL] stdiotest open_memstream failed\n");
+        return -1;
+    }
+    for (int i = 0; i < 10; i++) {
+        (void)fprintf(ms, "item-%02d;", i);
+    }
+    if (fflush(ms) != 0 || !ms_buf || ms_len != 80u ||
+        strncmp(ms_buf, "item-00;item-01;", 16u) != 0) {
+        printf("[FAIL] stdiotest open_memstream flush len=%zu\n", ms_len);
+        (void)fclose(ms);
+        free(ms_buf);
+        return -1;
+    }
+    (void)fseek(ms, 0, SEEK_SET);
+    (void)fputs("HEAD", ms);
+    (void)fseek(ms, 0, SEEK_END);
+    (void)fputs("END", ms);
+    if (fclose(ms) != 0 || ms_len != 83u ||
+        strncmp(ms_buf, "HEAD-00;", 8u) != 0 ||
+        strcmp(ms_buf + 80u, "END") != 0) {
+        printf("[FAIL] stdiotest open_memstream close len=%zu\n", ms_len);
+        free(ms_buf);
+        return -1;
+    }
+    free(ms_buf);
+
+    /* 4. dprintf / vdprintf and asprintf / vasprintf (with float printf). */
+    int pfd[2] = {-1, -1};
+    if (pipe2(pfd, 0) != 0) {
+        printf("[FAIL] stdiotest pipe2 for dprintf failed\n");
+        return -1;
+    }
+    int d1 = dprintf(pfd[1], "d=%d,", 123);
+    int d2 = vdprintf_helper(pfd[1], "f=%.2f", 3.5);
+    (void)close(pfd[1]);
+    char pbuf[32] = {0};
+    ssize_t pn = read(pfd[0], pbuf, sizeof(pbuf) - 1u);
+    (void)close(pfd[0]);
+    if (d1 != 6 || d2 != 6 || pn != 12 || strcmp(pbuf, "d=123,f=3.50") != 0) {
+        printf("[FAIL] stdiotest dprintf/vdprintf got '%s'\n", pbuf);
+        return -1;
+    }
+
+    char *as1 = 0;
+    char *as2 = 0;
+    int an1 = asprintf(&as1, "%#x:%.3f:%e", 0x2au, 1.25, 12.5);
+    int an2 = vasprintf_helper(&as2, "ok-%s", "2024");
+    if (an1 <= 0 || !as1 || strncmp(as1, "0x2a:1.250:1.250000e+01", 23u) != 0 ||
+        an2 != 7 || !as2 || strcmp(as2, "ok-2024") != 0) {
+        printf("[FAIL] stdiotest asprintf got '%s' / '%s'\n",
+               as1 ? as1 : "(null)", as2 ? as2 : "(null)");
+        free(as1);
+        free(as2);
+        return -1;
+    }
+    free(as1);
+    free(as2);
+
+    /* 5. freopen + scanf / vscanf in a forked child on redirected stdin. */
+    FILE *rf = fopen("/tmp/reopen1.txt", "w+");
+    if (!rf || fputs("first\n", rf) == EOF) {
+        printf("[FAIL] stdiotest freopen setup failed\n");
+        if (rf) {
+            (void)fclose(rf);
+        }
+        return -1;
+    }
+    rf = freopen("/tmp/reopen2.txt", "w+", rf);
+    if (!rf || fputs("987 654\n", rf) == EOF || fflush(rf) != 0) {
+        printf("[FAIL] stdiotest freopen(/tmp/reopen2.txt) failed\n");
+        if (rf) {
+            (void)fclose(rf);
+        }
+        return -1;
+    }
+    (void)fclose(rf);
+
+    pid_t sc_pid = fork();
+    if (sc_pid == 0) {
+        if (!freopen("/tmp/reopen2.txt", "r", stdin)) {
+            _exit(2);
+        }
+        int a = 0;
+        int b = 0;
+        if (scanf("%d %d", &a, &b) != 2 || a != 987 || b != 654) {
+            _exit(3);
+        }
+        _exit(0);
+    }
+    int sc_st = 0;
+    if (sc_pid < 0 || waitpid(sc_pid, &sc_st, 0) != sc_pid ||
+        !WIFEXITED(sc_st) || WEXITSTATUS(sc_st) != 0) {
+        printf("[FAIL] stdiotest freopen(stdin)/scanf child st=0x%x\n", sc_st);
+        return -1;
+    }
+    (void)unlink("/tmp/reopen1.txt");
+    (void)unlink("/tmp/reopen2.txt");
+
+    printf("[OK] Base stdio scanf*, getline/getdelim, dprintf, asprintf, "
+           "fmemopen, open_memstream, freopen, and fgetpos/fsetpos verified\n");
+    return 0;
+}
+
+static int g_qe_fd = -1;
+
+static void qe_handler_1(void) {
+    if (g_qe_fd >= 0) {
+        (void)write(g_qe_fd, "1", 1u);
+    }
+}
+
+static void qe_handler_2(void) {
+    if (g_qe_fd >= 0) {
+        (void)write(g_qe_fd, "2", 1u);
+    }
+}
+
+static void qe_atexit_forbidden(void) {
+    if (g_qe_fd >= 0) {
+        (void)write(g_qe_fd, "X", 1u);
+    }
+}
+
+static int cmp_int_r(const void *a, const void *b, void *arg) {
+    int dir = *(const int *)arg;
+    int va = *(const int *)a;
+    int vb = *(const int *)b;
+    return dir * ((va > vb) - (va < vb));
+}
+
+static int test_stdlib_and_string_completion(void) {
+    /* 1. strtod, strtof, strtold, atof. */
+    char *end = 0;
+    errno = 0;
+    double d1 = strtod("  -3.141592653589793e0!", &end);
+    if (fabs(d1 + 3.141592653589793) > 1e-15 || !end || *end != '!' ||
+        errno != 0) {
+        printf("[FAIL] stdiotest strtod pi mismatch\n");
+        return -1;
+    }
+    double dhex = strtod("0x1.8p+1", &end);
+    if (fabs(dhex - 3.0) > 1e-15 || !end || *end != '\0') {
+        printf("[FAIL] stdiotest strtod hex mismatch\n");
+        return -1;
+    }
+    double dinf = strtod("-Infinity", &end);
+    double dnan = strtod("NaN(42)", &end);
+    if (!isinf(dinf) || !signbit(dinf) || !isnan(dnan) || !end ||
+        *end != '\0') {
+        printf("[FAIL] stdiotest strtod inf/nan failed\n");
+        return -1;
+    }
+    errno = 0;
+    double dovf = strtod("1e500", &end);
+    if (!isinf(dovf) || errno != ERANGE) {
+        printf("[FAIL] stdiotest strtod overflow errno=%d\n", errno);
+        return -1;
+    }
+    errno = 0;
+    double duf = strtod("1e-500", &end);
+    if (duf != 0.0 || errno != ERANGE) {
+        printf("[FAIL] stdiotest strtod underflow errno=%d\n", errno);
+        return -1;
+    }
+    double drb = strtod("12e+xyz", &end);
+    if (drb != 12.0 || !end || strcmp(end, "e+xyz") != 0) {
+        printf("[FAIL] stdiotest strtod rollback end='%s'\n",
+               end ? end : "(null)");
+        return -1;
+    }
+    const char *bad_s = "  abc";
+    errno = 0;
+    if (strtod(bad_s, &end) != 0.0 || end != bad_s || errno != 0) {
+        printf("[FAIL] stdiotest strtod invalid input failed\n");
+        return -1;
+    }
+    float f1 = strtof("1.5e2", 0);
+    long double ld1 = strtold("0.25", 0);
+    if (fabsf(f1 - 150.0f) > 1e-5f || fabsl(ld1 - 0.25L) > 1e-12L ||
+        fabs(atof("-42.5") + 42.5) > 1e-12) {
+        printf("[FAIL] stdiotest strtof/strtold/atof failed\n");
+        return -1;
+    }
+
+    /* 2. aligned_alloc + realloc + free preserving errno. */
+    errno = 0;
+    if (aligned_alloc(24u, 64u) != 0 || errno != EINVAL) {
+        printf("[FAIL] stdiotest aligned_alloc(24) expected EINVAL\n");
+        return -1;
+    }
+    static const size_t aligns[] = {16u, 32u, 64u, 256u, 4096u};
+    for (size_t i = 0; i < 5u; i++) {
+        size_t sz = 37u + i * 19u;
+        unsigned char *p = (unsigned char *)aligned_alloc(aligns[i], sz);
+        if (!p || (((uintptr_t)p & (aligns[i] - 1u)) != 0u)) {
+            printf("[FAIL] stdiotest aligned_alloc(%zu) misaligned\n",
+                   aligns[i]);
+            return -1;
+        }
+        memset(p, (int)(0x40u + i), sz);
+        unsigned char *g = (unsigned char *)realloc(p, sz + 64u);
+        if (!g || g[0] != (unsigned char)(0x40u + i) ||
+            g[sz - 1u] != (unsigned char)(0x40u + i)) {
+            printf("[FAIL] stdiotest realloc(aligned_alloc) lost data\n");
+            free(g ? g : p);
+            return -1;
+        }
+        errno = EAGAIN;
+        free(g);
+        if (errno != EAGAIN) {
+            printf("[FAIL] stdiotest free(aligned_alloc) modified errno\n");
+            return -1;
+        }
+    }
+
+    /* 3. quick_exit / at_quick_exit in forked child (LIFO, skips atexit). */
+    int qfd[2] = {-1, -1};
+    if (pipe2(qfd, 0) != 0) {
+        printf("[FAIL] stdiotest pipe2 for quick_exit failed\n");
+        return -1;
+    }
+    pid_t qpid = fork();
+    if (qpid == 0) {
+        (void)close(qfd[0]);
+        g_qe_fd = qfd[1];
+        (void)atexit(qe_atexit_forbidden);
+        (void)at_quick_exit(qe_handler_1);
+        (void)at_quick_exit(qe_handler_2);
+        quick_exit(42);
+    }
+    (void)close(qfd[1]);
+    char qbuf[8] = {0};
+    size_t qn = 0u;
+    while (qn < sizeof(qbuf) - 1u) {
+        ssize_t rr = read(qfd[0], qbuf + qn, sizeof(qbuf) - 1u - qn);
+        if (rr <= 0) {
+            break;
+        }
+        qn += (size_t)rr;
+    }
+    (void)close(qfd[0]);
+    int qst = 0;
+    if (qpid < 0 || waitpid(qpid, &qst, 0) != qpid || !WIFEXITED(qst) ||
+        WEXITSTATUS(qst) != 42 || qn != 2u || strcmp(qbuf, "21") != 0) {
+        printf("[FAIL] stdiotest quick_exit qbuf='%s' st=0x%x\n", qbuf, qst);
+        return -1;
+    }
+
+    /* 4. div / ldiv / lldiv, rand / srand, qsort_r, getsubopt. */
+    div_t d_res = div(-17, 5);
+    ldiv_t ld_res = ldiv(1000000L, 7L);
+    lldiv_t lld_res = lldiv(10000000000LL, 9LL);
+    if (d_res.quot != -3 || d_res.rem != -2 || ld_res.quot != 142857L ||
+        ld_res.rem != 1L || lld_res.quot != 1111111111LL ||
+        lld_res.rem != 1LL) {
+        printf("[FAIL] stdiotest div/ldiv/lldiv failed\n");
+        return -1;
+    }
+
+    srand(12345u);
+    int r1 = rand();
+    int r2 = rand();
+    srand(12345u);
+    int r3 = rand();
+    if (r1 < 0 || r1 > RAND_MAX || r2 < 0 || r1 != r3 || r1 == r2) {
+        printf("[FAIL] stdiotest rand/srand repeatability failed\n");
+        return -1;
+    }
+
+    int arr[5] = {4, 1, 5, 2, 3};
+    int desc = -1;
+    qsort_r(arr, 5u, sizeof(int), cmp_int_r, &desc);
+    if (arr[0] != 5 || arr[1] != 4 || arr[2] != 3 || arr[3] != 2 ||
+        arr[4] != 1) {
+        printf("[FAIL] stdiotest qsort_r descending failed\n");
+        return -1;
+    }
+
+    char opt_str[] = "ro,size=64,bad=1,rw";
+    char *optp = opt_str;
+    char *const keys[] = {"ro", "rw", "size", 0};
+    char *val = 0;
+    int s0 = getsubopt(&optp, keys, &val);
+    int ok_sub = (s0 == 0 && val == 0);
+    int s1 = getsubopt(&optp, keys, &val);
+    ok_sub = ok_sub && (s1 == 2 && val && strcmp(val, "64") == 0);
+    int s2 = getsubopt(&optp, keys, &val);
+    ok_sub = ok_sub && (s2 == -1 && val && strcmp(val, "bad=1") == 0);
+    int s3 = getsubopt(&optp, keys, &val);
+    ok_sub = ok_sub && (s3 == 1 && val == 0);
+    int s4 = getsubopt(&optp, keys, &val);
+    ok_sub = ok_sub && (s4 == -1 && val == 0);
+    if (!ok_sub) {
+        printf("[FAIL] stdiotest getsubopt failed\n");
+        return -1;
+    }
+
+    /* 5. stpcpy, stpncpy, memmem, strerror_r. */
+    char sbuf[16];
+    char *ep = stpcpy(sbuf, "abc");
+    if (ep != sbuf + 3 || strcmp(sbuf, "abc") != 0) {
+        printf("[FAIL] stdiotest stpcpy failed\n");
+        return -1;
+    }
+    memset(sbuf, 'Z', sizeof(sbuf));
+    char *en = stpncpy(sbuf, "hi", 5u);
+    if (en != sbuf + 2 || sbuf[2] != '\0' || sbuf[4] != '\0' ||
+        sbuf[5] != 'Z') {
+        printf("[FAIL] stdiotest stpncpy failed\n");
+        return -1;
+    }
+    const unsigned char hay[] = {'A', 0, 'B', 'C', 0, 'D'};
+    const unsigned char ndl[] = {'C', 0, 'D'};
+    const unsigned char *hit =
+        (const unsigned char *)memmem(hay, sizeof(hay), ndl, sizeof(ndl));
+    if (hit != hay + 3 || memmem(hay, sizeof(hay), "XYZ", 3u) != 0 ||
+        memmem(hay, sizeof(hay), "", 0u) != hay) {
+        printf("[FAIL] stdiotest memmem failed\n");
+        return -1;
+    }
+    char ebuf[64] = {0};
+    errno = EAGAIN;
+    if (strerror_r(ENOENT, ebuf, sizeof(ebuf)) != 0 ||
+        !strstr(ebuf, "No such file") || errno != EAGAIN) {
+        printf("[FAIL] stdiotest strerror_r(ENOENT) failed\n");
+        return -1;
+    }
+    if (strerror_r(ENOENT, ebuf, 4u) != ERANGE ||
+        strerror_r(99999, ebuf, sizeof(ebuf)) != EINVAL) {
+        printf("[FAIL] stdiotest strerror_r ERANGE/EINVAL failed\n");
+        return -1;
+    }
+
+    printf(
+        "[OK] Base stdlib strtod*, aligned_alloc, quick_exit, div*, rand, "
+        "qsort_r, getsubopt, and string stpcpy/memmem/strerror_r verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_buffered_stdio() != 0) {
         return 1;
@@ -407,6 +897,12 @@ int main(void) {
         return 1;
     }
     if (test_core_headers_and_strings() != 0) {
+        return 1;
+    }
+    if (test_stdio_base_completion() != 0) {
+        return 1;
+    }
+    if (test_stdlib_and_string_completion() != 0) {
         return 1;
     }
     return 0;

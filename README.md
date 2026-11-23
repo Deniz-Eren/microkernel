@@ -286,19 +286,23 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   C17 `<threads.h>`. Synchronize with unnamed and named semaphores, `sched_*`
   helpers, deferred cancellation, and thread-local `errno`. Use Base signals
   (`sigaction`, `sigsuspend`, `sigwait*`, `sigqueue`, `sig2str`/`str2sig`,
-  `pause`) and monotonic or realtime clocks and timers.
-- **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered
-  `<stdio.h>` streams, permissions, hard and symbolic links, FIFOs, positional
-  I/O, directory traversal (`posix_getdents`, `scandir`), `<sys/statvfs.h>`, and
-  temp-file helpers. Communicate over pipes, `AF_UNIX` sockets, `<aio.h>`, and
+  `pause`), monotonic/realtime clocks, timers, and `<time.h>` calendar functions
+  (`gmtime*`, `localtime*`, `mktime`, `strftime`, `clock`, `timespec_get`).
+- **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered and
+  memory-backed `<stdio.h>` streams (`fmemopen`, `open_memstream`, `freopen`,
+  `scanf*`, `getline`, `dprintf`, `asprintf`, `fgetpos`/`fsetpos`). Use
+  permissions, hard and symbolic links, FIFOs, positional I/O, directory
+  traversal (`posix_getdents`, `scandir`), `<sys/statvfs.h>`, and temp-file
+  helpers. Communicate over pipes, `AF_UNIX` sockets, `<aio.h>`, and
   `<termios.h>`, and multiplex descriptors across servers with `poll`, `ppoll`,
   `select`, or `pselect`.
 - **Memory, math, and standard C utilities:** Allocate memory from an
-  `mmap`-backed coalescing heap, map shared memory (`shm_open`), enforce W^X
-  page protections, or lock pages in RAM (`mlock`). Compute with `<fenv.h>` and
-  `<math.h>` compiled for `x86-64-v3` with hardware `FMA`, plus strings,
-  sorting, `getopt`, `fnmatch`, `setjmp`, `realpath`, `<stdatomic.h>`, and
-  `<uchar.h>`.
+  `mmap`-backed coalescing heap (`malloc`, `aligned_alloc`, `reallocarray`), map
+  shared memory (`shm_open`), enforce W^X page protections, or lock pages in RAM
+  (`mlock`). Compute with `<fenv.h>` and `<math.h>` compiled for `x86-64-v3`
+  with hardware `FMA`. Standard helpers include `strtod*`, `quick_exit`,
+  `qsort_r`, `getsubopt`, `stpcpy`/`memmem`/`strerror_r`, `getopt`, `fnmatch`,
+  `setjmp`, `realpath`, `<stdatomic.h>`, and `<uchar.h>`.
 
 ### For system server and driver authors
 
@@ -319,11 +323,10 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** Full `<stdio.h>`/`<stdlib.h>`/`<time.h>`
-  completion (`scanf*`, `strtod`, `strftime`), `<complex.h>`/`<tgmath.h>`,
-  locales, wide characters, regular expressions, and `<dlfcn.h>`. Ring 3 TCP/IP
-  networking and remaining shell grammar and XCU utilities follow. See
-  [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** `<complex.h>`/`<tgmath.h>`, locales,
+  wide characters, `<iconv.h>`, `<libintl.h>`, regular expressions, and
+  `<dlfcn.h>`. Ring 3 TCP/IP networking and remaining shell grammar and XCU
+  utilities follow. See [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
