@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0054 — Add POSIX.1-2024 XCU pax archive utility
+
+```{task} Add POSIX.1-2024 XCU pax archive utility
+:id: TSK_0054
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0046, SWR_LIBC_0023
+
+Add the portable archive interchange utility `pax` (read, write, and copy-pass
+modes over `<tar.h>` `ustar` and `<cpio.h>` formats) with QEMU runtime tests
+({need}`BDR_0004`, {need}`SWR_LIBC_0023`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0046 — Add POSIX.1-2024 XCU diff, cmp, comm, and patch utilities
 
 ```{task} Add POSIX.1-2024 XCU diff, cmp, comm, and patch utilities

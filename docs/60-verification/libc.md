@@ -298,3 +298,15 @@ and `diff`/`patch` round trips across unified (`-u`), normal, context (`-c`),
 and reverse (`-R`) modes. Gate 2 verifies all four Base utilities
 ({need}`SWR_LIBC_0022`).
 ```
+
+```{ver} Verify XCU pax archive utility (ustar, cpio, -s, and copy-pass)
+:id: VER_LIBC_0023
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0023
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `pax` `ustar` and `cpio` archive
+creation, extraction, symlink handling, `-s` regex path substitution, and `-rw`
+copy-pass. Gate 2 verifies the Base `pax` utility ({need}`SWR_LIBC_0023`).
+```

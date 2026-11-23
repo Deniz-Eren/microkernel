@@ -293,3 +293,16 @@ pasting, joining, and POSIX.1-2024 CRC-32 checksums ({need}`ARC_LIBC_0001`,
 file comparisons, LCS unified/context/normal/ed diffs, and reversible patch
 application in Ring 3 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0022`).
 ```
+
+```{comp} Ring 3 pax archive utility (ustar and cpio)
+:id: COMP_LIBC_0022
+:status: active
+:posix: XCU/pax (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0023
+
+`bin/utils/pax.c` implements POSIX.1-2024 `pax` list, extract, write, and `-rw`
+copy-pass modes in Ring 3. It supports `<tar.h>` `ustar` and `<cpio.h>` ODC
+archives with `-s` regex path substitution ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0023`).
+```

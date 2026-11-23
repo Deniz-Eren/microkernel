@@ -18,7 +18,8 @@
 #include <unistd.h>
 
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
-/* need:: VER_LIBC_0022 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0022 VER_LIBC_0023 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
+ */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -820,6 +821,42 @@ static int test_diff_cmp_comm_patch_utils(void) {
     return 0;
 }
 
+static int test_pax_archive_utility(void) {
+    char out[256];
+    ssize_t len = 0;
+
+    int rc = run_sh_capture(
+        "/boot/mkdir /tmp/pxs /tmp/pxs/sub /tmp/pxu /tmp/pxc /tmp/pxp && "
+        "/boot/printf 'alpha\\n' > /tmp/pxs/a.txt && "
+        "/boot/printf 'beta\\n' > /tmp/pxs/sub/b.txt && "
+        "/boot/ln -s a.txt /tmp/pxs/link.txt && "
+        "(cd /tmp/pxs && /boot/pax -w -f /tmp/p.tar .) && "
+        "(cd /tmp/pxu && /boot/pax -r -f /tmp/p.tar) && "
+        "/boot/cmp -s /tmp/pxs/a.txt /tmp/pxu/a.txt && "
+        "/boot/cmp -s /tmp/pxs/sub/b.txt /tmp/pxu/sub/b.txt && "
+        "/boot/readlink /tmp/pxu/link.txt && "
+        "(cd /tmp/pxs && /boot/pax -w -x cpio -f /tmp/p.cpio a.txt sub) && "
+        "(cd /tmp/pxc && /boot/pax -r -s '/a\\.txt/renamed.txt/' -f "
+        "/tmp/p.cpio) "
+        "&& "
+        "/boot/cmp -s /tmp/pxs/a.txt /tmp/pxc/renamed.txt && "
+        "/boot/cmp -s /tmp/pxs/sub/b.txt /tmp/pxc/sub/b.txt && "
+        "(cd /tmp/pxs && /boot/pax -r -w a.txt sub /tmp/pxp) && "
+        "/boot/cmp -s /tmp/pxs/sub/b.txt /tmp/pxp/sub/b.txt && "
+        "/boot/rm -r /tmp/pxs /tmp/pxu /tmp/pxc /tmp/pxp /tmp/p.tar "
+        "/tmp/p.cpio "
+        "&& /boot/echo PAX_OK",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "a.txt\nPAX_OK\n") != 0) {
+        printf("[FAIL] shtest pax rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utility pax (ustar, cpio, -s, and -rw copy-pass) "
+           "verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -859,6 +896,9 @@ int main(void) {
         return 1;
     }
     if (test_diff_cmp_comm_patch_utils() != 0) {
+        return 1;
+    }
+    if (test_pax_archive_utility() != 0) {
         return 1;
     }
     return 0;

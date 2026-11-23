@@ -77,6 +77,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `pax` in Ring 3 `bin/utils/pax.c` (`TSK_0054`,
+  `SWR_LIBC_0023`, `ADR_0046`, `COMP_LIBC_0022`, `VER_LIBC_0023`) supporting
+  list, extract (`-r`), write (`-w`), and copy-pass (`-rw`) modes over `<tar.h>`
+  `ustar` and `<cpio.h>` ODC formats with `-s` regex path rewriting, advancing
+  Gate 2 from 81/108 to 82/108 Base XCU utilities.
 - Added POSIX.1-2024 XCU `diff`, `cmp`, `comm`, and `patch` in Ring 3
   `bin/utils/` (`TSK_0046`, `SWR_LIBC_0022`, `ADR_0045`, `COMP_LIBC_0021`,
   `VER_LIBC_0022`), advancing Gate 2 from 77/108 to 81/108 Base XCU utilities

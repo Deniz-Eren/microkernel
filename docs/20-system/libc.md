@@ -307,6 +307,18 @@ User space must supply standalone Ring 3 utilities `diff`, `cmp`, `comm`, and
 `patch` over `libc` and `vfsserv` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU pax archive utility
+:id: SWR_LIBC_0023
+:status: active
+:posix: XCU/pax (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0046
+
+User space must supply the Ring 3 `pax` archive utility supporting list, read,
+write, and copy-pass modes over `<tar.h>` `ustar` and `<cpio.h>` formats
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:
