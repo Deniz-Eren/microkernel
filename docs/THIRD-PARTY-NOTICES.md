@@ -137,6 +137,15 @@ SOFTWARE.
 * **License:** BSD and ISC licenses (plus public-domain cryptography components
   as documented in the upstream `LICENCE` file of OpenSSH Portable).
 
+### zlib (1.3.1)
+* **Role:** Ring 3 compression library (`libz.a`, `<zlib.h>`, `<zconf.h>`),
+  downloaded and cross-compiled into the sysroot during the CMake build by
+  `cmake/zlib.cmake` (SHA-256
+  `9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23`). Upstream
+  source files are not stored in this repository.
+* **Source:** [zlib.net][zlib-src]
+* **License:** zlib License (Jean-loup Gailly and Mark Adler).
+
 ## 3. Trademarks
 
 * POSIX® is a registered trademark of the Institute of Electrical and Electronic
@@ -152,3 +161,5 @@ SOFTWARE.
 [cc-by-3]: https://creativecommons.org/licenses/by/3.0/legalcode
 [openssh-src]:
   https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p2.tar.gz
+[zlib-src]:
+  https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz

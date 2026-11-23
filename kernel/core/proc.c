@@ -1757,6 +1757,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "nettest", 96, 0);
     /* Ring 3 /mnt ext2 writable on-disk filesystem persistence test. */
     spawn_image(tar_phys, tar_size, "ext2test", 95, 0);
+    /* Ring 3 sysroot zlib (libz.a) compression, gzip, and checksum test. */
+    spawn_image(tar_phys, tar_size, "zlibtest", 95, 0);
     /* Multi-core SMP concurrency (parallelism, futex, PMM/VMM/COW, IPC) test.
      */
     spawn_image(tar_phys, tar_size, "smptest", 94, 0);

@@ -393,6 +393,19 @@ OpenSSH compatibility helpers (`vsyslog`, `gettimeofday`, `futimes`,
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply cross-compiled Ring 3 sysroot zlib (libz.a and zlib.h)
+:id: SWR_LIBC_0030
+:status: active
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0055
+
+The CMake build must download and cross-compile `zlib` into the Ring 3 sysroot
+(`libz.a`, `<zlib.h>`, and `<zconf.h>`) without storing upstream source in git.
+It must support one-shot compression, streaming `deflate`/`inflate`, gzip
+framing, `gz*` file I/O, and `crc32`/`adler32` checksums
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

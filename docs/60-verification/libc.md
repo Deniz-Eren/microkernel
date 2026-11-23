@@ -386,3 +386,16 @@ iterators, `setresuid`/`setresgid`, `getgrouplist`/`initgroups`, and `chroot`.
 Gate 1 (`tests/posix/test_headers.py`) verifies header compilation and hygiene
 ({need}`SWR_LIBC_0029`).
 ```
+
+```{ver} Verify cross-compiled Ring 3 sysroot zlib in QEMU
+:id: VER_LIBC_0030
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0030
+
+The headless QEMU harness `tests/test_runner.py` runs `zlibtest`
+(`tests/zlibtest/test_zlib.c`) linked against sysroot `libz.a`. It verifies
+`zlibVersion`, `crc32`/`adler32` vectors, `compress2`/`uncompress`, corruption
+detection, streaming zlib and gzip `deflate`/`inflate`, and `gzopen`/
+`gzwrite`/`gzread` over `/tmp` ({need}`SWR_LIBC_0030`).
+```

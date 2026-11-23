@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0058 — Cross-compile zlib into the Ring 3 sysroot via CMake
-
-```{task} Cross-compile zlib into the Ring 3 sysroot via CMake
-:id: TSK_0058
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001
-
-Keep only CMake build configurations in the repository. Download and build
-`zlib` during the CMake build into the Ring 3 sysroot (`libz.a`, `<zlib.h>`)
-without cloning upstream source. Verify compression in QEMU and update
-`docs/THIRD-PARTY-NOTICES.md` ({need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0059 — Cross-compile OpenSSL into the Ring 3 sysroot via CMake
 
 ```{task} Cross-compile OpenSSL into the Ring 3 sysroot via CMake

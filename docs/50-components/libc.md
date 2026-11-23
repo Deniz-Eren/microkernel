@@ -385,3 +385,15 @@ logging, SHA-256 salted `crypt`, vector I/O, `getrusage`, `pw`/`gr` iterators,
 and OpenSSH compatibility helpers ({need}`ICD_LIBC_0018`,
 {need}`SWR_LIBC_0029`).
 ```
+
+```{comp} Ring 3 sysroot zlib build configuration (libz.a and zlib.h)
+:id: COMP_LIBC_0029
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0030
+
+`cmake/zlib.cmake` downloads `zlib` `1.3.1` during the CMake build, generates
+`zconf.h`, installs `<zlib.h>` and `<zconf.h>` into the Ring 3 sysroot, and
+cross-compiles `libz.a` against `libc.a` ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0030`).
+```

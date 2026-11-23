@@ -82,6 +82,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added CMake `FetchContent` cross-compilation of `zlib` `1.3.1` into the Ring 3
+  sysroot (`sysroot/usr/lib/libz.a`, `<zlib.h>`, `<zconf.h>`, downloaded at
+  build time with zero vendored source) with QEMU verification in
+  `tests/zlibtest/test_zlib.c` (`TSK_0058`, `SWR_LIBC_0030`, `ADR_0055`,
+  `COMP_LIBC_0029`, `VER_LIBC_0030`).
 - Added CMake `FetchContent` cross-compilation of OpenSSH Portable `9.9p2`
   (`/boot/sshd`, `/boot/sshd-session`, `/boot/ssh-keygen`, downloaded at build
   time with zero vendored source), `/boot/sshd-setup` auto-start on `init=sh`
