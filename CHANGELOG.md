@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- Reclassified six mislabeled option-group entries in
+  `tests/posix/issue8-manifest.tsv` (`encrypt` and `setkey` from `BASE` to
+  `XSI`; `posix_spawnattr_{get,set}sched{param,policy}` from `BASE` to `SPN`) so
+  Gate 2 (`posix.symbol_diff`) reports exact POSIX.1-2024 Base interface counts
+  (`751/1041`).
 - Serialized LLVM coverage framing (`cov_dump_proc()`, `cov_dump_kernel()`, and
   `@@COV_COMPLETE@@`) in `kernel/core/cov.c` under `g_console_lock` via
   `console_lock_irqsave()` / `console_unlock_irqrestore()` so SMP `printk()` and
@@ -32,6 +37,14 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Refined, split, and reordered the remaining POSIX.1-2024 Base task backlog in
+  `docs/records/TASKS.md`: explicitly listed `<stdlib.h>` multibyte, `*_l`
+  locale helpers, and `wcstoimax`/`wcstoumax` in `TSK_0037`; split wide `stdio`
+  (`TSK_0045`), diff/archive utilities (`TSK_0046`), network Base headers
+  (`TSK_0047`), and remaining batch/spool utilities (`TSK_0048`); and moved
+  `<regex.h>`/`<glob.h>` (`TSK_0039`), shell grammar (`TSK_0042`), and text
+  utilities (`TSK_0043`, `TSK_0046`) ahead of i18n catalogs (`TSK_0038`) and
+  networking.
 - Rewrote the `User-space functionality (current support)` section of
   `README.md` from a shell-user, C17-programmer, and Ring 3 server/driver
   perspective instead of an exhaustive symbol dump, linking to

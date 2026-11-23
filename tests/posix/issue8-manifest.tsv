@@ -1,4 +1,7 @@
-# The Open Group Base Specifications Issue 8 (IEEE Std 1003.1-2024).
+# The Open Group Base Specifications Issue 8 (POSIX.1-2024 /
+# IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026).
+# POSIX® is a registered trademark of the Institute of Electrical and
+# Electronic Engineers, Inc.
 # Publication 9799919799. Factual index only (ADR-8): identifier names,
 # canonical URLs, and option tags. No specification prose.
 # Columns: volume <TAB> identifier <TAB> category <TAB> conformance_group
@@ -517,7 +520,7 @@ XSH	dup	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/function
 XSH	dup2	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/dup2.html
 XSH	dup3	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/dup3.html
 XSH	duplocale	interface	CX	https://pubs.opengroup.org/onlinepubs/9799919799/functions/duplocale.html
-XSH	encrypt	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/encrypt.html
+XSH	encrypt	interface	XSI	https://pubs.opengroup.org/onlinepubs/9799919799/functions/encrypt.html
 XSH	endgrent	interface	XSI	https://pubs.opengroup.org/onlinepubs/9799919799/functions/endgrent.html
 XSH	endhostent	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/endhostent.html
 XSH	endnetent	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/endnetent.html
@@ -997,15 +1000,15 @@ XSH	posix_spawn_file_actions_init	interface	SPN	https://pubs.opengroup.org/onlin
 XSH	posix_spawnattr_destroy	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_destroy.html
 XSH	posix_spawnattr_getflags	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getflags.html
 XSH	posix_spawnattr_getpgroup	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getpgroup.html
-XSH	posix_spawnattr_getschedparam	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getschedparam.html
-XSH	posix_spawnattr_getschedpolicy	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getschedpolicy.html
+XSH	posix_spawnattr_getschedparam	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getschedparam.html
+XSH	posix_spawnattr_getschedpolicy	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getschedpolicy.html
 XSH	posix_spawnattr_getsigdefault	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getsigdefault.html
 XSH	posix_spawnattr_getsigmask	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_getsigmask.html
 XSH	posix_spawnattr_init	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_init.html
 XSH	posix_spawnattr_setflags	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setflags.html
 XSH	posix_spawnattr_setpgroup	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setpgroup.html
-XSH	posix_spawnattr_setschedparam	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setschedparam.html
-XSH	posix_spawnattr_setschedpolicy	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setschedpolicy.html
+XSH	posix_spawnattr_setschedparam	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setschedparam.html
+XSH	posix_spawnattr_setschedpolicy	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setschedpolicy.html
 XSH	posix_spawnattr_setsigdefault	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setsigdefault.html
 XSH	posix_spawnattr_setsigmask	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnattr_setsigmask.html
 XSH	posix_spawnp	interface	SPN	https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawnp.html
@@ -1222,7 +1225,7 @@ XSH	setgid	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/funct
 XSH	setgrent	interface	XSI	https://pubs.opengroup.org/onlinepubs/9799919799/functions/setgrent.html
 XSH	sethostent	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/sethostent.html
 XSH	setjmp	interface	CX	https://pubs.opengroup.org/onlinepubs/9799919799/functions/setjmp.html
-XSH	setkey	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/setkey.html
+XSH	setkey	interface	XSI	https://pubs.opengroup.org/onlinepubs/9799919799/functions/setkey.html
 XSH	setlocale	interface	CX	https://pubs.opengroup.org/onlinepubs/9799919799/functions/setlocale.html
 XSH	setlogmask	interface	XSI	https://pubs.opengroup.org/onlinepubs/9799919799/functions/setlogmask.html
 XSH	setnetent	interface	BASE	https://pubs.opengroup.org/onlinepubs/9799919799/functions/setnetent.html
