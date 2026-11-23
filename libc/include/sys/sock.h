@@ -13,10 +13,13 @@
 /* need:: ICD_IPC_0012 */
 
 #include <stdint.h>
+#include <sys/fd.h>
 
 #define SOCK_PATH_MAX 108u
 #define SOCK_DATA_MAX 360u
 #define SOCK_DGRAM_DATA_MAX 256u
+#define SOCK_MSG_DATA_MAX 256u
+#define SOCK_MAX_RIGHTS 4u
 #define SOCK_POLL_MAX 32u
 
 #define SOCK_OP_CREATE 1u
@@ -35,6 +38,8 @@
 #define SOCK_OP_SETOPT 14u
 #define SOCK_OP_POLL 15u
 #define SOCK_OP_STATS 16u
+#define SOCK_OP_SENDMSG 17u
+#define SOCK_OP_RECVMSG 18u
 
 typedef struct {
     uint32_t op;
@@ -50,6 +55,11 @@ typedef struct {
             char path[SOCK_PATH_MAX];
             uint8_t data[SOCK_DGRAM_DATA_MAX];
         } dgram;
+        struct {
+            uint32_t rights_count;
+            struct __k_fd_entry rights[SOCK_MAX_RIGHTS];
+            uint8_t data[SOCK_MSG_DATA_MAX];
+        } msg;
     } u;
 } sock_req_t;
 
@@ -67,6 +77,11 @@ typedef struct {
             char path[SOCK_PATH_MAX];
             uint8_t data[SOCK_DGRAM_DATA_MAX];
         } dgram;
+        struct {
+            uint32_t rights_count;
+            struct __k_fd_entry rights[SOCK_MAX_RIGHTS];
+            uint8_t data[SOCK_MSG_DATA_MAX];
+        } msg;
     } u;
 } sock_rep_t;
 

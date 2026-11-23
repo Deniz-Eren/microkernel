@@ -92,5 +92,10 @@ int mbtowc(wchar_t *restrict pwc, const char *restrict s, size_t n);
 int wctomb(char *s, wchar_t wchar);
 size_t mbstowcs(wchar_t *restrict pwcs, const char *restrict s, size_t n);
 size_t wcstombs(char *restrict s, const wchar_t *restrict pwcs, size_t n);
+int posix_openpt(int oflag);
+int grantpt(int fildes);
+int unlockpt(int fildes);
+char *ptsname(int fildes);
+int ptsname_r(int fildes, char *name, size_t namesize);
 
 #endif /* _STDLIB_H */

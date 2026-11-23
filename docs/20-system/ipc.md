@@ -178,6 +178,20 @@ virtqueue slot overwrites. User space must supply Ring 3 `nc` and `ping`, and
 ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply Ring 3 PTYs, virtual character devices, and SCM_RIGHTS
+:id: SWR_IPC_0015
+:status: active
+:posix: XSH/posix_openpt, XSH/grantpt, XSH/unlockpt, XSH/ptsname (XSI)
+:derives: SYS_IPC_0001
+:traces: BDR_0003, BDR_0004, ADR_0002, ADR_0003, ADR_0053
+
+`ttyserv` must supply Ring 3 PTY pairs (`/dev/ptmx`, `/dev/pts/N`) with
+`termios`, `winsize`, `SIGWINCH`, `ISIG`, `poll`, and `<sys/ioctl.h>`. `vfsserv`
+must supply `/dev/null`, `/dev/zero`, and ChaCha20-backed `/dev/urandom`.
+`sockserv` must pass open descriptors across `AF_UNIX` `SCM_RIGHTS` messages
+({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:

@@ -82,6 +82,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added Ring 3 PTYs (`/dev/ptmx`, `/dev/pts/N`, `posix_openpt`/`grantpt`/
+  `unlockpt`/`ptsname*`, `<sys/ioctl.h>`, `SIGWINCH`), virtual character devices
+  (`/dev/null`, `/dev/zero`, ChaCha20 `/dev/urandom`), Ring 3 `AF_UNIX`
+  `SCM_RIGHTS` FD passing, and XSI/OpenSSH `libc` APIs (`<syslog.h>`,
+  `<sys/time.h>`, `<sys/uio.h>`, `crypt`, `getrusage`, `pw`/`gr` iterators,
+  `setresuid`/`setresgid`, `initgroups`, `daemon`, `chroot`) with `SIGWINCH`
+  default-ignore disposition and zero new Ring 0 syscalls (`TSK_0056`,
+  `SWR_IPC_0015`, `SWR_LIBC_0029`, `ADR_0053`, `ICD_IPC_0018`, `ICD_LIBC_0018`,
+  `COMP_IPC_0020`, `COMP_LIBC_0028`, `VER_IPC_0013`, `VER_LIBC_0029`).
 - Added localhost-only host-to-guest TCP port forwarding in `scripts/env.sh run`
   (`2222:22,8080:8080`), hardened `servers/netserv/` (32 KiB TCP RX buffers,
   window-update ACKs, passive ARP learning, duplicate-`SYN` replies, and TX

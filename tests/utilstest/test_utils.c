@@ -43,6 +43,9 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <sys/time.h>
+#include <sys/uio.h>
+#include <syslog.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
@@ -54,6 +57,7 @@
 
 /* need:: VER_LIBC_0008 VER_LIBC_0015 VER_LIBC_0016 VER_LIBC_0017 */
 /* need:: VER_PROC_0008 VER_PROC_0009 VER_PROC_0010 VER_IPC_0010 */
+/* need:: VER_IPC_0013 VER_LIBC_0029 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -640,9 +644,9 @@ static int test_sysconf_tty_and_proclist(void) {
         printf("[FAIL] tcgetsid failed\n");
         return -1;
     }
-    struct winsize orig_ws = {0, 0};
+    struct winsize orig_ws = {0};
     struct winsize set_ws = {.ws_row = 40u, .ws_col = 120u};
-    struct winsize got_ws = {0, 0};
+    struct winsize got_ws = {0};
     if (tcgetwinsize(STDIN_FILENO, &orig_ws) != 0 || orig_ws.ws_row == 0u ||
         orig_ws.ws_col == 0u || tcsetwinsize(STDIN_FILENO, &set_ws) != 0 ||
         tcgetwinsize(STDIN_FILENO, &got_ws) != 0 || got_ws.ws_row != 40u ||
@@ -1641,6 +1645,175 @@ static int test_dlfcn_et_dyn(void) {
     return 0;
 }
 
+static int test_vdevs_syslog_crypt_and_xsi(void) {
+    /* 1. /dev/null, /dev/zero, and /dev/urandom virtual character devices. */
+    int nfd = open("/dev/null", O_RDWR | O_CLOEXEC);
+    struct stat st = {0};
+    char buf[32] = {0};
+    if (nfd < 0 || fstat(nfd, &st) != 0 || !S_ISCHR(st.st_mode) ||
+        write(nfd, "discard", 7u) != 7 || read(nfd, buf, sizeof(buf)) != 0) {
+        printf("[FAIL] /dev/null failed\n");
+        if (nfd >= 0) {
+            (void)close(nfd);
+        }
+        return -1;
+    }
+    (void)close(nfd);
+
+    int zfd = open("/dev/zero", O_RDONLY | O_CLOEXEC);
+    memset(buf, 0x5A, sizeof(buf));
+    if (zfd < 0 || read(zfd, buf, 16u) != 16 || buf[0] != 0 || buf[15] != 0) {
+        printf("[FAIL] /dev/zero failed\n");
+        if (zfd >= 0) {
+            (void)close(zfd);
+        }
+        return -1;
+    }
+    (void)close(zfd);
+
+    int ufd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+    unsigned char r1[32] = {0};
+    unsigned char r2[32] = {0};
+    if (ufd < 0 || read(ufd, r1, sizeof(r1)) != 32 ||
+        read(ufd, r2, sizeof(r2)) != 32 || memcmp(r1, r2, sizeof(r1)) == 0) {
+        printf("[FAIL] /dev/urandom failed\n");
+        if (ufd >= 0) {
+            (void)close(ufd);
+        }
+        return -1;
+    }
+    (void)close(ufd);
+
+    /* 2. <syslog.h>: openlog, setlogmask, syslog, closelog. */
+    (void)unlink("/tmp/syslog");
+    openlog("utilstest", LOG_PID, LOG_DAEMON);
+    (void)setlogmask(LOG_UPTO(LOG_INFO));
+    syslog(LOG_DEBUG, "filtered-out");
+    syslog(LOG_INFO, "hello-%d", 56);
+    closelog();
+    int lfd = open("/tmp/syslog", O_RDONLY | O_CLOEXEC);
+    char lbuf[256] = {0};
+    ssize_t ln = (lfd >= 0) ? read(lfd, lbuf, sizeof(lbuf) - 1u) : -1;
+    if (lfd >= 0) {
+        (void)close(lfd);
+    }
+    (void)unlink("/tmp/syslog");
+    if (ln <= 0 || !strstr(lbuf, "hello-56") || strstr(lbuf, "filtered-out")) {
+        printf("[FAIL] syslog output mismatch '%s'\n", lbuf);
+        return -1;
+    }
+
+    /* 3. crypt() salted SHA-256 and 2-char salt hashing. */
+    char h1[96] = {0};
+    const char *c1 = crypt("secret", "$5$testsalt$");
+    if (!c1 || strncmp(c1, "$5$testsalt$", 12u) != 0) {
+        printf("[FAIL] crypt($5$) failed\n");
+        return -1;
+    }
+    (void)strlcpy(h1, c1, sizeof(h1));
+    const char *c2 = crypt("secret", h1);
+    if (!c2 || strcmp(c2, h1) != 0) {
+        printf("[FAIL] crypt verification match failed\n");
+        return -1;
+    }
+    const char *c3 = crypt("wrong", h1);
+    if (!c3 || strcmp(c3, h1) == 0) {
+        printf("[FAIL] crypt verification reject failed\n");
+        return -1;
+    }
+    const char *c4 = crypt("secret", "ab");
+    if (!c4 || strncmp(c4, "ab", 2u) != 0 || strlen(c4) != 13u) {
+        printf("[FAIL] crypt(2-char) failed\n");
+        return -1;
+    }
+
+    /* 4. gettimeofday, utimes/futimes, readv/writev, getrusage. */
+    struct timeval tv = {0, 0};
+    if (gettimeofday(&tv, NULL) != 0 || tv.tv_usec < 0 ||
+        tv.tv_usec >= 1000000L) {
+        printf("[FAIL] gettimeofday failed\n");
+        return -1;
+    }
+    int tfd =
+        open("/tmp/ut_test", O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0644u);
+    struct timeval utv[2] = {{1700000000L, 123000L}, {1700000100L, 456000L}};
+    if (tfd < 0 || futimes(tfd, utv) != 0 || fstat(tfd, &st) != 0 ||
+        st.st_mtim.tv_sec != 1700000100L) {
+        printf("[FAIL] futimes failed\n");
+        if (tfd >= 0) {
+            (void)close(tfd);
+        }
+        (void)unlink("/tmp/ut_test");
+        return -1;
+    }
+    (void)close(tfd);
+    utv[1].tv_sec = 1700000200L;
+    if (utimes("/tmp/ut_test", utv) != 0 || stat("/tmp/ut_test", &st) != 0 ||
+        st.st_mtim.tv_sec != 1700000200L) {
+        printf("[FAIL] utimes failed\n");
+        (void)unlink("/tmp/ut_test");
+        return -1;
+    }
+    (void)unlink("/tmp/ut_test");
+
+    int pfd[2] = {-1, -1};
+    if (pipe2(pfd, O_CLOEXEC) != 0) {
+        return -1;
+    }
+    char w1[] = "AB";
+    char w2[] = "CDE";
+    struct iovec wv[2] = {{w1, 2u}, {w2, 3u}};
+    char r_a[3] = {0};
+    char r_b[4] = {0};
+    struct iovec rv[2] = {{r_a, 2u}, {r_b, 3u}};
+    if (writev(pfd[1], wv, 2) != 5 || readv(pfd[0], rv, 2) != 5 ||
+        strcmp(r_a, "AB") != 0 || strcmp(r_b, "CDE") != 0) {
+        printf("[FAIL] readv/writev failed\n");
+        (void)close(pfd[0]);
+        (void)close(pfd[1]);
+        return -1;
+    }
+    (void)close(pfd[0]);
+    (void)close(pfd[1]);
+
+    struct rusage ru = {{0, 0}, {0, 0}};
+    if (getrusage(RUSAGE_SELF, &ru) != 0) {
+        printf("[FAIL] getrusage failed\n");
+        return -1;
+    }
+
+    /* 5. pw/gr iterators, setresuid/setresgid, getgrouplist, chroot. */
+    setpwent();
+    int saw_sshd = 0;
+    struct passwd *pw = NULL;
+    while ((pw = getpwent()) != NULL) {
+        if (strcmp(pw->pw_name, "sshd") == 0 && pw->pw_passwd && pw->pw_gecos) {
+            saw_sshd = 1;
+        }
+    }
+    endpwent();
+    setgrent();
+    int gr_count = 0;
+    while (getgrent() != NULL) {
+        gr_count++;
+    }
+    endgrent();
+    gid_t gl[8];
+    int ngl = 8;
+    if (!saw_sshd || gr_count < 3 || getgrouplist("root", 0u, gl, &ngl) < 1 ||
+        initgroups("root", 0u) != 0 ||
+        setresuid((uid_t)-1, (uid_t)-1, (uid_t)-1) != 0 ||
+        setresgid((gid_t)-1, (gid_t)-1, (gid_t)-1) != 0 ||
+        chroot("/tmp") != 0 || chdir("/") != 0) {
+        printf("[FAIL] XSI pwd/grp/cred/chroot check failed\n");
+        return -1;
+    }
+
+    printf("[OK] /dev/null, /dev/urandom, syslog, crypt, and XSI/OpenSSH libc "
+           "APIs verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -1676,6 +1849,9 @@ int main(void) {
         return 1;
     }
     if (test_signal_sched_process_utils() != 0) {
+        return 1;
+    }
+    if (test_vdevs_syslog_crypt_and_xsi() != 0) {
         return 1;
     }
     return 0;

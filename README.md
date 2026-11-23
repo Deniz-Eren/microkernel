@@ -298,26 +298,29 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
 - **Processes, credentials, threads, signals, and timing:** Spawn processes with
   `fork`, `_Fork`, `execl*`, `execv*`, `fexecve`, `popen`/`pclose`, and
   `system`, and reap or inspect state with `waitpid` and `waitid`. Manage
-  UIDs/GIDs, `<pwd.h>`/`<grp.h>`, and `<sys/resource.h>` limits. Run
-  multithreaded code with pthreads (robust mutexes and `pthread_atfork`) and ISO
-  C17 `<threads.h>`. Synchronize with unnamed and named semaphores, `sched_*`
-  helpers, deferred cancellation, and thread-local `errno`. Use Base signals
-  (`sigaction`, `sigsuspend`, `sigwait*`, `sigqueue`, `sig2str`/`str2sig`,
-  `pause`), monotonic/realtime clocks, timers, and `<time.h>` calendar functions
-  (`gmtime*`, `localtime*`, `mktime`, `strftime`, `tzset`/`tzname`, `clock`,
-  `timespec_get`).
+  UIDs/GIDs (`setreuid`/`setregid`/`setresuid`/`setresgid`, `initgroups`),
+  `<pwd.h>`/`<grp.h>` iterators, `crypt`, `daemon`/`chroot`, `<syslog.h>`, and
+  `<sys/resource.h>` limits (`getrusage`). Run multithreaded code with pthreads
+  (robust mutexes and `pthread_atfork`) and ISO C17 `<threads.h>`. Synchronize
+  with unnamed and named semaphores, `sched_*` helpers, deferred cancellation,
+  and thread-local `errno`. Use Base signals (`sigaction`, `sigsuspend`,
+  `sigwait*`, `sigqueue`, `sig2str`/`str2sig`, `pause`), monotonic/realtime
+  clocks, timers, and `<time.h>` calendar functions (`gmtime*`, `localtime*`,
+  `mktime`, `strftime`, `tzset`/`tzname`, `clock`, `timespec_get`).
 - **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered,
   wide-oriented, and memory-backed `<stdio.h>`/`<wchar.h>` streams (`fmemopen`,
   `open_memstream`, `open_wmemstream`, `freopen`, `fwide`, `*wprintf`,
   `*wscanf`, `scanf*`, `getline`, `dprintf`, `asprintf`, `fgetpos`/`fsetpos`).
   Use permissions, nanosecond timestamps (`futimens`, `utimensat`), hard and
   symbolic links, FIFOs, positional I/O, directory traversal (`posix_getdents`,
-  `scandir`), `<sys/statvfs.h>`, and temp-file helpers. Communicate over pipes,
-  `AF_UNIX`/`AF_INET`/`AF_INET6` sockets (`sendmsg`, `recvmsg`, `sockatmark`),
-  `<netinet/in.h>`, `<netinet/tcp.h>`, `<arpa/inet.h>`, `<net/if.h>`,
-  `<netdb.h>` (`getaddrinfo`, `getnameinfo`, `get*ent`), `<aio.h>`, and
-  `<termios.h>`. Multiplex descriptors across servers with `poll`, `ppoll`,
-  `select`, or `pselect`.
+  `scandir`), `<sys/statvfs.h>`, and temp-file helpers. Communicate over pipes
+  and `AF_UNIX`/`AF_INET`/`AF_INET6` sockets (`sendmsg`/`recvmsg` with Ring 3
+  `SCM_RIGHTS` FD passing, `sockatmark`). Use `<netinet/in.h>`,
+  `<netinet/tcp.h>`, `<arpa/inet.h>`, `<net/if.h>`, `<netdb.h>` (`getaddrinfo`,
+  `getnameinfo`, `get*ent`), `<aio.h>`, `<sys/uio.h>`, and `<sys/time.h>`. Open
+  `/dev/null`, `/dev/zero`, `/dev/urandom`, Ring 3 PTYs (`/dev/ptmx`,
+  `/dev/pts/N`, `<sys/ioctl.h>`), and `<termios.h>`. Multiplex descriptors
+  across servers with `poll`, `ppoll`, `select`, or `pselect`.
 - **Memory, math, and standard C utilities:** Allocate memory from an
   `mmap`-backed coalescing heap (`malloc`, `aligned_alloc`, `reallocarray`), map
   shared memory (`shm_open`), enforce W^X page protections, or lock pages in RAM

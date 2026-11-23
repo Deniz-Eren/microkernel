@@ -378,6 +378,21 @@ User space must supply standalone Ring 3 utilities `at`, `batch`, `crontab`,
 `lp`, and `mailx` over `libc` and `vfsserv` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply XSI syslog, crypt, time, uio, and OpenSSH libc APIs
+:id: SWR_LIBC_0029
+:status: active
+:posix: XBD/syslog.h, XBD/sys/time.h, XBD/sys/uio.h, XSH/crypt (XSI)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0053
+
+`libc` must supply `<syslog.h>`, `<sys/time.h>`, `<sys/uio.h>`, `crypt`,
+`getrusage`, `setpwent`/`getpwent`/`endpwent`, `setgrent`/`getgrent`/`endgrent`,
+and `setreuid`/`setregid`/`setresuid`/`setresgid`. It must also supply guarded
+OpenSSH compatibility helpers (`vsyslog`, `gettimeofday`, `futimes`,
+`setgroups`, `initgroups`, `getgrouplist`, `daemon`, `chroot`)
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

@@ -15,7 +15,7 @@
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
 # need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014 VER_LIBC_0015
-# need:: VER_LIBC_0016 VER_LIBC_0017 VER_LIBC_0020
+# need:: VER_LIBC_0016 VER_LIBC_0017 VER_LIBC_0020 VER_LIBC_0029 VER_IPC_0013
 
 from __future__ import annotations
 
@@ -79,6 +79,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "stdnoreturn.h",
     "string.h",
     "strings.h",
+    "syslog.h",
     "tar.h",
     "termios.h",
     "tgmath.h",
@@ -95,8 +96,10 @@ POSIX_HEADERS: tuple[str, ...] = (
     "sys/socket.h",
     "sys/stat.h",
     "sys/statvfs.h",
+    "sys/time.h",
     "sys/times.h",
     "sys/types.h",
+    "sys/uio.h",
     "sys/un.h",
     "sys/utsname.h",
     "sys/wait.h",
@@ -920,7 +923,7 @@ class PosixHeaderMatrixTests(unittest.TestCase):
                 "#endif",
                 "static long __check_sysconf_tty(int fd) {",
                 "    char buf[L_ctermid + 32];",
-                "    struct winsize ws = {0, 0};",
+                "    struct winsize ws = {0};",
                 "    long v = sysconf(_SC_PAGESIZE) + sysconf(_SC_CLK_TCK) +",
                 "             pathconf(\"/\", _PC_PATH_MAX) +",
                 "             fpathconf(fd, _PC_PIPE_BUF);",
@@ -1677,6 +1680,62 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"network headers check failed:\n{err}")
+
+    def test_pty_syslog_xsi_and_ioctl_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <grp.h>",
+                "#include <pwd.h>",
+                "#include <stdlib.h>",
+                "#include <sys/ioctl.h>",
+                "#include <sys/resource.h>",
+                "#include <sys/socket.h>",
+                "#include <sys/time.h>",
+                "#include <sys/uio.h>",
+                "#include <syslog.h>",
+                "#include <termios.h>",
+                "#include <unistd.h>",
+                "#ifdef TTY_OP_PTY_OPEN_MASTER",
+                '#error "termios.h/ioctl.h leaked TTY_OP_PTY_OPEN_MASTER"',
+                "#endif",
+                "static int __check_pty_xsi(void) {",
+                "    char buf[32] = {0};",
+                "    struct winsize ws = {24, 80, 0, 0};",
+                "    struct timeval tv[2] = {{1, 0}, {2, 0}};",
+                "    struct rusage ru = {{0, 0}, {0, 0}};",
+                "    struct iovec iv = {buf, sizeof(buf)};",
+                "    int fd = posix_openpt(2);",
+                "    (void)grantpt(fd);",
+                "    (void)unlockpt(fd);",
+                "    (void)ptsname(fd);",
+                "    (void)ptsname_r(fd, buf, sizeof(buf));",
+                "    (void)ioctl(fd, TIOCSWINSZ, &ws);",
+                "    (void)ioctl(fd, TIOCGWINSZ, &ws);",
+                "    openlog(\"t\", LOG_PID, LOG_DAEMON);",
+                "    (void)setlogmask(LOG_UPTO(LOG_INFO));",
+                "    syslog(LOG_INFO, \"%s\", \"ok\");",
+                "    closelog();",
+                "    (void)crypt(\"pw\", \"$5$ab$\");",
+                "    setpwent(); (void)getpwent(); endpwent();",
+                "    setgrent(); (void)getgrent(); endgrent();",
+                "    (void)setreuid((uid_t)-1, (uid_t)-1);",
+                "    (void)setregid((gid_t)-1, (gid_t)-1);",
+                "    (void)setresuid((uid_t)-1, (uid_t)-1, (uid_t)-1);",
+                "    (void)setresgid((gid_t)-1, (gid_t)-1, (gid_t)-1);",
+                "    (void)utimes(\"/tmp/x\", tv);",
+                "    (void)getrusage(RUSAGE_SELF, &ru);",
+                "    (void)readv(0, &iv, 1);",
+                "    (void)writev(1, &iv, 1);",
+                "    return (int)CMSG_SPACE(sizeof(int)) + MSG_CMSG_CLOEXEC;",
+                "}",
+                "int (*__pty_xsi_ref)(void) = __check_pty_xsi;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"pty/xsi headers check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

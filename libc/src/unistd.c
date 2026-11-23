@@ -347,3 +347,51 @@ unsigned int sleep(unsigned int seconds) {
     }
     return 0u;
 }
+
+int daemon(int nochdir, int noclose) {
+    pid_t pid = fork();
+    if (pid < 0) {
+        return -1;
+    }
+    if (pid > 0) {
+        _exit(0);
+    }
+    if (setsid() == (pid_t)-1) {
+        return -1;
+    }
+    if (!nochdir) {
+        (void)chdir("/");
+    }
+    if (!noclose) {
+        int fd = open("/dev/null", O_RDWR);
+        if (fd >= 0) {
+            (void)dup2(fd, STDIN_FILENO);
+            (void)dup2(fd, STDOUT_FILENO);
+            (void)dup2(fd, STDERR_FILENO);
+            if (fd > STDERR_FILENO) {
+                (void)close(fd);
+            }
+        }
+    }
+    return 0;
+}
+
+int chroot(const char *path) {
+    if (!path) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (geteuid() != 0u) {
+        errno = EPERM;
+        return -1;
+    }
+    struct stat st = {0};
+    if (stat(path, &st) != 0) {
+        return -1;
+    }
+    if (!S_ISDIR(st.st_mode)) {
+        errno = ENOTDIR;
+        return -1;
+    }
+    return chdir(path);
+}

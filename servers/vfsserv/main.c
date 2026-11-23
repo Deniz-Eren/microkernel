@@ -26,7 +26,8 @@
 #include <unistd.h>
 #include "ext2.h"
 
-/* need:: COMP_IPC_0008 COMP_IPC_0016 COMP_IPC_0017 COMP_LIBC_0011 */
+/* need:: COMP_IPC_0008 COMP_IPC_0016 COMP_IPC_0017 COMP_IPC_0020 */
+/* need:: COMP_LIBC_0011 */
 
 #define VFS_NAME_MAX 128u
 #define VFS_MAX_HANDLES 128u
@@ -36,6 +37,11 @@
 #define VFS_DEV_TMPFS 1ULL
 #define VFS_DEV_BOOTFS 2ULL
 #define VFS_DEV_EXT2 3ULL
+
+#define VFS_CHR_NONE 0u
+#define VFS_CHR_NULL 1u
+#define VFS_CHR_ZERO 2u
+#define VFS_CHR_URANDOM 3u
 
 typedef struct vfs_node vfs_node_t;
 
@@ -53,6 +59,7 @@ struct vfs_node {
     uint32_t uid;
     uint32_t gid;
     uint8_t readonly;
+    uint8_t dev_kind;
     uint32_t open_refs;
     size_t size;
     size_t cap;
@@ -100,6 +107,81 @@ static uint32_t g_ext2_blocks;
 static uint64_t g_next_ino = 1ULL;
 static vfs_file_t g_files[VFS_MAX_HANDLES];
 static vfs_fifo_wait_t g_fifo_wait[VFS_FIFO_WAIT_MAX];
+
+static uint32_t g_rng_state[16];
+static uint32_t g_rng_seeded;
+static uint32_t g_rng_bytes_out;
+
+static uint32_t rotl32(uint32_t v, unsigned int n) {
+    return (v << n) | (v >> (32u - n));
+}
+
+static void chacha20_qr(uint32_t *s, int a, int b, int c, int d) {
+    s[a] += s[b];
+    s[d] = rotl32(s[d] ^ s[a], 16u);
+    s[c] += s[d];
+    s[b] = rotl32(s[b] ^ s[c], 12u);
+    s[a] += s[b];
+    s[d] = rotl32(s[d] ^ s[a], 8u);
+    s[c] += s[d];
+    s[b] = rotl32(s[b] ^ s[c], 7u);
+}
+
+static void urandom_reseed(void) {
+    uint8_t seed[44] = {0};
+    (void)getentropy(seed, sizeof(seed));
+    g_rng_state[0] = 0x61707865u;
+    g_rng_state[1] = 0x3320646Eu;
+    g_rng_state[2] = 0x79622D32u;
+    g_rng_state[3] = 0x6B206574u;
+    for (int i = 0; i < 8; i++) {
+        uint32_t w = 0u;
+        memcpy(&w, seed + (size_t)i * 4u, 4u);
+        g_rng_state[4 + i] = w;
+    }
+    g_rng_state[12] = 1u;
+    for (int i = 0; i < 3; i++) {
+        uint32_t w = 0u;
+        memcpy(&w, seed + 32u + (size_t)i * 4u, 4u);
+        g_rng_state[13 + i] = w;
+    }
+    g_rng_seeded = 1u;
+    g_rng_bytes_out = 0u;
+}
+
+static void urandom_fill(uint8_t *dst, size_t n) {
+    if (!g_rng_seeded || g_rng_bytes_out >= 65536u) {
+        urandom_reseed();
+    }
+    size_t pos = 0u;
+    while (pos < n) {
+        uint32_t x[16];
+        memcpy(x, g_rng_state, sizeof(x));
+        for (int r = 0; r < 10; r++) {
+            chacha20_qr(x, 0, 4, 8, 12);
+            chacha20_qr(x, 1, 5, 9, 13);
+            chacha20_qr(x, 2, 6, 10, 14);
+            chacha20_qr(x, 3, 7, 11, 15);
+            chacha20_qr(x, 0, 5, 10, 15);
+            chacha20_qr(x, 1, 6, 11, 12);
+            chacha20_qr(x, 2, 7, 8, 13);
+            chacha20_qr(x, 3, 4, 9, 14);
+        }
+        uint8_t block[64];
+        for (int i = 0; i < 16; i++) {
+            uint32_t w = x[i] + g_rng_state[i];
+            memcpy(block + (size_t)i * 4u, &w, 4u);
+        }
+        g_rng_state[12]++;
+        size_t take = n - pos;
+        if (take > sizeof(block)) {
+            take = sizeof(block);
+        }
+        memcpy(dst + pos, block, take);
+        pos += take;
+        g_rng_bytes_out += (uint32_t)take;
+    }
+}
 
 static void get_now(int64_t *sec, int64_t *nsec) {
     struct timespec ts = {0};
@@ -736,6 +818,20 @@ static int handle_read(uint32_t msgid, const vfs_req_t *req, vfs_rep_t *rep,
         rep->err = -EISDIR;
         return 0;
     }
+    if (f->node->dev_kind != VFS_CHR_NONE) {
+        uint32_t want = req->len > VFS_DATA_MAX ? VFS_DATA_MAX : req->len;
+        rep->err = 0;
+        if (f->node->dev_kind == VFS_CHR_NULL || want == 0u) {
+            rep->len = 0u;
+        } else if (f->node->dev_kind == VFS_CHR_ZERO) {
+            memset(rep->u.data, 0, want);
+            rep->len = want;
+        } else if (f->node->dev_kind == VFS_CHR_URANDOM) {
+            urandom_fill(rep->u.data, want);
+            rep->len = want;
+        }
+        return 0;
+    }
     if (S_ISFIFO(f->node->mode)) {
         if (positional) {
             rep->err = -ESPIPE;
@@ -849,6 +945,12 @@ static void handle_write(const vfs_req_t *req, vfs_rep_t *rep, int positional) {
         rep->err = -EISDIR;
         return;
     }
+    if (f->node->dev_kind != VFS_CHR_NONE) {
+        uint32_t take = req->len > VFS_DATA_MAX ? VFS_DATA_MAX : req->len;
+        rep->err = 0;
+        rep->len = take;
+        return;
+    }
     if (f->node->readonly) {
         rep->err = -EROFS;
         return;
@@ -953,6 +1055,11 @@ static void handle_lseek(const vfs_req_t *req, vfs_rep_t *rep) {
         rep->err = -ESPIPE;
         return;
     }
+    if (S_ISCHR(f->node->mode)) {
+        rep->err = 0;
+        rep->offset = 0;
+        return;
+    }
     int64_t base = 0;
     if (req->whence == SEEK_SET) {
         base = 0;
@@ -990,6 +1097,10 @@ static void handle_ftruncate(const vfs_req_t *req, vfs_rep_t *rep) {
     }
     if (S_ISDIR(f->node->mode)) {
         rep->err = -EISDIR;
+        return;
+    }
+    if (S_ISCHR(f->node->mode)) {
+        rep->err = 0;
         return;
     }
     if (f->node->readonly) {
@@ -1957,6 +2068,34 @@ int main(void) {
         node_destroy(tmp_dir);
         printf("[FAIL] vfsserv /tmp setup failed\n");
         return 1;
+    }
+    vfs_node_t *dev_dir = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, g_root);
+    if (dev_dir && dir_add_child(g_root, "dev", dev_dir) == 0) {
+        struct {
+            const char *name;
+            uint8_t kind;
+        } chr_devs[] = {
+            {"null", VFS_CHR_NULL},       {"zero", VFS_CHR_ZERO},
+            {"urandom", VFS_CHR_URANDOM}, {"random", VFS_CHR_URANDOM},
+            {"tty", VFS_CHR_NONE},        {"ptmx", VFS_CHR_NONE},
+        };
+        for (size_t i = 0; i < sizeof(chr_devs) / sizeof(chr_devs[0]); i++) {
+            vfs_node_t *dn =
+                node_new(VFS_DEV_TMPFS, S_IFCHR | 0666u, 0u, dev_dir);
+            if (dn) {
+                dn->dev_kind = chr_devs[i].kind;
+                if (dir_add_child(dev_dir, chr_devs[i].name, dn) != 0) {
+                    node_destroy(dn);
+                }
+            }
+        }
+        vfs_node_t *pts_dir =
+            node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, dev_dir);
+        if (pts_dir && dir_add_child(dev_dir, "pts", pts_dir) != 0) {
+            node_destroy(pts_dir);
+        }
+    } else {
+        node_destroy(dev_dir);
     }
     populate_bootfs(boot_dir);
     vfs_node_t *bin_link = node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, g_root);

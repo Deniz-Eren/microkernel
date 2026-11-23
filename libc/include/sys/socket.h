@@ -70,6 +70,11 @@ struct linger {
 #define __CMSG_ALIGN(len)                                                      \
     (((size_t)(len) + sizeof(size_t) - 1u) & ~(sizeof(size_t) - 1u))
 
+#define CMSG_SPACE(len)                                                        \
+    (__CMSG_ALIGN(sizeof(struct cmsghdr)) + __CMSG_ALIGN(len))
+
+#define CMSG_LEN(len) (__CMSG_ALIGN(sizeof(struct cmsghdr)) + (size_t)(len))
+
 #define CMSG_DATA(cmsg)                                                        \
     ((unsigned char *)((unsigned char *)(cmsg) +                               \
                        __CMSG_ALIGN(sizeof(struct cmsghdr))))
@@ -136,6 +141,7 @@ static inline struct cmsghdr *__cmsg_nxthdr(const struct msghdr *__mhdr,
 #define MSG_EOR 0x0080
 #define MSG_WAITALL 0x0100
 #define MSG_NOSIGNAL 0x4000
+#define MSG_CMSG_CLOEXEC 0x40000000
 
 #define SHUT_RD 0
 #define SHUT_WR 1

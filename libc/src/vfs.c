@@ -23,6 +23,7 @@
 #include <sys/microkernel.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <sys/time.h>
 #include <sys/vfs.h>
 #include <sys/vm.h>
 #include <time.h>
@@ -300,6 +301,26 @@ ssize_t __libc_vfs_write(uint32_t handle, const void *buf, size_t n,
     return (ssize_t)done;
 }
 
+static int parse_pts_path(const char *path, uint32_t *idx_out) {
+    if (!path || strncmp(path, "/dev/pts/", 9u) != 0 || path[9] == '\0') {
+        return 0;
+    }
+    uint32_t v = 0u;
+    for (const char *p = path + 9; *p; p++) {
+        if (*p < '0' || *p > '9') {
+            return 0;
+        }
+        v = v * 10u + (uint32_t)(*p - '0');
+        if (v > 255u) {
+            return 0;
+        }
+    }
+    if (idx_out) {
+        *idx_out = v;
+    }
+    return 1;
+}
+
 int openat(int fd, const char *path, int oflag, ...) {
     __libc_cancel_point();
     mode_t mode = 0u;
@@ -326,6 +347,13 @@ int openat(int fd, const char *path, int oflag, ...) {
             return -1;
         }
         return (int)tfd;
+    }
+    if (path && strcmp(path, "/dev/ptmx") == 0) {
+        return __libc_tty_open_ptmx(oflag);
+    }
+    uint32_t pts_idx = 0u;
+    if (parse_pts_path(path, &pts_idx)) {
+        return __libc_tty_open_pts(pts_idx, oflag);
     }
 
     vfs_req_t req = {0};
@@ -463,6 +491,14 @@ int fstatat(int fd, const char *restrict path, struct stat *restrict buf,
         errno = EINVAL;
         return -1;
     }
+    uint32_t pts_idx = 0u;
+    if (parse_pts_path(path, &pts_idx)) {
+        memset(buf, 0, sizeof(*buf));
+        buf->st_mode = S_IFCHR | 0620u;
+        buf->st_nlink = 1u;
+        buf->st_ino = (ino_t)(1000u + pts_idx);
+        return 0;
+    }
     vfs_req_t req = {0};
     vfs_rep_t rep = {0};
     req.op = VFS_OP_STAT;
@@ -512,7 +548,11 @@ int fstat(int fildes, struct stat *buf) {
     }
     if (e.kind == FD_KIND_SERVER) {
         memset(buf, 0, sizeof(*buf));
-        buf->st_mode = S_IFIFO | 0600u;
+        if (__libc_tty_is_srv(e.srv_pid, e.srv_chanid)) {
+            buf->st_mode = S_IFCHR | 0620u;
+        } else {
+            buf->st_mode = S_IFIFO | 0600u;
+        }
         buf->st_nlink = 1u;
         return 0;
     }
@@ -884,6 +924,9 @@ int fchmodat(int fd, const char *path, mode_t mode, int flag) {
         errno = EINVAL;
         return -1;
     }
+    if (parse_pts_path(path, NULL)) {
+        return 0;
+    }
     vfs_req_t req = {0};
     vfs_rep_t rep = {0};
     req.op = VFS_OP_CHMOD;
@@ -916,6 +959,11 @@ int fchmod(int fildes, mode_t mode) {
     if (gr < 0) {
         errno = (int)(-gr);
         return -1;
+    }
+    if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY ||
+        (e.kind == FD_KIND_SERVER &&
+         __libc_tty_is_srv(e.srv_pid, e.srv_chanid))) {
+        return 0;
     }
     if (e.kind != FD_KIND_VFS) {
         errno = EINVAL;
@@ -1018,10 +1066,45 @@ int futimens(int fd, const struct timespec times[2]) {
     return 0;
 }
 
+int utimes(const char *path, const struct timeval times[2]) {
+    if (!times) {
+        return utimensat(AT_FDCWD, path, NULL, 0);
+    }
+    struct timespec ts[2];
+    for (int i = 0; i < 2; i++) {
+        if (times[i].tv_usec < 0 || times[i].tv_usec >= 1000000L) {
+            errno = EINVAL;
+            return -1;
+        }
+        ts[i].tv_sec = times[i].tv_sec;
+        ts[i].tv_nsec = (long)times[i].tv_usec * 1000L;
+    }
+    return utimensat(AT_FDCWD, path, ts, 0);
+}
+
+int futimes(int fd, const struct timeval tv[2]) {
+    if (!tv) {
+        return futimens(fd, NULL);
+    }
+    struct timespec ts[2];
+    for (int i = 0; i < 2; i++) {
+        if (tv[i].tv_usec < 0 || tv[i].tv_usec >= 1000000L) {
+            errno = EINVAL;
+            return -1;
+        }
+        ts[i].tv_sec = tv[i].tv_sec;
+        ts[i].tv_nsec = (long)tv[i].tv_usec * 1000L;
+    }
+    return futimens(fd, ts);
+}
+
 int fchownat(int fd, const char *path, uid_t owner, gid_t group, int flag) {
     if (flag & ~AT_SYMLINK_NOFOLLOW) {
         errno = EINVAL;
         return -1;
+    }
+    if (parse_pts_path(path, NULL)) {
+        return 0;
     }
     vfs_req_t req = {0};
     vfs_rep_t rep = {0};
@@ -1060,6 +1143,11 @@ int fchown(int fildes, uid_t owner, gid_t group) {
     if (gr < 0) {
         errno = (int)(-gr);
         return -1;
+    }
+    if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY ||
+        (e.kind == FD_KIND_SERVER &&
+         __libc_tty_is_srv(e.srv_pid, e.srv_chanid))) {
+        return 0;
     }
     if (e.kind != FD_KIND_VFS) {
         errno = EINVAL;

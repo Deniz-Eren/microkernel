@@ -371,3 +371,17 @@ encoding, syslog logging, terminal control, messaging, and group switching
 deferred job queues, cron schedule tables, print spooling, and local `mbox` mail
 in Ring 3 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0028`).
 ```
+
+```{comp} Ring 3 syslog, crypt, uio, time, and OpenSSH libc modules
+:id: COMP_LIBC_0028
+:status: active
+:posix: XSH/syslog, XSH/crypt, XSH/readv, XSH/writev, XSH/utimes (XSI)
+:refines: ARC_LIBC_0001, ICD_LIBC_0018
+:satisfies: SWR_LIBC_0029
+
+`libc/src/syslog.c`, `libc/src/crypt.c`, `libc/src/uio.c`, `libc/src/cred.c`,
+`libc/src/time.c`, `libc/src/vfs.c`, and `libc/src/unistd.c` implement system
+logging, SHA-256 salted `crypt`, vector I/O, `getrusage`, `pw`/`gr` iterators,
+and OpenSSH compatibility helpers ({need}`ICD_LIBC_0018`,
+{need}`SWR_LIBC_0029`).
+```

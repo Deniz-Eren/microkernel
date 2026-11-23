@@ -210,3 +210,15 @@ FIFOs, positional I/O, `posix_getdents`, `statvfs`, and temp-file APIs
 `net_req_t`, and `net_rep_t` for Ring 3 `/dev/net` IPC ({need}`ARC_IPC_0001`,
 {need}`SWR_IPC_0013`).
 ```
+
+```{icd} Terminal and descriptor ioctl interface (<sys/ioctl.h>)
+:id: ICD_IPC_0018
+:status: active
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0015
+
+`libc/include/sys/ioctl.h` declares `ioctl` and request codes `TIOCGWINSZ`,
+`TIOCSWINSZ`, `TIOCSCTTY`, `TIOCNOTTY`, `TIOCGPGRP`, `TIOCSPGRP`, `FIONREAD`,
+and `FIONBIO` over Ring 3 `ttyserv` and `fcntl` ({need}`ARC_IPC_0001`,
+{need}`SWR_IPC_0015`).
+```

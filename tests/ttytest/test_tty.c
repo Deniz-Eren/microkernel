@@ -12,17 +12,21 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/ipc.h>
 #include <sys/stat.h>
 #include <sys/tty.h>
+#include <sys/wait.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_IPC_0006 */
+/* need:: VER_IPC_0006 VER_IPC_0013 */
 
 static int g_tty_conn = -1;
 
@@ -241,6 +245,188 @@ static int test_raw_mode_and_multi_server_ppoll(int pfd[2],
     return 0;
 }
 
+static volatile sig_atomic_t g_winch_seen;
+
+static void on_winch(int sig) {
+    (void)sig;
+    g_winch_seen = 1;
+}
+
+static int test_pty_and_ioctl(void) {
+    int master = posix_openpt(O_RDWR | O_NOCTTY | O_CLOEXEC);
+    if (master < 0 || grantpt(master) != 0 || unlockpt(master) != 0) {
+        printf("[FAIL] PTY master open/grant/unlock failed errno=%d\n", errno);
+        if (master >= 0) {
+            (void)close(master);
+        }
+        return 1;
+    }
+
+    char pts_path[32] = {0};
+    if (ptsname_r(master, pts_path, sizeof(pts_path)) != 0 ||
+        strncmp(pts_path, "/dev/pts/", 9u) != 0) {
+        printf("[FAIL] ptsname_r failed path='%s'\n", pts_path);
+        (void)close(master);
+        return 1;
+    }
+
+    int slave = open(pts_path, O_RDWR | O_CLOEXEC);
+    if (slave < 0) {
+        printf("[FAIL] open(%s) failed errno=%d\n", pts_path, errno);
+        (void)close(master);
+        return 1;
+    }
+
+    struct stat st = {0};
+    char tname[32] = {0};
+    if (!isatty(master) || !isatty(slave) || fstat(slave, &st) != 0 ||
+        !S_ISCHR(st.st_mode) || ttyname_r(slave, tname, sizeof(tname)) != 0 ||
+        strcmp(tname, pts_path) != 0) {
+        printf("[FAIL] PTY isatty/fstat/ttyname mismatch\n");
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+
+    /* Test ioctl TIOCSCTTY, TIOCSWINSZ/TIOCGWINSZ, and SIGWINCH delivery. */
+    g_winch_seen = 0;
+    struct sigaction sa = {0};
+    sa.sa_handler = on_winch;
+    (void)sigaction(SIGWINCH, &sa, NULL);
+    if (ioctl(slave, TIOCSCTTY, 0) != 0) {
+        printf("[FAIL] ioctl(TIOCSCTTY) failed errno=%d\n", errno);
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+    struct winsize ws = {.ws_row = 42u, .ws_col = 132u};
+    struct winsize got_ws = {0};
+    if (ioctl(master, TIOCSWINSZ, &ws) != 0 ||
+        ioctl(slave, TIOCGWINSZ, &got_ws) != 0 || got_ws.ws_row != 42u ||
+        got_ws.ws_col != 132u || !g_winch_seen) {
+        printf("[FAIL] PTY winsize/SIGWINCH mismatch (%ux%u winch=%d)\n",
+               got_ws.ws_row, got_ws.ws_col, (int)g_winch_seen);
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+
+    /* Slave -> master write with ONLCR, FIONREAD, and poll. */
+    if (write(slave, "hi\n", 3u) != 3) {
+        printf("[FAIL] PTY slave write failed\n");
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+    int avail = 0;
+    if (ioctl(master, FIONREAD, &avail) != 0 || avail != 4) {
+        printf("[FAIL] PTY FIONREAD expected 4, got %d\n", avail);
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+    struct pollfd mp = {.fd = master, .events = POLLIN, .revents = 0};
+    if (poll(&mp, 1u, 100) != 1 || !(mp.revents & POLLIN)) {
+        printf("[FAIL] PTY master poll POLLIN failed\n");
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+    char mbuf[16] = {0};
+    if (read(master, mbuf, sizeof(mbuf) - 1u) != 4 ||
+        strcmp(mbuf, "hi\r\n") != 0) {
+        printf("[FAIL] PTY master read got '%s'\n", mbuf);
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+
+    /* Master -> slave canonical input + echo back to master. */
+    if (write(master, "ok\r", 3u) != 3) {
+        printf("[FAIL] PTY master write failed\n");
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+    char sbuf[16] = {0};
+    if (read(slave, sbuf, sizeof(sbuf) - 1u) != 3 ||
+        strcmp(sbuf, "ok\n") != 0) {
+        printf("[FAIL] PTY slave read got '%s'\n", sbuf);
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+    /* Drain echo from master. */
+    memset(mbuf, 0, sizeof(mbuf));
+    if (read(master, mbuf, sizeof(mbuf) - 1u) != 4 ||
+        strcmp(mbuf, "ok\r\n") != 0) {
+        printf("[FAIL] PTY echo mismatch got '%s'\n", mbuf);
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+
+    /* Fork child on PTY slave: Ctrl-C triggers ISIG SIGINT, exit yields EOF. */
+    pid_t pid = fork();
+    if (pid < 0) {
+        printf("[FAIL] PTY fork failed\n");
+        (void)close(slave);
+        (void)close(master);
+        return 1;
+    }
+    if (pid == 0) {
+        (void)close(master);
+        (void)setsid();
+        (void)ioctl(slave, TIOCSCTTY, 0);
+        (void)write(slave, "R", 1u);
+        for (;;) {
+            (void)pause();
+        }
+    }
+    (void)close(slave);
+
+    char rdy = 0;
+    if (read(master, &rdy, 1u) != 1 || rdy != 'R') {
+        printf("[FAIL] PTY child ready byte failed\n");
+        (void)kill(pid, SIGKILL);
+        (void)waitpid(pid, NULL, 0);
+        (void)close(master);
+        return 1;
+    }
+    const char ctrl_c = 0x03;
+    (void)write(master, &ctrl_c, 1u);
+    int wst = 0;
+    if (waitpid(pid, &wst, 0) != pid || !WIFSIGNALED(wst) ||
+        WTERMSIG(wst) != SIGINT) {
+        printf("[FAIL] PTY ISIG child status=0x%x\n", wst);
+        (void)close(master);
+        return 1;
+    }
+
+    /* Drain echoed "^C\r\n", then master must observe POLLHUP and 0-byte EOF.
+     */
+    int nb = 1;
+    (void)ioctl(master, FIONBIO, &nb);
+    char drain[16];
+    while (read(master, drain, sizeof(drain)) > 0) {
+    }
+    nb = 0;
+    (void)ioctl(master, FIONBIO, &nb);
+    mp.events = POLLIN;
+    mp.revents = 0;
+    if (poll(&mp, 1u, 100) != 1 || !(mp.revents & POLLHUP) ||
+        read(master, drain, sizeof(drain)) != 0) {
+        printf("[FAIL] PTY master EOF/POLLHUP after slave exit failed\n");
+        (void)close(master);
+        return 1;
+    }
+
+    (void)close(master);
+    printf("[OK] Ring 3 PTY (/dev/ptmx, /dev/pts/N), ioctl, SIGWINCH, ISIG, "
+           "and POLLHUP verified\n");
+    return 0;
+}
+
 int main(void) {
     int pfd[2] = {-1, -1};
     if (pipe2(pfd, O_CLOEXEC) != 0) {
@@ -254,6 +440,9 @@ int main(void) {
     }
     if (rc == 0) {
         rc = test_raw_mode_and_multi_server_ppoll(pfd, &orig);
+    }
+    if (rc == 0) {
+        rc = test_pty_and_ioctl();
     }
     close(pfd[0]);
     close(pfd[1]);

@@ -247,3 +247,16 @@ relay (`-l`, `-k`, `-e`, `-u`) and ICMPv4/ICMPv6 ping over `/dev/net`.
 forwarding and hardened wire RX/TX handling ({need}`ICD_IPC_0017`,
 {need}`SWR_IPC_0014`).
 ```
+
+```{comp} Ring 3 PTY multiplexer, virtual devices, and SCM_RIGHTS passing
+:id: COMP_IPC_0020
+:status: active
+:refines: ARC_IPC_0001, ICD_IPC_0010, ICD_IPC_0012, ICD_IPC_0018
+:satisfies: SWR_IPC_0015
+
+`servers/ttyserv/main.c` and `libc/src/tty.c` implement Ring 3 PTY pairs
+(`/dev/ptmx`, `/dev/pts/N`) and `ioctl`. `servers/vfsserv/main.c` implements
+`/dev/null`, `/dev/zero`, and ChaCha20 `/dev/urandom`. `servers/sockserv/main.c`
+and `libc/src/socket.c` implement `AF_UNIX` `SCM_RIGHTS` FD passing
+({need}`ICD_IPC_0018`, {need}`SWR_IPC_0015`).
+```

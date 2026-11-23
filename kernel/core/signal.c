@@ -29,7 +29,7 @@
 #define SIG_UNBLOCKABLE_MASK ((1u << SIGKILL) | (1u << SIGSTOP))
 
 static int signal_is_default_ignore(unsigned sig) {
-    return sig == SIGCHLD || sig == SIGURG || sig == SIGCONT;
+    return sig == SIGCHLD || sig == SIGURG || sig == SIGCONT || sig == SIGWINCH;
 }
 
 static int signal_is_ignored_locked(pcb_t *p, unsigned sig) {

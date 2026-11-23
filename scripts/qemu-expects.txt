@@ -84,6 +84,7 @@ ttyserv registered /dev/tty
 isatty, /dev/tty, tcgetattr/tcsetattr, and speeds verified
 canonical line discipline \(VERASE, VKILL, ICRNL, VEOF\)
 raw mode and multi-server ppoll \(TTY \+ pipe\) verified
+Ring 3 PTY \(/dev/ptmx, /dev/pts/N\), ioctl, SIGWINCH, ISIG, and POLLHUP verified
 buffered stdio fopen, fread/fwrite, fgets, ungetc, fseek, and
 setenv/unsetenv and execvp PATH lookup with environ
 ctype, strings, inttypes, limits, assert, strdup, strstr, and
@@ -94,6 +95,7 @@ sockserv registered /dev/sock
 AF_UNIX socketpair, SOCK_CLOEXEC/SOCK_NONBLOCK, MSG_PEEK, and
 AF_UNIX bind, listen, connect, and accept4 atomic flags
 AF_UNIX SOCK_DGRAM sendto/recvfrom and multi-server ppoll
+Ring 3 AF_UNIX SCM_RIGHTS cross-process FD passing verified
 sh pipelines, redirections, and core utilities
 sh Issue 8 ANSI-C quoting, set -o pipefail, and built-ins
 sh Issue 8 read -d custom and NUL delimiters verified
@@ -130,6 +132,7 @@ sleep utility suspended for about one second
 time utility reported real/user/sys on stderr
 timeout utility enforced limits and -s/-p/-- options
 nohup utility ran a command immune to SIGHUP
+/dev/null, /dev/urandom, syslog, crypt, and XSI/OpenSSH libc APIs verified
 setpgid, getpgid, setsid, waitpid\(-pgid\), and kill\(-pgid\) verified
 TTY ISIG Ctrl-C SIGINT and tcgetpgrp/tcsetpgrp verified
 Ring 3 core utilities \(mkdir, rm, cp, mv, uname, env, wc, head\) verified

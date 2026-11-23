@@ -64,6 +64,22 @@ NON_POSIX_EXTENSION_UTILITIES: tuple[str, ...] = (
     "ping",
 )
 
+# Intentional non-POSIX UNIX/OpenSSH compatibility exports in libc.a (see
+# ADR_0053; guarded out of strict _POSIX_C_SOURCE=202405L header ASTs).
+NON_POSIX_COMPAT_SYMBOLS: frozenset[str] = frozenset(
+    {
+        "chroot",
+        "daemon",
+        "futimes",
+        "getgrouplist",
+        "gettimeofday",
+        "initgroups",
+        "ioctl",
+        "setgroups",
+        "vsyslog",
+    }
+)
+
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
     "arpa/inet.h",
@@ -114,6 +130,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "stdnoreturn.h",
     "string.h",
     "strings.h",
+    "syslog.h",
     "tar.h",
     "termios.h",
     "tgmath.h",
@@ -130,8 +147,10 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "sys/socket.h",
     "sys/stat.h",
     "sys/statvfs.h",
+    "sys/time.h",
     "sys/times.h",
     "sys/types.h",
+    "sys/uio.h",
     "sys/un.h",
     "sys/utsname.h",
     "sys/wait.h",
@@ -315,7 +334,7 @@ class PosixSymbolDiffTests(unittest.TestCase):
         )
 
         arc_bad, arc_opt, _ = _classify_symbols(
-            archive_symbols, manifest, active_macros
+            archive_symbols - NON_POSIX_COMPAT_SYMBOLS, manifest, active_macros
         )
         self.assertEqual(
             arc_bad,

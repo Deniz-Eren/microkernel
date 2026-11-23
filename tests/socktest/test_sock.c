@@ -19,7 +19,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_IPC_0007 */
+/* need:: VER_IPC_0007 VER_IPC_0013 */
 
 static int test_socketpair_and_shutdown(void) {
     int sv[2] = {-1, -1};
@@ -357,6 +357,108 @@ static int test_dgram_and_multi_ppoll(void) {
     return 0;
 }
 
+static int test_scm_rights_fd_passing(void) {
+    int sv[2] = {-1, -1};
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sv) != 0) {
+        printf("[FAIL] scm_rights socketpair failed\n");
+        return -1;
+    }
+    int pfd[2] = {-1, -1};
+    if (pipe2(pfd, O_CLOEXEC) != 0) {
+        printf("[FAIL] scm_rights pipe2 failed\n");
+        (void)close(sv[0]);
+        (void)close(sv[1]);
+        return -1;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        printf("[FAIL] scm_rights fork failed\n");
+        (void)close(pfd[0]);
+        (void)close(pfd[1]);
+        (void)close(sv[0]);
+        (void)close(sv[1]);
+        return -1;
+    }
+    if (pid == 0) {
+        (void)close(sv[0]);
+        (void)close(pfd[0]);
+        (void)close(pfd[1]);
+        char tag = 0;
+        struct iovec iov = {.iov_base = &tag, .iov_len = 1u};
+        union {
+            char buf[CMSG_SPACE(sizeof(int))];
+            struct cmsghdr align;
+        } u = {0};
+        struct msghdr msg = {0};
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        msg.msg_control = u.buf;
+        msg.msg_controllen = (socklen_t)sizeof(u.buf);
+        ssize_t n = recvmsg(sv[1], &msg, MSG_CMSG_CLOEXEC);
+        if (n != 1 || tag != 'F') {
+            _exit(2);
+        }
+        struct cmsghdr *cm = CMSG_FIRSTHDR(&msg);
+        if (!cm || cm->cmsg_level != SOL_SOCKET ||
+            cm->cmsg_type != SCM_RIGHTS) {
+            _exit(3);
+        }
+        int rfd = -1;
+        memcpy(&rfd, CMSG_DATA(cm), sizeof(int));
+        if (rfd < 0 || (fcntl(rfd, F_GETFD) & FD_CLOEXEC) == 0) {
+            _exit(4);
+        }
+        char buf[16] = {0};
+        ssize_t rn = read(rfd, buf, sizeof(buf) - 1u);
+        (void)close(rfd);
+        (void)close(sv[1]);
+        _exit((rn == 10 && strcmp(buf, "FD_PASS_OK") == 0) ? 0 : 5);
+    }
+
+    (void)close(sv[1]);
+    if (write(pfd[1], "FD_PASS_OK", 10u) != 10) {
+        printf("[FAIL] scm_rights pipe write failed\n");
+        (void)close(pfd[0]);
+        (void)close(pfd[1]);
+        (void)close(sv[0]);
+        (void)waitpid(pid, NULL, 0);
+        return -1;
+    }
+    char tag = 'F';
+    struct iovec iov = {.iov_base = &tag, .iov_len = 1u};
+    union {
+        char buf[CMSG_SPACE(sizeof(int))];
+        struct cmsghdr align;
+    } u = {0};
+    struct msghdr msg = {0};
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = u.buf;
+    msg.msg_controllen = (socklen_t)sizeof(u.buf);
+    struct cmsghdr *cm = CMSG_FIRSTHDR(&msg);
+    cm->cmsg_level = SOL_SOCKET;
+    cm->cmsg_type = SCM_RIGHTS;
+    cm->cmsg_len = (socklen_t)CMSG_LEN(sizeof(int));
+    memcpy(CMSG_DATA(cm), &pfd[0], sizeof(int));
+
+    ssize_t sn = sendmsg(sv[0], &msg, 0);
+    /* Close sender's copy immediately to prove server-side refcount dup. */
+    (void)close(pfd[0]);
+    (void)close(pfd[1]);
+    (void)close(sv[0]);
+
+    int st = 0;
+    if (sn != 1 || waitpid(pid, &st, 0) != pid || !WIFEXITED(st) ||
+        WEXITSTATUS(st) != 0) {
+        printf("[FAIL] scm_rights failed sn=%ld st=0x%x\n", (long)sn, st);
+        return -1;
+    }
+    printf(
+        "[OK] Ring 3 AF_UNIX SCM_RIGHTS cross-process FD passing verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_socketpair_and_shutdown() != 0) {
         return 1;
@@ -365,6 +467,9 @@ int main(void) {
         return 1;
     }
     if (test_dgram_and_multi_ppoll() != 0) {
+        return 1;
+    }
+    if (test_scm_rights_fd_passing() != 0) {
         return 1;
     }
     return 0;

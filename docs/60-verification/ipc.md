@@ -159,3 +159,16 @@ client into `/boot/nc -l` over PCI `virtio-net`. `shtest`
 (`tests/shtest/test_sh.c`) verifies `/boot/ping` (`127.0.0.1` and `10.0.2.2`)
 and `/boot/nc` loopback TCP sessions ({need}`SWR_IPC_0014`).
 ```
+
+```{ver} Verify Ring 3 PTYs, virtual character devices, and SCM_RIGHTS
+:id: VER_IPC_0013
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0015
+
+`ttytest` (`tests/ttytest/test_tty.c`) verifies PTY master/slave I/O, `ioctl`,
+`SIGWINCH`, `ISIG`, and `POLLHUP`. `socktest` (`tests/socktest/test_sock.c`)
+verifies cross-process `SCM_RIGHTS` FD passing with `MSG_CMSG_CLOEXEC`.
+`utilstest` (`tests/utilstest/test_utils.c`) verifies `/dev/null`, `/dev/zero`,
+and `/dev/urandom` ({need}`SWR_IPC_0015`).
+```

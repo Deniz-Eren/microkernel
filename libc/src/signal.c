@@ -280,15 +280,20 @@ int sigqueue(pid_t pid, int sig, const union sigval value) {
 }
 
 static const char *const g_sig_names[NSIG] = {
-    [0] = "0",          [SIGHUP] = "HUP",       [SIGINT] = "INT",
-    [SIGQUIT] = "QUIT", [SIGILL] = "ILL",       [SIGTRAP] = "TRAP",
-    [SIGABRT] = "ABRT", [SIGBUS] = "BUS",       [SIGFPE] = "FPE",
-    [SIGKILL] = "KILL", [SIGUSR1] = "USR1",     [SIGSEGV] = "SEGV",
-    [SIGUSR2] = "USR2", [SIGPIPE] = "PIPE",     [SIGALRM] = "ALRM",
-    [SIGTERM] = "TERM", [SIGCHLD] = "CHLD",     [SIGCONT] = "CONT",
-    [SIGSTOP] = "STOP", [SIGTSTP] = "TSTP",     [SIGTTIN] = "TTIN",
-    [SIGTTOU] = "TTOU", [SIGURG] = "URG",       [SIGXCPU] = "XCPU",
-    [SIGXFSZ] = "XFSZ", [SIGVTALRM] = "VTALRM", [SIGPROF] = "PROF",
+    [0] = "0",          [SIGHUP] = "HUP",
+    [SIGINT] = "INT",   [SIGQUIT] = "QUIT",
+    [SIGILL] = "ILL",   [SIGTRAP] = "TRAP",
+    [SIGABRT] = "ABRT", [SIGBUS] = "BUS",
+    [SIGFPE] = "FPE",   [SIGKILL] = "KILL",
+    [SIGUSR1] = "USR1", [SIGSEGV] = "SEGV",
+    [SIGUSR2] = "USR2", [SIGPIPE] = "PIPE",
+    [SIGALRM] = "ALRM", [SIGTERM] = "TERM",
+    [SIGCHLD] = "CHLD", [SIGCONT] = "CONT",
+    [SIGSTOP] = "STOP", [SIGTSTP] = "TSTP",
+    [SIGTTIN] = "TTIN", [SIGTTOU] = "TTOU",
+    [SIGURG] = "URG",   [SIGXCPU] = "XCPU",
+    [SIGXFSZ] = "XFSZ", [SIGVTALRM] = "VTALRM",
+    [SIGPROF] = "PROF", [SIGWINCH] = "WINCH",
     [SIGSYS] = "SYS",
 };
 
@@ -320,6 +325,7 @@ static const char *const g_sig_desc[NSIG] = {
     [SIGXFSZ] = "File size limit exceeded",
     [SIGVTALRM] = "Virtual timer expired",
     [SIGPROF] = "Profiling timer expired",
+    [SIGWINCH] = "Window size changed",
     [SIGSYS] = "Bad system call",
 };
 

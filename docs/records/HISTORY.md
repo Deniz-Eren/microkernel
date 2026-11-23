@@ -20,6 +20,20 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0056 — Add Ring 3 PTYs, virtual devices, SCM_RIGHTS, and OpenSSH APIs
+
+```{task} Add Ring 3 PTYs, virtual devices, SCM_RIGHTS, and OpenSSH APIs
+:id: TSK_0056
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0053, SWR_IPC_0015, SWR_LIBC_0029
+
+Extend `servers/ttyserv/` with Ring 3 PTYs (`/dev/ptmx`, `/dev/pts/N`) and
+`ioctl` support. Add `/dev/null`, `/dev/urandom`, Ring 3 `SCM_RIGHTS` FD
+passing, `<syslog.h>`, `crypt`, and OpenSSH `libc` APIs with QEMU tests
+({need}`SWR_IPC_0015`, {need}`SWR_LIBC_0029`, {need}`SYS_IPC_0001`,
+{need}`SYS_LIBC_0001`, {need}`SYS_PROC_0001`).
+```
+
 ### TSK_0055 — Add host-to-guest networking, netserv hardening, nc, and ping
 
 ```{task} Add host-to-guest networking, netserv hardening, nc, and ping

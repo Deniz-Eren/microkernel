@@ -23,11 +23,12 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: COMP_IPC_0012 */
+/* need:: COMP_IPC_0012 COMP_IPC_0020 */
 
 #define SOCK_MAX 48
 #define SOCK_BUF_SIZE 4096u
 #define DGRAM_Q_MAX 8
+#define RIGHTS_Q_MAX 8
 #define ACCEPT_Q_MAX 16
 #define RWAIT_MAX 32
 #define WWAIT_MAX 32
@@ -45,7 +46,15 @@ typedef struct {
     uint32_t len;
     char sender[SOCK_PATH_MAX];
     uint8_t data[SOCK_DGRAM_DATA_MAX];
+    uint32_t rights_count;
+    struct __k_fd_entry rights[SOCK_MAX_RIGHTS];
 } dgram_pkt_t;
+
+typedef struct {
+    uint64_t byte_pos;
+    uint32_t count;
+    struct __k_fd_entry fds[SOCK_MAX_RIGHTS];
+} rights_pkt_t;
 
 typedef struct {
     uint8_t used;
@@ -64,7 +73,14 @@ typedef struct {
     /* SOCK_STREAM receive ring buffer. */
     uint32_t rx_head;
     uint32_t rx_len;
+    uint64_t rx_total_written;
+    uint64_t rx_total_read;
     uint8_t rx_buf[SOCK_BUF_SIZE];
+
+    /* SOCK_STREAM ancillary SCM_RIGHTS queue ordered by stream offset. */
+    uint32_t rights_head;
+    uint32_t rights_len;
+    rights_pkt_t rights_q[RIGHTS_Q_MAX];
 
     /* SOCK_STREAM listening accept queue (server-side connected indices). */
     uint32_t accept_head;
@@ -79,6 +95,7 @@ typedef struct {
 
 typedef struct {
     uint8_t used;
+    uint8_t is_msg;
     uint32_t msgid;
     uint32_t sock_idx;
     uint32_t want_len;
@@ -90,6 +107,8 @@ typedef struct {
     uint32_t msgid;
     uint32_t sock_idx;
     uint32_t len;
+    uint32_t rights_count;
+    struct __k_fd_entry rights[SOCK_MAX_RIGHTS];
     uint8_t data[SOCK_DATA_MAX];
 } send_waiter_t;
 
@@ -116,6 +135,33 @@ static poll_waiter_t g_pwait[PWAIT_MAX];
 
 static volatile unsigned int g_timed_polls;
 static int g_self_conn = -1;
+static uint32_t g_self_pid;
+
+static void handle_close_handle(uint32_t handle);
+
+static void release_rights_entries(const struct __k_fd_entry *fds,
+                                   uint32_t count) {
+    for (uint32_t i = 0; i < count && i < SOCK_MAX_RIGHTS; i++) {
+        const struct __k_fd_entry *e = &fds[i];
+        if (e->kind != FD_KIND_SERVER && e->kind != FD_KIND_VFS &&
+            e->kind != FD_KIND_SOCK) {
+            continue;
+        }
+        if (e->srv_pid == 0u || e->srv_chanid == 0u) {
+            continue;
+        }
+        if (e->srv_pid == g_self_pid) {
+            handle_close_handle(e->srv_handle);
+            continue;
+        }
+        long c = OpenConnection(e->srv_pid, e->srv_chanid);
+        if (c >= 0) {
+            (void)SendPulse((int)c, (int)PULSE_CODE_FD_CLOSE,
+                            (int)e->srv_handle);
+            CloseConnection((int)c);
+        }
+    }
+}
 
 static uint64_t now_mono_ns(void) {
     struct timespec ts = {0};
@@ -187,6 +233,7 @@ static uint32_t rx_peek(const sock_obj_t *s, uint8_t *dst, uint32_t max_n) {
 static void rx_consume(sock_obj_t *s, uint32_t n) {
     s->rx_head = (s->rx_head + n) % SOCK_BUF_SIZE;
     s->rx_len -= n;
+    s->rx_total_read += (uint64_t)n;
 }
 
 static uint32_t rx_push(sock_obj_t *s, const uint8_t *src, uint32_t n) {
@@ -197,7 +244,78 @@ static uint32_t rx_push(sock_obj_t *s, const uint8_t *src, uint32_t n) {
         s->rx_buf[(tail + i) % SOCK_BUF_SIZE] = src[i];
     }
     s->rx_len += take;
+    s->rx_total_written += (uint64_t)take;
     return take;
+}
+
+static void rights_push(sock_obj_t *s, uint64_t byte_pos,
+                        const struct __k_fd_entry *fds, uint32_t count) {
+    if (count == 0u || count > SOCK_MAX_RIGHTS ||
+        s->rights_len >= RIGHTS_Q_MAX) {
+        return;
+    }
+    uint32_t tail = (s->rights_head + s->rights_len) % RIGHTS_Q_MAX;
+    s->rights_q[tail].byte_pos = byte_pos;
+    s->rights_q[tail].count = count;
+    memcpy(s->rights_q[tail].fds, fds, count * sizeof(struct __k_fd_entry));
+    s->rights_len++;
+}
+
+static uint32_t stream_recv_prepare(sock_obj_t *s, uint32_t want, int is_msg,
+                                    sock_rep_t *rep, int *pop_rights_out) {
+    *pop_rights_out = 0;
+    uint32_t cap = want;
+    if (is_msg && cap > SOCK_MSG_DATA_MAX) {
+        cap = SOCK_MSG_DATA_MAX;
+    }
+    if (s->rights_len > 0u) {
+        const rights_pkt_t *rp = &s->rights_q[s->rights_head];
+        if (rp->byte_pos == s->rx_total_read) {
+            if (is_msg) {
+                rep->u.msg.rights_count = rp->count;
+                memcpy(rep->u.msg.rights, rp->fds,
+                       rp->count * sizeof(struct __k_fd_entry));
+                *pop_rights_out = 1;
+                if (s->rights_len > 1u) {
+                    const rights_pkt_t *next =
+                        &s->rights_q[(s->rights_head + 1u) % RIGHTS_Q_MAX];
+                    uint64_t max_bytes = next->byte_pos > s->rx_total_read
+                                             ? next->byte_pos - s->rx_total_read
+                                             : 1u;
+                    if ((uint64_t)cap > max_bytes) {
+                        cap = (uint32_t)max_bytes;
+                    }
+                }
+            } else {
+                *pop_rights_out = 2; /* discard unread rights on plain recv */
+            }
+        } else if (rp->byte_pos > s->rx_total_read) {
+            uint64_t diff = rp->byte_pos - s->rx_total_read;
+            if ((uint64_t)cap > diff) {
+                cap = (uint32_t)diff;
+            }
+        }
+    }
+    uint8_t *dst = is_msg ? rep->u.msg.data : rep->u.data;
+    return rx_peek(s, dst, cap);
+}
+
+static void stream_recv_commit(sock_obj_t *s, uint32_t n, uint32_t flags,
+                               int pop_rights) {
+    if (flags & (uint32_t)MSG_PEEK) {
+        return;
+    }
+    if (n > 0u) {
+        rx_consume(s, n);
+    }
+    if (pop_rights != 0 && s->rights_len > 0u) {
+        if (pop_rights == 2) {
+            const rights_pkt_t *rp = &s->rights_q[s->rights_head];
+            release_rights_entries(rp->fds, rp->count);
+        }
+        s->rights_head = (s->rights_head + 1u) % RIGHTS_Q_MAX;
+        s->rights_len--;
+    }
 }
 
 static uint32_t find_bound_sock(const char *path, int32_t type,
@@ -335,14 +453,28 @@ static void wake_sock_waiters(uint32_t idx) {
                 uint32_t copy =
                     pkt->len < rw->want_len ? pkt->len : rw->want_len;
                 rep.len = copy;
-                strlcpy(rep.u.dgram.path, pkt->sender,
-                        sizeof(rep.u.dgram.path));
-                if (copy > 0u) {
-                    memcpy(rep.u.dgram.data, pkt->data, copy);
+                if (rw->is_msg) {
+                    rep.u.msg.rights_count = pkt->rights_count;
+                    if (pkt->rights_count > 0u) {
+                        memcpy(rep.u.msg.rights, pkt->rights,
+                               pkt->rights_count * sizeof(struct __k_fd_entry));
+                    }
+                    if (copy > 0u) {
+                        memcpy(rep.u.msg.data, pkt->data, copy);
+                    }
+                } else {
+                    strlcpy(rep.u.dgram.path, pkt->sender,
+                            sizeof(rep.u.dgram.path));
+                    if (copy > 0u) {
+                        memcpy(rep.u.dgram.data, pkt->data, copy);
+                    }
                 }
                 long rc = ReplyMsg((int)rw->msgid, &rep, sizeof(rep));
                 rw->used = 0;
                 if (rc >= 0 && !(rw->flags & (uint32_t)MSG_PEEK)) {
+                    if (!rw->is_msg && pkt->rights_count > 0u) {
+                        release_rights_entries(pkt->rights, pkt->rights_count);
+                    }
                     s->dg_head = (s->dg_head + 1u) % DGRAM_Q_MAX;
                     s->dg_len--;
                 }
@@ -355,17 +487,19 @@ static void wake_sock_waiters(uint32_t idx) {
 
         sock_obj_t *peer = get_sock(s->peer_idx);
         int peer_eof = (!peer || s->peer_closed || peer->shut_wr || s->shut_rd);
-        if (s->rx_len == 0u && !peer_eof) {
+        if (s->rx_len == 0u && s->rights_len == 0u && !peer_eof) {
             continue;
         }
         sock_rep_t rep = {0};
-        uint32_t n = rx_peek(s, rep.u.data, rw->want_len);
+        int pop_rights = 0;
+        uint32_t n = stream_recv_prepare(s, rw->want_len, (int)rw->is_msg, &rep,
+                                         &pop_rights);
         rep.err = 0;
         rep.len = n;
         long rc = ReplyMsg((int)rw->msgid, &rep, sizeof(rep));
         rw->used = 0;
-        if (rc >= 0 && n > 0u && !(rw->flags & (uint32_t)MSG_PEEK)) {
-            rx_consume(s, n);
+        if (rc >= 0) {
+            stream_recv_commit(s, n, rw->flags, pop_rights);
         }
     }
 
@@ -380,21 +514,37 @@ static void wake_sock_waiters(uint32_t idx) {
             continue;
         }
         if (s->shut_rd || sender->shut_wr || sender->peer_closed) {
+            if (ww->rights_count > 0u) {
+                release_rights_entries(ww->rights, ww->rights_count);
+                ww->rights_count = 0u;
+            }
             sock_rep_t rep = {0};
             rep.err = -EPIPE;
             (void)ReplyMsg((int)ww->msgid, &rep, sizeof(rep));
             ww->used = 0;
             continue;
         }
-        if (s->rx_len < SOCK_BUF_SIZE) {
+        if (s->rx_len < SOCK_BUF_SIZE &&
+            (ww->rights_count == 0u || s->rights_len < RIGHTS_Q_MAX)) {
+            uint64_t rpos = s->rx_total_written;
             uint32_t n = rx_push(s, ww->data, ww->len);
+            if (ww->rights_count > 0u) {
+                rights_push(s, rpos, ww->rights, ww->rights_count);
+            }
             sock_rep_t rep = {0};
             rep.err = 0;
             rep.len = n;
             long rc = ReplyMsg((int)ww->msgid, &rep, sizeof(rep));
+            uint32_t rcnt = ww->rights_count;
+            ww->rights_count = 0u;
             ww->used = 0;
             if (rc < 0) {
                 s->rx_len -= n;
+                s->rx_total_written -= (uint64_t)n;
+                if (rcnt > 0u && s->rights_len > 0u) {
+                    s->rights_len--;
+                    release_rights_entries(ww->rights, rcnt);
+                }
             } else {
                 wake_sock_waiters(idx);
             }
@@ -451,6 +601,22 @@ static void handle_close_handle(uint32_t handle) {
             s->accept_len--;
             handle_close_handle(qidx);
         }
+    }
+
+    /* Release any unread SCM_RIGHTS FD entries queued on this socket. */
+    while (s->rights_len > 0u) {
+        const rights_pkt_t *rp = &s->rights_q[s->rights_head];
+        release_rights_entries(rp->fds, rp->count);
+        s->rights_head = (s->rights_head + 1u) % RIGHTS_Q_MAX;
+        s->rights_len--;
+    }
+    while (s->dg_len > 0u) {
+        const dgram_pkt_t *pkt = &s->dg_q[s->dg_head];
+        if (pkt->rights_count > 0u) {
+            release_rights_entries(pkt->rights, pkt->rights_count);
+        }
+        s->dg_head = (s->dg_head + 1u) % DGRAM_Q_MAX;
+        s->dg_len--;
     }
 
     /* Notify connected peer of EOF / EPIPE. */
@@ -743,6 +909,7 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
             uint32_t tail = (dst->dg_head + dst->dg_len) % DGRAM_Q_MAX;
             dgram_pkt_t *pkt = &dst->dg_q[tail];
             pkt->len = plen;
+            pkt->rights_count = 0u;
             strlcpy(pkt->sender, s->bound_path, sizeof(pkt->sender));
             if (plen > 0u) {
                 memcpy(pkt->data, payload, plen);
@@ -782,6 +949,7 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
                 wake_sock_waiters(s->peer_idx);
             } else {
                 peer->rx_len -= n;
+                peer->rx_total_written -= (uint64_t)n;
             }
             return;
         }
@@ -796,6 +964,7 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
                 g_wwait[i].msgid = msgid;
                 g_wwait[i].sock_idx = req->handle;
                 g_wwait[i].len = wlen;
+                g_wwait[i].rights_count = 0u;
                 memcpy(g_wwait[i].data, req->u.data, wlen);
                 return; /* deferred ReplyMsg */
             }
@@ -804,7 +973,124 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
         ReplyMsg((int)msgid, &rep, sizeof(rep));
         return;
     }
-    case SOCK_OP_RECV: {
+    case SOCK_OP_SENDMSG: {
+        sock_obj_t *s = get_sock(req->handle);
+        if (!s) {
+            rep.err = -EBADF;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            return;
+        }
+        if (s->shut_wr) {
+            rep.err = -EPIPE;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            return;
+        }
+        uint32_t rcnt = req->u.msg.rights_count;
+        if (rcnt > SOCK_MAX_RIGHTS) {
+            rep.err = -EINVAL;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            return;
+        }
+        uint32_t wlen =
+            req->len > SOCK_MSG_DATA_MAX ? SOCK_MSG_DATA_MAX : req->len;
+        if (s->type == SOCK_DGRAM) {
+            sock_obj_t *dst = get_sock(s->peer_idx);
+            if (!dst) {
+                rep.err = -EDESTADDRREQ;
+                ReplyMsg((int)msgid, &rep, sizeof(rep));
+                return;
+            }
+            if (dst->dg_len >= DGRAM_Q_MAX) {
+                rep.err = -EAGAIN;
+                ReplyMsg((int)msgid, &rep, sizeof(rep));
+                return;
+            }
+            uint32_t tail = (dst->dg_head + dst->dg_len) % DGRAM_Q_MAX;
+            dgram_pkt_t *pkt = &dst->dg_q[tail];
+            pkt->len = wlen;
+            pkt->rights_count = rcnt;
+            if (rcnt > 0u) {
+                memcpy(pkt->rights, req->u.msg.rights,
+                       rcnt * sizeof(struct __k_fd_entry));
+            }
+            strlcpy(pkt->sender, s->bound_path, sizeof(pkt->sender));
+            if (wlen > 0u) {
+                memcpy(pkt->data, req->u.msg.data, wlen);
+            }
+            dst->dg_len++;
+            rep.err = 0;
+            rep.len = wlen;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            wake_sock_waiters(s->peer_idx);
+            return;
+        }
+        if (s->state != ST_CONNECTED && !s->peer_closed) {
+            rep.err = -ENOTCONN;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            return;
+        }
+        sock_obj_t *peer = get_sock(s->peer_idx);
+        if (!peer || s->peer_closed || peer->shut_rd) {
+            rep.err = -EPIPE;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            return;
+        }
+        if (wlen == 0u && rcnt == 0u) {
+            rep.err = 0;
+            rep.len = 0;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            return;
+        }
+        if ((wlen == 0u || peer->rx_len < SOCK_BUF_SIZE) &&
+            (rcnt == 0u || peer->rights_len < RIGHTS_Q_MAX)) {
+            uint64_t rpos = peer->rx_total_written;
+            uint32_t n =
+                (wlen > 0u) ? rx_push(peer, req->u.msg.data, wlen) : 0u;
+            if (rcnt > 0u) {
+                rights_push(peer, rpos, req->u.msg.rights, rcnt);
+            }
+            rep.err = 0;
+            rep.len = n;
+            if (ReplyMsg((int)msgid, &rep, sizeof(rep)) >= 0) {
+                wake_sock_waiters(s->peer_idx);
+            } else {
+                peer->rx_len -= n;
+                peer->rx_total_written -= (uint64_t)n;
+                if (rcnt > 0u && peer->rights_len > 0u) {
+                    peer->rights_len--;
+                }
+            }
+            return;
+        }
+        if (req->flags & ((uint32_t)O_NONBLOCK | (uint32_t)MSG_DONTWAIT)) {
+            rep.err = -EAGAIN;
+            ReplyMsg((int)msgid, &rep, sizeof(rep));
+            return;
+        }
+        for (int i = 0; i < WWAIT_MAX; i++) {
+            if (!g_wwait[i].used) {
+                g_wwait[i].used = 1;
+                g_wwait[i].msgid = msgid;
+                g_wwait[i].sock_idx = req->handle;
+                g_wwait[i].len = wlen;
+                g_wwait[i].rights_count = rcnt;
+                if (rcnt > 0u) {
+                    memcpy(g_wwait[i].rights, req->u.msg.rights,
+                           rcnt * sizeof(struct __k_fd_entry));
+                }
+                if (wlen > 0u) {
+                    memcpy(g_wwait[i].data, req->u.msg.data, wlen);
+                }
+                return;
+            }
+        }
+        rep.err = -EAGAIN;
+        ReplyMsg((int)msgid, &rep, sizeof(rep));
+        return;
+    }
+    case SOCK_OP_RECV:
+    case SOCK_OP_RECVMSG: {
+        int is_msg = (req->op == SOCK_OP_RECVMSG);
         sock_obj_t *s = get_sock(req->handle);
         if (!s) {
             rep.err = -EBADF;
@@ -812,20 +1098,34 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
             return;
         }
         if (s->type == SOCK_DGRAM) {
-            uint32_t want =
-                req->len > SOCK_DGRAM_DATA_MAX ? SOCK_DGRAM_DATA_MAX : req->len;
+            uint32_t dmax = is_msg ? SOCK_MSG_DATA_MAX : SOCK_DGRAM_DATA_MAX;
+            uint32_t want = req->len > dmax ? dmax : req->len;
             if (s->dg_len > 0u) {
                 dgram_pkt_t *pkt = &s->dg_q[s->dg_head];
                 uint32_t copy = pkt->len < want ? pkt->len : want;
                 rep.err = 0;
                 rep.len = copy;
-                strlcpy(rep.u.dgram.path, pkt->sender,
-                        sizeof(rep.u.dgram.path));
-                if (copy > 0u) {
-                    memcpy(rep.u.dgram.data, pkt->data, copy);
+                if (is_msg) {
+                    rep.u.msg.rights_count = pkt->rights_count;
+                    if (pkt->rights_count > 0u) {
+                        memcpy(rep.u.msg.rights, pkt->rights,
+                               pkt->rights_count * sizeof(struct __k_fd_entry));
+                    }
+                    if (copy > 0u) {
+                        memcpy(rep.u.msg.data, pkt->data, copy);
+                    }
+                } else {
+                    strlcpy(rep.u.dgram.path, pkt->sender,
+                            sizeof(rep.u.dgram.path));
+                    if (copy > 0u) {
+                        memcpy(rep.u.dgram.data, pkt->data, copy);
+                    }
                 }
                 if (ReplyMsg((int)msgid, &rep, sizeof(rep)) >= 0 &&
                     !(req->flags & (uint32_t)MSG_PEEK)) {
+                    if (!is_msg && pkt->rights_count > 0u) {
+                        release_rights_entries(pkt->rights, pkt->rights_count);
+                    }
                     s->dg_head = (s->dg_head + 1u) % DGRAM_Q_MAX;
                     s->dg_len--;
                     service_pollers(0, 0);
@@ -846,6 +1146,7 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
             for (int i = 0; i < RWAIT_MAX; i++) {
                 if (!g_rwait[i].used) {
                     g_rwait[i].used = 1;
+                    g_rwait[i].is_msg = (uint8_t)is_msg;
                     g_rwait[i].msgid = msgid;
                     g_rwait[i].sock_idx = req->handle;
                     g_rwait[i].want_len = want;
@@ -858,22 +1159,24 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
             return;
         }
 
-        /* SOCK_STREAM recv */
+        /* SOCK_STREAM recv / recvmsg */
         if (s->state != ST_CONNECTED && !s->peer_closed) {
             rep.err = -ENOTCONN;
             ReplyMsg((int)msgid, &rep, sizeof(rep));
             return;
         }
-        uint32_t want = req->len > SOCK_DATA_MAX ? SOCK_DATA_MAX : req->len;
+        uint32_t smax = is_msg ? SOCK_MSG_DATA_MAX : SOCK_DATA_MAX;
+        uint32_t want = req->len > smax ? smax : req->len;
         sock_obj_t *peer = get_sock(s->peer_idx);
         int peer_eof = (!peer || s->peer_closed || peer->shut_wr || s->shut_rd);
-        if (want == 0u || s->rx_len > 0u || peer_eof) {
-            uint32_t n = rx_peek(s, rep.u.data, want);
+        if (want == 0u || s->rx_len > 0u || s->rights_len > 0u || peer_eof) {
+            int pop_rights = 0;
+            uint32_t n =
+                stream_recv_prepare(s, want, is_msg, &rep, &pop_rights);
             rep.err = 0;
             rep.len = n;
-            if (ReplyMsg((int)msgid, &rep, sizeof(rep)) >= 0 && n > 0u &&
-                !(req->flags & (uint32_t)MSG_PEEK)) {
-                rx_consume(s, n);
+            if (ReplyMsg((int)msgid, &rep, sizeof(rep)) >= 0) {
+                stream_recv_commit(s, n, req->flags, pop_rights);
                 wake_sock_waiters(req->handle);
             }
             return;
@@ -886,6 +1189,7 @@ static void handle_sock_req(uint32_t msgid, const sock_req_t *req) {
         for (int i = 0; i < RWAIT_MAX; i++) {
             if (!g_rwait[i].used) {
                 g_rwait[i].used = 1;
+                g_rwait[i].is_msg = (uint8_t)is_msg;
                 g_rwait[i].msgid = msgid;
                 g_rwait[i].sock_idx = req->handle;
                 g_rwait[i].want_len = want;
@@ -1128,7 +1432,8 @@ int main(void) {
     }
     CloseConnection((int)ns);
 
-    g_self_conn = (int)OpenConnection((uint32_t)getpid(), (uint32_t)ch);
+    g_self_pid = (uint32_t)getpid();
+    g_self_conn = (int)OpenConnection(g_self_pid, (uint32_t)ch);
     (void)ThreadSpawn(ticker_thread, NULL, 90);
 
     printf("[OK] sockserv registered /dev/sock (chan=%ld)\n", ch);

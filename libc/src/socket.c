@@ -992,6 +992,106 @@ ssize_t sendmsg(int sockfd, const struct msghdr *message, int flags) {
         memcpy(flat + total, message->msg_iov[i].iov_base, copy);
         total += copy;
     }
+
+    if (message->msg_control && message->msg_controllen > 0u) {
+        struct __k_fd_entry se = {0};
+        if (get_sock_fd(sockfd, &se) != 0) {
+            return -1;
+        }
+        if (__libc_sock_is_net(se.srv_pid, se.srv_chanid)) {
+            errno = EOPNOTSUPP;
+            return -1;
+        }
+        struct __k_fd_entry rights[SOCK_MAX_RIGHTS];
+        uint32_t rcnt = 0u;
+        for (struct cmsghdr *cm = CMSG_FIRSTHDR(message); cm != NULL;
+             cm = CMSG_NXTHDR(message, cm)) {
+            if (cm->cmsg_level != SOL_SOCKET || cm->cmsg_type != SCM_RIGHTS) {
+                continue;
+            }
+            if (cm->cmsg_len < (socklen_t)CMSG_LEN(0u)) {
+                for (uint32_t j = 0; j < rcnt; j++) {
+                    __libc_fd_close_entry(&rights[j]);
+                }
+                errno = EINVAL;
+                return -1;
+            }
+            size_t nf = ((size_t)cm->cmsg_len - CMSG_LEN(0u)) / sizeof(int);
+            const unsigned char *p = CMSG_DATA(cm);
+            for (size_t k = 0; k < nf; k++) {
+                if (rcnt >= SOCK_MAX_RIGHTS) {
+                    for (uint32_t j = 0; j < rcnt; j++) {
+                        __libc_fd_close_entry(&rights[j]);
+                    }
+                    errno = EMSGSIZE;
+                    return -1;
+                }
+                int pass_fd = -1;
+                memcpy(&pass_fd, p + k * sizeof(int), sizeof(int));
+                struct __k_fd_entry fe = {0};
+                long gr = __sys5(SYS_FD_OP, FD_OP_GET, pass_fd,
+                                 (long)(uintptr_t)&fe, 0, 0);
+                if (gr < 0) {
+                    for (uint32_t j = 0; j < rcnt; j++) {
+                        __libc_fd_close_entry(&rights[j]);
+                    }
+                    errno = EBADF;
+                    return -1;
+                }
+                if (fe.kind == FD_KIND_SHM) {
+                    for (uint32_t j = 0; j < rcnt; j++) {
+                        __libc_fd_close_entry(&rights[j]);
+                    }
+                    errno = EOPNOTSUPP;
+                    return -1;
+                }
+                fe.fd_flags = 0u;
+                long dr = __libc_fd_dup_entry(&fe);
+                if (dr < 0) {
+                    for (uint32_t j = 0; j < rcnt; j++) {
+                        __libc_fd_close_entry(&rights[j]);
+                    }
+                    errno = (int)(-dr);
+                    return -1;
+                }
+                rights[rcnt++] = fe;
+            }
+        }
+        if (rcnt > 0u) {
+            if (total > SOCK_MSG_DATA_MAX) {
+                total = SOCK_MSG_DATA_MAX;
+            }
+            sock_req_t req = {0};
+            sock_rep_t rep = {0};
+            req.op = SOCK_OP_SENDMSG;
+            req.handle = se.srv_handle;
+            req.flags = ((uint32_t)se.status_flags & (uint32_t)O_NONBLOCK) |
+                        (uint32_t)flags;
+            req.len = (uint32_t)total;
+            req.u.msg.rights_count = rcnt;
+            memcpy(req.u.msg.rights, rights,
+                   rcnt * sizeof(struct __k_fd_entry));
+            if (total > 0u) {
+                memcpy(req.u.msg.data, flat, total);
+            }
+            long r = sock_rpc(&req, &rep);
+            if (r == -EINTR) {
+                __libc_cancel_point();
+            }
+            if (r < 0) {
+                for (uint32_t j = 0; j < rcnt; j++) {
+                    __libc_fd_close_entry(&rights[j]);
+                }
+                if (r == -EPIPE && !(flags & MSG_NOSIGNAL)) {
+                    (void)raise(SIGPIPE);
+                }
+                errno = (int)(-r);
+                return -1;
+            }
+            return (ssize_t)rep.len;
+        }
+    }
+
     return sendto(sockfd, flat, total, flags,
                   (const struct sockaddr *)message->msg_name,
                   message->msg_namelen);
@@ -1024,6 +1124,84 @@ ssize_t recvmsg(int sockfd, struct msghdr *message, int flags) {
                        : message->msg_iov[i].iov_len;
         }
     }
+
+    struct __k_fd_entry se = {0};
+    if (get_sock_fd(sockfd, &se) != 0) {
+        return -1;
+    }
+    if (!__libc_sock_is_net(se.srv_pid, se.srv_chanid) &&
+        message->msg_control && message->msg_controllen > 0u) {
+        size_t req_cap = cap > SOCK_MSG_DATA_MAX ? SOCK_MSG_DATA_MAX : cap;
+        sock_req_t req = {0};
+        sock_rep_t rep = {0};
+        req.op = SOCK_OP_RECVMSG;
+        req.handle = se.srv_handle;
+        req.len = (uint32_t)req_cap;
+        req.flags = ((uint32_t)se.status_flags & (uint32_t)O_NONBLOCK) |
+                    (uint32_t)flags;
+        long r = sock_rpc(&req, &rep);
+        if (r == -EINTR) {
+            __libc_cancel_point();
+        }
+        if (r < 0) {
+            errno = (int)(-r);
+            return -1;
+        }
+        message->msg_flags = 0;
+        uint32_t rcnt = rep.u.msg.rights_count;
+        if (rcnt > SOCK_MAX_RIGHTS) {
+            rcnt = SOCK_MAX_RIGHTS;
+        }
+        if (rcnt > 0u) {
+            int fds_out[SOCK_MAX_RIGHTS];
+            uint32_t fit = 0u;
+            while (fit < rcnt && CMSG_SPACE((fit + 1u) * sizeof(int)) <=
+                                     (size_t)message->msg_controllen) {
+                struct __k_fd_entry fe = rep.u.msg.rights[fit];
+                if (flags & MSG_CMSG_CLOEXEC) {
+                    fe.fd_flags = FD_FLAG_CLOEXEC;
+                }
+                long nfd = __sys5(SYS_FD_OP, FD_OP_ALLOC, 0,
+                                  (long)(uintptr_t)&fe, 0, 0);
+                if (nfd < 0) {
+                    break;
+                }
+                fds_out[fit++] = (int)nfd;
+            }
+            for (uint32_t j = fit; j < rcnt; j++) {
+                __libc_fd_close_entry(&rep.u.msg.rights[j]);
+                message->msg_flags |= MSG_CTRUNC;
+            }
+            if (fit > 0u) {
+                memset(message->msg_control, 0, CMSG_SPACE(fit * sizeof(int)));
+                struct cmsghdr *cm = (struct cmsghdr *)message->msg_control;
+                cm->cmsg_level = SOL_SOCKET;
+                cm->cmsg_type = SCM_RIGHTS;
+                cm->cmsg_len = (socklen_t)CMSG_LEN(fit * sizeof(int));
+                memcpy(CMSG_DATA(cm), fds_out, fit * sizeof(int));
+                message->msg_controllen =
+                    (socklen_t)CMSG_SPACE(fit * sizeof(int));
+            } else {
+                message->msg_controllen = 0u;
+            }
+        } else {
+            message->msg_controllen = 0u;
+        }
+        size_t off = 0u;
+        size_t remain = (size_t)rep.len;
+        for (int i = 0; i < message->msg_iovlen && remain > 0u; i++) {
+            size_t ilen = message->msg_iov[i].iov_len;
+            if (ilen == 0u) {
+                continue;
+            }
+            size_t copy = (remain < ilen) ? remain : ilen;
+            memcpy(message->msg_iov[i].iov_base, rep.u.msg.data + off, copy);
+            off += copy;
+            remain -= copy;
+        }
+        return (ssize_t)rep.len;
+    }
+
     uint8_t flat[NET_DATA_MAX];
     socklen_t namelen = message->msg_namelen;
     ssize_t got =

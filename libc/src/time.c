@@ -11,12 +11,13 @@
 #include <errno.h>
 #include <stdint.h>
 #include <sys/microkernel.h>
+#include <sys/time.h>
 #include <sys/times.h>
 #include <time.h>
 #include <unistd.h>
 #include "tls_internal.h"
 
-/* need:: COMP_PROC_0004 COMP_LIBC_0006 COMP_LIBC_0009 */
+/* need:: COMP_PROC_0004 COMP_LIBC_0006 COMP_LIBC_0009 COMP_LIBC_0028 */
 
 int clock_getres(clockid_t clock_id, struct timespec *res) {
     long r = __sys2(SYS_CLOCK_GETRES, (long)clock_id, (long)(uintptr_t)res);
@@ -170,4 +171,19 @@ int timespec_get(struct timespec *ts, int base) {
         return 0;
     }
     return TIME_UTC;
+}
+
+int gettimeofday(struct timeval *restrict tv, void *restrict tz) {
+    (void)tz;
+    if (!tv) {
+        errno = EFAULT;
+        return -1;
+    }
+    struct timespec ts = {0, 0};
+    if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+        return -1;
+    }
+    tv->tv_sec = ts.tv_sec;
+    tv->tv_usec = (suseconds_t)(ts.tv_nsec / 1000L);
+    return 0;
 }

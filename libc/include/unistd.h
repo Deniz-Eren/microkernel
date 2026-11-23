@@ -180,11 +180,16 @@ uid_t getuid(void);
 uid_t geteuid(void);
 int setuid(uid_t uid);
 int seteuid(uid_t uid);
+int setreuid(uid_t ruid, uid_t euid);
+int setresuid(uid_t ruid, uid_t euid, uid_t suid);
 gid_t getgid(void);
 gid_t getegid(void);
 int setgid(gid_t gid);
 int setegid(gid_t gid);
+int setregid(gid_t rgid, gid_t egid);
+int setresgid(gid_t rgid, gid_t egid, gid_t sgid);
 int getgroups(int gidsetsize, gid_t grouplist[]);
+char *crypt(const char *key, const char *salt);
 char *getlogin(void);
 int getlogin_r(char *name, size_t namesize);
 int setpgid(pid_t pid, pid_t pgid);
@@ -213,5 +218,11 @@ char *ttyname(int fildes);
 int ttyname_r(int fildes, char *name, size_t namesize);
 _Noreturn void _exit(int status);
 unsigned int sleep(unsigned int seconds);
+
+#if (!defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE)) ||                  \
+    defined(_DEFAULT_SOURCE) || defined(_BSD_SOURCE) || defined(_GNU_SOURCE)
+int daemon(int nochdir, int noclose);
+int chroot(const char *path);
+#endif
 
 #endif /* _UNISTD_H */

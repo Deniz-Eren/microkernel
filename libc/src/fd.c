@@ -108,6 +108,42 @@ static long pipe_dup_handle(uint32_t handle) {
     return pipe_rpc(&req, &rep);
 }
 
+long __libc_fd_dup_entry(const struct __k_fd_entry *e) {
+    if (!e) {
+        return -EINVAL;
+    }
+    if (e->kind == FD_KIND_VFS) {
+        return __libc_vfs_dup_handle(e->srv_handle);
+    }
+    if (e->kind == FD_KIND_SOCK) {
+        return __libc_sock_dup_handle(e);
+    }
+    if (e->kind == FD_KIND_SERVER) {
+        if (__libc_tty_is_srv(e->srv_pid, e->srv_chanid)) {
+            return __libc_tty_dup_handle(e->srv_handle);
+        }
+        return pipe_dup_handle(e->srv_handle);
+    }
+    return 0;
+}
+
+void __libc_fd_close_entry(const struct __k_fd_entry *e) {
+    if (!e) {
+        return;
+    }
+    if (e->kind == FD_KIND_VFS) {
+        __libc_vfs_close_handle(e->srv_handle);
+    } else if (e->kind == FD_KIND_SOCK) {
+        __libc_sock_close_handle(e);
+    } else if (e->kind == FD_KIND_SERVER) {
+        if (__libc_tty_is_srv(e->srv_pid, e->srv_chanid)) {
+            __libc_tty_close_handle(e->srv_handle);
+        } else {
+            pipe_close_handle(e->srv_handle);
+        }
+    }
+}
+
 int __libc_fd_prefork(void) {
     struct __k_fd_entry fds[PROC_MAX_FDS];
     memset(fds, 0, sizeof(fds));
@@ -119,23 +155,10 @@ int __libc_fd_prefork(void) {
     for (long i = 0; i < n; i++) {
         if (fds[i].kind == FD_KIND_SERVER || fds[i].kind == FD_KIND_VFS ||
             fds[i].kind == FD_KIND_SOCK) {
-            long r = 0;
-            if (fds[i].kind == FD_KIND_VFS) {
-                r = __libc_vfs_dup_handle(fds[i].srv_handle);
-            } else if (fds[i].kind == FD_KIND_SOCK) {
-                r = __libc_sock_dup_handle(&fds[i]);
-            } else {
-                r = pipe_dup_handle(fds[i].srv_handle);
-            }
+            long r = __libc_fd_dup_entry(&fds[i]);
             if (r < 0) {
                 for (long j = 0; j < i; j++) {
-                    if (fds[j].kind == FD_KIND_SERVER) {
-                        pipe_close_handle(fds[j].srv_handle);
-                    } else if (fds[j].kind == FD_KIND_VFS) {
-                        __libc_vfs_close_handle(fds[j].srv_handle);
-                    } else if (fds[j].kind == FD_KIND_SOCK) {
-                        __libc_sock_close_handle(&fds[j]);
-                    }
+                    __libc_fd_close_entry(&fds[j]);
                 }
                 return (int)r;
             }
@@ -153,13 +176,7 @@ void __libc_fd_postfork_rollback(void) {
         return;
     }
     for (long i = 0; i < n; i++) {
-        if (fds[i].kind == FD_KIND_SERVER) {
-            pipe_close_handle(fds[i].srv_handle);
-        } else if (fds[i].kind == FD_KIND_VFS) {
-            __libc_vfs_close_handle(fds[i].srv_handle);
-        } else if (fds[i].kind == FD_KIND_SOCK) {
-            __libc_sock_close_handle(&fds[i]);
-        }
+        __libc_fd_close_entry(&fds[i]);
     }
 }
 
@@ -176,7 +193,7 @@ ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
         return -1;
     }
     if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY) {
-        return __libc_tty_read(buf, n, e.status_flags);
+        return __libc_tty_read(0u, buf, n, e.status_flags);
     }
     if (e.kind == FD_KIND_VFS) {
         return __libc_vfs_read(e.srv_handle, buf, n);
@@ -187,6 +204,9 @@ ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
     if (e.kind != FD_KIND_SERVER) {
         errno = EBADF;
         return -1;
+    }
+    if (__libc_tty_is_srv(e.srv_pid, e.srv_chanid)) {
+        return __libc_tty_read(e.srv_handle, buf, n, e.status_flags);
     }
     if (n == 0u) {
         return 0;
@@ -227,7 +247,7 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
         return -1;
     }
     if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY) {
-        return __libc_tty_write(buf, n);
+        return __libc_tty_write(0u, buf, n, e.status_flags);
     }
     if (e.kind == FD_KIND_VFS) {
         return __libc_vfs_write(e.srv_handle, buf, n, e.status_flags);
@@ -238,6 +258,9 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
     if (e.kind != FD_KIND_SERVER) {
         errno = EBADF;
         return -1;
+    }
+    if (__libc_tty_is_srv(e.srv_pid, e.srv_chanid)) {
+        return __libc_tty_write(e.srv_handle, buf, n, e.status_flags);
     }
     if (n == 0u) {
         return 0;
@@ -278,13 +301,7 @@ int close(int fd) {
         errno = (int)(-r);
         return -1;
     }
-    if (old.kind == FD_KIND_SERVER) {
-        pipe_close_handle(old.srv_handle);
-    } else if (old.kind == FD_KIND_VFS) {
-        __libc_vfs_close_handle(old.srv_handle);
-    } else if (old.kind == FD_KIND_SOCK) {
-        __libc_sock_close_handle(&old);
-    }
+    __libc_fd_close_entry(&old);
     return 0;
 }
 
@@ -364,14 +381,7 @@ static int dup_min(int oldfd, int min_fd, int cloexec) {
     }
     if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_VFS ||
         e.kind == FD_KIND_SOCK) {
-        long dr = 0;
-        if (e.kind == FD_KIND_VFS) {
-            dr = __libc_vfs_dup_handle(e.srv_handle);
-        } else if (e.kind == FD_KIND_SOCK) {
-            dr = __libc_sock_dup_handle(&e);
-        } else {
-            dr = pipe_dup_handle(e.srv_handle);
-        }
+        long dr = __libc_fd_dup_entry(&e);
         if (dr < 0) {
             errno = (int)(-dr);
             return -1;
@@ -380,13 +390,7 @@ static int dup_min(int oldfd, int min_fd, int cloexec) {
     long nf = __sys5(SYS_FD_OP, FD_OP_DUP, oldfd, min_fd,
                      cloexec ? FD_FLAG_CLOEXEC : 0, 0);
     if (nf < 0) {
-        if (e.kind == FD_KIND_SERVER) {
-            pipe_close_handle(e.srv_handle);
-        } else if (e.kind == FD_KIND_VFS) {
-            __libc_vfs_close_handle(e.srv_handle);
-        } else if (e.kind == FD_KIND_SOCK) {
-            __libc_sock_close_handle(&e);
-        }
+        __libc_fd_close_entry(&e);
         errno = (int)(-nf);
         return -1;
     }
@@ -418,14 +422,7 @@ int dup3(int oldfd, int newfd, int flags) {
     }
     if (e.kind == FD_KIND_SERVER || e.kind == FD_KIND_VFS ||
         e.kind == FD_KIND_SOCK) {
-        long dr = 0;
-        if (e.kind == FD_KIND_VFS) {
-            dr = __libc_vfs_dup_handle(e.srv_handle);
-        } else if (e.kind == FD_KIND_SOCK) {
-            dr = __libc_sock_dup_handle(&e);
-        } else {
-            dr = pipe_dup_handle(e.srv_handle);
-        }
+        long dr = __libc_fd_dup_entry(&e);
         if (dr < 0) {
             errno = (int)(-dr);
             return -1;
@@ -436,23 +433,11 @@ int dup3(int oldfd, int newfd, int flags) {
                      (flags & O_CLOEXEC) ? FD_FLAG_CLOEXEC : 0,
                      (long)(uintptr_t)&replaced);
     if (nf < 0) {
-        if (e.kind == FD_KIND_SERVER) {
-            pipe_close_handle(e.srv_handle);
-        } else if (e.kind == FD_KIND_VFS) {
-            __libc_vfs_close_handle(e.srv_handle);
-        } else if (e.kind == FD_KIND_SOCK) {
-            __libc_sock_close_handle(&e);
-        }
+        __libc_fd_close_entry(&e);
         errno = (int)(-nf);
         return -1;
     }
-    if (replaced.kind == FD_KIND_SERVER) {
-        pipe_close_handle(replaced.srv_handle);
-    } else if (replaced.kind == FD_KIND_VFS) {
-        __libc_vfs_close_handle(replaced.srv_handle);
-    } else if (replaced.kind == FD_KIND_SOCK) {
-        __libc_sock_close_handle(&replaced);
-    }
+    __libc_fd_close_entry(&replaced);
     return (int)nf;
 }
 
@@ -591,8 +576,8 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
     preq.op = PIPE_OP_POLL;
     nfds_t srv_map[PIPE_POLL_MAX];
     uint32_t srv_count = 0;
-    nfds_t tty_map[PIPE_POLL_MAX];
-    int16_t tty_events[PIPE_POLL_MAX];
+    tty_poll_item_t tty_items[TTY_POLL_MAX];
+    nfds_t tty_map[TTY_POLL_MAX];
     uint32_t tty_count = 0;
     sock_poll_item_t sock_items[SOCK_POLL_MAX];
     nfds_t sock_map[SOCK_POLL_MAX];
@@ -623,8 +608,10 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
                 local_ready++;
             }
             if (in) {
+                tty_items[tty_count].handle = 0u;
+                tty_items[tty_count].events = in;
+                tty_items[tty_count].revents = 0;
                 tty_map[tty_count] = i;
-                tty_events[tty_count] = in;
                 tty_count++;
             }
             continue;
@@ -639,11 +626,19 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
             continue;
         }
         if (e.kind == FD_KIND_SERVER) {
-            preq.items[srv_count].handle = e.srv_handle;
-            preq.items[srv_count].events = fds[i].events;
-            preq.items[srv_count].revents = 0;
-            srv_map[srv_count] = i;
-            srv_count++;
+            if (__libc_tty_is_srv(e.srv_pid, e.srv_chanid)) {
+                tty_items[tty_count].handle = e.srv_handle;
+                tty_items[tty_count].events = fds[i].events;
+                tty_items[tty_count].revents = 0;
+                tty_map[tty_count] = i;
+                tty_count++;
+            } else {
+                preq.items[srv_count].handle = e.srv_handle;
+                preq.items[srv_count].events = fds[i].events;
+                preq.items[srv_count].revents = 0;
+                srv_map[srv_count] = i;
+                srv_count++;
+            }
             continue;
         }
         if (e.kind == FD_KIND_SOCK) {
@@ -700,16 +695,13 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
         }
     }
 
-    /* Single-server fast path: only /dev/tty FDs being polled. */
+    /* Single-server fast path: only /dev/tty or PTY FDs being polled. */
     if (srv_count == 0u && sock_count == 0u && net_count == 0u &&
         tty_count > 0u) {
-        int16_t agg_events = 0;
-        for (uint32_t k = 0; k < tty_count; k++) {
-            agg_events = (int16_t)(agg_events | tty_events[k]);
-        }
-        int16_t trev = 0;
-        long tr = __libc_tty_poll(agg_events,
-                                  (local_ready > 0) ? 0 : timeout_ns, &trev);
+        tty_poll_item_t out_items[TTY_POLL_MAX];
+        long tr =
+            __libc_tty_poll(tty_items, tty_count,
+                            (local_ready > 0) ? 0 : timeout_ns, out_items);
         if (tr < 0) {
             restore_sigmask(swapped, &oldmask);
             if (tr == -EINTR) {
@@ -720,7 +712,7 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
         }
         int total_ready = local_ready;
         for (uint32_t k = 0; k < tty_count; k++) {
-            short hit = (short)(trev & tty_events[k]);
+            short hit = out_items[k].revents;
             if (hit != 0) {
                 if (fds[tty_map[k]].revents == 0) {
                     total_ready++;
@@ -834,10 +826,6 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
             return -1;
         }
     }
-    int16_t agg_tty_events = 0;
-    for (uint32_t k = 0; k < tty_count; k++) {
-        agg_tty_events = (int16_t)(agg_tty_events | tty_events[k]);
-    }
     int64_t deadline_ns = -1;
     if (timeout_ns > 0) {
         struct timespec now_ts = {0};
@@ -877,8 +865,8 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
         }
 
         if (tty_count > 0u) {
-            int16_t trev = 0;
-            long tr = __libc_tty_poll(agg_tty_events, 0, &trev);
+            tty_poll_item_t out_items[TTY_POLL_MAX];
+            long tr = __libc_tty_poll(tty_items, tty_count, 0, out_items);
             if (tr < 0) {
                 restore_sigmask(swapped, &oldmask);
                 if (tr == -EINTR) {
@@ -888,7 +876,7 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
                 return -1;
             }
             for (uint32_t k = 0; k < tty_count; k++) {
-                short hit = (short)(trev & tty_events[k]);
+                short hit = out_items[k].revents;
                 if (hit != 0) {
                     if (fds[tty_map[k]].revents == 0) {
                         total_ready++;

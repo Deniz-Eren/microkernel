@@ -13,6 +13,7 @@
 
 /* need:: ICD_PROC_0010 */
 
+#include <sys/time.h>
 #include <sys/types.h>
 
 typedef unsigned long rlim_t;
@@ -29,12 +30,21 @@ typedef unsigned long rlim_t;
 #define RLIMIT_STACK 5
 #define RLIMIT_AS 6
 
+#define RUSAGE_SELF 0
+#define RUSAGE_CHILDREN (-1)
+
 struct rlimit {
     rlim_t rlim_cur;
     rlim_t rlim_max;
 };
 
+struct rusage {
+    struct timeval ru_utime;
+    struct timeval ru_stime;
+};
+
 int getrlimit(int resource, struct rlimit *rlp);
 int setrlimit(int resource, const struct rlimit *rlp);
+int getrusage(int who, struct rusage *r_usage);
 
 #endif /* _SYS_RESOURCE_H */

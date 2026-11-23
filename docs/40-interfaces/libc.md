@@ -244,3 +244,17 @@ POSIX.1-2024 `ustar` and `cpio` header macros ({need}`ARC_LIBC_0001`,
 `<sys/net.h>` or kernel leakage ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
 {need}`SWR_LIBC_0020`).
 ```
+
+```{icd} POSIX.1-2024 XSI syslog, time, and uio headers
+:id: ICD_LIBC_0018
+:status: active
+:posix: XBD/syslog.h, XBD/sys/time.h, XBD/sys/uio.h (XSI)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0029
+
+`<syslog.h>` declares `LOG_*`, `openlog`, `syslog`, `closelog`, and
+`setlogmask`. `<sys/time.h>` declares `struct timeval` and `utimes`.
+`<sys/uio.h>` declares `struct iovec`, `readv`, and `writev`. Non-POSIX helpers
+stay guarded out of strict `_POSIX_C_SOURCE=202405L` views
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0029`).
+```

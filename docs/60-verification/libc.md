@@ -373,3 +373,16 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`
 delete workflows. Gate 2 verifies all 108 Base utilities
 ({need}`SWR_LIBC_0028`).
 ```
+
+```{ver} Verify XSI syslog, crypt, time, uio, and OpenSSH libc APIs
+:id: VER_LIBC_0029
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0029
+
+`utilstest` (`tests/utilstest/test_utils.c`) verifies `<syslog.h>`, `crypt`,
+`gettimeofday`, `utimes`/`futimes`, `readv`/`writev`, `getrusage`, `pw`/`gr`
+iterators, `setresuid`/`setresgid`, `getgrouplist`/`initgroups`, and `chroot`.
+Gate 1 (`tests/posix/test_headers.py`) verifies header compilation and hygiene
+({need}`SWR_LIBC_0029`).
+```
