@@ -42,6 +42,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Reordered `docs/records/TASKS.md` to pull Ring 3 TCP/IP networking
+  (`TSK_0041`) and the five remaining network Base headers (`TSK_0047`) ahead of
+  the remaining XCU utility waves, and split `TSK_0048` into `TSK_0048`
+  (encoding, logging, terminal, and user utilities) and `TSK_0053` (scheduling,
+  spooling, and mail utilities).
 - Reordered and split the remaining POSIX.1-2024 Base task backlog in
   `docs/records/TASKS.md`: moved i18n headers (`TSK_0038`) and `<dlfcn.h>`
   (`TSK_0040`) ahead of the XCU utility waves so all non-network Base C headers

@@ -338,11 +338,11 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** Remaining XCU text, archive, and
-  language utilities (`sort`, `uniq`, `diff`, `patch`, `pax`, `awk`, `bc`,
-  `m4`), and Ring 3 TCP/IP networking (`<netdb.h>`, `<netinet/in.h>`,
-  `<arpa/inet.h>`, `<net/if.h>`, `<netinet/tcp.h>`). See
-  [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** Ring 3 TCP/IP networking (`virtio-net`,
+  `<netdb.h>`, `<netinet/in.h>`, `<arpa/inet.h>`, `<net/if.h>`,
+  `<netinet/tcp.h>`), followed by the remaining XCU text, archive, language, and
+  batch utilities (`sort`, `uniq`, `diff`, `patch`, `pax`, `awk`, `bc`, `m4`).
+  See [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
