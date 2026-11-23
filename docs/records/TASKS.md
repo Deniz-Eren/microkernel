@@ -21,21 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0057 — Port OpenSSH Portable sshd and ssh-keygen to Ring 3
-
-```{task} Port OpenSSH Portable sshd and ssh-keygen to Ring 3
-:id: TSK_0057
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_IPC_0001, SYS_LIBC_0001
-
-Cross-compile OpenSSH Portable (`--without-openssl --without-zlib`) for Ring 3
-with Ed25519 `authorized_keys` and dev password login. Keep only CMake build
-configurations in the repository. Download and build OpenSSH during the CMake
-build without cloning upstream source into the repository. Start `sshd` on
-interactive boot and verify real OpenSSH client logins in CTest
-({need}`SYS_IPC_0001`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0058 — Cross-compile zlib into the Ring 3 sysroot via CMake
 
 ```{task} Cross-compile zlib into the Ring 3 sysroot via CMake

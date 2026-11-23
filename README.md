@@ -164,16 +164,29 @@ the Ring 3 command shell (`/boot/sh`):
 command line `init=sh`. It starts the Ring 3 system servers (`sysproc`,
 `ttyserv`, `pipeserv`, `vfsserv`, `sockserv`, `rtcdrv`, `blkdrv`, `netserv`)
 plus `/boot/sh` and connects `COM1` to your terminal (`-serial mon:stdio`). It
-also forwards localhost TCP ports (`2222:22,8080:8080`) into the VM. Override
-the port list with `MICROKERNEL_NET_PORTS` (or `none`). Once the `$ ` prompt
-appears, you can run POSIX and network commands directly:
+forwards localhost TCP ports (`2222:22,8080:8080`) into the VM and starts
+OpenSSH `sshd` automatically via `/boot/sshd-setup` on guest port 22. Override
+the port list with `MICROKERNEL_NET_PORTS` (or `none`). Once `[OK] sshd
+listening on port 22` and the `$ ` prompt appear, you can run commands on the
+serial console or connect from the host over SSH:
 
 ```sh
+# Inside the Microkernel serial console:
 ls /boot
 echo hello microkernel > /tmp/note.txt && cat /tmp/note.txt
 ping -c 2 10.0.2.2
 nc -l 8080   # connect from host: nc 127.0.0.1 8080
 ```
+
+```bash
+# From another terminal on your host (dev password: microkernel):
+ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    root@127.0.0.1
+```
+
+To use an Ed25519 key instead of the development password, append your host
+public key (`~/.ssh/id_ed25519.pub`) to `/mnt/root/.ssh/authorized_keys` (`chmod
+600`) inside the VM. Host keys and `/mnt/etc/ssh` persist in `build/disk.img`.
 
 Press `Ctrl-A` followed by `X` to exit QEMU cleanly. If `qemu-system-x86_64` is
 installed directly on your host, you can also boot `build/microkernel-shell.iso`
@@ -279,6 +292,11 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   inspect, and checksum files with `diff`, `cmp`, `comm`, `patch`, `pax`,
   `file`, `strings`, `tsort`, and `cksum`. Encode and decode files with
   `uuencode` and `uudecode`.
+- **Connect over TCP/IP and OpenSSH:** Run `ping` and `nc` (`-l`, `-k`, `-e`,
+  `-u`) over Ring 3 `netserv` (`virtio-net`). Interactive `init=sh` boot runs
+  `/boot/sshd-setup` to prepare `/mnt/etc/ssh` and generate an Ed25519 host key
+  with `/boot/ssh-keygen`. It then launches OpenSSH Portable `/boot/sshd` on TCP
+  port 22 for Ed25519 public-key, password, and PTY logins.
 - **Inspect and control processes, timing, credentials, and terminals:** View
   live processes with `ps` and check identity with `id` and `logname`. Adjust
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,

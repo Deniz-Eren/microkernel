@@ -82,6 +82,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added CMake `FetchContent` cross-compilation of OpenSSH Portable `9.9p2`
+  (`/boot/sshd`, `/boot/sshd-session`, `/boot/ssh-keygen`, downloaded at build
+  time with zero vendored source), `/boot/sshd-setup` auto-start on `init=sh`
+  interactive boot (Ed25519 host key, `/mnt/etc/passwd` with dev password
+  `microkernel`, `/mnt/etc/ssh/sshd_config`), and real OpenSSH client CTest
+  `ipc.sshd_e2e` verifying Ed25519 public-key exec, password login, and
+  interactive `-tt` PTY sessions (`TSK_0057`, `SWR_IPC_0016`, `ADR_0054`,
+  `COMP_IPC_0021`, `VER_IPC_0014`).
 - Added Ring 3 PTYs (`/dev/ptmx`, `/dev/pts/N`, `posix_openpt`/`grantpt`/
   `unlockpt`/`ptsname*`, `<sys/ioctl.h>`, `SIGWINCH`), virtual character devices
   (`/dev/null`, `/dev/zero`, ChaCha20 `/dev/urandom`), Ring 3 `AF_UNIX`

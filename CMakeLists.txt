@@ -226,6 +226,7 @@ add_subdirectory(servers/rtcdrv)
 add_subdirectory(servers/blkdrv)
 add_subdirectory(servers/netserv)
 add_subdirectory(bin)
+include(cmake/openssh.cmake)
 add_subdirectory(tests/ipccli)
 add_subdirectory(tests/sigtest)
 add_subdirectory(tests/proctest)
@@ -511,5 +512,17 @@ if(MICROKERNEL_ARCH STREQUAL "x86-64" AND NOT MICROKERNEL_COVERAGE)
     set_tests_properties(
         ipc.net_hostfwd
         PROPERTIES LABELS "ipc;net"
+    )
+    add_test(
+        NAME ipc.sshd_e2e
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            "${CMAKE_SOURCE_DIR}/tests/boot/test_sshd_e2e.py"
+            --build-dir "${CMAKE_BINARY_DIR}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+    set_tests_properties(
+        ipc.sshd_e2e
+        PROPERTIES LABELS "ipc;net;ssh"
     )
 endif()

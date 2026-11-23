@@ -123,3 +123,6 @@ microkernel_add_user_executable(lp utils/lp.c)
 microkernel_add_user_executable(mailx utils/mailx.c)
 microkernel_add_user_executable(nc utils/nc.c)
 microkernel_add_user_executable(ping utils/ping.c)
+microkernel_add_user_executable(
+    sshd_setup BOOT_NAME sshd-setup utils/sshd_setup.c
+)

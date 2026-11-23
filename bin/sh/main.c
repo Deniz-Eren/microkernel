@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include "sh.h"
 
@@ -105,6 +106,18 @@ int main(int argc, char **argv) {
         (void)setpgid(0, 0);
         g_sh.shell_pgid = getpgrp();
         (void)tcsetpgrp(STDIN_FILENO, g_sh.shell_pgid);
+        if (getppid() == 0 && argc == 1 &&
+            access("/boot/sshd-setup", F_OK) == 0) {
+            pid_t sp = fork();
+            if (sp == 0) {
+                char *const sargv[] = {(char *)"/boot/sshd-setup", NULL};
+                (void)execv("/boot/sshd-setup", sargv);
+                _exit(127);
+            }
+            if (sp > 0) {
+                (void)waitpid(sp, NULL, 0);
+            }
+        }
     } else {
         sh_buf_t script = {0};
         char chunk[512];

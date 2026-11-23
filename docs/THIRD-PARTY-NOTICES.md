@@ -127,6 +127,16 @@ SOFTWARE.
 * **Source:** `posix-issue8-os-dev` skill (`references/issue8-manifest.tsv`).
 * **License:** MIT License. Copyright (c) 2026 Deniz Eren.
 
+### OpenSSH Portable (9.9p2)
+* **Role:** Ring 3 SSH server (`sshd`, `sshd-session`) and key generator
+  (`ssh-keygen`), downloaded and cross-compiled during the CMake build by
+  `cmake/openssh.cmake` (SHA-256
+  `91aadb603e08cc285eddf965e1199d02585fa94d994d6cae5b41e1721e215673`). Upstream
+  source files are not stored in this repository.
+* **Source:** [openssh.com][openssh-src]
+* **License:** BSD and ISC licenses (plus public-domain cryptography components
+  as documented in the upstream `LICENCE` file of OpenSSH Portable).
+
 ## 3. Trademarks
 
 * POSIX® is a registered trademark of the Institute of Electrical and Electronic
@@ -140,3 +150,5 @@ SOFTWARE.
   https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx
 [semver-src]: https://github.com/semver/semver.md/blob/master/semver.md
 [cc-by-3]: https://creativecommons.org/licenses/by/3.0/legalcode
+[openssh-src]:
+  https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p2.tar.gz

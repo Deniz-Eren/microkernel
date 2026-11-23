@@ -20,6 +20,21 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0057 — Port OpenSSH Portable sshd and ssh-keygen to Ring 3
+
+```{task} Port OpenSSH Portable sshd and ssh-keygen to Ring 3
+:id: TSK_0057
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0054, SWR_IPC_0016
+
+Cross-compile OpenSSH Portable (`--without-openssl --without-zlib`) for Ring 3
+with Ed25519 `authorized_keys` and dev password login. Keep only CMake build
+configurations in the repository. Download and build OpenSSH during the CMake
+build without cloning upstream source into the repository. Start `sshd` on
+interactive boot and verify real OpenSSH client logins in CTest
+({need}`SWR_IPC_0016`, {need}`SYS_IPC_0001`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0056 — Add Ring 3 PTYs, virtual devices, SCM_RIGHTS, and OpenSSH APIs
 
 ```{task} Add Ring 3 PTYs, virtual devices, SCM_RIGHTS, and OpenSSH APIs

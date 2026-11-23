@@ -27,6 +27,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-pip \
         e2fsprogs \
         git \
+        curl \
+        make \
+        perl \
+        openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure unversioned llvm and clang tool symlinks exist (Debian ships versioned names)

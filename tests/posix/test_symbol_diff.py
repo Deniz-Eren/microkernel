@@ -58,10 +58,11 @@ SH_BUILTIN_UTILITIES: tuple[str, ...] = (
     "wait",
 )
 
-# Intentional non-POSIX Ring 3 utilities built in bin/ (see ADR_0052).
+# Intentional non-POSIX Ring 3 utilities built in bin/ (see ADR_0052, ADR_0054).
 NON_POSIX_EXTENSION_UTILITIES: tuple[str, ...] = (
     "nc",
     "ping",
+    "sshd-setup",
 )
 
 # Intentional non-POSIX UNIX/OpenSSH compatibility exports in libc.a (see

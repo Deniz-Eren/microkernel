@@ -260,3 +260,17 @@ forwarding and hardened wire RX/TX handling ({need}`ICD_IPC_0017`,
 and `libc/src/socket.c` implement `AF_UNIX` `SCM_RIGHTS` FD passing
 ({need}`ICD_IPC_0018`, {need}`SWR_IPC_0015`).
 ```
+
+```{comp} Ring 3 OpenSSH Portable build integration and boot setup helper
+:id: COMP_IPC_0021
+:status: active
+:refines: ARC_IPC_0001, ICD_IPC_0017, ICD_IPC_0018
+:satisfies: SWR_IPC_0016
+
+`cmake/openssh.cmake`, `cmake/openssh_config.h`, and `cmake/openssh_compat/`
+download and cross-compile OpenSSH Portable `9.9p2` (`sshd`, `sshd-session`,
+`ssh-keygen`) into `boot.tar` during the CMake build. `bin/utils/sshd_setup.c`
+initializes `/mnt/etc/ssh`, `/mnt/etc/passwd`, and the Ed25519 host key, and
+starts `/boot/sshd` on `init=sh` interactive boot ({need}`ICD_IPC_0017`,
+{need}`ICD_IPC_0018`, {need}`SWR_IPC_0016`).
+```

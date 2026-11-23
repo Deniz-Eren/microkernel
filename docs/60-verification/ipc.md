@@ -172,3 +172,16 @@ verifies cross-process `SCM_RIGHTS` FD passing with `MSG_CMSG_CLOEXEC`.
 `utilstest` (`tests/utilstest/test_utils.c`) verifies `/dev/null`, `/dev/zero`,
 and `/dev/urandom` ({need}`SWR_IPC_0015`).
 ```
+
+```{ver} Verify real OpenSSH client logins into Microkernel sshd over QEMU
+:id: VER_IPC_0014
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0016
+
+CTest `ipc.sshd_e2e` (`tests/boot/test_sshd_e2e.py`) boots Microkernel with
+`init=sh` and localhost QEMU SLIRP `hostfwd` to guest port 22. It verifies
+automatic `/boot/sshd` startup and runs the real OpenSSH `ssh` client. The test
+checks Ed25519 `authorized_keys` command execution, development password login,
+and an interactive `-tt` PTY session over `/dev/pts/` ({need}`SWR_IPC_0016`).
+```

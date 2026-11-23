@@ -192,6 +192,20 @@ must supply `/dev/null`, `/dev/zero`, and ChaCha20-backed `/dev/urandom`.
 ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply Ring 3 OpenSSH Portable sshd, ssh-keygen, and boot setup
+:id: SWR_IPC_0016
+:status: active
+:derives: SYS_IPC_0001
+:traces: BDR_0003, BDR_0004, ADR_0002, ADR_0052, ADR_0053, ADR_0054
+
+The CMake build must download and cross-compile OpenSSH Portable `sshd`,
+`sshd-session`, and `ssh-keygen` into `boot.tar` without storing upstream source
+in git. Interactive `init=sh` boot must run `/boot/sshd-setup` to prepare
+`/mnt/etc/ssh`, an Ed25519 host key, and `/mnt/etc/passwd`. It must start
+`/boot/sshd` on TCP port 22 for Ed25519 public-key, password, and PTY sessions
+({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:
