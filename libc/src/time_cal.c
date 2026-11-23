@@ -17,7 +17,7 @@
 #include <string.h>
 #include <time.h>
 
-/* need:: COMP_LIBC_0009 COMP_LIBC_0011 */
+/* need:: COMP_LIBC_0009 COMP_LIBC_0011 COMP_LIBC_0012 */
 
 static const char *const k_wday_abbr[7] = {"Sun", "Mon", "Tue", "Wed",
                                            "Thu", "Fri", "Sat"};
@@ -581,4 +581,10 @@ size_t strftime(char *restrict s, size_t maxsize, const char *restrict format,
     }
     out.buf[out.pos] = '\0';
     return out.pos;
+}
+
+size_t strftime_l(char *restrict s, size_t maxsize, const char *restrict format,
+                  const struct tm *restrict timeptr, locale_t locale) {
+    (void)locale;
+    return strftime(s, maxsize, format, timeptr);
 }

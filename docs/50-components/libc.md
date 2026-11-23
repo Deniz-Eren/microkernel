@@ -154,3 +154,18 @@ exponential, logarithmic, trigonometric, and hyperbolic functions over
 `libc/src/time_cal.c` implements `tzset` and `tzname[2]` over `TZ`
 ({need}`ICD_LIBC_0011`, {need}`SWR_LIBC_0012`).
 ```
+
+```{comp} Ring 3 locale, multibyte, wctype, and core wchar components
+:id: COMP_LIBC_0012
+:status: active
+:posix: XBD/locale.h (CX), XBD/wchar.h (CX), XBD/wctype.h (CX)
+:refines: ARC_LIBC_0001, ICD_LIBC_0012
+:satisfies: SWR_LIBC_0013
+
+`libc/src/locale.c` implements `C`/`C.UTF-8` locale management over `FS.base`
+TLS. `libc/src/ctype.c`, `string.c`, and `time_cal.c` implement `*_l` helpers,
+`strcoll*`, and `strxfrm*`. `libc/src/wctype.c`, `wchar_mb.c`, `wchar_str.c`,
+and `wchar_conv.c` implement `<wctype.h>`, UTF-8 multibyte conversions, `wmem*`,
+`wcs*`, `wcsto*`, `wcstoimax`/`wcstoumax`, and `wcsftime`
+({need}`ICD_LIBC_0012`, {need}`SWR_LIBC_0013`).
+```

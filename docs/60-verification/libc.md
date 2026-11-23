@@ -162,3 +162,17 @@ The headless QEMU harness `tests/test_runner.py` runs `vfstest`
 and poles, and `tzset`/`tzname`. CTest Gates 1 to 3 check standalone headers,
 XSI isolation, Base exports, and async-signal-safety ({need}`SWR_LIBC_0012`).
 ```
+
+```{ver} Verify <locale.h>, *_l helpers, multibyte, and core wchar/wctype
+:id: VER_LIBC_0013
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0013
+
+The headless QEMU harness `tests/test_runner.py` runs `libctest`
+(`tests/libctest/test_libc_issue8.c`). It checks `C`/`C.UTF-8` locales,
+per-thread `uselocale`, `getlocalename_l`, `*_l` helpers, UTF-8 multibyte
+conversions, `<wctype.h>`, `wmem*`, `wcs*`, `wcsto*`, and `wcsftime`. CTest
+Gates 1 to 3 check standalone headers, Base exports, and async-signal-safety
+({need}`SWR_LIBC_0013`).
+```

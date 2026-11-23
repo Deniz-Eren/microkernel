@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <strings.h>
 
-/* need:: COMP_LIBC_0004 */
+/* need:: COMP_LIBC_0004 COMP_LIBC_0012 */
 
 int isupper(int c) {
     return (c >= 'A' && c <= 'Z') ? 1 : 0;
@@ -77,6 +77,76 @@ int toupper(int c) {
     return islower(c) ? (c - ('a' - 'A')) : c;
 }
 
+int isupper_l(int c, locale_t locale) {
+    (void)locale;
+    return isupper(c);
+}
+
+int islower_l(int c, locale_t locale) {
+    (void)locale;
+    return islower(c);
+}
+
+int isalpha_l(int c, locale_t locale) {
+    (void)locale;
+    return isalpha(c);
+}
+
+int isdigit_l(int c, locale_t locale) {
+    (void)locale;
+    return isdigit(c);
+}
+
+int isalnum_l(int c, locale_t locale) {
+    (void)locale;
+    return isalnum(c);
+}
+
+int isxdigit_l(int c, locale_t locale) {
+    (void)locale;
+    return isxdigit(c);
+}
+
+int isblank_l(int c, locale_t locale) {
+    (void)locale;
+    return isblank(c);
+}
+
+int isspace_l(int c, locale_t locale) {
+    (void)locale;
+    return isspace(c);
+}
+
+int iscntrl_l(int c, locale_t locale) {
+    (void)locale;
+    return iscntrl(c);
+}
+
+int isprint_l(int c, locale_t locale) {
+    (void)locale;
+    return isprint(c);
+}
+
+int isgraph_l(int c, locale_t locale) {
+    (void)locale;
+    return isgraph(c);
+}
+
+int ispunct_l(int c, locale_t locale) {
+    (void)locale;
+    return ispunct(c);
+}
+
+int tolower_l(int c, locale_t locale) {
+    (void)locale;
+    return tolower(c);
+}
+
+int toupper_l(int c, locale_t locale) {
+    (void)locale;
+    return toupper(c);
+}
+
 int strcasecmp(const char *s1, const char *s2) {
     while (*s1 && *s2) {
         int c1 = tolower((unsigned char)*s1);
@@ -90,6 +160,11 @@ int strcasecmp(const char *s1, const char *s2) {
     return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
 }
 
+int strcasecmp_l(const char *s1, const char *s2, locale_t locale) {
+    (void)locale;
+    return strcasecmp(s1, s2);
+}
+
 int strncasecmp(const char *s1, const char *s2, size_t n) {
     for (size_t i = 0; i < n; i++) {
         int c1 = tolower((unsigned char)s1[i]);
@@ -99,6 +174,11 @@ int strncasecmp(const char *s1, const char *s2, size_t n) {
         }
     }
     return 0;
+}
+
+int strncasecmp_l(const char *s1, const char *s2, size_t n, locale_t locale) {
+    (void)locale;
+    return strncasecmp(s1, s2, n);
 }
 
 _Noreturn void __assert_fail(const char *expr, const char *file,

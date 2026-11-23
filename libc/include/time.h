@@ -11,9 +11,10 @@
 #ifndef _TIME_H
 #define _TIME_H
 
-/* need:: ICD_PROC_0005 ICD_LIBC_0009 ICD_LIBC_0011 */
+/* need:: ICD_PROC_0005 ICD_LIBC_0009 ICD_LIBC_0011 ICD_LIBC_0012 */
 
 #include <stddef.h>
+#include <sys/_locale_t.h>
 #include <sys/types.h>
 
 #define CLOCK_REALTIME 0
@@ -86,6 +87,8 @@ char *ctime(const time_t *clock);
 char *ctime_r(const time_t *clock, char *buf);
 size_t strftime(char *restrict s, size_t maxsize, const char *restrict format,
                 const struct tm *restrict timeptr);
+size_t strftime_l(char *restrict s, size_t maxsize, const char *restrict format,
+                  const struct tm *restrict timeptr, locale_t locale);
 
 int clock_getres(clockid_t clock_id, struct timespec *res);
 int clock_gettime(clockid_t clock_id, struct timespec *tp);

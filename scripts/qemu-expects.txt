@@ -65,6 +65,9 @@ flockfile/ftrylockfile/funlockfile serialized concurrent stdio
 strlcpy, strlcat, reallocarray, and secure_getenv verified
 getentropy\(32\) uniqueness and >256 EINVAL verified
 <stdatomic\.h>, <stdalign\.h>, and <uchar\.h> UTF-16/UTF-32
+<locale\.h> C/C\.UTF-8, uselocale, getlocalename_l, and \*_l helpers verified
+<stdlib\.h> multibyte, mbr\*/mbs\*/wcs\* UTF-8, and <wctype\.h> verified
+<wchar\.h> wmem\*, wcs\*, wcsto\*, wcstoimax/wcstoumax, and wcsftime verified
 mmap slab coalescing, alignment, and 20 MiB churn verified
 large munmap reclamation, free errno, and realloc boundaries
 4-thread concurrent mmap malloc/calloc/realloc/free stress

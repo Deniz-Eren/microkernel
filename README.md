@@ -301,8 +301,10 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   `mmap`-backed coalescing heap (`malloc`, `aligned_alloc`, `reallocarray`), map
   shared memory (`shm_open`), enforce W^X page protections, or lock pages in RAM
   (`mlock`). Compute with `<fenv.h>`, `<math.h>`, `<complex.h>`, and
-  `<tgmath.h>` compiled for `x86-64-v3` with hardware `FMA`. Standard helpers
-  include `strtod*`, `quick_exit`, `qsort_r`, `getsubopt`,
+  `<tgmath.h>` compiled for `x86-64-v3` with hardware `FMA`. Locale and wide
+  text support covers `<locale.h>` (`C`/`C.UTF-8`, per-thread `uselocale`, `*_l`
+  helpers), UTF-8 multibyte conversions, `<wctype.h>`, and core `<wchar.h>`.
+  Other helpers include `strtod*`, `quick_exit`, `qsort_r`, `getsubopt`,
   `stpcpy`/`memmem`/`strerror_r`, `getopt`, `fnmatch`, `setjmp`, `realpath`,
   `<stdatomic.h>`, and `<uchar.h>`.
 
@@ -325,10 +327,10 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** Locales, wide characters, `<regex.h>`,
-  `<glob.h>`, `<wordexp.h>`, `<iconv.h>`, `<libintl.h>`, and `<dlfcn.h>`. Ring 3
-  TCP/IP networking and remaining shell grammar and XCU utilities follow. See
-  [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** Wide-oriented `FILE` streams,
+  `<regex.h>`, `<glob.h>`, `<wordexp.h>`, `<iconv.h>`, `<libintl.h>`, and
+  `<dlfcn.h>`. Ring 3 TCP/IP networking and remaining shell grammar and XCU
+  utilities follow. See [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree

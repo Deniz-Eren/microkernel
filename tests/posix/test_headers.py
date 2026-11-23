@@ -14,7 +14,7 @@
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
-# need:: VER_LIBC_0011 VER_LIBC_0012
+# need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013
 
 from __future__ import annotations
 
@@ -44,6 +44,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "inttypes.h",
     "iso646.h",
     "limits.h",
+    "locale.h",
     "math.h",
     "poll.h",
     "pthread.h",
@@ -69,6 +70,8 @@ POSIX_HEADERS: tuple[str, ...] = (
     "time.h",
     "uchar.h",
     "unistd.h",
+    "wchar.h",
+    "wctype.h",
     "sys/mman.h",
     "sys/resource.h",
     "sys/select.h",
@@ -1339,6 +1342,77 @@ class PosixHeaderMatrixTests(unittest.TestCase):
                 rc, err = _compile_snippet(src, ["-fhosted", macro])
                 self.assertEqual(
                     rc, 0, f"utimens/lgamma/tzset check failed:\n{err}"
+                )
+
+    def test_locale_wchar_and_wctype_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <ctype.h>",
+                "#include <inttypes.h>",
+                "#include <locale.h>",
+                "#include <stdlib.h>",
+                "#include <string.h>",
+                "#include <strings.h>",
+                "#include <time.h>",
+                "#include <wchar.h>",
+                "#include <wctype.h>",
+                "#ifdef SYS_DEBUG_LOG",
+                '#error "locale/wchar/wctype leaked SYS_DEBUG_LOG"',
+                "#endif",
+                "static int __check_loc_wc(void) {",
+                "    locale_t loc = newlocale(LC_ALL_MASK, \"C.UTF-8\",",
+                "                             (locale_t)0);",
+                "    locale_t dup = duplocale(loc);",
+                "    locale_t old = uselocale(dup);",
+                "    const char *nm = getlocalename_l(LC_CTYPE, dup);",
+                "    struct lconv *lc = localeconv();",
+                "    (void)setlocale(LC_ALL, (const char *)0);",
+                "    mbstate_t st = {0};",
+                "    wchar_t wbuf[16] = {0};",
+                "    char cbuf[16] = {0};",
+                "    struct tm tm0 = {0};",
+                "    (void)mbsinit(&st);",
+                "    (void)btowc('A');",
+                "    (void)wctob((wint_t)'A');",
+                "    (void)mblen(\"a\", 1u);",
+                "    (void)mbtowc(wbuf, \"a\", 1u);",
+                "    (void)wctomb(cbuf, L'a');",
+                "    (void)mbstowcs(wbuf, \"a\", 16u);",
+                "    (void)wcstombs(cbuf, L\"a\", 16u);",
+                "    (void)isalpha_l('a', dup);",
+                "    (void)strcasecmp_l(\"a\", \"A\", dup);",
+                "    (void)strcoll_l(\"a\", \"b\", dup);",
+                "    (void)strxfrm_l(cbuf, \"a\", sizeof(cbuf), dup);",
+                "    (void)strerror_l(0, dup);",
+                "    (void)strftime_l(cbuf, sizeof(cbuf), \"%Y\", &tm0, dup);",
+                "    (void)iswalpha_l((wint_t)'a', dup);",
+                "    (void)towlower_l((wint_t)'A', dup);",
+                "    (void)iswctype_l((wint_t)'a', wctype_l(\"alpha\", dup),",
+                "                     dup);",
+                "    (void)towctrans_l((wint_t)'A',",
+                "                      wctrans_l(\"tolower\", dup), dup);",
+                "    (void)wcscasecmp_l(L\"a\", L\"A\", dup);",
+                "    (void)wcscoll_l(L\"a\", L\"b\", dup);",
+                "    (void)wcsxfrm_l(wbuf, L\"a\", 16u, dup);",
+                "    (void)wcstoimax(L\"42\", (wchar_t **)0, 10);",
+                "    (void)wcstoumax(L\"42\", (wchar_t **)0, 10);",
+                "    (void)wcstod(L\"1.5\", (wchar_t **)0);",
+                "    (void)wcsftime(wbuf, 16u, L\"%Y\", &tm0);",
+                "    (void)uselocale(old);",
+                "    freelocale(dup);",
+                "    freelocale(loc);",
+                "    return (int)MB_CUR_MAX + (nm != (const char *)0) +",
+                "           (lc != (struct lconv *)0) + (WEOF != (wint_t)0);",
+                "}",
+                "int (*__lwc_ref)(void) = __check_loc_wc;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(
+                    rc, 0, f"locale/wchar/wctype check failed:\n{err}"
                 )
 
 

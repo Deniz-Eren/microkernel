@@ -175,6 +175,22 @@ with `UTIME_NOW` and `UTIME_OMIT` in Ring 3. `libc` must supply `lgamma`,
 `_POSIX_C_SOURCE=202405L` ({need}`SYS_LIBC_0001`, {need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply <locale.h>, *_l helpers, multibyte, and core wchar/wctype
+:id: SWR_LIBC_0013
+:status: active
+:posix: XBD/locale.h (CX), XBD/wchar.h (CX), XBD/wctype.h (CX)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0035
+
+`libc` must supply `<locale.h>` (`C` and `C.UTF-8` locales, `setlocale`,
+`localeconv`, `newlocale`, `duplocale`, `freelocale`, `uselocale`, and
+`getlocalename_l`) and `*_l` helpers in `<ctype.h>`, `<strings.h>`,
+`<string.h>`, and `<time.h>`. It must supply `<stdlib.h>` multibyte conversions,
+`<wctype.h>`, core `<wchar.h>` (`btowc`, `wctob`, `mbr*`, `mbs*`, `wcrtomb`,
+`wmem*`, `wcs*`, `wcsto*`, `wcsftime`), and `<inttypes.h>`
+`wcstoimax`/`wcstoumax` in Ring 3 ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

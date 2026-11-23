@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0009 */
+/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0009 COMP_LIBC_0012 */
 
 typedef uint64_t __attribute__((may_alias, aligned(1))) libc_u64_unaligned_t;
 
@@ -516,6 +516,38 @@ char *strerror(int errnum) {
         errno = EINVAL;
     }
     return (char *)msg;
+}
+
+char *strerror_l(int errnum, locale_t locale) {
+    (void)locale;
+    return strerror(errnum);
+}
+
+int strcoll(const char *s1, const char *s2) {
+    return strcmp(s1, s2);
+}
+
+int strcoll_l(const char *s1, const char *s2, locale_t locale) {
+    (void)locale;
+    return strcmp(s1, s2);
+}
+
+size_t strxfrm(char *restrict s1, const char *restrict s2, size_t n) {
+    size_t len = strlen(s2);
+    if (n > 0u) {
+        size_t copy = len < (n - 1u) ? len : (n - 1u);
+        if (copy > 0u) {
+            memcpy(s1, s2, copy);
+        }
+        s1[copy] = '\0';
+    }
+    return len;
+}
+
+size_t strxfrm_l(char *restrict s1, const char *restrict s2, size_t n,
+                 locale_t locale) {
+    (void)locale;
+    return strxfrm(s1, s2, n);
 }
 
 int strerror_r(int errnum, char *strerrbuf, size_t buflen) {

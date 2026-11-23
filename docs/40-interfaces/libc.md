@@ -153,3 +153,20 @@ type-generic `lgamma` macro. `<time.h>` declares `tzset` and `extern char
 *tzname[2]` without exposing XSI globals under `_POSIX_C_SOURCE=202405L`
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0012`).
 ```
+
+```{icd} Locale, multibyte, <wctype.h>, and core <wchar.h> interfaces
+:id: ICD_LIBC_0012
+:status: active
+:posix: XBD/locale.h (CX), XBD/wchar.h (CX), XBD/wctype.h (CX)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0013
+
+`<locale.h>` declares `LC_*`, `LC_GLOBAL_LOCALE`, `locale_t`, `struct lconv`,
+`setlocale`, `localeconv`, `newlocale`, `duplocale`, `freelocale`, `uselocale`,
+and `getlocalename_l`. `<ctype.h>`, `<strings.h>`, `<string.h>`, and `<time.h>`
+declare `*_l` helpers, `strcoll*`, and `strxfrm*`. `<stdlib.h>`, `<wctype.h>`,
+`<wchar.h>`, and `<inttypes.h>` declare `MB_CUR_MAX`, multibyte functions,
+`isw*`/`tow*`/`wctype*`/`wctrans*`, `wmem*`, `wcs*`, `wcsto*`, `wcsftime`, and
+`wcstoimax`/`wcstoumax` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
+{need}`SWR_LIBC_0013`).
+```

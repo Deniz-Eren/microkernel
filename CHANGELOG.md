@@ -59,6 +59,19 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 `<locale.h>`, `*_l` locale helpers, `<stdlib.h>` multibyte
+  conversions, `<wctype.h>`, and core `<wchar.h>` in Ring 3 `libc` (`TSK_0037`,
+  `SWR_LIBC_0013`, `ADR_0035`, `ICD_LIBC_0012`, `COMP_LIBC_0012`,
+  `VER_LIBC_0013`): implemented `C` and `C.UTF-8` locales (`setlocale`,
+  `localeconv`, `newlocale`, `duplocale`, `freelocale`, `uselocale` over
+  `FS.base` TLS, `getlocalename_l`) in `libc/src/locale.c`; added `*_l` helpers
+  in `<ctype.h>`, `<strings.h>`, `<string.h>`, and `<time.h>`; added
+  `MB_CUR_MAX` and `mblen`/`mbtowc`/`wctomb`/`mbstowcs`/`wcstombs`; added all 36
+  `<wctype.h>` functions in `libc/src/wctype.c` and 51 core `<wchar.h>` plus
+  `<inttypes.h>` `wcstoimax`/`wcstoumax` functions across
+  `libc/src/wchar_{mb,str,conv}.c`; raised Gate 2 to `54/70` Base headers and
+  `939/1037` Base interfaces (+123); and verified in QEMU (`libctest`) and CTest
+  Gates 1 to 3 with zero Ring 0 changes.
 - Added POSIX.1-2024 Base `futimens`/`utimensat`, `lgamma*`, and
   `tzset`/`tzname` in Ring 3 `libc` and `vfsserv` (`TSK_0049`, `SWR_LIBC_0012`,
   `ADR_0034`, `ICD_LIBC_0011`, `COMP_LIBC_0011`, `VER_LIBC_0012`): added

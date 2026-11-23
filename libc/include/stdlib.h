@@ -12,13 +12,16 @@
 #define _STDLIB_H
 
 /* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0006 ICD_IPC_0016 */
-/* need:: ICD_LIBC_0009 */
+/* need:: ICD_LIBC_0009 ICD_LIBC_0012 */
 
 #include <stddef.h>
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 #define RAND_MAX 2147483647
+
+size_t __libc_mb_cur_max(void);
+#define MB_CUR_MAX (__libc_mb_cur_max())
 
 typedef struct {
     int quot;
@@ -84,5 +87,10 @@ ldiv_t ldiv(long numer, long denom);
 lldiv_t lldiv(long long numer, long long denom);
 int rand(void);
 void srand(unsigned int seed);
+int mblen(const char *s, size_t n);
+int mbtowc(wchar_t *restrict pwc, const char *restrict s, size_t n);
+int wctomb(char *s, wchar_t wchar);
+size_t mbstowcs(wchar_t *restrict pwcs, const char *restrict s, size_t n);
+size_t wcstombs(char *restrict s, const wchar_t *restrict pwcs, size_t n);
 
 #endif /* _STDLIB_H */

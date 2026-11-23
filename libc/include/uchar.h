@@ -15,19 +15,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/_mbstate_t.h>
 
 typedef uint_least16_t char16_t;
 typedef uint_least32_t char32_t;
-
-#ifndef _MBSTATE_T_DEFINED
-#define _MBSTATE_T_DEFINED
-typedef struct {
-    uint32_t __codepoint;
-    uint16_t __pending_low;
-    uint8_t __expected;
-    uint8_t __seen;
-} mbstate_t;
-#endif /* _MBSTATE_T_DEFINED */
 
 size_t mbrtoc16(char16_t *restrict pc16, const char *restrict s, size_t n,
                 mbstate_t *restrict ps);

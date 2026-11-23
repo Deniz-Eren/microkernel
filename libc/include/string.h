@@ -11,9 +11,10 @@
 #ifndef _STRING_H
 #define _STRING_H
 
-/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0009 */
+/* need:: ICD_LIBC_0001 ICD_LIBC_0005 ICD_LIBC_0009 ICD_LIBC_0012 */
 
 #include <stddef.h>
+#include <sys/_locale_t.h>
 
 void *memset(void *dst, int c, size_t n);
 void *memcpy(void *dst, const void *src, size_t n);
@@ -26,6 +27,11 @@ size_t strlen(const char *s);
 size_t strnlen(const char *s, size_t maxlen);
 int strcmp(const char *a, const char *b);
 int strncmp(const char *a, const char *b, size_t n);
+int strcoll(const char *s1, const char *s2);
+int strcoll_l(const char *s1, const char *s2, locale_t locale);
+size_t strxfrm(char *restrict s1, const char *restrict s2, size_t n);
+size_t strxfrm_l(char *restrict s1, const char *restrict s2, size_t n,
+                 locale_t locale);
 char *strcpy(char *restrict dst, const char *restrict src);
 char *strncpy(char *restrict dst, const char *restrict src, size_t n);
 char *stpcpy(char *restrict dst, const char *restrict src);
@@ -46,6 +52,7 @@ char *strtok_r(char *restrict s, const char *restrict sep,
 char *strdup(const char *s);
 char *strndup(const char *s, size_t size);
 char *strerror(int errnum);
+char *strerror_l(int errnum, locale_t locale);
 int strerror_r(int errnum, char *strerrbuf, size_t buflen);
 char *strsignal(int sig);
 

@@ -20,6 +20,24 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0037 — Add <locale.h>, *_l helpers, multibyte, and core wchar/wctype
+
+```{task} Add <locale.h>, *_l helpers, multibyte, and core wchar/wctype
+:id: TSK_0037
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0035, SWR_LIBC_0013
+
+Supply `<locale.h>` (`C` and `C.UTF-8` locales, `setlocale`, `newlocale`,
+`duplocale`, `freelocale`, `uselocale`, `localeconv`, `getlocalename_l`). Add
+locale-aware helpers `*_l` (`<ctype.h>`, `strcasecmp_l`, `strncasecmp_l`,
+`strcoll`, `strcoll_l`, `strxfrm`, `strxfrm_l`, `strerror_l`, `strftime_l`). Add
+`<stdlib.h>` `mblen`, `mbtowc`, `wctomb`, `mbstowcs`, and `wcstombs`. Supply
+`<wctype.h>` (`isw*`, `tow*`, `wctype*`, `wctrans*`) and core `<wchar.h>`
+(`btowc`, `wctob`, `mbr*`, `mbs*`, `wcrtomb`, `wcs*`, `wmem*`, `wcsto*`,
+`wcsftime`, plus `<inttypes.h>` `wcstoimax`/`wcstoumax`) ({need}`BDR_0004`,
+{need}`SWR_LIBC_0013`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0049 — Add Base futimens, utimensat, lgamma*, tzset, and tzname
 
 ```{task} Add Base futimens, utimensat, lgamma*, tzset, and tzname
