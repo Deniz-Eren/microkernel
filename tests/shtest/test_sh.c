@@ -17,7 +17,8 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0007 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0007 VER_LIBC_0018 VER_PROC_0008 VER_PROC_0009 */
+/* need:: VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -501,6 +502,146 @@ static int test_wait_builtin(void) {
     return 0;
 }
 
+static int test_shell_grammar_and_expansions(void) {
+    char out[1024];
+    ssize_t len = 0;
+
+    /* 1. if/elif/else, for/break/continue, while/until, $((arith)), case. */
+    int rc = run_sh_capture(
+        "x=2; "
+        "if /boot/test $x -eq 1; then echo one; "
+        "elif /boot/test $x -eq 2; then echo two; "
+        "else echo other; fi; "
+        "sum=0; i=1; "
+        "while /boot/test $i -le 5; do "
+        "  sum=$((sum + i)); i=$((i + 1)); "
+        "done; echo sum=$sum; "
+        "u=3; until /boot/test $u -eq 0; do u=$((u - 1)); done; echo u=$u; "
+        "res=''; for v in a b c d; do "
+        "  if /boot/test $v = b; then continue; fi; "
+        "  if /boot/test $v = d; then break; fi; "
+        "  res=\"$res$v\"; "
+        "done; echo for=$res; "
+        "case foo.c in *.h) echo hdr;; *.c|*.cc) echo csrc;; *) echo no;; esac",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "two\nsum=15\nu=0\nfor=ac\ncsrc\n") != 0) {
+        printf("[FAIL] shtest compound grammar rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 2. Subshell isolation, brace group redirection, functions + return. */
+    rc = run_sh_capture(
+        "v=outer; (v=inner; echo $v); echo $v; "
+        "{ echo g1; echo g2; } > /tmp/sh_grp.txt; /boot/cat /tmp/sh_grp.txt; "
+        "/boot/rm /tmp/sh_grp.txt; "
+        "add() { echo \"$#:$1+$2=$(($1 + $2))\"; return 7; }; "
+        "add 3 4; echo fnrc=$?",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 ||
+        strcmp(out, "inner\nouter\ng1\ng2\n2:3+4=7\nfnrc=7\n") != 0) {
+        printf("[FAIL] shtest subshell/brace/func rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 3. $(...), parameter expansions (#, :-, :=, :+, #, ##, %, %%). */
+    rc = run_sh_capture(
+        "p=/usr/local/bin/sh; unset u; "
+        "echo $(echo sub) ${#p} ${u:-def} ${u:=set} $u ${u:+alt} "
+        "${p#*/} ${p##*/} ${p%/*} [${p%%/*}]",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "sub 17 def set set alt usr/local/bin/sh sh "
+                               "/usr/local/bin []\n") != 0) {
+        printf("[FAIL] shtest param/cmdsub rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 4. Here-documents (expanded, quoted, tab-stripped) + glob + trap. */
+    (void)mkdir("/tmp/shg", 0755u);
+    int f1 = open("/tmp/shg/a.txt", O_CREAT | O_WRONLY | O_CLOEXEC, 0644u);
+    int f2 = open("/tmp/shg/b.txt", O_CREAT | O_WRONLY | O_CLOEXEC, 0644u);
+    if (f1 >= 0) {
+        (void)close(f1);
+    }
+    if (f2 >= 0) {
+        (void)close(f2);
+    }
+
+    rc = run_sh_capture("who=mk\n"
+                        "/boot/cat <<EOF\n"
+                        "hi $who\n"
+                        "EOF\n"
+                        "/boot/cat <<'EOF'\n"
+                        "lit $who\n"
+                        "EOF\n"
+                        "/boot/cat <<-EOF\n"
+                        "\t\tindented\n"
+                        "\tEOF\n"
+                        "echo /tmp/shg/*.txt\n"
+                        "set -f; echo /tmp/shg/*.txt; set +f\n"
+                        "trap 'echo exit_trap_ok' EXIT\n",
+                        NULL, 0, out, sizeof(out), &len);
+    (void)unlink("/tmp/shg/a.txt");
+    (void)unlink("/tmp/shg/b.txt");
+    (void)rmdir("/tmp/shg");
+    if (rc != 0 || strcmp(out, "hi mk\nlit $who\nindented\n"
+                               "/tmp/shg/a.txt /tmp/shg/b.txt\n"
+                               "/tmp/shg/*.txt\nexit_trap_ok\n") != 0) {
+        printf("[FAIL] shtest heredoc/glob/trap rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] sh compound grammar, functions, expansions, heredocs, glob, "
+           "and trap verified\n");
+    return 0;
+}
+
+static int test_shell_builtins_complete(void) {
+    char out[1024];
+    ssize_t len = 0;
+
+    /* Create dot-sourced script in /tmp. */
+    FILE *df = fopen("/tmp/sh_dot.sh", "w");
+    if (!df) {
+        printf("[FAIL] create /tmp/sh_dot.sh failed\n");
+        return -1;
+    }
+    fputs("DOT_VAL=from_dot\nreturn 0\nDOT_VAL=unreachable\n", df);
+    (void)fclose(df);
+
+    int rc = run_sh_capture(
+        ": ignored; echo colon=$?; "
+        ". /tmp/sh_dot.sh; echo dot=$DOT_VAL; "
+        "alias hi='echo aliased'; eval 'hi ok'; unalias hi; "
+        "echo() { command echo \"fn:$1\"; }; "
+        "echo a; command echo b; unset -f echo; "
+        "command -v /boot/echo; "
+        "hash echo; hash -r; "
+        "set -- -a val -b rest; "
+        "out=''; while getopts ':a:b' opt; do out=\"$out$opt:$OPTARG,\"; done; "
+        "shift $((OPTIND - 1)); echo \"go=$out rem=$1\"; "
+        "(exec > /tmp/sh_ex.txt; echo exec_redir); /boot/cat /tmp/sh_ex.txt; "
+        "/boot/rm /tmp/sh_ex.txt; "
+        "(exec /boot/echo exec_cmd); "
+        "readonly RO=1; RO=2 2>/tmp/sh_ro.err; echo ro_rc=$?; "
+        "/boot/rm /tmp/sh_ro.err; "
+        "times",
+        NULL, 0, out, sizeof(out), &len);
+    (void)unlink("/tmp/sh_dot.sh");
+    if (rc != 0 || !strstr(out, "colon=0\n") ||
+        !strstr(out, "dot=from_dot\n") || !strstr(out, "aliased ok\n") ||
+        !strstr(out, "fn:a\nb\n") || !strstr(out, "/boot/echo\n") ||
+        !strstr(out, "go=a:val,b:, rem=rest\n") ||
+        !strstr(out, "exec_redir\nexec_cmd\nro_rc=1\n") || !strstr(out, "m") ||
+        !strstr(out, "s\n")) {
+        printf("[FAIL] shtest builtins rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] sh built-ins dot, colon, alias, command, eval, exec, "
+           "getopts, hash, shift, times verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -525,6 +666,12 @@ int main(void) {
         return 1;
     }
     if (test_wait_builtin() != 0) {
+        return 1;
+    }
+    if (test_shell_grammar_and_expansions() != 0) {
+        return 1;
+    }
+    if (test_shell_builtins_complete() != 0) {
         return 1;
     }
     return 0;

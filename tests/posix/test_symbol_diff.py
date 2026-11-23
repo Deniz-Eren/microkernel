@@ -43,7 +43,19 @@ DEFAULT_MANIFEST = ROOT / "tests" / "posix" / "issue8-manifest.tsv"
 DEFAULT_BIN_CMAKE = ROOT / "bin" / "CMakeLists.txt"
 
 SH_BUILTIN_UTILITIES: tuple[str, ...] = (
-    "cd", "pwd", "read", "ulimit", "umask", "wait"
+    ".",
+    ":",
+    "alias",
+    "cd",
+    "command",
+    "getopts",
+    "hash",
+    "pwd",
+    "read",
+    "ulimit",
+    "umask",
+    "unalias",
+    "wait",
 )
 
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (

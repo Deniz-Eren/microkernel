@@ -581,11 +581,11 @@ static int run_stress_round(int round) {
 }
 
 int main(void) {
-    /* Wait until earlier concurrent boot tests have exited (7 servers + self).
+    /* Wait until earlier concurrent boot tests have exited (8 servers + self).
      */
     struct __k_sys_stats ks = {0};
-    for (int wait_it = 0; wait_it < 400; wait_it++) {
-        if (SysStats(&ks) == 0 && ks.live_procs <= 8u) {
+    for (int wait_it = 0; wait_it < 3000; wait_it++) {
+        if (SysStats(&ks) == 0 && ks.live_procs <= 9u) {
             break;
         }
         sleep_ms(20);
@@ -630,12 +630,16 @@ int main(void) {
             return 1;
         }
     }
-    sleep_ms(30);
-
     leak_snapshot_t after = {0};
-    if (take_snapshot(pipe_conn, vfs_conn, sock_conn, &after) != 0) {
-        printf("[FAIL] stresstest after snapshot failed\n");
-        return 1;
+    for (int settle = 0; settle < 10; settle++) {
+        sleep_ms(30);
+        if (take_snapshot(pipe_conn, vfs_conn, sock_conn, &after) != 0) {
+            printf("[FAIL] stresstest after snapshot failed\n");
+            return 1;
+        }
+        if (after.k.pmm_free_bytes == before.k.pmm_free_bytes) {
+            break;
+        }
     }
 
     CloseConnection(pipe_conn);

@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- Fixed `tests/stresstest/test_stress.c` boot-quiescence threshold from 8 to 9
+  live processes (8 persistent servers including `blkdrv` plus `stresstest`) and
+  added post-stress SMP zombie-stack settle polling so `stresstest` waits
+  accurately for earlier boot tests in instrumented coverage builds without
+  false PMM leak mismatches.
 - Reclassified six mislabeled option-group entries in
   `tests/posix/issue8-manifest.tsv` (`encrypt` and `setkey` from `BASE` to
   `XSI`; `posix_spawnattr_{get,set}sched{param,policy}` from `BASE` to `SPN`) so
@@ -64,6 +69,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Completed POSIX.1-2024 XCU shell grammar and standard built-ins in `/boot/sh`
+  (`TSK_0042`, `SWR_LIBC_0018`, `ADR_0040`, `COMP_LIBC_0017`, `VER_LIBC_0018`):
+  refactored `bin/sh/` into `lexer.c`, `parser.c`, `expand.c`, `exec.c`,
+  `builtins.c`, and `main.c`; added compound commands (`if`, `for`, `while`,
+  `until`, `case`, subshells, brace groups), shell functions, `$(...)`,
+  `$((...))`, parameter expansions, here-documents (`<<`/`<<-`), `<glob.h>`
+  globbing, `trap`, and standard built-ins (`.`, `:`, `alias`, `unalias`,
+  `command`, `eval`, `exec`, `getopts`, `hash`, `return`, `shift`, `times`,
+  `break`, `continue`, `readonly`); raised Gate 2 to `62/108` Base utilities
+  (+7, 57.4%); and verified in QEMU (`shtest`) with zero Ring 0 changes.
 - Added Ring 3 ELF64 `ET_DYN` dynamic loading and POSIX.1-2024 `<dlfcn.h>`
   (`TSK_0040`, `SWR_LIBC_0017`, `ADR_0039`, `ICD_LIBC_0016`, `COMP_LIBC_0016`,
   `VER_LIBC_0017`): implemented `dlopen`, `dlsym` (`RTLD_DEFAULT`, `RTLD_NEXT`),

@@ -244,6 +244,20 @@ and `<libintl.h>` in Ring 3. User space must supply `locale`, `localedef`,
 destructors ({need}`SYS_LIBC_0001`, {need}`SYS_PROC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU shell compound grammar and built-ins
+:id: SWR_LIBC_0018
+:status: active
+:posix: XCU/2 (BASE), XCU/dot, XCU/colon, XCU/alias, XCU/command, XCU/getopts
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0040
+
+`/boot/sh` must support `if`, `for`, `while`, `until`, `case`, subshells, brace
+groups, functions, `$(...)`, `$((...))`, parameter expansions, here-documents,
+`<glob.h>` globbing, and `trap`. It must also supply `.`, `:`, `alias`,
+`unalias`, `command`, `eval`, `exec`, `getopts`, `hash`, `return`, `shift`, and
+`times` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

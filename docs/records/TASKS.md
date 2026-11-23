@@ -21,21 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0042 — Complete POSIX.1-2024 XCU shell grammar and built-ins
-
-```{task} Complete POSIX.1-2024 XCU shell grammar and built-ins
-:id: TSK_0042
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001
-
-Extend `/boot/sh` with compound commands (`if`, `for`, `while`, `until`, `case`,
-subshells), functions, `$(...)` command substitution, `$((...))` arithmetic,
-parameter expansions, here-documents, pathname globbing via `<glob.h>`, and
-`trap`. Add remaining standard built-ins (`.`, `:`, `alias`, `unalias`,
-`command`, `eval`, `exec`, `getopts`, `hash`, `return`, `shift`, `times`)
-({need}`BDR_0004`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0043 — Add POSIX.1-2024 XCU regex, find, and core stream utilities
 
 ```{task} Add POSIX.1-2024 XCU regex, find, and core stream utilities

@@ -256,10 +256,14 @@ what interactive users and C17 programmers can do today.
 Booting with `./scripts/env.sh run` drops you into `/boot/sh` over the serial
 terminal (`ttyserv`) with foreground `Ctrl-C` job control:
 
-- **Run scripts and command pipelines:** Chain commands with pipes, redirections
-  (`<`, `>`, `>>`, `2>&1`), `&&`/`||`/`;`, environment variables, and built-ins
-  (`cd`, `pwd`, `export`, `unset`, `read`, `set`, `umask`, `ulimit`, `wait`,
-  `exit`). The shell also targets Issue 8 `$'...'` quoting, `set -o pipefail`,
+- **Run scripts and command pipelines:** Write POSIX.1-2024 scripts with
+  `if`/`elif`/`else`, `for`/`while`/`until`, `case`, subshells, brace groups,
+  and functions. Use `$(...)` command substitution, `$((...))` arithmetic,
+  parameter expansions, here-documents (`<<`/`<<-`), `<glob.h>` globbing, and
+  `trap`. Use standard built-ins (`.`, `:`, `alias`, `unalias`, `cd`, `command`,
+  `eval`, `exec`, `exit`, `export`, `getopts`, `hash`, `pwd`, `read`,
+  `readonly`, `return`, `set`, `shift`, `times`, `ulimit`, `umask`, `unset`,
+  `wait`). The shell also targets Issue 8 `$'...'` quoting, `set -o pipefail`,
   and `read -d` with custom or NUL delimiters.
 - **Work with read-only, temporary, and persistent files:** List, inspect, copy,
   move, link, and remove files across `/boot` (`/bin`), `/tmp` (`tmpfs`), and
@@ -332,9 +336,10 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** Remaining XCU shell grammar and
-  utilities, and Ring 3 TCP/IP networking (`<netdb.h>`, `<netinet/in.h>`,
-  `<arpa/inet.h>`, `<net/if.h>`, `<netinet/tcp.h>`). See
+- **Not available yet (planned next):** Remaining XCU text, archive, and
+  language utilities (`grep`, `sed`, `find`, `diff`, `pax`, `awk`, `bc`, `m4`),
+  and Ring 3 TCP/IP networking (`<netdb.h>`, `<netinet/in.h>`, `<arpa/inet.h>`,
+  `<net/if.h>`, `<netinet/tcp.h>`). See
   [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 

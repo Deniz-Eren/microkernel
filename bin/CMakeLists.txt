@@ -7,7 +7,15 @@
 # SPDX-License-Identifier: MIT
 #
 
-microkernel_add_user_executable(sh sh/main.c)
+microkernel_add_user_executable(
+    sh
+    sh/main.c
+    sh/lexer.c
+    sh/parser.c
+    sh/expand.c
+    sh/exec.c
+    sh/builtins.c
+)
 microkernel_add_user_executable(echo utils/echo.c)
 microkernel_add_user_executable(cat utils/cat.c)
 microkernel_add_user_executable(ls utils/ls.c)

@@ -226,3 +226,17 @@ implement the seven POSIX.1-2024 i18n CLI utilities ({need}`ICD_LIBC_0015`,
 hooks and keeps per-thread `dlerror` state in `FS.base` TLS
 ({need}`ICD_LIBC_0016`, {need}`SWR_LIBC_0017`).
 ```
+
+```{comp} Ring 3 modular POSIX.1-2024 XCU shell
+:id: COMP_LIBC_0017
+:status: active
+:posix: XCU/2 (BASE), XCU/dot, XCU/colon, XCU/alias, XCU/command, XCU/getopts
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0018
+
+`bin/sh/lexer.c`, `parser.c`, `expand.c`, `exec.c`, `builtins.c`, and `main.c`
+implement the Ring 3 command shell AST and compound commands. They also
+implement deferred expansions, here-documents, `<glob.h>` globbing, `trap`, and
+all standard POSIX.1-2024 built-in utilities ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0018`).
+```

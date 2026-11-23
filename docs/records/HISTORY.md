@@ -20,6 +20,21 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0042 — Complete POSIX.1-2024 XCU shell grammar and built-ins
+
+```{task} Complete POSIX.1-2024 XCU shell grammar and built-ins
+:id: TSK_0042
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0040, SWR_LIBC_0018
+
+Extend `/boot/sh` with compound commands (`if`, `for`, `while`, `until`, `case`,
+subshells), functions, `$(...)` command substitution, `$((...))` arithmetic,
+parameter expansions, here-documents, pathname globbing via `<glob.h>`, and
+`trap`. Add remaining standard built-ins (`.`, `:`, `alias`, `unalias`,
+`command`, `eval`, `exec`, `getopts`, `hash`, `return`, `shift`, `times`)
+({need}`BDR_0004`, {need}`SWR_LIBC_0018`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0040 — Add Ring 3 ELF dynamic symbol resolution and <dlfcn.h>
 
 ```{task} Add Ring 3 ELF dynamic symbol resolution and <dlfcn.h>

@@ -231,3 +231,16 @@ relocations, host `libc` calls, `dlsym`, `dladdr`, `dlerror`, refcounting, and
 constructors/destructors. CTest Gates 1 and 2 verify `<dlfcn.h>` hygiene and all
 five Base exports ({need}`SWR_LIBC_0017`).
 ```
+
+```{ver} Verify POSIX.1-2024 XCU shell compound grammar and built-ins
+:id: VER_LIBC_0018
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0018
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `if`, `for`, `while`, `until`, `case`,
+subshells, brace groups, functions, `$(...)`, `$((...))`, parameter expansions,
+here-documents, `<glob.h>` globbing, `trap`, and all standard built-ins. Gate 2
+verifies all seven new Base built-in utilities ({need}`SWR_LIBC_0018`).
+```

@@ -102,6 +102,8 @@ XCU utilities ps, getconf, tty, and stty verified
 XCU id, logname, nice, renice, umask, and ulimit verified
 XCU chmod, chown, chgrp, ln, mkfifo, readlink, realpath, touch, rmdir, df, du, dd, basename, dirname, and pathchk verified
 sh wait builtin reaped children and reported statuses
+sh compound grammar, functions, expansions, heredocs, glob, and trap verified
+sh built-ins dot, colon, alias, command, eval, exec, getopts, hash, shift, times verified
 uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified
