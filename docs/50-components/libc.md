@@ -253,3 +253,17 @@ implement regex search, stream editing, and directory traversal in Ring 3. They
 also implement NUL-safe argument batching, expression evaluation, and formatted
 output ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0019`).
 ```
+
+```{comp} Ring 3 POSIX network socket dispatch, inet, if, and netdb library
+:id: COMP_LIBC_0019
+:status: active
+:posix: XBD/netinet/in.h, netinet/tcp.h, arpa/inet.h, net/if.h, netdb.h (BASE)
+:refines: ARC_LIBC_0001, ICD_LIBC_0017
+:satisfies: SWR_LIBC_0020
+
+`libc/src/socket.c` and `libc/src/fd.c` dispatch `AF_INET` and `AF_INET6`
+sockets, `sendmsg`, `recvmsg`, `sockatmark`, and multi-server `ppoll`/`select`
+over `/dev/net`. `libc/src/inet.c` and `libc/src/netdb.c` implement byte-order
+helpers, `inet_*`, live `/dev/net` `if_*` queries, `getaddrinfo`, `getnameinfo`,
+`gai_strerror`, and `get*ent` ({need}`ICD_LIBC_0017`, {need}`SWR_LIBC_0020`).
+```

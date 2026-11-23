@@ -257,3 +257,17 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`
 `xargs` (`-0`, `-n`, `-I`), `expr`, and `printf`. Gate 2 verifies all six Base
 utilities ({need}`SWR_LIBC_0019`).
 ```
+
+```{ver} Verify network Base headers, AF_INET/6 sockets, sendmsg, and netdb
+:id: VER_LIBC_0020
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0020
+
+The headless QEMU harness `tests/test_runner.py` runs `nettest`
+(`tests/nettest/test_net.c`). It checks `hton*`/`ntoh*`, `inet_*`, live `if_*`,
+`getaddrinfo`, `getnameinfo`, `gai_strerror`, `get*ent`, `AF_INET`/`AF_INET6`
+sockets, `sendmsg`/`recvmsg`, `sockatmark`, and multi-server `select`. CTest
+Gates 1 to 3 verify all 70 Base headers, 1037 Base interfaces,
+async-signal-safety, and cancellation points ({need}`SWR_LIBC_0020`).
+```

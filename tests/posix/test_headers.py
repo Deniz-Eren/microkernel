@@ -15,7 +15,7 @@
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
 # need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014 VER_LIBC_0015
-# need:: VER_LIBC_0016 VER_LIBC_0017
+# need:: VER_LIBC_0016 VER_LIBC_0017 VER_LIBC_0020
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 
 POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
+    "arpa/inet.h",
     "assert.h",
     "complex.h",
     "cpio.h",
@@ -54,6 +55,10 @@ POSIX_HEADERS: tuple[str, ...] = (
     "locale.h",
     "math.h",
     "monetary.h",
+    "net/if.h",
+    "netdb.h",
+    "netinet/in.h",
+    "netinet/tcp.h",
     "nl_types.h",
     "poll.h",
     "pthread.h",
@@ -1602,6 +1607,76 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"dlfcn.h check failed:\n{err}")
+
+    def test_network_base_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <arpa/inet.h>",
+                "#include <net/if.h>",
+                "#include <netdb.h>",
+                "#include <netinet/in.h>",
+                "#include <netinet/tcp.h>",
+                "#include <sys/socket.h>",
+                "#ifdef NET_OP_INFO",
+                '#error "network headers leaked sys/net.h NET_OP_INFO"',
+                "#endif",
+                "#ifdef SYS_FD_OP",
+                '#error "network headers leaked SYS_FD_OP"',
+                "#endif",
+                "static int __check_net_headers(void) {",
+                "    struct in_addr a4 = {INADDR_ANY};",
+                "    struct in6_addr a6 = in6addr_loopback;",
+                "    struct sockaddr_in sin = {0};",
+                "    struct sockaddr_in6 sin6 = {0};",
+                "    struct msghdr mh = {0};",
+                "    struct iovec iv = {0};",
+                "    struct addrinfo hints = {0};",
+                "    struct addrinfo *res = (struct addrinfo *)0;",
+                "    char buf[INET6_ADDRSTRLEN] = {0};",
+                "    char ifn[IF_NAMESIZE] = {0};",
+                "    sin.sin_family = AF_INET;",
+                "    sin.sin_port = htons(80u);",
+                "    sin6.sin6_family = AF_INET6;",
+                "    sin6.sin6_port = ntohs(80u);",
+                "    a4.s_addr = htonl(ntohl(inet_addr(\"127.0.0.1\")));",
+                "    (void)inet_ntoa(a4);",
+                "    (void)inet_pton(AF_INET6, \"::1\", &a6);",
+                "    (void)inet_ntop(AF_INET6, &a6, buf, sizeof(buf));",
+                "    (void)if_nametoindex(\"lo0\");",
+                "    (void)if_indextoname(1u, ifn);",
+                "    struct if_nameindex *ni = if_nameindex();",
+                "    if_freenameindex(ni);",
+                "    (void)getaddrinfo(\"localhost\", \"80\", &hints, &res);",
+                "    (void)getnameinfo((struct sockaddr *)&sin,",
+                "                      (socklen_t)sizeof(sin), buf,",
+                "                      sizeof(buf), ifn, sizeof(ifn),",
+                "                      NI_NUMERICHOST);",
+                "    freeaddrinfo(res);",
+                "    (void)gai_strerror(EAI_NONAME);",
+                "    sethostent(0); (void)gethostent(); endhostent();",
+                "    setnetent(0); (void)getnetent();",
+                "    (void)getnetbyname(\"loopback\");",
+                "    (void)getnetbyaddr(0u, AF_INET); endnetent();",
+                "    setprotoent(0); (void)getprotoent();",
+                "    (void)getprotobyname(\"tcp\");",
+                "    (void)getprotobynumber(IPPROTO_TCP); endprotoent();",
+                "    setservent(0); (void)getservent();",
+                "    (void)getservbyname(\"http\", \"tcp\");",
+                "    (void)getservbyport(80, \"tcp\"); endservent();",
+                "    mh.msg_iov = &iv; mh.msg_iovlen = 1;",
+                "    (void)sendmsg(0, &mh, 0);",
+                "    (void)recvmsg(0, &mh, 0);",
+                "    return sockatmark(0) + TCP_NODELAY +",
+                "           IN6_IS_ADDR_LOOPBACK(&a6);",
+                "}",
+                "int (*__net_hdr_ref)(void) = __check_net_headers;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"network headers check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

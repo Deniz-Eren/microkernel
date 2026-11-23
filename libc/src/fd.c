@@ -123,7 +123,7 @@ int __libc_fd_prefork(void) {
             if (fds[i].kind == FD_KIND_VFS) {
                 r = __libc_vfs_dup_handle(fds[i].srv_handle);
             } else if (fds[i].kind == FD_KIND_SOCK) {
-                r = __libc_sock_dup_handle(fds[i].srv_handle);
+                r = __libc_sock_dup_handle(&fds[i]);
             } else {
                 r = pipe_dup_handle(fds[i].srv_handle);
             }
@@ -134,7 +134,7 @@ int __libc_fd_prefork(void) {
                     } else if (fds[j].kind == FD_KIND_VFS) {
                         __libc_vfs_close_handle(fds[j].srv_handle);
                     } else if (fds[j].kind == FD_KIND_SOCK) {
-                        __libc_sock_close_handle(fds[j].srv_handle);
+                        __libc_sock_close_handle(&fds[j]);
                     }
                 }
                 return (int)r;
@@ -158,7 +158,7 @@ void __libc_fd_postfork_rollback(void) {
         } else if (fds[i].kind == FD_KIND_VFS) {
             __libc_vfs_close_handle(fds[i].srv_handle);
         } else if (fds[i].kind == FD_KIND_SOCK) {
-            __libc_sock_close_handle(fds[i].srv_handle);
+            __libc_sock_close_handle(&fds[i]);
         }
     }
 }
@@ -182,7 +182,7 @@ ssize_t __libc_fd_read(int fd, void *buf, size_t n) {
         return __libc_vfs_read(e.srv_handle, buf, n);
     }
     if (e.kind == FD_KIND_SOCK) {
-        return __libc_sock_read(e.srv_handle, buf, n, e.status_flags);
+        return __libc_sock_read(&e, buf, n);
     }
     if (e.kind != FD_KIND_SERVER) {
         errno = EBADF;
@@ -233,7 +233,7 @@ ssize_t __libc_fd_write(int fd, const void *buf, size_t n) {
         return __libc_vfs_write(e.srv_handle, buf, n, e.status_flags);
     }
     if (e.kind == FD_KIND_SOCK) {
-        return __libc_sock_write(e.srv_handle, buf, n, e.status_flags);
+        return __libc_sock_write(&e, buf, n);
     }
     if (e.kind != FD_KIND_SERVER) {
         errno = EBADF;
@@ -283,7 +283,7 @@ int close(int fd) {
     } else if (old.kind == FD_KIND_VFS) {
         __libc_vfs_close_handle(old.srv_handle);
     } else if (old.kind == FD_KIND_SOCK) {
-        __libc_sock_close_handle(old.srv_handle);
+        __libc_sock_close_handle(&old);
     }
     return 0;
 }
@@ -368,7 +368,7 @@ static int dup_min(int oldfd, int min_fd, int cloexec) {
         if (e.kind == FD_KIND_VFS) {
             dr = __libc_vfs_dup_handle(e.srv_handle);
         } else if (e.kind == FD_KIND_SOCK) {
-            dr = __libc_sock_dup_handle(e.srv_handle);
+            dr = __libc_sock_dup_handle(&e);
         } else {
             dr = pipe_dup_handle(e.srv_handle);
         }
@@ -385,7 +385,7 @@ static int dup_min(int oldfd, int min_fd, int cloexec) {
         } else if (e.kind == FD_KIND_VFS) {
             __libc_vfs_close_handle(e.srv_handle);
         } else if (e.kind == FD_KIND_SOCK) {
-            __libc_sock_close_handle(e.srv_handle);
+            __libc_sock_close_handle(&e);
         }
         errno = (int)(-nf);
         return -1;
@@ -422,7 +422,7 @@ int dup3(int oldfd, int newfd, int flags) {
         if (e.kind == FD_KIND_VFS) {
             dr = __libc_vfs_dup_handle(e.srv_handle);
         } else if (e.kind == FD_KIND_SOCK) {
-            dr = __libc_sock_dup_handle(e.srv_handle);
+            dr = __libc_sock_dup_handle(&e);
         } else {
             dr = pipe_dup_handle(e.srv_handle);
         }
@@ -441,7 +441,7 @@ int dup3(int oldfd, int newfd, int flags) {
         } else if (e.kind == FD_KIND_VFS) {
             __libc_vfs_close_handle(e.srv_handle);
         } else if (e.kind == FD_KIND_SOCK) {
-            __libc_sock_close_handle(e.srv_handle);
+            __libc_sock_close_handle(&e);
         }
         errno = (int)(-nf);
         return -1;
@@ -451,7 +451,7 @@ int dup3(int oldfd, int newfd, int flags) {
     } else if (replaced.kind == FD_KIND_VFS) {
         __libc_vfs_close_handle(replaced.srv_handle);
     } else if (replaced.kind == FD_KIND_SOCK) {
-        __libc_sock_close_handle(replaced.srv_handle);
+        __libc_sock_close_handle(&replaced);
     }
     return (int)nf;
 }
@@ -597,6 +597,9 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
     sock_poll_item_t sock_items[SOCK_POLL_MAX];
     nfds_t sock_map[SOCK_POLL_MAX];
     uint32_t sock_count = 0;
+    net_poll_item_t net_items[NET_POLL_MAX];
+    nfds_t net_map[NET_POLL_MAX];
+    uint32_t net_count = 0;
     int local_ready = 0;
 
     for (nfds_t i = 0; i < nfds; i++) {
@@ -644,15 +647,26 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
             continue;
         }
         if (e.kind == FD_KIND_SOCK) {
-            sock_items[sock_count].handle = e.srv_handle;
-            sock_items[sock_count].events = fds[i].events;
-            sock_items[sock_count].revents = 0;
-            sock_map[sock_count] = i;
-            sock_count++;
+            if (__libc_sock_is_net(e.srv_pid, e.srv_chanid)) {
+                if (net_count < NET_POLL_MAX) {
+                    net_items[net_count].handle = e.srv_handle;
+                    net_items[net_count].events = fds[i].events;
+                    net_items[net_count].revents = 0;
+                    net_map[net_count] = i;
+                    net_count++;
+                }
+            } else {
+                sock_items[sock_count].handle = e.srv_handle;
+                sock_items[sock_count].events = fds[i].events;
+                sock_items[sock_count].revents = 0;
+                sock_map[sock_count] = i;
+                sock_count++;
+            }
         }
     }
 
-    if (srv_count == 0u && tty_count == 0u && sock_count == 0u) {
+    if (srv_count == 0u && tty_count == 0u && sock_count == 0u &&
+        net_count == 0u) {
         if (local_ready > 0 || timeout_ns == 0) {
             restore_sigmask(swapped, &oldmask);
             return local_ready;
@@ -687,7 +701,8 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
     }
 
     /* Single-server fast path: only /dev/tty FDs being polled. */
-    if (srv_count == 0u && sock_count == 0u && tty_count > 0u) {
+    if (srv_count == 0u && sock_count == 0u && net_count == 0u &&
+        tty_count > 0u) {
         int16_t agg_events = 0;
         for (uint32_t k = 0; k < tty_count; k++) {
             agg_events = (int16_t)(agg_events | tty_events[k]);
@@ -719,7 +734,8 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
     }
 
     /* Single-server fast path: only /dev/sock FDs being polled. */
-    if (srv_count == 0u && tty_count == 0u && sock_count > 0u) {
+    if (srv_count == 0u && tty_count == 0u && net_count == 0u &&
+        sock_count > 0u) {
         sock_poll_item_t out_items[SOCK_POLL_MAX];
         long sr =
             __libc_sock_poll(sock_items, sock_count,
@@ -743,8 +759,34 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
         return total_ready;
     }
 
+    /* Single-server fast path: only /dev/net FDs being polled. */
+    if (srv_count == 0u && tty_count == 0u && sock_count == 0u &&
+        net_count > 0u) {
+        net_poll_item_t out_items[NET_POLL_MAX];
+        long nr =
+            __libc_net_poll(net_items, net_count,
+                            (local_ready > 0) ? 0 : timeout_ns, out_items);
+        if (nr < 0) {
+            restore_sigmask(swapped, &oldmask);
+            if (nr == -EINTR) {
+                __libc_cancel_point();
+            }
+            errno = (int)(-nr);
+            return -1;
+        }
+        int total_ready = local_ready;
+        for (uint32_t k = 0; k < net_count; k++) {
+            fds[net_map[k]].revents = out_items[k].revents;
+            if (out_items[k].revents != 0) {
+                total_ready++;
+            }
+        }
+        restore_sigmask(swapped, &oldmask);
+        return total_ready;
+    }
+
     /* Single-server fast path: only /dev/pipe FDs being polled. */
-    if (tty_count == 0u && sock_count == 0u) {
+    if (tty_count == 0u && sock_count == 0u && net_count == 0u) {
         preq.nfds = srv_count;
         preq.timeout_ns = (local_ready > 0) ? 0 : timeout_ns;
 
@@ -870,6 +912,25 @@ int ppoll(struct pollfd fds[], nfds_t nfds,
             }
             for (uint32_t k = 0; k < sock_count; k++) {
                 fds[sock_map[k]].revents = out_items[k].revents;
+                if (out_items[k].revents != 0) {
+                    total_ready++;
+                }
+            }
+        }
+
+        if (net_count > 0u) {
+            net_poll_item_t out_items[NET_POLL_MAX];
+            long nr = __libc_net_poll(net_items, net_count, 0, out_items);
+            if (nr < 0) {
+                restore_sigmask(swapped, &oldmask);
+                if (nr == -EINTR) {
+                    __libc_cancel_point();
+                }
+                errno = (int)(-nr);
+                return -1;
+            }
+            for (uint32_t k = 0; k < net_count; k++) {
+                fds[net_map[k]].revents = out_items[k].revents;
                 if (out_items[k].revents != 0) {
                     total_ready++;
                 }

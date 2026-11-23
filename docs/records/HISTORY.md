@@ -20,6 +20,23 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0047 — Add 5 network Base headers and socket/resolver libc APIs
+
+```{task} Add 5 network Base headers and socket/resolver libc APIs
+:id: TSK_0047
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0043, SWR_LIBC_0020
+
+Wire `AF_INET` and `AF_INET6` into `<sys/socket.h>` and `libc` FD dispatch
+(`read`, `write`, `close`, `dup*`, `poll`, `select`) over `/dev/net`, and add
+`sendmsg`, `recvmsg`, and `sockatmark`. Supply `<netinet/in.h>`,
+`<netinet/tcp.h>`, `<arpa/inet.h>`, `<netdb.h>`, and `<net/if.h>`
+(`htons`/`htonl`/`ntohs`/`ntohl`, `inet_*`, `if_*`, `getaddrinfo`,
+`getnameinfo`, `gai_strerror`, `get*ent`) to reach 70 Base headers and 1037 Base
+interfaces ({need}`BDR_0004`, {need}`SWR_LIBC_0020`, {need}`SYS_IPC_0001`,
+{need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0041 — Add Ring 3 PCI virtio-net driver and TCP/IP/loopback server
 
 ```{task} Add Ring 3 PCI virtio-net driver and TCP/IP/loopback server

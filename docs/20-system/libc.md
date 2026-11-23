@@ -270,6 +270,20 @@ User space must supply standalone Ring 3 utilities `grep`, `sed`, `find`,
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 network Base headers, AF_INET/6 sockets, and netdb
+:id: SWR_LIBC_0020
+:status: active
+:posix: XBD/netinet/in.h, netinet/tcp.h, arpa/inet.h, net/if.h, netdb.h (BASE)
+:derives: SYS_LIBC_0001, SYS_IPC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0043
+
+`libc` must wire `AF_INET` and `AF_INET6` sockets over `/dev/net` and supply
+`sendmsg`, `recvmsg`, and `sockatmark`. It must also supply `<netinet/in.h>`,
+`<netinet/tcp.h>`, `<arpa/inet.h>`, `<net/if.h>`, and `<netdb.h>`
+(`hton*`/`ntoh*`, `inet_*`, `if_*`, `getaddrinfo`, `getnameinfo`,
+`gai_strerror`, `get*ent`) ({need}`SYS_LIBC_0001`, {need}`SYS_IPC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

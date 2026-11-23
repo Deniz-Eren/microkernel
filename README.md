@@ -304,8 +304,11 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   Use permissions, nanosecond timestamps (`futimens`, `utimensat`), hard and
   symbolic links, FIFOs, positional I/O, directory traversal (`posix_getdents`,
   `scandir`), `<sys/statvfs.h>`, and temp-file helpers. Communicate over pipes,
-  `AF_UNIX` sockets, `<aio.h>`, and `<termios.h>`, and multiplex descriptors
-  across servers with `poll`, `ppoll`, `select`, or `pselect`.
+  `AF_UNIX`/`AF_INET`/`AF_INET6` sockets (`sendmsg`, `recvmsg`, `sockatmark`),
+  `<netinet/in.h>`, `<netinet/tcp.h>`, `<arpa/inet.h>`, `<net/if.h>`,
+  `<netdb.h>` (`getaddrinfo`, `getnameinfo`, `get*ent`), `<aio.h>`, and
+  `<termios.h>`. Multiplex descriptors across servers with `poll`, `ppoll`,
+  `select`, or `pselect`.
 - **Memory, math, and standard C utilities:** Allocate memory from an
   `mmap`-backed coalescing heap (`malloc`, `aligned_alloc`, `reallocarray`), map
   shared memory (`shm_open`), enforce W^X page protections, or lock pages in RAM
@@ -340,11 +343,11 @@ isolated Ring 3 OS services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** POSIX.1-2024 network Base C headers and
-  resolver APIs (`<netdb.h>`, `<netinet/in.h>`, `<arpa/inet.h>`, `<net/if.h>`,
-  `<netinet/tcp.h>` over `/dev/net`). Remaining XCU text, archive, language, and
-  batch utilities (`sort`, `uniq`, `diff`, `patch`, `pax`, `awk`, `bc`, `m4`)
-  follow next. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** All 70 POSIX.1-2024 Base C headers and
+  all 1037 Base C interfaces are in place. Remaining XCU text, comparison,
+  archive, language, and batch utilities (`sort`, `uniq`, `diff`, `patch`,
+  `pax`, `awk`, `ed`, `bc`, `m4`, `at`, `crontab`, `mailx`) follow next. See
+  [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree

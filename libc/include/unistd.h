@@ -104,6 +104,7 @@
 #define _SC_GETGR_R_SIZE_MAX 59
 #define _SC_GETPW_R_SIZE_MAX 60
 #define _SC_V8_LP64_OFF64 61
+#define _SC_IPV6 62
 
 /* POSIX.1-2024 confstr() names. */
 #define _CS_PATH 1

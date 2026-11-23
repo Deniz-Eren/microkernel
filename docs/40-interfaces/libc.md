@@ -229,3 +229,18 @@ POSIX.1-2024 `ustar` and `cpio` header macros ({need}`ARC_LIBC_0001`,
 `dlerror`, and `dladdr` without leaking `<sys/mman.h>` or kernel symbols
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0017`).
 ```
+
+```{icd} POSIX.1-2024 network Base headers and extended <sys/socket.h>
+:id: ICD_LIBC_0017
+:status: active
+:posix: XBD/netinet/in.h, netinet/tcp.h, arpa/inet.h, net/if.h, netdb.h (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0020
+
+`<sys/socket.h>` adds `AF_INET`, `AF_INET6`, `struct iovec`, `struct msghdr`,
+`struct cmsghdr`, `CMSG_*`, `sendmsg`, `recvmsg`, and `sockatmark`.
+`<netinet/in.h>`, `<netinet/tcp.h>`, `<arpa/inet.h>`, `<net/if.h>`, and
+`<netdb.h>` declare all 37 remaining Base networking interfaces with zero
+`<sys/net.h>` or kernel leakage ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
+{need}`SWR_LIBC_0020`).
+```

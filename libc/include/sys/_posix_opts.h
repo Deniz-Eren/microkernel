@@ -14,6 +14,7 @@
 /* need:: ICD_LIBC_0002 */
 
 /* Active POSIX.1-2024 (Issue 8) option groups. */
+#define _POSIX_IPV6 202405L
 #define _POSIX_SHARED_MEMORY_OBJECTS 202405L
 #define _POSIX_MEMLOCK 202405L
 #define _POSIX_MEMLOCK_RANGE 202405L

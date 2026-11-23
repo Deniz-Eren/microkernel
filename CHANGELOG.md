@@ -42,6 +42,9 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Split `pax` out of `TSK_0046` into `TSK_0054` in `docs/records/TASKS.md` so
+  file comparison/patching (`diff`, `cmp`, `comm`, `patch`) and archive
+  interchange (`pax`) land as focused milestones.
 - Reordered `docs/records/TASKS.md` to pull Ring 3 TCP/IP networking
   (`TSK_0041`) and the five remaining network Base headers (`TSK_0047`) ahead of
   the remaining XCU utility waves, and split `TSK_0048` into `TSK_0048`
@@ -74,6 +77,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added the remaining five POSIX.1-2024 Base network headers (`<netinet/in.h>`,
+  `<netinet/tcp.h>`, `<arpa/inet.h>`, `<net/if.h>`, and `<netdb.h>`) and wired
+  `AF_INET`/`AF_INET6` sockets, `sendmsg`, `recvmsg`, `sockatmark`, and
+  multi-server `ppoll`/`select` over `/dev/net` (`TSK_0047`, `SWR_LIBC_0020`,
+  `ADR_0043`, `ICD_LIBC_0017`, `COMP_LIBC_0019`, `VER_LIBC_0020`), reaching
+  70/70 Base C headers and 1037/1037 Base C interfaces with zero Ring 0 changes.
 - Added Ring 3 Modern VirtIO 1.0 PCI `virtio-net` driver and TCP/IP/loopback
   network server `netserv` (`/dev/net`) with zero Ring 0 syscall or kernel
   module expansion (`TSK_0041`, `SWR_IPC_0013`, `ADR_0042`, `ICD_IPC_0017`,

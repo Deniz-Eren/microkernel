@@ -141,6 +141,8 @@ nettest virtio-net ARP and ICMPv4 ping to 10\.0\.2\.2 verified
 nettest loopback ICMPv4 \(127\.0\.0\.1\) and ICMPv6 \(::1\) echo verified
 nettest IPv4 and IPv6 UDP bind/send/recv/poll verified
 nettest IPv4 and IPv6 TCP handshake, data, FIN, and RST verified
+<netinet/in\.h>, <netinet/tcp\.h>, <arpa/inet\.h>, <net/if\.h>, and <netdb\.h> verified
+POSIX AF_INET/AF_INET6 sockets, sendmsg/recvmsg, sockatmark, and multi-server select verified
 vfsserv .*mounted.* ext2 on /mnt
 ext2test /mnt create, multi-block write/read, truncate, rename, and unlink verified
 SMP SysStats reports 2 online CPUs

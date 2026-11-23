@@ -60,6 +60,7 @@ SH_BUILTIN_UTILITIES: tuple[str, ...] = (
 
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
+    "arpa/inet.h",
     "assert.h",
     "complex.h",
     "cpio.h",
@@ -83,6 +84,10 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "locale.h",
     "math.h",
     "monetary.h",
+    "net/if.h",
+    "netdb.h",
+    "netinet/in.h",
+    "netinet/tcp.h",
     "nl_types.h",
     "poll.h",
     "pthread.h",

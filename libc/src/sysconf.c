@@ -92,6 +92,8 @@ long sysconf(int name) {
         return _POSIX_VERSION;
     case _SC_SHARED_MEMORY_OBJECTS:
         return _POSIX_SHARED_MEMORY_OBJECTS;
+    case _SC_IPV6:
+        return _POSIX_IPV6;
     case _SC_TIMERS:
     case _SC_THREADS:
     case _SC_THREAD_SAFE_FUNCTIONS:
