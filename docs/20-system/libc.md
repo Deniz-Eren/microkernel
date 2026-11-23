@@ -355,6 +355,18 @@ macro processor `m4` (`-D`, `-U`, `-s`) over `libc`, `vfsserv`, and `pipeserv`
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU encoding, logging, terminal, and user tools
+:id: SWR_LIBC_0027
+:status: active
+:posix: XCU/uuencode, XCU/uudecode, XCU/logger, XCU/tput, XCU/tabs, XCU/mesg
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0050
+
+User space must supply standalone Ring 3 utilities `uuencode`, `uudecode`,
+`logger`, `tput`, `tabs`, `mesg`, `write`, and `newgrp` over `libc`, `vfsserv`,
+and `ttyserv` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

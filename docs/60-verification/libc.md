@@ -348,3 +348,15 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`
 `eval`, `translit`, and diversions. Gate 2 verifies both Base utilities
 ({need}`SWR_LIBC_0026`).
 ```
+
+```{ver} Verify XCU encoding, logging, terminal, and user utilities
+:id: VER_LIBC_0027
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0027
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `uuencode`/`uudecode` (historical and
+Base64), `logger`, `tput`, `tabs`, `mesg`, `write`, and `newgrp`. Gate 2
+verifies all eight Base utilities ({need}`SWR_LIBC_0027`).
+```

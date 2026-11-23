@@ -108,3 +108,11 @@ microkernel_add_user_executable(
     bc/eval.c
 )
 microkernel_add_user_executable(m4 utils/m4.c)
+microkernel_add_user_executable(uuencode utils/uuencode.c)
+microkernel_add_user_executable(uudecode utils/uudecode.c)
+microkernel_add_user_executable(logger utils/logger.c)
+microkernel_add_user_executable(tput utils/tput.c)
+microkernel_add_user_executable(tabs utils/tabs.c)
+microkernel_add_user_executable(mesg utils/mesg.c)
+microkernel_add_user_executable(write utils/write.c)
+microkernel_add_user_executable(newgrp utils/newgrp.c)

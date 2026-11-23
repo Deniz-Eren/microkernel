@@ -346,3 +346,16 @@ decimal `bc` with `-l` math functions. `bin/utils/m4.c` implements the Ring 3
 `m4` macro processor with pushback expansion, `eval`, and diversions
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0026`).
 ```
+
+```{comp} Ring 3 encoding, logging, terminal, and user utilities
+:id: COMP_LIBC_0026
+:status: active
+:posix: XCU/uuencode, XCU/uudecode, XCU/logger, XCU/tput, XCU/tabs, XCU/mesg
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0027
+
+`bin/utils/uuencode.c`, `uudecode.c`, `logger.c`, `tput.c`, `tabs.c`, `mesg.c`,
+`write.c`, and `newgrp.c` implement eight Ring 3 XCU tools. They supply
+encoding, syslog logging, terminal control, messaging, and group switching
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0027`).
+```

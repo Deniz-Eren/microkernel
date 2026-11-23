@@ -77,6 +77,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `uuencode`, `uudecode`, `logger`, `tput`, `tabs`,
+  `mesg`, `write`, and `newgrp` in Ring 3 `bin/utils/` (`TSK_0048`,
+  `SWR_LIBC_0027`, `ADR_0050`, `COMP_LIBC_0026`, `VER_LIBC_0027`), advancing
+  Gate 2 from 95/108 to 103/108 Base XCU utilities with QEMU tests in
+  `tests/shtest/test_sh.c`.
 - Added POSIX.1-2024 XCU `bc` (`-l`) in Ring 3 `bin/bc/` and `m4` in Ring 3
   `bin/utils/m4.c` (`TSK_0052`, `SWR_LIBC_0026`, `ADR_0049`, `COMP_LIBC_0025`,
   `VER_LIBC_0026`), advancing Gate 2 from 93/108 to 95/108 Base XCU utilities

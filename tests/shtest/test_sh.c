@@ -19,7 +19,8 @@
 
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
 /* need:: VER_LIBC_0022 VER_LIBC_0023 VER_LIBC_0024 VER_LIBC_0025 */
-/* need:: VER_LIBC_0026 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0026 VER_LIBC_0027 VER_PROC_0008 VER_PROC_0009 */
+/* need:: VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -1012,6 +1013,56 @@ static int test_bc_and_m4_utils(void) {
     return 0;
 }
 
+static int test_enc_log_term_user_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    int rc = run_sh_capture(
+        "/boot/printf 'Hello, POSIX-2024!\\n' > /tmp/uu_in.txt && "
+        "/boot/uuencode /tmp/uu_in.txt /tmp/uu_out.txt | /boot/uudecode && "
+        "/boot/cmp -s /tmp/uu_in.txt /tmp/uu_out.txt && "
+        "/boot/uuencode -m /tmp/uu_in.txt ignored.bin | "
+        "/boot/uudecode -o /tmp/uu_b64.txt && "
+        "/boot/cmp -s /tmp/uu_in.txt /tmp/uu_b64.txt && "
+        "/boot/rm /tmp/uu_in.txt /tmp/uu_out.txt /tmp/uu_b64.txt && "
+        "/boot/logger -t shtag -i hello syslog && "
+        "/boot/grep -q 'shtag\\[.*\\]: hello syslog' /tmp/syslog && "
+        "/boot/rm /tmp/syslog && "
+        "/boot/echo UU_LOG_OK",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "UU_LOG_OK\n") != 0) {
+        printf("[FAIL] shtest uuencode/uudecode/logger rc=%d out='%s'\n", rc,
+               out);
+        return -1;
+    }
+
+    rc = run_sh_capture(
+        "/boot/tput cols && "
+        "/boot/tput clear | /boot/wc -c && "
+        "/boot/tabs -8 | /boot/wc -c && "
+        "/boot/mesg n; m1=$?; "
+        "/boot/mesg > /tmp/m1.out; m2=$?; ms=$(/boot/cat /tmp/m1.out); "
+        "/boot/mesg y; m3=$?; "
+        "/boot/mesg > /tmp/m2.out; m4=$?; ms2=$(/boot/cat /tmp/m2.out); "
+        "/boot/echo \"$m1:$ms:$m2:$m3:$ms2:$m4\" && "
+        "/boot/printf 'ping user\\n' | /boot/write root /tmp/wt.out && "
+        "/boot/grep -q 'Message from root' /tmp/wt.out && "
+        "/boot/grep -q 'ping user' /tmp/wt.out && "
+        "/boot/rm /tmp/m1.out /tmp/m2.out /tmp/wt.out /tmp/.mesg && "
+        "/boot/printf '/boot/id -g\\n' | /boot/newgrp wheel",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strstr(out, "80\n") == NULL ||
+        strstr(out, "1:is n:1:0:is y:0\n10\n") == NULL) {
+        printf("[FAIL] shtest tput/tabs/mesg/write/newgrp rc=%d out='%s'\n", rc,
+               out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities uuencode, uudecode, logger, tput, tabs, mesg, "
+           "write, and newgrp verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -1063,6 +1114,9 @@ int main(void) {
         return 1;
     }
     if (test_bc_and_m4_utils() != 0) {
+        return 1;
+    }
+    if (test_enc_log_term_user_utils() != 0) {
         return 1;
     }
     return 0;

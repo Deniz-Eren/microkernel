@@ -275,15 +275,17 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   `printf`. Split, format, calculate, and expand macros with `split`, `csplit`,
   `fold`, `expand`, `unexpand`, `pr`, `bc`, and `m4`. Compare, patch, archive,
   inspect, and checksum files with `diff`, `cmp`, `comm`, `patch`, `pax`,
-  `file`, `strings`, `tsort`, and `cksum`.
+  `file`, `strings`, `tsort`, and `cksum`. Encode and decode files with
+  `uuencode` and `uudecode`.
 - **Inspect and control processes, timing, credentials, and terminals:** View
   live processes with `ps` and check identity with `id` and `logname`. Adjust
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,
   `timeout`, and `nohup`. Query POSIX limits with `getconf`, check system
-  details with `uname` and `env`, and adjust terminal modes with `tty` and
-  `stty`. Work with locales, character-set conversion, and message catalogs
-  using `locale`, `localedef`, `iconv`, `gencat`, `msgfmt`, `gettext`, and
-  `ngettext`.
+  details with `uname` and `env`, and adjust terminal modes with `tty`, `stty`,
+  `tput`, and `tabs`. Log events, switch groups, and send user messages with
+  `logger`, `newgrp`, `mesg`, and `write`. Work with locales, character-set
+  conversion, and message catalogs using `locale`, `localedef`, `iconv`,
+  `gencat`, `msgfmt`, `gettext`, and `ngettext`.
 
 ### For C17 application programmers
 
