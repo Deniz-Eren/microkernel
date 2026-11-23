@@ -14,6 +14,7 @@
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
+# need:: VER_LIBC_0011
 
 from __future__ import annotations
 
@@ -30,6 +31,7 @@ SYSROOT_INC = ROOT / "sysroot" / "usr" / "include"
 POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
     "assert.h",
+    "complex.h",
     "ctype.h",
     "dirent.h",
     "endian.h",
@@ -62,6 +64,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "string.h",
     "strings.h",
     "termios.h",
+    "tgmath.h",
     "threads.h",
     "time.h",
     "uchar.h",
@@ -1241,6 +1244,58 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"base std check failed:\n{err}")
+
+
+    def test_complex_and_tgmath_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <complex.h>",
+                "#include <tgmath.h>",
+                "#ifdef SYS_DEBUG_LOG",
+                '#error "complex.h/tgmath.h leaked SYS_DEBUG_LOG"',
+                "#endif",
+                "static double __check_complex_tg(double x, float xf) {",
+                "    double complex z = CMPLX(x, 1.0);",
+                "    float complex zf = CMPLXF(xf, 1.0f);",
+                "    long double complex zl = CMPLXL(1.0L, 1.0L);",
+                "    double complex w = cexp(z) + clog(z) + csqrt(z) +",
+                "                       cpow(z, z) + csin(z) + ccos(z) +",
+                "                       ctan(z) + casin(z) + cacos(z) +",
+                "                       catan(z) + csinh(z) + ccosh(z) +",
+                "                       ctanh(z) + casinh(z) + cacosh(z) +",
+                "                       catanh(z) + conj(z) + cproj(z) +",
+                "                       (double complex)I;",
+                "    float complex wf = cexpf(zf) + clogf(zf) + csqrtf(zf) +",
+                "                       cpowf(zf, zf) + csinf(zf) +",
+                "                       ccosf(zf) + ctanf(zf) + casinf(zf) +",
+                "                       cacosf(zf) + catanf(zf) +",
+                "                       csinhf(zf) + ccoshf(zf) +",
+                "                       ctanhf(zf) + casinhf(zf) +",
+                "                       cacoshf(zf) + catanhf(zf) +",
+                "                       conjf(zf) + cprojf(zf);",
+                "    long double complex wl = cexpl(zl) + clogl(zl) +",
+                "                             csqrtl(zl) + cpowl(zl, zl) +",
+                "                             csinl(zl) + ccosl(zl) +",
+                "                             ctanl(zl) + casinl(zl) +",
+                "                             cacosl(zl) + catanl(zl) +",
+                "                             csinhl(zl) + ccoshl(zl) +",
+                "                             ctanhl(zl) + casinhl(zl) +",
+                "                             cacoshl(zl) + catanhl(zl) +",
+                "                             conjl(zl) + cprojl(zl);",
+                "    double tg = fabs(w) + creal(sin(z)) + cimag(cos(z)) +",
+                "                carg(w) + (double)cabsf(wf) +",
+                "                (double)cabsl(wl) + sqrt(x) +",
+                "                (double)sqrt(xf) + (double)creall(wl);",
+                "    return tg + cabs(w) + cargf(wf) + (double)cargl(wl);",
+                "}",
+                "double (*__cx_tg_ref)(double, float) = __check_complex_tg;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, ["-fhosted", macro])
+                self.assertEqual(rc, 0, f"complex/tgmath check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

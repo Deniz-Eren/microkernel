@@ -48,6 +48,7 @@ SH_BUILTIN_UTILITIES: tuple[str, ...] = (
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
     "assert.h",
+    "complex.h",
     "ctype.h",
     "dirent.h",
     "endian.h",
@@ -80,6 +81,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "string.h",
     "strings.h",
     "termios.h",
+    "tgmath.h",
     "threads.h",
     "time.h",
     "uchar.h",

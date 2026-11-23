@@ -135,3 +135,16 @@ check `scanf*`, `getline`/`getdelim`, `dprintf*`, `asprintf*`, `fmemopen`,
 `<time.h>` calendar functions. CTest Gates 1 to 3 check standalone headers,
 Base/CX exports, and async-signal-safety ({need}`SWR_LIBC_0010`).
 ```
+
+```{ver} Verify ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h> in QEMU
+:id: VER_LIBC_0011
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0011
+
+The headless QEMU harness `tests/test_runner.py` runs `mathtest`
+(`tests/mathtest/test_math.c`). It checks `<complex.h>` arithmetic, `cabs*`,
+`carg*`, `conj*`, `cproj*`, `csqrt*`, `cexp*`, `clog*`, `cpow*`, trig/hyperbolic
+round-trips, and `<tgmath.h>` `_Generic` type dispatch. CTest Gates 1 and 2
+check standalone compilation and all 69 Base/CX exports ({need}`SWR_LIBC_0011`).
+```

@@ -20,6 +20,20 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0036 — Add ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h>
+
+```{task} Add ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h>
+:id: TSK_0036
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0033, SWR_LIBC_0011
+
+Supply `<complex.h>` (`CMPLX*`, `cabs*`, `carg*`, `cimag*`, `creal*`, `conj*`,
+`cproj*`, `csqrt*`, `cexp*`, `clog*`, `cpow*`, and complex trigonometric and
+hyperbolic functions) and `<tgmath.h>` over `<math.h>` with Gates 1 and 2 and
+QEMU unit tests ({need}`BDR_0004`, {need}`SWR_LIBC_0011`,
+{need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0035 — Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>
 
 ```{task} Complete Base <stdio.h>, <stdlib.h>, <string.h>, and <time.h>

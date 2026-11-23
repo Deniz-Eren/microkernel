@@ -125,3 +125,17 @@ and `strerror_r`. `<time.h>` declares `struct tm`, `CLOCKS_PER_SEC`, `TIME_UTC`,
 `asctime*`, `ctime*`, and `strftime` ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0010`).
 ```
+
+```{icd} ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h> interfaces
+:id: ICD_LIBC_0010
+:status: active
+:posix: XBD/complex.h (CX), XBD/tgmath.h (CX)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0011
+
+`libc/include/complex.h` declares `complex`, `_Complex_I`, `I`, `CMPLX`,
+`CMPLXF`, `CMPLXL`, and all 66 `float`, `double`, and `long double` complex
+functions. `libc/include/tgmath.h` provides pure C17 `_Generic` type-generic
+macros over `<math.h>` and `<complex.h>` ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0011`).
+```

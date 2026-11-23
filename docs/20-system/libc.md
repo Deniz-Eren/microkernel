@@ -147,6 +147,20 @@ Base `<time.h>` calendar, `strftime`, `clock`, and `timespec_get` interfaces
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h>
+:id: SWR_LIBC_0011
+:status: active
+:posix: XBD/complex.h (CX), XBD/tgmath.h (CX)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0033
+
+`libc` must supply `<complex.h>` (`CMPLX*`, `cabs*`, `carg*`, `cimag*`,
+`creal*`, `conj*`, `cproj*`, `csqrt*`, `cexp*`, `clog*`, `cpow*`, and complex
+trigonometric and hyperbolic functions). It must also supply `<tgmath.h>`
+type-generic macros over `<math.h>` and `<complex.h>` in Ring 3
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

@@ -8,8 +8,9 @@
  *
  */
 
-/* need:: VER_LIBC_0009 */
+/* need:: VER_LIBC_0009 VER_LIBC_0011 */
 
+#include <complex.h>
 #include <errno.h>
 #include <fenv.h>
 #include <math.h>
@@ -260,6 +261,125 @@ static int test_trig_and_hyperbolic(void) {
     return 0;
 }
 
+static int capprox(double complex got, double complex want, double tol) {
+    return approx(creal(got), creal(want), tol) &&
+           approx(cimag(got), cimag(want), tol);
+}
+
+static int test_complex_functions(void) {
+    const double pi = 3.14159265358979323846;
+
+    /* Manipulation, arithmetic (__muldc3 / __divdc3), cabs, carg, cproj. */
+    double complex z1 = CMPLX(3.0, 4.0);
+    double complex z2 = CMPLX(1.0, -2.0);
+    double complex prod = z1 * z2;
+    double complex quot = z1 / z2;
+    if (creal(z1) != 3.0 || cimag(z1) != 4.0 || !approx(cabs(z1), 5.0, 1e-14) ||
+        !approx(carg(CMPLX(1.0, 1.0)), pi / 4.0, 1e-14) ||
+        !capprox(conj(z1), CMPLX(3.0, -4.0), 1e-15) ||
+        !capprox(prod, CMPLX(11.0, -2.0), 1e-14) ||
+        !capprox(quot, CMPLX(-1.0, 2.0), 1e-14)) {
+        printf("[FAIL] mathtest: complex basic ops failed\n");
+        return -1;
+    }
+
+    double complex inf_z = cproj(CMPLX(1.0, -(double)INFINITY));
+    if (!isinf(creal(inf_z)) || creal(inf_z) < 0.0 || cimag(inf_z) != 0.0 ||
+        !signbit(cimag(inf_z))) {
+        printf("[FAIL] mathtest: cproj(1 - inf*I) failed\n");
+        return -1;
+    }
+
+    /* csqrt, cexp, clog, cpow. */
+    if (!capprox(csqrt(CMPLX(-1.0, 0.0)), CMPLX(0.0, 1.0), 1e-14) ||
+        !capprox(csqrt(CMPLX(3.0, 4.0)), CMPLX(2.0, 1.0), 1e-14) ||
+        !capprox(cexp(CMPLX(0.0, pi)), CMPLX(-1.0, 0.0), 1e-14) ||
+        !capprox(clog(CMPLX(-1.0, 0.0)), CMPLX(0.0, pi), 1e-14) ||
+        !capprox(cpow(CMPLX(0.0, 1.0), CMPLX(2.0, 0.0)), CMPLX(-1.0, 0.0),
+                 1e-13) ||
+        !approx((double)cabsf(CMPLXF(3.0f, 4.0f)), 5.0, 1e-6) ||
+        !approx((double)creall(csqrtl(CMPLXL(3.0L, 4.0L))), 2.0, 1e-12)) {
+        printf("[FAIL] mathtest: csqrt/cexp/clog/cpow failed\n");
+        return -1;
+    }
+
+    /* Complex trig and hyperbolic round-trips. */
+    double complex w = CMPLX(0.4, 0.6);
+    if (!capprox(csin(casin(w)), w, 1e-13) ||
+        !capprox(ccos(cacos(w)), w, 1e-13) ||
+        !capprox(ctan(catan(w)), w, 1e-13) ||
+        !capprox(csinh(casinh(w)), w, 1e-13) ||
+        !capprox(ccosh(cacosh(CMPLX(1.5, 0.7))), CMPLX(1.5, 0.7), 1e-13) ||
+        !capprox(ctanh(catanh(w)), w, 1e-13)) {
+        printf("[FAIL] mathtest: complex trig/hyperbolic round-trip failed\n");
+        return -1;
+    }
+
+    /* Verify Euler identity sin^2(z) + cos^2(z) == 1. */
+    double complex sz = csin(w);
+    double complex cz = ccos(w);
+    if (!capprox(sz * sz + cz * cz, CMPLX(1.0, 0.0), 1e-13)) {
+        printf("[FAIL] mathtest: complex sin^2 + cos^2 != 1\n");
+        return -1;
+    }
+
+    /* Float and long double variants (__mulsc3/__divsc3/__mulxc3/__divxc3). */
+    float complex fz = CMPLXF(1.0f, 2.0f) * CMPLXF(3.0f, 4.0f);
+    float complex fq = fz / CMPLXF(3.0f, 4.0f);
+    long double complex lz = CMPLXL(2.0L, 3.0L) * CMPLXL(4.0L, -1.0L);
+    long double complex lq = lz / CMPLXL(4.0L, -1.0L);
+    if (!approx((double)crealf(fq), 1.0, 1e-5) ||
+        !approx((double)cimagf(fq), 2.0, 1e-5) ||
+        !approx((double)creall(lq), 2.0, 1e-12) ||
+        !approx((double)cimagl(lq), 3.0, 1e-12)) {
+        printf("[FAIL] mathtest: float/ldbl complex mul/div failed\n");
+        return -1;
+    }
+    return 0;
+}
+
+#include <tgmath.h>
+
+#define TG_TYPE_ID(expr)                                                       \
+    _Generic((expr), float : 1, double : 2, long double : 3,                   \
+             float complex : 4, double complex : 5, long double complex : 6,   \
+             default : 0)
+
+static int test_tgmath_dispatch(void) {
+    float f = 4.0f;
+    double d = 4.0;
+    long double ld = 4.0L;
+    float complex fc = CMPLXF(-1.0f, 0.0f);
+    double complex dc = CMPLX(3.0, 4.0);
+    long double complex ldc = CMPLXL(0.0L, 1.0L);
+
+    if (TG_TYPE_ID(sqrt(f)) != 1 || TG_TYPE_ID(sqrt(d)) != 2 ||
+        TG_TYPE_ID(sqrt(4)) != 2 || TG_TYPE_ID(sqrt(ld)) != 3 ||
+        TG_TYPE_ID(sqrt(fc)) != 4 || TG_TYPE_ID(sqrt(dc)) != 5 ||
+        TG_TYPE_ID(sqrt(ldc)) != 6) {
+        printf("[FAIL] mathtest: tgmath sqrt type dispatch failed\n");
+        return -1;
+    }
+    if (TG_TYPE_ID(fabs(dc)) != 2 || TG_TYPE_ID(fabs(fc)) != 1 ||
+        !approx(fabs(dc), 5.0, 1e-14) || TG_TYPE_ID(pow(2.0f, 3.0f)) != 1 ||
+        TG_TYPE_ID(pow(2.0f, 3)) != 2 || TG_TYPE_ID(pow(dc, 2)) != 5 ||
+        TG_TYPE_ID(fma(1.0f, 2.0f, 3.0f)) != 1 || TG_TYPE_ID(creal(fc)) != 1 ||
+        TG_TYPE_ID(cimag(ldc)) != 3) {
+        printf("[FAIL] mathtest: tgmath fabs/pow/fma/creal dispatch failed\n");
+        return -1;
+    }
+    if (!capprox(exp(CMPLX(0.0, 3.14159265358979323846)), CMPLX(-1.0, 0.0),
+                 1e-14) ||
+        !approx((double)sin(0.5f), (double)sinf(0.5f), 1e-6)) {
+        printf("[FAIL] mathtest: tgmath exp/sin values failed\n");
+        return -1;
+    }
+
+    printf("[OK] <complex.h> and <tgmath.h> arithmetic, trig, hyperbolic, and"
+           " generic dispatch verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_fenv_and_rounding() != 0) {
         return 1;
@@ -271,6 +391,12 @@ int main(void) {
         return 1;
     }
     if (test_trig_and_hyperbolic() != 0) {
+        return 1;
+    }
+    if (test_complex_functions() != 0) {
+        return 1;
+    }
+    if (test_tgmath_dispatch() != 0) {
         return 1;
     }
     return 0;

@@ -52,6 +52,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added ISO C17 and POSIX.1-2024 `<complex.h>` and `<tgmath.h>` in Ring 3 `libc`
+  (`TSK_0036`, `SWR_LIBC_0011`, `ADR_0033`, `ICD_LIBC_0010`, `COMP_LIBC_0010`,
+  `VER_LIBC_0011`): implemented `CMPLX`/`CMPLXF`/`CMPLXL` and all 66 `float`,
+  `double`, and `long double` complex functions in `libc/src/complex.c`,
+  supplied Annex G `__mul{s,d,x}c3` and `__div{s,d,x}c3` runtime helpers in
+  `libc/src/complex_arith.c`, provided pure C17 `_Generic` dispatch in
+  `libc/include/tgmath.h`, registered both headers in Gates 1 and 2 (`51/70`
+  Base headers, `820/1041` Base interfaces), and verified in QEMU
+  `tests/mathtest/test_math.c` with zero Ring 0 changes.
 - Completed POSIX.1-2024 Base `<stdio.h>`, `<stdlib.h>`, `<string.h>`, and
   `<time.h>` in Ring 3 `libc` (`TSK_0035`, `SWR_LIBC_0010`, `ADR_0032`,
   `ICD_LIBC_0009`, `COMP_LIBC_0009`, `VER_LIBC_0010`): added `scanf*`

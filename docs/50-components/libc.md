@@ -126,3 +126,17 @@ and `strerror_r`. `time.c` and `time_cal.c` implement `time`, `difftime`,
 `clock`, `timespec_get`, `gmtime*`, `localtime*`, `mktime`, `asctime*`,
 `ctime*`, and `strftime` ({need}`ICD_LIBC_0009`, {need}`SWR_LIBC_0010`).
 ```
+
+```{comp} Complex math library and Annex G complex multiply/divide helpers
+:id: COMP_LIBC_0010
+:status: active
+:posix: XBD/complex.h (CX), XBD/tgmath.h (CX)
+:refines: ARC_LIBC_0001, ICD_LIBC_0010
+:satisfies: SWR_LIBC_0011
+
+`libc/src/complex.c` implements all 66 `<complex.h>` manipulation, power,
+exponential, logarithmic, trigonometric, and hyperbolic functions over
+`<math.h>`. `libc/src/complex_arith.c` supplies Annex G `__mulsc3`, `__muldc3`,
+`__mulxc3`, `__divsc3`, `__divdc3`, and `__divxc3` runtime helpers
+({need}`ICD_LIBC_0010`, {need}`SWR_LIBC_0011`).
+```
