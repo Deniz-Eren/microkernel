@@ -21,19 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0055 — Add host-to-guest networking, netserv hardening, nc, and ping
-
-```{task} Add host-to-guest networking, netserv hardening, nc, and ping
-:id: TSK_0055
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0042, SYS_IPC_0001, SYS_LIBC_0001
-
-Add localhost QEMU and Podman port forwarding in `scripts/env.sh` and harden
-`servers/netserv/` for inbound host TCP traffic. Add Ring 3 `nc` and `ping`
-utilities with an automated host-to-guest TCP test ({need}`ADR_0042`,
-{need}`SYS_IPC_0001`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0056 — Add Ring 3 PTYs, virtual devices, SCM_RIGHTS, and OpenSSH APIs
 
 ```{task} Add Ring 3 PTYs, virtual devices, SCM_RIGHTS, and OpenSSH APIs
@@ -55,7 +42,9 @@ passing, `<syslog.h>`, `crypt`, and OpenSSH `libc` APIs with QEMU tests
 :traces: BDR_0003, BDR_0004, ADR_0003, SYS_IPC_0001, SYS_LIBC_0001
 
 Cross-compile OpenSSH Portable (`--without-openssl --without-zlib`) for Ring 3
-with Ed25519 `authorized_keys` and dev password login. Start `sshd` on
+with Ed25519 `authorized_keys` and dev password login. Keep only CMake build
+configurations in the repository. Download and build OpenSSH during the CMake
+build without cloning upstream source into the repository. Start `sshd` on
 interactive boot and verify real OpenSSH client logins in CTest
 ({need}`SYS_IPC_0001`, {need}`SYS_LIBC_0001`).
 ```

@@ -20,7 +20,7 @@
 /* need:: COMP_IPC_0018 */
 
 #define NET_SOCK_MAX 48u
-#define TCP_RX_BUF_CAP 8192u
+#define TCP_RX_BUF_CAP 32768u
 #define TCP_MSS 1400u
 #define UDP_Q_MAX 16u
 #define ACCEPT_Q_MAX 16u
@@ -753,6 +753,12 @@ static void net_rx_tcp(const net_addr_t *src_ip, const net_addr_t *dst_ip,
     }
 
     if (s->tcp_state == TCP_SYN_RCVD) {
+        if ((flags & TCP_FLAG_SYN) != 0u && (flags & TCP_FLAG_ACK) == 0u) {
+            (void)tcp_send_seg(&s->local, &s->peer, s->snd_una, s->rcv_nxt,
+                               TCP_FLAG_SYN | TCP_FLAG_ACK, tcp_window(s), NULL,
+                               0u);
+            return;
+        }
         if ((flags & TCP_FLAG_ACK) != 0u && ack == s->snd_nxt) {
             s->snd_una = ack;
             s->tcp_state = TCP_ESTABLISHED;
@@ -792,10 +798,20 @@ static void net_rx_tcp(const net_addr_t *src_ip, const net_addr_t *dst_ip,
     }
 
     int need_ack = 0;
-    if (plen > 0u && seq == s->rcv_nxt && !s->shut_rd) {
-        tcp_rx_push(s, payload, plen);
-        s->rcv_nxt += plen;
-        need_ack = 1;
+    if (plen > 0u && !s->shut_rd) {
+        if (seq == s->rcv_nxt) {
+            uint32_t avail = (s->rx_len < TCP_RX_BUF_CAP)
+                                 ? (TCP_RX_BUF_CAP - s->rx_len)
+                                 : 0u;
+            uint32_t take = (plen < avail) ? plen : avail;
+            if (take > 0u) {
+                tcp_rx_push(s, payload, take);
+                s->rcv_nxt += take;
+            }
+            need_ack = 1;
+        } else {
+            need_ack = 1;
+        }
     }
 
     if ((flags & TCP_FLAG_FIN) != 0u) {
@@ -1184,6 +1200,18 @@ void net_rx_eth(const uint8_t *frame, uint32_t len) {
     if (etype == ETH_TYPE_ARP) {
         net_rx_arp(payload, plen);
     } else if (etype == ETH_TYPE_IPV4) {
+        if (plen >= 20u && (payload[0] >> 4) == 4u) {
+            const uint8_t *src_ip = payload + 12u;
+            int same_sub = 1;
+            for (int i = 0; i < 4; i++) {
+                if ((src_ip[i] & g_mask4[i]) != (g_ip4[i] & g_mask4[i])) {
+                    same_sub = 0;
+                }
+            }
+            if (same_sub && !ip4_is_local(src_ip) && !ip4_is_zero(src_ip)) {
+                arp_update(src_ip, frame + 6u);
+            }
+        }
         net_rx_ipv4(payload, plen);
     } else if (etype == ETH_TYPE_IPV6) {
         net_rx_ipv6(payload, plen);
@@ -2112,7 +2140,15 @@ static void handle_sock_recv(uint32_t msgid, const net_req_t *req) {
             return;
         }
         if (s->rx_len > 0u) {
+            uint16_t win_before = tcp_window(s);
             uint32_t n = tcp_rx_pop(s, rep.data, want, peek);
+            if (!peek && n > 0u && win_before < TCP_MSS &&
+                tcp_window(s) >= TCP_MSS &&
+                (s->tcp_state == TCP_ESTABLISHED ||
+                 s->tcp_state == TCP_CLOSE_WAIT)) {
+                (void)tcp_send_seg(&s->local, &s->peer, s->snd_nxt, s->rcv_nxt,
+                                   TCP_FLAG_ACK, tcp_window(s), NULL, 0u);
+            }
             rep.err = 0;
             rep.len = n;
             rep.addr = s->peer;

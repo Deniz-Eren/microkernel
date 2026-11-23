@@ -113,6 +113,7 @@ XCU utilities awk and ed verified
 XCU utilities bc and m4 verified
 XCU utilities uuencode, uudecode, logger, tput, tabs, mesg, write, and newgrp verified
 XCU utilities at, batch, crontab, lp, and mailx verified
+Ring 3 network utilities nc and ping verified
 uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified

@@ -234,3 +234,16 @@ MMIO BARs, contiguous DMA RX/TX virtqueues, and IOAPIC IRQ pulses.
 with loopback, Ethernet, ARP, IPv4, IPv6, ICMPv4, ICMPv6, UDP, TCP, and poll
 support ({need}`ICD_IPC_0002`, {need}`ICD_IPC_0017`, {need}`SWR_IPC_0013`).
 ```
+
+```{comp} Ring 3 netcat (nc), ping CLI, and host-to-guest networking support
+:id: COMP_IPC_0019
+:status: active
+:refines: ARC_IPC_0001, ICD_IPC_0017
+:satisfies: SWR_IPC_0014
+
+`bin/utils/nc.c` and `bin/utils/ping.c` implement TCP/UDP client and listener
+relay (`-l`, `-k`, `-e`, `-u`) and ICMPv4/ICMPv6 ping over `/dev/net`.
+`servers/netserv/` and `scripts/env.sh` provide localhost host-to-guest TCP
+forwarding and hardened wire RX/TX handling ({need}`ICD_IPC_0017`,
+{need}`SWR_IPC_0014`).
+```

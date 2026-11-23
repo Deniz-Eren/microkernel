@@ -500,4 +500,16 @@ if(MICROKERNEL_ARCH STREQUAL "x86-64" AND NOT MICROKERNEL_COVERAGE)
         proc.smp_cores
         PROPERTIES LABELS "proc;smp"
     )
+    add_test(
+        NAME ipc.net_hostfwd
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            "${CMAKE_SOURCE_DIR}/tests/boot/test_net_hostfwd.py"
+            --build-dir "${CMAKE_BINARY_DIR}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+    set_tests_properties(
+        ipc.net_hostfwd
+        PROPERTIES LABELS "ipc;net"
+    )
 endif()

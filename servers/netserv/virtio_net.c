@@ -495,7 +495,15 @@ int virtio_net_tx(const uint8_t *frame, uint32_t len) {
     if (!frame || len < ETH_HDR_LEN || len > ETH_FRAME_MAX) {
         return -EINVAL;
     }
+    vring_avail_t *avail = (vring_avail_t *)(g_nic.dma_va + DMA_TX_AVAIL_OFF);
     drain_tx_used();
+    for (uint32_t spin = 0u;
+         spin < 200000u &&
+         (uint16_t)(avail->idx - g_nic.tx_last_used) >= g_nic.tx_qsize;
+         spin++) {
+        arch_cpu_relax();
+        drain_tx_used();
+    }
 
     uint16_t slot = g_nic.tx_next_slot;
     g_nic.tx_next_slot = (uint16_t)((slot + 1u) % g_nic.tx_qsize);
@@ -507,7 +515,6 @@ int virtio_net_tx(const uint8_t *frame, uint32_t len) {
     memcpy(buf + sizeof(*vh), frame, len);
 
     vring_desc_t *desc = (vring_desc_t *)(g_nic.dma_va + DMA_TX_DESC_OFF);
-    vring_avail_t *avail = (vring_avail_t *)(g_nic.dma_va + DMA_TX_AVAIL_OFF);
     desc[slot].addr =
         g_nic.dma_phys + DMA_TX_BUF_BASE + (uint64_t)slot * NET_BUF_STRIDE;
     desc[slot].len = (uint32_t)sizeof(*vh) + len;

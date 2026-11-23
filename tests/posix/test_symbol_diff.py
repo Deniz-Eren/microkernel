@@ -58,6 +58,12 @@ SH_BUILTIN_UTILITIES: tuple[str, ...] = (
     "wait",
 )
 
+# Intentional non-POSIX Ring 3 utilities built in bin/ (see ADR_0052).
+NON_POSIX_EXTENSION_UTILITIES: tuple[str, ...] = (
+    "nc",
+    "ping",
+)
+
 IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
     "arpa/inet.h",
@@ -251,7 +257,11 @@ class PosixSymbolDiffTests(unittest.TestCase):
         self.assertTrue(_BIN_CMAKE.is_file(), f"missing {_BIN_CMAKE}")
         bin_utilities = extract_bin_utilities(_BIN_CMAKE)
         base_utilities = manifest.base_utilities()
-        non_posix_bins = sorted(bin_utilities - base_utilities)
+        non_posix_bins = sorted(
+            bin_utilities
+            - base_utilities
+            - set(NON_POSIX_EXTENSION_UTILITIES)
+        )
         self.assertEqual(
             non_posix_bins,
             [],

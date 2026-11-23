@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0055 — Add host-to-guest networking, netserv hardening, nc, and ping
+
+```{task} Add host-to-guest networking, netserv hardening, nc, and ping
+:id: TSK_0055
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0042, ADR_0052, SWR_IPC_0014
+
+Add localhost QEMU and Podman port forwarding in `scripts/env.sh` and harden
+`servers/netserv/` for inbound host TCP traffic. Add Ring 3 `nc` and `ping`
+utilities with an automated host-to-guest TCP test ({need}`ADR_0042`,
+{need}`SWR_IPC_0014`, {need}`SYS_IPC_0001`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0053 — Add XCU scheduling, spooling, and mail utilities
 
 ```{task} Add XCU scheduling, spooling, and mail utilities

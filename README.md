@@ -162,15 +162,17 @@ the Ring 3 command shell (`/boot/sh`):
 
 `./scripts/env.sh run` builds `build/microkernel-shell.iso` with the Multiboot2
 command line `init=sh`. It starts the Ring 3 system servers (`sysproc`,
-`ttyserv`, `pipeserv`, `vfsserv`, `sockserv`, `rtcdrv`) plus `/boot/sh` and
-connects `COM1` to your terminal (`-serial mon:stdio`). Once the `$ ` prompt
-appears, you can run POSIX commands directly:
+`ttyserv`, `pipeserv`, `vfsserv`, `sockserv`, `rtcdrv`, `blkdrv`, `netserv`)
+plus `/boot/sh` and connects `COM1` to your terminal (`-serial mon:stdio`). It
+also forwards localhost TCP ports (`2222:22,8080:8080`) into the VM. Override
+the port list with `MICROKERNEL_NET_PORTS` (or `none`). Once the `$ ` prompt
+appears, you can run POSIX and network commands directly:
 
 ```sh
 ls /boot
 echo hello microkernel > /tmp/note.txt && cat /tmp/note.txt
-cd /tmp && pwd
-set -o pipefail; /boot/false | /boot/true; echo $?
+ping -c 2 10.0.2.2
+nc -l 8080   # connect from host: nc 127.0.0.1 8080
 ```
 
 Press `Ctrl-A` followed by `X` to exit QEMU cleanly. If `qemu-system-x86_64` is

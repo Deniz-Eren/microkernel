@@ -29,10 +29,17 @@ crun() {
 }
 
 crun_tty() {
+    local extra=()
+    while [ "$#" -gt 0 ] && [ "$1" = "--podman-arg" ]; do
+        extra+=("$2")
+        shift 2
+    done
     if [ -t 0 ] && [ -t 1 ]; then
-        podman run --rm -it -v "$ROOT:/workspace:Z" -w /workspace "$IMAGE" "$@"
+        podman run --rm -it "${extra[@]}" \
+            -v "$ROOT:/workspace:Z" -w /workspace "$IMAGE" "$@"
     else
-        podman run --rm -i -v "$ROOT:/workspace:Z" -w /workspace "$IMAGE" "$@"
+        podman run --rm -i "${extra[@]}" \
+            -v "$ROOT:/workspace:Z" -w /workspace "$IMAGE" "$@"
     fi
 }
 
@@ -58,9 +65,29 @@ case "${1:-shell}" in
     run)
         shift
         ensure_image
+        NET_PORTS="${MICROKERNEL_NET_PORTS:-2222:22,8080:8080}"
+        PODMAN_PORT_ARGS=()
+        HOSTFWD_SPEC=""
+        if [ "$NET_PORTS" != "none" ] && [ -n "$NET_PORTS" ]; then
+            IFS=',' read -r -a _pairs <<< "$NET_PORTS"
+            for _p in "${_pairs[@]}"; do
+                _hp="${_p%%:*}"
+                _gp="${_p##*:}"
+                PODMAN_PORT_ARGS+=(
+                    --podman-arg "-p"
+                    --podman-arg "127.0.0.1:${_hp}:${_hp}"
+                )
+                HOSTFWD_SPEC="${HOSTFWD_SPEC},hostfwd=tcp::${_hp}-:${_gp}"
+            done
+        fi
         echo "[env.sh] booting interactive Microkernel shell (Ctrl-A X to exit)"
-        crun_tty bash -c '
+        if [ -n "$HOSTFWD_SPEC" ]; then
+            echo "[env.sh] host->guest localhost ports: $NET_PORTS"
+        fi
+        crun_tty "${PODMAN_PORT_ARGS[@]}" bash -c '
             set -euo pipefail
+            HOSTFWD_SPEC="$1"
+            shift
             if [ ! -f build/kernel.elf ] || [ ! -f build/boot.tar ]; then
                 cmake --build build
             fi
@@ -85,10 +112,10 @@ EOF
                 -m 256M -smp 2 -cdrom build/microkernel-shell.iso \
                 -drive id=hd0,file=build/disk.img,if=none,format=raw \
                 -device virtio-blk-pci,drive=hd0,disable-legacy=on \
-                -netdev user,id=net0 \
+                -netdev "user,id=net0${HOSTFWD_SPEC}" \
                 -device virtio-net-pci,netdev=net0,disable-legacy=on \
                 -serial mon:stdio -display none -no-reboot "$@"
-        ' -- "$@"
+        ' -- "$HOSTFWD_SPEC" "$@"
         ;;
     coverage)
         shift

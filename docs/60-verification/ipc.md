@@ -146,3 +146,16 @@ SLIRP gateway `10.0.2.2` with IOAPIC IRQ pulses. It also checks loopback
 ICMPv4/ICMPv6, IPv4 and IPv6 UDP `bind`/`send`/`recv`/`poll`, and TCP handshake,
 data, `FIN`, `RST`, and leak freedom ({need}`SWR_IPC_0013`).
 ```
+
+```{ver} Verify host-to-guest TCP forwarding, netserv bursts, nc, and ping
+:id: VER_IPC_0012
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0014
+
+CTest `ipc.net_hostfwd` (`tests/boot/test_net_hostfwd.py`) boots Microkernel
+with QEMU SLIRP `hostfwd` and sends a multi-segment TCP burst from a host Python
+client into `/boot/nc -l` over PCI `virtio-net`. `shtest`
+(`tests/shtest/test_sh.c`) verifies `/boot/ping` (`127.0.0.1` and `10.0.2.2`)
+and `/boot/nc` loopback TCP sessions ({need}`SWR_IPC_0014`).
+```

@@ -20,7 +20,7 @@
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
 /* need:: VER_LIBC_0022 VER_LIBC_0023 VER_LIBC_0024 VER_LIBC_0025 */
 /* need:: VER_LIBC_0026 VER_LIBC_0027 VER_LIBC_0028 VER_PROC_0008 */
-/* need:: VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_PROC_0009 VER_IPC_0010 VER_IPC_0012 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -1098,6 +1098,28 @@ static int test_sched_spool_mail_utils(void) {
     return 0;
 }
 
+static int test_net_cli_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    int rc = run_sh_capture(
+        "/boot/ping -c 1 127.0.0.1 | /boot/grep -q '1 packets received' && "
+        "/boot/ping -c 1 10.0.2.2 | /boot/grep -q '1 packets received' && "
+        "/boot/nc -l -e '/boot/tr a-z A-Z' 18080 & "
+        "pid=$!; "
+        "/boot/sleep 1; "
+        "/boot/printf 'netcat loopback\\n' | /boot/nc 127.0.0.1 18080 && "
+        "wait $pid",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "NETCAT LOOPBACK\n") != 0) {
+        printf("[FAIL] shtest nc/ping rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] Ring 3 network utilities nc and ping verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -1155,6 +1177,9 @@ int main(void) {
         return 1;
     }
     if (test_sched_spool_mail_utils() != 0) {
+        return 1;
+    }
+    if (test_net_cli_utils() != 0) {
         return 1;
     }
     return 0;

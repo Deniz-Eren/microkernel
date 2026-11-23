@@ -82,6 +82,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added localhost-only host-to-guest TCP port forwarding in `scripts/env.sh run`
+  (`2222:22,8080:8080`), hardened `servers/netserv/` (32 KiB TCP RX buffers,
+  window-update ACKs, passive ARP learning, duplicate-`SYN` replies, and TX
+  virtqueue backpressure), added Ring 3 `nc` and `ping` utilities, and added
+  CTest `ipc.net_hostfwd` (`TSK_0055`, `SWR_IPC_0014`, `ADR_0052`,
+  `COMP_IPC_0019`, `VER_IPC_0012`).
 - Added POSIX.1-2024 XCU `at`, `batch`, `crontab`, `lp`, and `mailx` in Ring 3
   `bin/utils/` (`TSK_0053`, `SWR_LIBC_0028`, `ADR_0051`, `COMP_LIBC_0027`,
   `VER_LIBC_0028`), reaching 108/108 Base XCU utilities (alongside 70/70 Base C

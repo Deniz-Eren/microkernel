@@ -165,6 +165,19 @@ IPv4, IPv6, ICMPv4, ICMPv6, UDP, and TCP with zero new Ring 0 syscalls
 ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply host-to-guest TCP forwarding, netserv wire hardening, nc, ping
+:id: SWR_IPC_0014
+:status: active
+:derives: SYS_IPC_0001
+:traces: BDR_0003, BDR_0004, ADR_0002, ADR_0042, ADR_0052
+
+`netserv` must learn same-subnet ARP entries from inbound IPv4 frames and buffer
+at least 32 KiB per TCP socket. It must emit window-update ACKs and prevent TX
+virtqueue slot overwrites. User space must supply Ring 3 `nc` and `ping`, and
+`scripts/env.sh run` must forward localhost TCP ports into the VM
+({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:
