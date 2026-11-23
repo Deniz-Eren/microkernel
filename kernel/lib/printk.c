@@ -146,6 +146,14 @@ static int kvsnprintf(char *buf, size_t n, const char *fmt, va_list ap) {
     return (int)(p - buf);
 }
 
+uint64_t console_lock_irqsave(void) {
+    return spin_lock_irqsave(&g_console_lock);
+}
+
+void console_unlock_irqrestore(uint64_t flags) {
+    spin_unlock_irqrestore(&g_console_lock, flags);
+}
+
 void console_write_locked(const char *s, size_t n) {
     uint64_t flags = spin_lock_irqsave(&g_console_lock);
     arch_console_write(s, n);

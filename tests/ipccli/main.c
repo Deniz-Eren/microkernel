@@ -13,11 +13,11 @@
  * synchronous round trips. */
 #include <stdio.h>
 #include <string.h>
-#include <sys/microkernel.h>
 #include <sys/ipc.h>
+#include <sys/microkernel.h>
+#include <time.h>
 
 int main(void) {
-    /* Resolve /dev/echo via sysproc (PID 1, chanid 1). */
     int nconnid = (int)OpenConnection(1, 1);
     if (nconnid < 0) {
         printf("[FAIL] ipccli OpenConnection(name) -> %d\n", nconnid);
@@ -28,7 +28,16 @@ int main(void) {
     q.type = NAME_MSG_QUERY;
     memcpy(q.path, "/dev/echo", sizeof("/dev/echo"));
     name_reply_t r = {0};
-    long s = SendMsg(nconnid, &q, sizeof(q), &r, sizeof(r));
+    long s = -1;
+    for (int tries = 0; tries < 80; tries++) {
+        memset(&r, 0, sizeof(r));
+        s = SendMsg(nconnid, &q, sizeof(q), &r, sizeof(r));
+        if (s >= 0 && r.err == 0 && r.pid != 0) {
+            break;
+        }
+        struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000L};
+        (void)nanosleep(&ts, NULL);
+    }
     if (s < 0 || r.err != 0 || r.pid == 0) {
         printf("[FAIL] ipccli name query -> send=%ld err=%d pid=%d\n", s, r.err,
                r.pid);

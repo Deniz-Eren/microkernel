@@ -18,13 +18,10 @@
 
 #include <kernel/arch.h>
 #include <kernel/printk.h>
-#include <kernel/spinlock.h>
 #include <kernel/string.h>
 #include <kernel/uaccess.h>
 #include <stddef.h>
 #include <sys/microkernel.h>
-
-static spinlock_t g_cov_lock = SPINLOCK_INIT;
 
 /* LLVM 14 Raw Profile v8 constants (InstrProfData.inc). */
 #define LLVM_PROF_RAW_MAGIC_64 0xFF6C70726F667281ULL
@@ -253,9 +250,9 @@ void cov_dump_proc(pcb_t *p) {
     if (!validate_desc(&p->cov, 1)) {
         return;
     }
-    uint64_t cf = spin_lock_irqsave(&g_cov_lock);
+    uint64_t cf = console_lock_irqsave();
     if (p->cov_dumped) {
-        spin_unlock_irqrestore(&g_cov_lock, cf);
+        console_unlock_irqrestore(cf);
         return;
     }
     p->cov_dumped = 1;
@@ -282,7 +279,7 @@ void cov_dump_proc(pcb_t *p) {
     }
     b64_finish(&st);
     emit_frame_end();
-    spin_unlock_irqrestore(&g_cov_lock, cf);
+    console_unlock_irqrestore(cf);
 }
 
 void cov_dump_kernel(void) {
@@ -301,6 +298,7 @@ void cov_dump_kernel(void) {
     struct llvm_prof_raw_hdr hdr;
     fill_header(&hdr, &d);
 
+    uint64_t cf = console_lock_irqsave();
     emit_frame_begin("kernel");
     b64_stream_t st;
     b64_init(&st);
@@ -319,6 +317,7 @@ void cov_dump_kernel(void) {
     }
     b64_finish(&st);
     emit_frame_end();
+    console_unlock_irqrestore(cf);
 }
 
 long sys_cov_write(uint64_t op, uint64_t arg) {
@@ -348,7 +347,7 @@ long sys_cov_write(uint64_t op, uint64_t arg) {
         }
         cov_dump_kernel();
         static const char done_marker[] = "\n@@COV_COMPLETE@@\n";
-        arch_console_write(done_marker, sizeof(done_marker) - 1u);
+        console_write_locked(done_marker, sizeof(done_marker) - 1u);
         return 0;
     }
     return -EINVAL;

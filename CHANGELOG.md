@@ -19,6 +19,17 @@ Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Serialized LLVM coverage framing (`cov_dump_proc()`, `cov_dump_kernel()`, and
+  `@@COV_COMPLETE@@`) in `kernel/core/cov.c` under `g_console_lock` via
+  `console_lock_irqsave()` / `console_unlock_irqrestore()` so SMP `printk()` and
+  `ttyserv` `FD_OP_CONSOLE_TX` output never interleaves into base64 `.profraw`
+  frames or swallows `[OK]` test expectations during `./scripts/env.sh
+  coverage`.
+- Added retry polling to `/dev/echo` name resolution in `tests/ipccli/main.c` so
+  SMP boot scheduling order never causes spurious `NAME_MSG_QUERY` failures.
+
 ### Changed
 
 - Rewrote the `User-space functionality (current support)` section of
