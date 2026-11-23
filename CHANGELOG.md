@@ -37,6 +37,13 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Synced `tests/posix/issue8-manifest.tsv` with the updated
+  `posix-issue8-os-dev` manifest, activated and header-gated the implemented
+  option groups (`PS`, `SIO`, `TSA`, `RPP`) in `libc/include/sys/_posix_opts.h`,
+  `aio.h`, `sys/mman.h`, `sched.h`, `pthread.h`, `sysconf.c`, and Gate 2
+  (`ALT_OPTION_GROUPS` for `FSC|SIO` and `XSI|SIO`), and queued `TSK_0049` in
+  `docs/records/TASKS.md` for the seven newly-Base interfaces (`futimens`,
+  `utimensat`, `lgamma*`, `tzset`, `tzname`).
 - Refined, split, and reordered the remaining POSIX.1-2024 Base task backlog in
   `docs/records/TASKS.md`: explicitly listed `<stdlib.h>` multibyte, `*_l`
   locale helpers, and `wcstoimax`/`wcstoumax` in `TSK_0037`; split wide `stdio`

@@ -15,6 +15,7 @@
 
 #include <sched.h>
 #include <stddef.h>
+#include <sys/_posix_opts.h>
 #include <sys/_pthread_types.h>
 #include <sys/types.h>
 #include <time.h>
@@ -120,11 +121,13 @@ int pthread_attr_getschedparam(const pthread_attr_t *restrict attr,
                                struct sched_param *restrict param);
 int pthread_attr_setschedparam(pthread_attr_t *restrict attr,
                                const struct sched_param *restrict param);
+#if defined(_POSIX_THREAD_ATTR_STACKADDR) && (_POSIX_THREAD_ATTR_STACKADDR > 0)
 int pthread_attr_getstack(const pthread_attr_t *restrict attr,
                           void **restrict stackaddr,
                           size_t *restrict stacksize);
 int pthread_attr_setstack(pthread_attr_t *attr, void *stackaddr,
                           size_t stacksize);
+#endif
 
 int pthread_atfork(void (*prepare)(void), void (*parent)(void),
                    void (*child)(void));
@@ -168,10 +171,12 @@ int pthread_mutexattr_destroy(pthread_mutexattr_t *attr);
 int pthread_mutexattr_gettype(const pthread_mutexattr_t *restrict attr,
                               int *restrict type);
 int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
+#if defined(_POSIX_THREAD_PRIO_PROTECT) && (_POSIX_THREAD_PRIO_PROTECT > 0)
 int pthread_mutexattr_getprioceiling(const pthread_mutexattr_t *restrict attr,
                                      int *restrict prioceiling);
 int pthread_mutexattr_setprioceiling(pthread_mutexattr_t *attr,
                                      int prioceiling);
+#endif
 int pthread_mutexattr_getrobust(const pthread_mutexattr_t *restrict attr,
                                 int *restrict robust);
 int pthread_mutexattr_setrobust(pthread_mutexattr_t *attr, int robust);
@@ -187,10 +192,12 @@ int pthread_mutex_clocklock(pthread_mutex_t *restrict mutex, clockid_t clock_id,
                             const struct timespec *restrict abstime);
 int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
+#if defined(_POSIX_THREAD_PRIO_PROTECT) && (_POSIX_THREAD_PRIO_PROTECT > 0)
 int pthread_mutex_getprioceiling(const pthread_mutex_t *restrict mutex,
                                  int *restrict prioceiling);
 int pthread_mutex_setprioceiling(pthread_mutex_t *restrict mutex,
                                  int prioceiling, int *restrict old_ceiling);
+#endif
 int pthread_mutex_consistent(pthread_mutex_t *mutex);
 
 int pthread_condattr_init(pthread_condattr_t *attr);

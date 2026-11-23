@@ -79,11 +79,13 @@ long sysconf(int name) {
         return _POSIX_MEMLOCK_RANGE;
     case _SC_MEMORY_PROTECTION:
         return _POSIX_VERSION;
+    case _SC_PRIORITY_SCHEDULING:
+        return _POSIX_PRIORITY_SCHEDULING;
+    case _SC_SYNCHRONIZED_IO:
+        return _POSIX_SYNCHRONIZED_IO;
     case _SC_MESSAGE_PASSING:
     case _SC_PRIORITIZED_IO:
-    case _SC_PRIORITY_SCHEDULING:
     case _SC_REALTIME_SIGNALS:
-    case _SC_SYNCHRONIZED_IO:
     case _SC_SPAWN:
         return -1L;
     case _SC_SEMAPHORES:

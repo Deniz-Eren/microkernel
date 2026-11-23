@@ -15,6 +15,7 @@
 
 #include <signal.h>
 #include <stddef.h>
+#include <sys/_posix_opts.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -49,7 +50,10 @@ struct aiocb {
 
 int aio_cancel(int fildes, struct aiocb *aiocbp);
 int aio_error(const struct aiocb *aiocbp);
+#if (defined(_POSIX_FSYNC) && (_POSIX_FSYNC > 0)) ||                           \
+    (defined(_POSIX_SYNCHRONIZED_IO) && (_POSIX_SYNCHRONIZED_IO > 0))
 int aio_fsync(int op, struct aiocb *aiocbp);
+#endif
 int aio_read(struct aiocb *aiocbp);
 ssize_t aio_return(struct aiocb *aiocbp);
 int aio_suspend(const struct aiocb *const list[], int nent,

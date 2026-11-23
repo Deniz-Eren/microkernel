@@ -37,7 +37,11 @@
 void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off);
 int munmap(void *addr, size_t len);
 int mprotect(void *addr, size_t len, int prot);
+
+#if defined(_XOPEN_SOURCE) ||                                                  \
+    (defined(_POSIX_SYNCHRONIZED_IO) && (_POSIX_SYNCHRONIZED_IO > 0))
 int msync(void *addr, size_t len, int flags);
+#endif
 
 #if defined(_POSIX_MEMLOCK) && (_POSIX_MEMLOCK > 0)
 #define MCL_CURRENT 0x1

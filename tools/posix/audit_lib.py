@@ -35,15 +35,24 @@ OPTION_GROUP_MACROS: dict[str, tuple[str, ...]] = {
     "MLR": ("_POSIX_MEMLOCK_RANGE",),
     "MSG": ("_POSIX_MESSAGE_PASSING",),
     "PS": ("_POSIX_PRIORITY_SCHEDULING",),
+    "RPP": ("_POSIX_THREAD_PRIO_PROTECT",),
     "SHM": ("_POSIX_SHARED_MEMORY_OBJECTS",),
     "SIO": ("_POSIX_SYNCHRONIZED_IO",),
     "SPN": ("_POSIX_SPAWN",),
     "TCT": ("_POSIX_THREAD_CPUTIME",),
     "TPS": ("_POSIX_THREAD_PRIORITY_SCHEDULING",),
+    "TSA": ("_POSIX_THREAD_ATTR_STACKADDR",),
     "TSH": ("_POSIX_THREAD_PROCESS_SHARED",),
     "TSS": ("_POSIX_THREAD_ATTR_STACKSIZE",),
     "TYM": ("_POSIX_TYPED_MEMORY_OBJECTS",),
     "XSI": ("_XOPEN_UNIX",),
+}
+
+# POSIX.1-2024 interfaces governed by compound OR option tags (e.g., FSC|SIO,
+# XSI|SIO) where the manifest records only the primary option code.
+ALT_OPTION_GROUPS: dict[str, tuple[str, ...]] = {
+    "aio_fsync": ("SIO",),
+    "msync": ("SIO",),
 }
 
 _FUNC_HDR_RE = re.compile(r"^[0-9a-fA-F]+\s+<([^>]+)>:\s*$")

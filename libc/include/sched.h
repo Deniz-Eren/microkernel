@@ -13,6 +13,7 @@
 
 /* need:: ICD_LIBC_0006 */
 
+#include <sys/_posix_opts.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -25,8 +26,10 @@ struct sched_param {
 #define SCHED_RR 2
 
 int sched_yield(void);
+#if defined(_POSIX_PRIORITY_SCHEDULING) && (_POSIX_PRIORITY_SCHEDULING > 0)
 int sched_get_priority_max(int policy);
 int sched_get_priority_min(int policy);
 int sched_rr_get_interval(pid_t pid, struct timespec *interval);
+#endif
 
 #endif /* _SCHED_H */

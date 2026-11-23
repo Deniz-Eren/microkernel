@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "posix"))
 
 from audit_lib import (  # noqa: E402
+    ALT_OPTION_GROUPS,
     BASE_TARGET_GROUPS,
     OPTION_GROUP_MACROS,
     PosixManifest,
@@ -111,11 +112,15 @@ _BOOT_TAR: Path | None = None
 _REPORT: Path | None = None
 
 
-def _is_option_allowed(group: str, active_macros: set[str]) -> bool:
+def _is_option_allowed(sym: str, group: str, active_macros: set[str]) -> bool:
     if group in BASE_TARGET_GROUPS:
         return True
-    macros = OPTION_GROUP_MACROS.get(group, ())
-    return any(m in active_macros for m in macros)
+    groups = (group, *ALT_OPTION_GROUPS.get(sym, ()))
+    for grp in groups:
+        macros = OPTION_GROUP_MACROS.get(grp, ())
+        if any(m in active_macros for m in macros):
+            return True
+    return False
 
 
 def _classify_symbols(
@@ -130,7 +135,7 @@ def _classify_symbols(
     for sym in sorted(symbols):
         entry = manifest.interfaces.get(sym)
         if entry is not None:
-            if not _is_option_allowed(entry.group, active_macros):
+            if not _is_option_allowed(sym, entry.group, active_macros):
                 ungated.append((sym, entry.group))
         elif is_reserved_identifier(sym):
             reserved.append(sym)
