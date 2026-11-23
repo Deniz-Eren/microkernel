@@ -146,6 +146,15 @@ SOFTWARE.
 * **Source:** [zlib.net][zlib-src]
 * **License:** zlib License (Jean-loup Gailly and Mark Adler).
 
+### OpenSSL (3.0.15)
+* **Role:** Ring 3 cryptography and TLS library (`libcrypto.a`, `libssl.a`, and
+  `<openssl/*.h>`), downloaded and cross-compiled into the sysroot during the
+  CMake build by `cmake/openssl.cmake` (SHA-256
+  `23c666d0edf20f14249b3d8f0368acaee9ab585b09e1de82107c66e1f3ec9533`). Upstream
+  source files are not stored in this repository.
+* **Source:** [openssl.org][openssl-src]
+* **License:** Apache License 2.0.
+
 ## 3. Trademarks
 
 * POSIX® is a registered trademark of the Institute of Electrical and Electronic
@@ -163,3 +172,4 @@ SOFTWARE.
   https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p2.tar.gz
 [zlib-src]:
   https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+[openssl-src]: https://www.openssl.org/source/openssl-3.0.15.tar.gz

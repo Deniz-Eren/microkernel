@@ -350,9 +350,10 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   Other helpers include `strtod*`, `quick_exit`, `qsort_r`, `getsubopt`,
   `stpcpy`/`memmem`/`strerror_r`, `getopt`, `fnmatch`, `<regex.h>`, `<glob.h>`,
   `<wordexp.h>`, `<tar.h>`, `<cpio.h>`, `<dlfcn.h>` (`ET_DYN` W^X dynamic
-  loading), `setjmp`, `realpath`, `<stdatomic.h>`, and `<uchar.h>`. Link against
-  cross-compiled sysroot `zlib` (`libz.a` and `<zlib.h>`) for DEFLATE, gzip, and
-  `crc32`/`adler32` compression.
+  loading), `setjmp`, `realpath`, `<stdatomic.h>`, and `<uchar.h>`. Link sysroot
+  `zlib` (`libz.a`, `<zlib.h>`) for DEFLATE and gzip compression. Link sysroot
+  OpenSSL `3.0.15` (`libcrypto.a`, `libssl.a`, `<openssl/*.h>`) for SHA-256,
+  AES-GCM, RSA, ECDSA, Ed25519, X.509, and TLS 1.3.
 
 ### For system server and driver authors
 

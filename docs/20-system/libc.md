@@ -406,6 +406,18 @@ framing, `gz*` file I/O, and `crc32`/`adler32` checksums
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply cross-compiled Ring 3 sysroot OpenSSL (libcrypto and libssl)
+:id: SWR_LIBC_0031
+:status: active
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0056
+
+The CMake build must download and cross-compile OpenSSL into the Ring 3 sysroot
+(`libcrypto.a`, `libssl.a`, and `<openssl/*.h>`) without storing upstream source
+in git. It must support `/dev/urandom` seeding, SHA-256, AES-GCM, RSA, ECDSA,
+Ed25519, X.509 certificates, and TLS 1.3 ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

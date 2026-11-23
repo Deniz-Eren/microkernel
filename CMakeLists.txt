@@ -137,6 +137,7 @@ add_custom_command(
 add_custom_target(crt0 DEPENDS ${SYSROOT_DIR}/usr/lib/crt0.o)
 add_dependencies(c crt0)
 include(cmake/zlib.cmake)
+include(cmake/openssl.cmake)
 
 #------------------------------------------------------------------------------
 # Stage 3: Ring 3 servers and test applications
@@ -253,6 +254,7 @@ add_subdirectory(tests/blktest)
 add_subdirectory(tests/nettest)
 add_subdirectory(tests/ext2test)
 add_subdirectory(tests/zlibtest)
+add_subdirectory(tests/openssltest)
 add_subdirectory(tests/smptest)
 add_subdirectory(tests/stresstest)
 

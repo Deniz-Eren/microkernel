@@ -82,6 +82,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added CMake `FetchContent` cross-compilation of OpenSSL `3.0.15` LTS into the
+  Ring 3 sysroot (`sysroot/usr/lib/libcrypto.a`, `sysroot/usr/lib/libssl.a`,
+  `<openssl/*.h>`, downloaded at build time with zero vendored source) with QEMU
+  verification in `tests/openssltest/test_openssl.c` (SHA-256, AES-256-GCM,
+  RSA-2048, ECDSA P-256, Ed25519, X.509, and TLS 1.3; `TSK_0059`,
+  `SWR_LIBC_0031`, `ADR_0056`, `COMP_LIBC_0030`, `VER_LIBC_0031`).
 - Added CMake `FetchContent` cross-compilation of `zlib` `1.3.1` into the Ring 3
   sysroot (`sysroot/usr/lib/libz.a`, `<zlib.h>`, `<zconf.h>`, downloaded at
   build time with zero vendored source) with QEMU verification in

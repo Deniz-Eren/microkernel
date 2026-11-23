@@ -399,3 +399,16 @@ The headless QEMU harness `tests/test_runner.py` runs `zlibtest`
 detection, streaming zlib and gzip `deflate`/`inflate`, and `gzopen`/
 `gzwrite`/`gzread` over `/tmp` ({need}`SWR_LIBC_0030`).
 ```
+
+```{ver} Verify cross-compiled Ring 3 sysroot OpenSSL in QEMU
+:id: VER_LIBC_0031
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0031
+
+The headless QEMU harness `tests/test_runner.py` runs `openssltest`
+(`tests/openssltest/test_openssl.c`) linked against `libssl.a` and
+`libcrypto.a`. It verifies `RAND_bytes`, SHA-256, AES-256-GCM, RSA-2048, ECDSA
+P-256, Ed25519, X.509 signing, and a TLS 1.3 handshake over memory BIO pairs
+({need}`SWR_LIBC_0031`).
+```

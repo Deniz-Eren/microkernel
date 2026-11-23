@@ -798,8 +798,13 @@ static void net_rx_tcp(const net_addr_t *src_ip, const net_addr_t *dst_ip,
     }
 
     int need_ack = 0;
-    if (plen > 0u && !s->shut_rd) {
-        if (seq == s->rcv_nxt) {
+    if (plen > 0u) {
+        if (s->shut_rd) {
+            if (seq == s->rcv_nxt) {
+                s->rcv_nxt += plen;
+            }
+            need_ack = 1;
+        } else if (seq == s->rcv_nxt) {
             uint32_t avail = (s->rx_len < TCP_RX_BUF_CAP)
                                  ? (TCP_RX_BUF_CAP - s->rx_len)
                                  : 0u;

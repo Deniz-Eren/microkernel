@@ -397,3 +397,15 @@ and OpenSSH compatibility helpers ({need}`ICD_LIBC_0018`,
 cross-compiles `libz.a` against `libc.a` ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0030`).
 ```
+
+```{comp} Ring 3 sysroot OpenSSL build configuration (libcrypto and libssl)
+:id: COMP_LIBC_0030
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0031
+
+`cmake/openssl.cmake`, `cmake/openssl_target.conf`, `cmake/build_openssl.sh`,
+and `cmake/openssl_compat/` download OpenSSL `3.0.15` during the CMake build.
+They cross-compile `libcrypto.a` and `libssl.a` and install `<openssl/*.h>` into
+the Ring 3 sysroot ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0031`).
+```
