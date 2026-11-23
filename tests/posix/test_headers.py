@@ -15,7 +15,7 @@
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
 # need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014 VER_LIBC_0015
-# need:: VER_LIBC_0016
+# need:: VER_LIBC_0016 VER_LIBC_0017
 
 from __future__ import annotations
 
@@ -36,6 +36,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "cpio.h",
     "ctype.h",
     "dirent.h",
+    "dlfcn.h",
     "endian.h",
     "errno.h",
     "fcntl.h",
@@ -1570,6 +1571,37 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"i18n headers check failed:\n{err}")
+
+    def test_dlfcn_header_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <dlfcn.h>",
+                "#ifdef SYS_VM_MAP",
+                '#error "dlfcn.h leaked SYS_VM_MAP"',
+                "#endif",
+                "#ifdef PROT_EXEC",
+                '#error "dlfcn.h leaked sys/mman.h PROT_EXEC"',
+                "#endif",
+                "static int __check_dlfcn(void) {",
+                "    Dl_info_t info;",
+                "    void *h = dlopen(\"libdltest.so\",",
+                "                     RTLD_NOW | RTLD_GLOBAL);",
+                "    void *s = dlsym(h, \"sym\");",
+                "    void *d = dlsym(RTLD_DEFAULT, \"sym\");",
+                "    void *n = dlsym(RTLD_NEXT, \"sym\");",
+                "    int a = dladdr(s, &info);",
+                "    const char *e = dlerror();",
+                "    return a + dlclose(h) + (d != (void *)0) +",
+                "           (n != (void *)0) + (e != (const char *)0);",
+                "}",
+                "int (*__dlfcn_ref)(void) = __check_dlfcn;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"dlfcn.h check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

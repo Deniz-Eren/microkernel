@@ -217,3 +217,17 @@ plural forms, and `locale`, `localedef`, `iconv`, `gettext`, and `ngettext`
 CLIs. CTest Gates 1 and 2 check all five headers, 25 interfaces, and seven
 utilities ({need}`SWR_LIBC_0016`).
 ```
+
+```{ver} Verify Ring 3 ELF64 ET_DYN dynamic loading and <dlfcn.h>
+:id: VER_LIBC_0017
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0017
+
+The headless QEMU harness `tests/test_runner.py` runs `utilstest`
+(`tests/utilstest/test_utils.c`) with the shared object `libdltest.so`
+(`tests/utilstest/dlplugin.c`). It checks `dlopen`, W^X `mprotect` execution,
+relocations, host `libc` calls, `dlsym`, `dladdr`, `dlerror`, refcounting, and
+constructors/destructors. CTest Gates 1 and 2 verify `<dlfcn.h>` hygiene and all
+five Base exports ({need}`SWR_LIBC_0017`).
+```

@@ -212,3 +212,17 @@ implement all 25 Base i18n interfaces in Ring 3. `bin/utils/locale.c`,
 implement the seven POSIX.1-2024 i18n CLI utilities ({need}`ICD_LIBC_0015`,
 {need}`SWR_LIBC_0016`).
 ```
+
+```{comp} Ring 3 ELF64 ET_DYN dynamic loader
+:id: COMP_LIBC_0016
+:status: active
+:posix: XBD/dlfcn.h (BASE)
+:refines: ARC_LIBC_0001, ICD_LIBC_0016
+:satisfies: SWR_LIBC_0017
+
+`libc/src/dlfcn.c` implements `dlopen`, `dlsym`, `dlclose`, `dlerror`, and
+`dladdr` in Ring 3. It maps `ET_DYN` shared objects via `mmap`, processes
+`x86-64` relocations, and enforces W^X via `mprotect`. It also runs init/fini
+hooks and keeps per-thread `dlerror` state in `FS.base` TLS
+({need}`ICD_LIBC_0016`, {need}`SWR_LIBC_0017`).
+```

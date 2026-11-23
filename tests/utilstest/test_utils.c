@@ -10,6 +10,7 @@
 
 #include <cpio.h>
 #include <dirent.h>
+#include <dlfcn.h>
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -51,8 +52,8 @@
 #include <unistd.h>
 #include <wordexp.h>
 
-/* need:: VER_LIBC_0008 VER_LIBC_0015 VER_LIBC_0016 VER_PROC_0008 */
-/* need:: VER_PROC_0009 VER_PROC_0010 VER_IPC_0010 */
+/* need:: VER_LIBC_0008 VER_LIBC_0015 VER_LIBC_0016 VER_LIBC_0017 */
+/* need:: VER_PROC_0008 VER_PROC_0009 VER_PROC_0010 VER_IPC_0010 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -1539,6 +1540,107 @@ static int test_i18n_headers_and_cli(void) {
     return 0;
 }
 
+static int test_dlfcn_et_dyn(void) {
+    /* 1. Initial dlerror is NULL; bad mode and missing file set + clear it. */
+    (void)dlerror();
+    if (dlerror() != NULL || dlopen("libdltest.so", 0) != NULL ||
+        dlerror() == NULL || dlerror() != NULL) {
+        printf("[FAIL] dlfcn invalid-mode/dlerror semantics failed\n");
+        return -1;
+    }
+    if (dlopen("/boot/no_such_lib.so", RTLD_NOW) != NULL || dlerror() == NULL ||
+        dlerror() != NULL) {
+        printf("[FAIL] dlfcn missing-file error failed\n");
+        return -1;
+    }
+
+    /* 2. Load real ET_DYN shared object from /boot with W^X mprotect. */
+    void *h = dlopen("libdltest.so", RTLD_NOW | RTLD_GLOBAL);
+    if (!h) {
+        printf("[FAIL] dlopen libdltest.so failed: %s\n", dlerror());
+        return -1;
+    }
+
+    typedef int (*add_fn_t)(int, int);
+    typedef int (*reloc_fn_t)(int);
+    typedef int (*slen_fn_t)(const char *);
+    typedef const char *(*greet_fn_t)(void);
+    typedef void (*dtor_reg_fn_t)(int *);
+
+    int *ctor_ran = (int *)dlsym(h, "dl_ctor_ran");
+    add_fn_t add_fn = (add_fn_t)(uintptr_t)dlsym(h, "dl_add");
+    reloc_fn_t reloc_fn = (reloc_fn_t)(uintptr_t)dlsym(h, "dl_call_reloc");
+    slen_fn_t slen_fn = (slen_fn_t)(uintptr_t)dlsym(h, "dl_use_host_strlen");
+    greet_fn_t greet_fn = (greet_fn_t)(uintptr_t)dlsym(h, "dl_greeting");
+    dtor_reg_fn_t set_dtor =
+        (dtor_reg_fn_t)(uintptr_t)dlsym(h, "dl_set_dtor_flag");
+
+    if (!ctor_ran || *ctor_ran != 42 || !add_fn || add_fn(19, 23) != 42 ||
+        !reloc_fn || reloc_fn(7) != 49 || !slen_fn ||
+        slen_fn("microkernel") != 11 || !greet_fn ||
+        strcmp(greet_fn(), "hello-from-et-dyn") != 0 || !set_dtor) {
+        printf("[FAIL] dlfcn symbol calls/relocations/ctor failed\n");
+        (void)dlclose(h);
+        return -1;
+    }
+
+    /* 3. RTLD_DEFAULT, dlopen(NULL), and missing symbol error. */
+    void *self_h = dlopen(NULL, RTLD_LAZY);
+    if (!self_h || dlsym(RTLD_DEFAULT, "dl_add") != (void *)(uintptr_t)add_fn ||
+        dlsym(self_h, "dl_add") != (void *)(uintptr_t)add_fn ||
+        dlclose(self_h) != 0) {
+        printf("[FAIL] dlfcn RTLD_DEFAULT/self handle lookup failed\n");
+        (void)dlclose(h);
+        return -1;
+    }
+    if (dlsym(h, "no_such_symbol") != NULL || dlerror() == NULL ||
+        dlerror() != NULL) {
+        printf("[FAIL] dlfcn missing symbol error failed\n");
+        (void)dlclose(h);
+        return -1;
+    }
+
+    /* 4. dladdr exact match, interior offset, and unmapped address. */
+    Dl_info_t info = {0};
+    const char *interior = ((const char *)(uintptr_t)add_fn) + 2;
+    if (dladdr((const void *)(uintptr_t)add_fn, &info) == 0 ||
+        !info.dli_fname || !strstr(info.dli_fname, "libdltest.so") ||
+        !info.dli_fbase || !info.dli_sname ||
+        strcmp(info.dli_sname, "dl_add") != 0 ||
+        info.dli_saddr != (void *)(uintptr_t)add_fn) {
+        printf("[FAIL] dladdr exact symbol lookup failed\n");
+        (void)dlclose(h);
+        return -1;
+    }
+    memset(&info, 0, sizeof(info));
+    if (dladdr(interior, &info) == 0 || !info.dli_sname ||
+        strcmp(info.dli_sname, "dl_add") != 0 ||
+        dladdr((const void *)(uintptr_t)0x1234u, &info) != 0) {
+        printf("[FAIL] dladdr interior/unmapped check failed\n");
+        (void)dlclose(h);
+        return -1;
+    }
+
+    /* 5. Refcounting and DT_FINI_ARRAY destructor on final dlclose. */
+    int dtor_flag = 0;
+    set_dtor(&dtor_flag);
+    void *h2 = dlopen("/boot/libdltest.so", RTLD_LAZY);
+    if (h2 != h || dlclose(h2) != 0 || dtor_flag != 0) {
+        printf("[FAIL] dlfcn refcount check failed flag=%d\n", dtor_flag);
+        (void)dlclose(h);
+        return -1;
+    }
+    if (dlclose(h) != 0 || dtor_flag != 99) {
+        printf("[FAIL] dlfcn final dlclose/destructor failed flag=%d\n",
+               dtor_flag);
+        return -1;
+    }
+
+    printf("[OK] <dlfcn.h> ET_DYN W^X loader, relocations, dladdr, and "
+           "ctor/dtor verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -1553,6 +1655,9 @@ int main(void) {
         return 1;
     }
     if (test_i18n_headers_and_cli() != 0) {
+        return 1;
+    }
+    if (test_dlfcn_et_dyn() != 0) {
         return 1;
     }
     if (test_atexit_qsort_bsearch_strto_getopt() != 0) {

@@ -64,6 +64,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added Ring 3 ELF64 `ET_DYN` dynamic loading and POSIX.1-2024 `<dlfcn.h>`
+  (`TSK_0040`, `SWR_LIBC_0017`, `ADR_0039`, `ICD_LIBC_0016`, `COMP_LIBC_0016`,
+  `VER_LIBC_0017`): implemented `dlopen`, `dlsym` (`RTLD_DEFAULT`, `RTLD_NEXT`),
+  `dlclose`, per-thread `dlerror`, and `dladdr` (`Dl_info_t`) in
+  `libc/src/dlfcn.c` using contiguous W^X `mmap`/`mprotect`, `x86-64`
+  relocations, SysV/GNU hash symbol tables, and `DT_INIT_ARRAY`/`DT_FINI_ARRAY`
+  hooks; added `microkernel_add_user_shared_library` and `libdltest.so` in
+  `tests/utilstest/dlplugin.c`; reached 100% of non-network Base headers
+  (`65/70`) and `1000/1037` Base interfaces (+5, 96.4%) in Gate 2 with zero Ring
+  0 changes.
 - Added POSIX.1-2024 `<langinfo.h>`, `<monetary.h>`, `<nl_types.h>`,
   `<iconv.h>`, and `<libintl.h>` plus seven i18n CLI utilities strictly in Ring
   3 (`TSK_0038`, `SWR_LIBC_0016`, `ADR_0038`, `ICD_LIBC_0015`, `COMP_LIBC_0015`,

@@ -231,6 +231,19 @@ and `<libintl.h>` in Ring 3. User space must supply `locale`, `localedef`,
 `iconv`, `gencat`, `msgfmt`, `gettext`, and `ngettext` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply Ring 3 ELF64 ET_DYN dynamic loading and <dlfcn.h>
+:id: SWR_LIBC_0017
+:status: active
+:posix: XBD/dlfcn.h (BASE)
+:derives: SYS_LIBC_0001, SYS_PROC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0039
+
+`libc` must supply `<dlfcn.h>` (`dlopen`, `dlsym`, `dlclose`, `dlerror`,
+`dladdr`) in Ring 3. The loader must map `ET_DYN` objects with W^X
+`mmap`/`mprotect`, process `x86-64` relocations, and run constructors and
+destructors ({need}`SYS_LIBC_0001`, {need}`SYS_PROC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

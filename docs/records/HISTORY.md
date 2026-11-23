@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0040 — Add Ring 3 ELF dynamic symbol resolution and <dlfcn.h>
+
+```{task} Add Ring 3 ELF dynamic symbol resolution and <dlfcn.h>
+:id: TSK_0040
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0039, SWR_LIBC_0017
+
+Add Ring 3 ELF dynamic object loading (`ET_DYN` with W^X `mmap`/`mprotect`
+relocation) for `<dlfcn.h>` (`dlopen`, `dlsym`, `dlclose`, `dlerror`, `dladdr`).
+Verify with Gates 1 and 2 and QEMU runtime tests ({need}`BDR_0004`,
+{need}`SWR_LIBC_0017`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0038 — Add <langinfo.h>, <monetary.h>, <iconv.h>, and <libintl.h>
 
 ```{task} Add <langinfo.h>, <monetary.h>, <iconv.h>, and <libintl.h>

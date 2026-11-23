@@ -310,8 +310,8 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   `<libintl.h>`, UTF-8 multibyte conversions, `<wctype.h>`, and `<wchar.h>`.
   Other helpers include `strtod*`, `quick_exit`, `qsort_r`, `getsubopt`,
   `stpcpy`/`memmem`/`strerror_r`, `getopt`, `fnmatch`, `<regex.h>`, `<glob.h>`,
-  `<wordexp.h>`, `<tar.h>`, `<cpio.h>`, `setjmp`, `realpath`, `<stdatomic.h>`,
-  and `<uchar.h>`.
+  `<wordexp.h>`, `<tar.h>`, `<cpio.h>`, `<dlfcn.h>` (`ET_DYN` W^X dynamic
+  loading), `setjmp`, `realpath`, `<stdatomic.h>`, and `<uchar.h>`.
 
 ### For system server and driver authors
 
@@ -332,9 +332,9 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** `<dlfcn.h>` dynamic loading, remaining
-  shell grammar and XCU utilities, and Ring 3 TCP/IP networking (`<netdb.h>`,
-  `<netinet/in.h>`, `<arpa/inet.h>`, `<net/if.h>`, `<netinet/tcp.h>`). See
+- **Not available yet (planned next):** Remaining XCU shell grammar and
+  utilities, and Ring 3 TCP/IP networking (`<netdb.h>`, `<netinet/in.h>`,
+  `<arpa/inet.h>`, `<net/if.h>`, `<netinet/tcp.h>`). See
   [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 

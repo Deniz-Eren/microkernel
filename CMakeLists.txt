@@ -177,6 +177,45 @@ function(microkernel_add_user_executable name)
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})
 endfunction()
 
+function(microkernel_add_user_shared_library name)
+    set(boot_name "${name}")
+    set(srcs ${ARGN})
+    list(GET srcs 0 first_arg)
+    if(first_arg STREQUAL "BOOT_NAME")
+        list(GET srcs 1 boot_name)
+        list(SUBLIST srcs 2 -1 srcs)
+    endif()
+    set(obj_target "${name}_obj")
+    add_library(${obj_target} OBJECT ${srcs})
+    set(pic_cflags ${USER_CFLAGS})
+    list(REMOVE_ITEM pic_cflags -fno-pic -fno-pie)
+    list(APPEND pic_cflags -fPIC)
+    target_compile_options(${obj_target} PRIVATE ${pic_cflags})
+    target_include_directories(${obj_target} SYSTEM PRIVATE
+        ${SYSROOT_DIR}/usr/include
+        ${CLANG_RESOURCE_DIR}/include
+    )
+    add_dependencies(${obj_target} install_headers)
+    set(out_so "${CMAKE_CURRENT_BINARY_DIR}/${boot_name}")
+    add_custom_command(
+        OUTPUT "${out_so}"
+        COMMAND ${CMAKE_LINKER}
+                -shared
+                -z separate-code
+                --hash-style=both
+                --build-id=none
+                $<TARGET_OBJECTS:${obj_target}>
+                -o "${out_so}"
+        DEPENDS ${obj_target}
+        COMMENT "Stage 3: linking Ring 3 shared object ${boot_name}"
+        VERBATIM
+    )
+    add_custom_target(${name} ALL DEPENDS "${out_so}")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+        "${boot_name}=${out_so}")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})
+endfunction()
+
 add_subdirectory(servers/sysproc)
 add_subdirectory(servers/pipeserv)
 add_subdirectory(servers/vfsserv)

@@ -36,6 +36,8 @@ typedef struct __pthread_tls {
     void *(*start_fn)(void *);
     void *start_arg;
     void *locale;
+    int dlerror_pending;
+    char dlerror_buf[128];
     void *tsd[PTHREAD_KEYS_MAX_INT];
 } __pthread_tls_t;
 

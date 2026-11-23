@@ -53,6 +53,7 @@ IMPLEMENTED_POSIX_HEADERS: tuple[str, ...] = (
     "cpio.h",
     "ctype.h",
     "dirent.h",
+    "dlfcn.h",
     "endian.h",
     "errno.h",
     "fcntl.h",

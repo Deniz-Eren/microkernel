@@ -8,3 +8,4 @@
 #
 
 microkernel_add_user_executable(utilstest test_utils.c)
+microkernel_add_user_shared_library(dltest BOOT_NAME libdltest.so dlplugin.c)

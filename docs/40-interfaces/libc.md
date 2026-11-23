@@ -216,3 +216,16 @@ POSIX.1-2024 `ustar` and `cpio` header macros ({need}`ARC_LIBC_0001`,
 `*textdomain*` interfaces ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
 {need}`SWR_LIBC_0016`).
 ```
+
+```{icd} Dynamic linking header <dlfcn.h>
+:id: ICD_LIBC_0016
+:status: active
+:posix: XBD/dlfcn.h (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0017
+
+`<dlfcn.h>` declares `RTLD_LAZY`, `RTLD_NOW`, `RTLD_GLOBAL`, `RTLD_LOCAL`,
+`RTLD_NEXT`, `RTLD_DEFAULT`, `Dl_info_t`, `dlopen`, `dlsym`, `dlclose`,
+`dlerror`, and `dladdr` without leaking `<sys/mman.h>` or kernel symbols
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0017`).
+```
