@@ -190,3 +190,16 @@ The headless QEMU harness `tests/test_runner.py` runs `stdiotest`
 1 and 2 check standalone `<wchar.h>` hygiene and all 23 Base exports
 ({need}`SWR_LIBC_0014`).
 ```
+
+```{ver} Verify <regex.h>, <glob.h>, <wordexp.h>, <tar.h>, and <cpio.h>
+:id: VER_LIBC_0015
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0015
+
+The headless QEMU harness `tests/test_runner.py` runs `utilstest`
+(`tests/utilstest/test_utils.c`). It checks BRE/ERE regex matching, `glob` flags
+and sorting, `wordexp` expansions and error flags, and `<tar.h>`/`<cpio.h>`
+constants. CTest Gates 1 and 2 check standalone header hygiene and all 8 Base
+exports ({need}`SWR_LIBC_0015`).
+```

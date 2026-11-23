@@ -185,3 +185,18 @@ declare `*_l` helpers, `strcoll*`, and `strxfrm*`. `<stdlib.h>`, `<wctype.h>`,
 `swscanf`, `vfwscanf`, `vwscanf`, and `vswscanf` without leaking `<stdio.h>`
 macros ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0014`).
 ```
+
+```{icd} Pattern matching, word expansion, and archive format headers
+:id: ICD_LIBC_0014
+:status: active
+:posix: XBD/regex.h, XBD/glob.h, XBD/wordexp.h, XBD/tar.h, XBD/cpio.h (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0015
+
+`<regex.h>` declares `regoff_t`, `regex_t`, `regmatch_t`, `REG_*` constants,
+`regcomp`, `regexec`, `regerror`, and `regfree`. `<glob.h>` declares `glob_t`,
+`GLOB_*` constants, `glob`, and `globfree`. `<wordexp.h>` declares `wordexp_t`,
+`WRDE_*` constants, `wordexp`, and `wordfree`. `<tar.h>` and `<cpio.h>` define
+POSIX.1-2024 `ustar` and `cpio` header macros ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0015`).
+```

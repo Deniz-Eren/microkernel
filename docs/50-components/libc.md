@@ -183,3 +183,18 @@ and `wchar_conv.c` implement `<wctype.h>`, UTF-8 multibyte conversions, `wmem*`,
 `v*wprintf`. `libc/src/wchar_scanf.c` implements `fwscanf`, `wscanf`, `swscanf`,
 and `v*wscanf` ({need}`ICD_LIBC_0013`, {need}`SWR_LIBC_0014`).
 ```
+
+```{comp} Ring 3 regex, glob, and wordexp components
+:id: COMP_LIBC_0014
+:status: active
+:posix: XBD/regex.h (CX), XBD/glob.h (CX), XBD/wordexp.h (CX)
+:refines: ARC_LIBC_0001, ICD_LIBC_0014
+:satisfies: SWR_LIBC_0015
+
+`libc/src/regex.c` implements POSIX BRE/ERE compilation, execution, `regerror`,
+and `regfree`. `libc/src/glob.c` implements `glob` and `globfree` over
+`opendir`, `readdir`, `fnmatch`, and `lstat`/`stat`. `libc/src/wordexp.c`
+implements `wordexp` and `wordfree` over quoting, parameter and arithmetic
+expansion, `popen`, `IFS` splitting, and `glob` ({need}`ICD_LIBC_0014`,
+{need}`SWR_LIBC_0015`).
+```

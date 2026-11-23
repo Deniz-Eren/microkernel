@@ -8,16 +8,19 @@
  *
  */
 
+#include <cpio.h>
 #include <dirent.h>
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <float.h>
 #include <fnmatch.h>
+#include <glob.h>
 #include <grp.h>
 #include <iso646.h>
 #include <limits.h>
 #include <pwd.h>
+#include <regex.h>
 #include <sched.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -36,11 +39,13 @@
 #include <sys/times.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
+#include <tar.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
+#include <wordexp.h>
 
-/* need:: VER_LIBC_0008 VER_PROC_0008 VER_PROC_0009 */
+/* need:: VER_LIBC_0008 VER_LIBC_0015 VER_PROC_0008 VER_PROC_0009 */
 /* need:: VER_PROC_0010 VER_IPC_0010 */
 
 static volatile sig_atomic_t g_alrm_hits;
@@ -1141,6 +1146,144 @@ static int test_vfs_links_fifo_statvfs_temp(void) {
     return 0;
 }
 
+static int test_regex_glob_wordexp_tar_cpio(void) {
+    /* 1. <tar.h> and <cpio.h> format constants. */
+    if (strcmp(TMAGIC, "ustar") != 0 || TMAGLEN != 6 ||
+        strcmp(TVERSION, "00") != 0 || REGTYPE != '0' || DIRTYPE != '5' ||
+        TUREAD != 00400 || strcmp(MAGIC, "070707") != 0 || C_ISREG != 0100000 ||
+        C_ISDIR != 0040000) {
+        printf("[FAIL] tar.h/cpio.h constants mismatch\n");
+        return -1;
+    }
+
+    /* 2. <regex.h> ERE alternation, leftmost-longest, groups, ICASE, NEWLINE.
+     */
+    regex_t re;
+    regmatch_t pm[4];
+    if (regcomp(&re, "([[:alpha:]]+)=([0-9]{2,4})", REG_EXTENDED) != 0 ||
+        re.re_nsub != 2u || regexec(&re, "xx foo=12345 yy", 3u, pm, 0) != 0 ||
+        pm[0].rm_so != 3 || pm[0].rm_eo != 11 || pm[1].rm_so != 3 ||
+        pm[1].rm_eo != 6 || pm[2].rm_so != 7 || pm[2].rm_eo != 11) {
+        printf("[FAIL] regex ERE group/bound match failed\n");
+        regfree(&re);
+        return -1;
+    }
+    regfree(&re);
+
+    /* Leftmost-longest alternation: (a|ab) on "ab" must match "ab". */
+    if (regcomp(&re, "a|ab", REG_EXTENDED) != 0 ||
+        regexec(&re, "ab", 1u, pm, 0) != 0 || pm[0].rm_so != 0 ||
+        pm[0].rm_eo != 2) {
+        printf("[FAIL] regex leftmost-longest alternation failed\n");
+        regfree(&re);
+        return -1;
+    }
+    regfree(&re);
+
+    /* BRE backreference \([a-z]*\)=\1, REG_ICASE, REG_NEWLINE, regerror. */
+    if (regcomp(&re, "^\\([a-z]\\{2,\\}\\)=\\1$", REG_ICASE | REG_NEWLINE) !=
+            0 ||
+        regexec(&re, "line1\nFoo=fOO\nline3", 2u, pm, 0) != 0 ||
+        pm[0].rm_so != 6 || pm[0].rm_eo != 13 ||
+        regexec(&re, "foo=bar", 0u, NULL, 0) != REG_NOMATCH) {
+        printf("[FAIL] regex BRE backref/ICASE/NEWLINE failed\n");
+        regfree(&re);
+        return -1;
+    }
+    regfree(&re);
+
+    int bad_rc = regcomp(&re, "[unclosed", REG_EXTENDED);
+    char ebuf[64] = {0};
+    if (bad_rc != REG_EBRACK ||
+        regerror(bad_rc, &re, ebuf, sizeof(ebuf)) < 2u || ebuf[0] == '\0') {
+        printf("[FAIL] regex regerror/REG_EBRACK failed rc=%d\n", bad_rc);
+        return -1;
+    }
+
+    /* 3. <glob.h>: wildcard expansion, sorting, GLOB_MARK, GLOB_DOOFFS/APPEND.
+     */
+    (void)mkdir("/tmp/gdir", 0755u);
+    (void)mkdir("/tmp/gdir/sub", 0755u);
+    int fd1 = open("/tmp/gdir/b.txt", O_CREAT | O_WRONLY | O_CLOEXEC, 0644u);
+    int fd2 = open("/tmp/gdir/a.txt", O_CREAT | O_WRONLY | O_CLOEXEC, 0644u);
+    int fd3 = open("/tmp/gdir/.hid", O_CREAT | O_WRONLY | O_CLOEXEC, 0644u);
+    if (fd1 >= 0) {
+        (void)close(fd1);
+    }
+    if (fd2 >= 0) {
+        (void)close(fd2);
+    }
+    if (fd3 >= 0) {
+        (void)close(fd3);
+    }
+
+    glob_t g = {0};
+    g.gl_offs = 1u;
+    if (glob("/tmp/gdir/*.txt", GLOB_DOOFFS, NULL, &g) != 0 ||
+        g.gl_pathc != 2u || g.gl_pathv[0] != NULL ||
+        strcmp(g.gl_pathv[1], "/tmp/gdir/a.txt") != 0 ||
+        strcmp(g.gl_pathv[2], "/tmp/gdir/b.txt") != 0) {
+        printf("[FAIL] glob *.txt sorted/DOOFFS failed count=%zu\n",
+               g.gl_pathc);
+        globfree(&g);
+        return -1;
+    }
+    if (glob("/tmp/gdir/s*", GLOB_DOOFFS | GLOB_APPEND | GLOB_MARK, NULL, &g) !=
+            0 ||
+        g.gl_pathc != 3u || strcmp(g.gl_pathv[3], "/tmp/gdir/sub/") != 0) {
+        printf("[FAIL] glob APPEND/MARK failed count=%zu\n", g.gl_pathc);
+        globfree(&g);
+        return -1;
+    }
+    globfree(&g);
+
+    if (glob("/tmp/gdir/nope*", 0, NULL, &g) != GLOB_NOMATCH ||
+        glob("/tmp/gdir/nope*", GLOB_NOCHECK, NULL, &g) != 0 ||
+        g.gl_pathc != 1u || strcmp(g.gl_pathv[0], "/tmp/gdir/nope*") != 0) {
+        printf("[FAIL] glob NOMATCH/NOCHECK failed\n");
+        globfree(&g);
+        return -1;
+    }
+    globfree(&g);
+
+    /* 4. <wordexp.h>: quotes, $VAR, ${VAR:-def}, $((arith)), glob, cmdsub. */
+    (void)setenv("WE_NAME", "micro", 1);
+    (void)unsetenv("WE_MISS");
+    wordexp_t we = {0};
+    if (wordexp("'$WE_NAME' \"${WE_NAME}:${WE_MISS:-ok}\" $((6*7)) "
+                "/tmp/gdir/*.txt $(echo hi)",
+                &we, 0) != 0 ||
+        we.we_wordc != 6u || strcmp(we.we_wordv[0], "$WE_NAME") != 0 ||
+        strcmp(we.we_wordv[1], "micro:ok") != 0 ||
+        strcmp(we.we_wordv[2], "42") != 0 ||
+        strcmp(we.we_wordv[3], "/tmp/gdir/a.txt") != 0 ||
+        strcmp(we.we_wordv[4], "/tmp/gdir/b.txt") != 0 ||
+        strcmp(we.we_wordv[5], "hi") != 0) {
+        printf("[FAIL] wordexp expansion failed count=%zu\n", we.we_wordc);
+        wordfree(&we);
+        return -1;
+    }
+    if (wordexp("$(echo blocked)", &we, WRDE_REUSE | WRDE_NOCMD) !=
+            WRDE_CMDSUB ||
+        wordexp("$WE_MISS", &we, WRDE_UNDEF) != WRDE_BADVAL ||
+        wordexp("a | b", &we, 0) != WRDE_BADCHAR) {
+        printf("[FAIL] wordexp error flags failed\n");
+        wordfree(&we);
+        return -1;
+    }
+    wordfree(&we);
+    (void)unsetenv("WE_NAME");
+    (void)unlink("/tmp/gdir/a.txt");
+    (void)unlink("/tmp/gdir/b.txt");
+    (void)unlink("/tmp/gdir/.hid");
+    (void)rmdir("/tmp/gdir/sub");
+    (void)rmdir("/tmp/gdir");
+
+    printf("[OK] <regex.h>, <glob.h>, <wordexp.h>, <tar.h>, and <cpio.h> "
+           "verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -1149,6 +1292,9 @@ int main(void) {
         return 1;
     }
     if (test_fnmatch_suite() != 0) {
+        return 1;
+    }
+    if (test_regex_glob_wordexp_tar_cpio() != 0) {
         return 1;
     }
     if (test_atexit_qsort_bsearch_strto_getopt() != 0) {

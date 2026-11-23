@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0039 — Add <regex.h>, <glob.h>, <wordexp.h>, <tar.h>, and <cpio.h>
+
+```{task} Add <regex.h>, <glob.h>, <wordexp.h>, <tar.h>, and <cpio.h>
+:id: TSK_0039
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0037, SWR_LIBC_0015
+
+Supply POSIX.1-2024 BRE/ERE matching (`regcomp`, `regexec`, `regerror`,
+`regfree`), pathname matching (`glob`, `globfree`), word expansion (`wordexp`,
+`wordfree`), and archive format headers `<tar.h>` and `<cpio.h>`
+({need}`BDR_0004`, {need}`SWR_LIBC_0015`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0045 — Add wide-oriented <stdio.h>/<wchar.h> I/O and open_wmemstream
 
 ```{task} Add wide-oriented <stdio.h>/<wchar.h> I/O and open_wmemstream

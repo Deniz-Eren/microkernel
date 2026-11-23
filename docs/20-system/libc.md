@@ -206,6 +206,19 @@ character I/O (`fgetwc`, `fgetws`, `fputwc`, `fputws`, `getwc`, `getwchar`,
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply <regex.h>, <glob.h>, <wordexp.h>, <tar.h>, and <cpio.h>
+:id: SWR_LIBC_0015
+:status: active
+:posix: XBD/regex.h, XBD/glob.h, XBD/wordexp.h, XBD/tar.h, XBD/cpio.h (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0037
+
+`libc` must supply POSIX.1-2024 BRE and ERE matching (`regcomp`, `regexec`,
+`regerror`, `regfree`), pathname matching (`glob`, `globfree`), and shell word
+expansion (`wordexp`, `wordfree`) in Ring 3. It must also supply `<tar.h>` and
+`<cpio.h>` archive format headers ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

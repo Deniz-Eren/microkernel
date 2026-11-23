@@ -14,7 +14,7 @@
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
-# need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014
+# need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014 VER_LIBC_0015
 
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "aio.h",
     "assert.h",
     "complex.h",
+    "cpio.h",
     "ctype.h",
     "dirent.h",
     "endian.h",
@@ -40,6 +41,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "fenv.h",
     "float.h",
     "fnmatch.h",
+    "glob.h",
     "grp.h",
     "inttypes.h",
     "iso646.h",
@@ -49,6 +51,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "poll.h",
     "pthread.h",
     "pwd.h",
+    "regex.h",
     "sched.h",
     "semaphore.h",
     "setjmp.h",
@@ -64,6 +67,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "stdnoreturn.h",
     "string.h",
     "strings.h",
+    "tar.h",
     "termios.h",
     "tgmath.h",
     "threads.h",
@@ -72,6 +76,7 @@ POSIX_HEADERS: tuple[str, ...] = (
     "unistd.h",
     "wchar.h",
     "wctype.h",
+    "wordexp.h",
     "sys/mman.h",
     "sys/resource.h",
     "sys/select.h",
@@ -1458,6 +1463,51 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, [macro])
                 self.assertEqual(rc, 0, f"wide stdio check failed:\n{err}")
+
+    def test_regex_glob_wordexp_tar_cpio_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <cpio.h>",
+                "#include <glob.h>",
+                "#include <regex.h>",
+                "#include <tar.h>",
+                "#include <wordexp.h>",
+                "#ifdef SYS_FD_OP",
+                '#error "pattern/archive headers leaked SYS_FD_OP"',
+                "#endif",
+                "#ifdef BUFSIZ",
+                '#error "pattern/archive headers leaked stdio.h BUFSIZ"',
+                "#endif",
+                '_Static_assert(TMAGLEN == 6, "TMAGLEN");',
+                '_Static_assert(TVERSLEN == 2, "TVERSLEN");',
+                '_Static_assert(C_ISREG == 0100000, "C_ISREG");',
+                "static int __check_pat_arch(void) {",
+                "    regex_t re;",
+                "    regmatch_t pm[2];",
+                "    char ebuf[32];",
+                "    glob_t gl;",
+                "    wordexp_t we;",
+                "    int rc = regcomp(&re, \"a+\", REG_EXTENDED | REG_ICASE);",
+                "    rc += regexec(&re, \"aaa\", 2u, pm, REG_NOTBOL);",
+                "    (void)regerror(REG_NOMATCH, &re, ebuf, sizeof(ebuf));",
+                "    regfree(&re);",
+                "    rc += glob(\"*.c\", GLOB_ERR | GLOB_MARK | GLOB_NOCHECK,",
+                "               (int (*)(const char *, int))0, &gl);",
+                "    globfree(&gl);",
+                "    rc += wordexp(\"a b\", &we, WRDE_NOCMD | WRDE_UNDEF);",
+                "    wordfree(&we);",
+                "    return rc + (int)(TMAGIC[0]) + (int)(MAGIC[0]);",
+                "}",
+                "int (*__pat_arch_ref)(void) = __check_pat_arch;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(
+                    rc, 0, f"regex/glob/wordexp/tar/cpio check failed:\n{err}"
+                )
 
 
 def main(argv: list[str] | None = None) -> int:

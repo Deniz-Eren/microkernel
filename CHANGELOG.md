@@ -37,6 +37,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Reordered and split the remaining POSIX.1-2024 Base task backlog in
+  `docs/records/TASKS.md`: moved i18n headers (`TSK_0038`) and `<dlfcn.h>`
+  (`TSK_0040`) ahead of the XCU utility waves so all non-network Base C headers
+  finish first, and split large utility waves into `TSK_0043`/`TSK_0050`,
+  `TSK_0046`/`TSK_0051`, and `TSK_0044`/`TSK_0052`.
 - Synced `tests/posix/issue8-manifest.tsv` with the updated
   `posix-issue8-os-dev` manifest, activated and header-gated the implemented
   option groups (`PS`, `SIO`, `TSA`, `RPP`) in `libc/include/sys/_posix_opts.h`,
@@ -59,6 +64,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 `<regex.h>`, `<glob.h>`, `<wordexp.h>`, `<tar.h>`, and
+  `<cpio.h>` in Ring 3 `libc` (`TSK_0039`, `SWR_LIBC_0015`, `ADR_0037`,
+  `ICD_LIBC_0014`, `COMP_LIBC_0014`, `VER_LIBC_0015`): implemented BRE/ERE
+  matching (`regcomp`, `regexec`, `regerror`, `regfree`) in `libc/src/regex.c`,
+  pathname globbing (`glob`, `globfree`) in `libc/src/glob.c`, shell word
+  expansion (`wordexp`, `wordfree`) in `libc/src/wordexp.c`, and archive header
+  macros in `<tar.h>` and `<cpio.h>`; raised Gate 2 to `59/70` Base headers (+5)
+  and `970/1037` Base interfaces (+8); and verified in QEMU (`utilstest`) and
+  CTest Gates 1 and 2 with zero Ring 0 changes.
 - Added wide-oriented Ring 3 `FILE` streams, `*wprintf`, `*wscanf`, and
   `open_wmemstream` (`TSK_0045`, `SWR_LIBC_0014`, `ADR_0036`, `ICD_LIBC_0013`,
   `COMP_LIBC_0013`, `VER_LIBC_0014`): extended `libc/src/stdio.c` with `fwide`,
