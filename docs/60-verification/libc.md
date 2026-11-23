@@ -244,3 +244,16 @@ subshells, brace groups, functions, `$(...)`, `$((...))`, parameter expansions,
 here-documents, `<glob.h>` globbing, `trap`, and all standard built-ins. Gate 2
 verifies all seven new Base built-in utilities ({need}`SWR_LIBC_0018`).
 ```
+
+```{ver} Verify XCU utilities grep, sed, find, xargs, expr, and printf
+:id: VER_LIBC_0019
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0019
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `grep` (`-E`/`-F`/`-i`/`-n`/`-v`/`-c`/
+`-q`), `sed` (`-E`, `s///`, backrefs, `y///`, `$`), `find` (`-print0`, `-exec`),
+`xargs` (`-0`, `-n`, `-I`), `expr`, and `printf`. Gate 2 verifies all six Base
+utilities ({need}`SWR_LIBC_0019`).
+```

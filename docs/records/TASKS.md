@@ -21,17 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0043 — Add POSIX.1-2024 XCU regex, find, and core stream utilities
-
-```{task} Add POSIX.1-2024 XCU regex, find, and core stream utilities
-:id: TSK_0043
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001
-
-Add `grep`, `sed`, `find`, `xargs`, `expr`, and `printf` over `<regex.h>` and
-`<fnmatch.h>` with QEMU tests ({need}`BDR_0004`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0050 — Add POSIX.1-2024 XCU sort, field, and checksum text utilities
 
 ```{task} Add POSIX.1-2024 XCU sort, field, and checksum text utilities

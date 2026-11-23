@@ -240,3 +240,16 @@ implement deferred expansions, here-documents, `<glob.h>` globbing, `trap`, and
 all standard POSIX.1-2024 built-in utilities ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0018`).
 ```
+
+```{comp} Ring 3 grep, sed, find, xargs, expr, and printf utilities
+:id: COMP_LIBC_0018
+:status: active
+:posix: XCU/grep, XCU/sed, XCU/find, XCU/xargs, XCU/expr, XCU/printf (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0019
+
+`bin/utils/grep.c`, `sed.c`, `find.c`, `xargs.c`, `expr.c`, and `printf.c`
+implement regex search, stream editing, and directory traversal in Ring 3. They
+also implement NUL-safe argument batching, expression evaluation, and formatted
+output ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0019`).
+```

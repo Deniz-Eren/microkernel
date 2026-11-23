@@ -104,6 +104,7 @@ XCU chmod, chown, chgrp, ln, mkfifo, readlink, realpath, touch, rmdir, df, du, d
 sh wait builtin reaped children and reported statuses
 sh compound grammar, functions, expansions, heredocs, glob, and trap verified
 sh built-ins dot, colon, alias, command, eval, exec, getopts, hash, shift, times verified
+XCU utilities grep, sed, find, xargs, expr, and printf verified
 uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified

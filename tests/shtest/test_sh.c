@@ -17,8 +17,8 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0007 VER_LIBC_0018 VER_PROC_0008 VER_PROC_0009 */
-/* need:: VER_IPC_0010 */
+/* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_PROC_0008 */
+/* need:: VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -642,6 +642,74 @@ static int test_shell_builtins_complete(void) {
     return 0;
 }
 
+static int test_regex_find_stream_utils(void) {
+    char out[1024];
+    ssize_t len = 0;
+
+    /* 1. grep (-E, -F, -i, -n, -v, -c, -q, -x). */
+    int rc =
+        run_sh_capture("/boot/printf 'Alpha 10\\nbeta 20\\nALPHA 30\\n' | "
+                       "/boot/grep -inE '^alpha [0-9]+$' && "
+                       "/boot/printf 'a.b\\naxb\\n' | /boot/grep -Fc 'a.b' && "
+                       "/boot/printf 'keep\\ndrop\\n' | /boot/grep -vx drop && "
+                       "/boot/printf 'ok\\n' | /boot/grep -q ok && echo q=0",
+                       NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "1:Alpha 10\n3:ALPHA 30\n1\nkeep\nq=0\n") != 0) {
+        printf("[FAIL] shtest grep rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 2. sed (s///g, backref, -E, -n/p, y///, $, d). */
+    rc = run_sh_capture(
+        "/boot/printf 'foo=1\\nbar=2\\nbaz=3\\n' | "
+        "/boot/sed -E -e 's/^([a-z]+)=([0-9]+)$/\\2:\\1/' -e '2d' "
+        "-e '$s/baz/END/' && "
+        "/boot/printf 'abc\\n' | /boot/sed 'y/abc/XYZ/'",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "1:foo\n3:END\nXYZ\n") != 0) {
+        printf("[FAIL] shtest sed rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 3. find (-name, -type, -print0, -exec +) and xargs (-0, -n, -I). */
+    rc = run_sh_capture(
+        "/boot/mkdir /tmp/f43 /tmp/f43/sub && "
+        "/boot/touch /tmp/f43/a.c /tmp/f43/sub/b.c /tmp/f43/c.txt && "
+        "/boot/find /tmp/f43 -type f -name '*.c' -print0 | "
+        "/boot/xargs -0 -n 1 /boot/basename && "
+        "/boot/find /tmp/f43 -name '*.txt' -exec /boot/basename {} + && "
+        "/boot/printf 'x y z\\n' | /boot/xargs -n 2 /boot/echo && "
+        "/boot/printf 'one\\ntwo\\n' | /boot/xargs -I '{}' /boot/echo '[{}]' "
+        "&& "
+        "/boot/rm /tmp/f43/a.c /tmp/f43/sub/b.c /tmp/f43/c.txt && "
+        "/boot/rmdir /tmp/f43/sub /tmp/f43",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || !strstr(out, "a.c\n") || !strstr(out, "b.c\n") ||
+        !strstr(out, "c.txt\n") || !strstr(out, "x y\nz\n") ||
+        !strstr(out, "[one]\n[two]\n")) {
+        printf("[FAIL] shtest find/xargs rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 4. expr (arithmetic, comparison, BRE : match/capture) and printf. */
+    rc = run_sh_capture(
+        "/boot/expr '(' 2 + 3 ')' '*' 4 && "
+        "/boot/expr 'abc123' : '[a-z]*\\([0-9]*\\)' && "
+        "/boot/expr 5 '<' 9 && "
+        "/boot/printf '[%04d:%x:%.1f:%d]\\n' 7 255 3.5 \"'A\" && "
+        "/boot/printf '%b' 'hi\\tthere\\cIGNORED'",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 ||
+        strcmp(out, "20\n123\n1\n[0007:ff:3.5:65]\nhi\tthere") != 0) {
+        printf("[FAIL] shtest expr/printf rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities grep, sed, find, xargs, expr, and printf "
+           "verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -672,6 +740,9 @@ int main(void) {
         return 1;
     }
     if (test_shell_builtins_complete() != 0) {
+        return 1;
+    }
+    if (test_regex_find_stream_utils() != 0) {
         return 1;
     }
     return 0;

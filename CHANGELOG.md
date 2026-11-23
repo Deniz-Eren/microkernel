@@ -69,6 +69,14 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `grep`, `sed`, `find`, `xargs`, `expr`, and `printf` in
+  Ring 3 `bin/utils/` (`TSK_0043`, `SWR_LIBC_0019`, `ADR_0041`,
+  `COMP_LIBC_0018`, `VER_LIBC_0019`): implemented BRE/ERE/fixed `grep`, full
+  stream-editing `sed` (`-E`, backrefs, hold space, `y///`, branches), `find`
+  (`-name`, `-type`, Issue 8 `-print0`, `-exec`), `xargs` (Issue 8 `-0`, `-n`,
+  `-I`), `expr` (arithmetic, comparisons, BRE `:`), and `printf` (format reuse,
+  `%b`); raised Gate 2 to `68/108` Base utilities (+6, 63.0%); and verified in
+  QEMU (`shtest`) with zero Ring 0 changes.
 - Completed POSIX.1-2024 XCU shell grammar and standard built-ins in `/boot/sh`
   (`TSK_0042`, `SWR_LIBC_0018`, `ADR_0040`, `COMP_LIBC_0017`, `VER_LIBC_0018`):
   refactored `bin/sh/` into `lexer.c`, `parser.c`, `expand.c`, `exec.c`,

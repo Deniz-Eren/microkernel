@@ -258,6 +258,18 @@ groups, functions, `$(...)`, `$((...))`, parameter expansions, here-documents,
 `times` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU grep, sed, find, xargs, expr, and printf
+:id: SWR_LIBC_0019
+:status: active
+:posix: XCU/grep, XCU/sed, XCU/find, XCU/xargs, XCU/expr, XCU/printf (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0041
+
+User space must supply standalone Ring 3 utilities `grep`, `sed`, `find`,
+`xargs`, `expr`, and `printf` over `<regex.h>` and `<fnmatch.h>`
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

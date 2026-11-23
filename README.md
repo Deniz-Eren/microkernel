@@ -269,7 +269,9 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   move, link, and remove files across `/boot` (`/bin`), `/tmp` (`tmpfs`), and
   persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Manage file
   modes, ownership, links, FIFOs, and disk usage with standard XCU utilities
-  (such as `ls`, `chmod`, `ln`, `mkfifo`, `df`, `du`, and `dd`).
+  (such as `ls`, `chmod`, `ln`, `mkfifo`, `df`, `du`, `dd`, `find`, `xargs`).
+  Search, edit, evaluate, and format text streams with `grep`, `sed`, `expr`,
+  and `printf`.
 - **Inspect and control processes, timing, credentials, and terminals:** View
   live processes with `ps` and check identity with `id` and `logname`. Adjust
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,
@@ -337,9 +339,9 @@ services outside the kernel:
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
 - **Not available yet (planned next):** Remaining XCU text, archive, and
-  language utilities (`grep`, `sed`, `find`, `diff`, `pax`, `awk`, `bc`, `m4`),
-  and Ring 3 TCP/IP networking (`<netdb.h>`, `<netinet/in.h>`, `<arpa/inet.h>`,
-  `<net/if.h>`, `<netinet/tcp.h>`). See
+  language utilities (`sort`, `uniq`, `diff`, `patch`, `pax`, `awk`, `bc`,
+  `m4`), and Ring 3 TCP/IP networking (`<netdb.h>`, `<netinet/in.h>`,
+  `<arpa/inet.h>`, `<net/if.h>`, `<netinet/tcp.h>`). See
   [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
