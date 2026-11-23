@@ -310,3 +310,15 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`
 creation, extraction, symlink handling, `-s` regex path substitution, and `-rw`
 copy-pass. Gate 2 verifies the Base `pax` utility ({need}`SWR_LIBC_0023`).
 ```
+
+```{ver} Verify XCU split, format, and inspection utilities
+:id: VER_LIBC_0024
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0024
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `split`, `csplit`, `fold`, `expand`,
+`unexpand`, `strings`, `tsort`, `file`, and `pr`. Gate 2 verifies all nine Base
+utilities ({need}`SWR_LIBC_0024`).
+```

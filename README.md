@@ -270,10 +270,11 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Manage file
   modes, ownership, links, FIFOs, and disk usage with standard XCU utilities
   (such as `ls`, `chmod`, `ln`, `mkfifo`, `df`, `du`, `dd`, `find`, `xargs`).
-  Search, edit, sort, filter, and format text streams with `grep`, `sed`,
-  `sort`, `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`, `join`, `expr`, and
-  `printf`. Compare, patch, archive, and checksum files with `diff`, `cmp`,
-  `comm`, `patch`, `pax`, and `cksum`.
+  Search, edit, sort, and filter text streams with `grep`, `sed`, `sort`,
+  `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`, `join`, `expr`, and `printf`.
+  Split and format text with `split`, `csplit`, `fold`, `expand`, `unexpand`,
+  and `pr`. Compare, patch, archive, inspect, and checksum files with `diff`,
+  `cmp`, `comm`, `patch`, `pax`, `file`, `strings`, `tsort`, and `cksum`.
 - **Inspect and control processes, timing, credentials, and terminals:** View
   live processes with `ps` and check identity with `id` and `logname`. Adjust
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,

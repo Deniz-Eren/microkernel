@@ -77,6 +77,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `split`, `csplit`, `fold`, `expand`, `unexpand`,
+  `strings`, `tsort`, `file`, and `pr` in Ring 3 `bin/utils/` (`TSK_0051`,
+  `SWR_LIBC_0024`, `ADR_0047`, `COMP_LIBC_0023`, `VER_LIBC_0024`), advancing
+  Gate 2 from 82/108 to 91/108 Base XCU utilities with QEMU tests in
+  `tests/shtest/test_sh.c`.
 - Added POSIX.1-2024 XCU `pax` in Ring 3 `bin/utils/pax.c` (`TSK_0054`,
   `SWR_LIBC_0023`, `ADR_0046`, `COMP_LIBC_0022`, `VER_LIBC_0023`) supporting
   list, extract (`-r`), write (`-w`), and copy-pass (`-rw`) modes over `<tar.h>`

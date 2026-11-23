@@ -319,6 +319,18 @@ write, and copy-pass modes over `<tar.h>` `ustar` and `<cpio.h>` formats
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU split, format, and inspection utilities
+:id: SWR_LIBC_0024
+:status: active
+:posix: XCU/split, XCU/csplit, XCU/fold, XCU/expand, XCU/unexpand, XCU/strings
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0047
+
+User space must supply standalone Ring 3 utilities `split`, `csplit`, `fold`,
+`expand`, `unexpand`, `strings`, `tsort`, `file`, and `pr` over `libc`,
+`vfsserv`, and `pipeserv` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

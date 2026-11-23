@@ -21,18 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0051 — Add POSIX.1-2024 XCU split, format, and inspection utilities
-
-```{task} Add POSIX.1-2024 XCU split, format, and inspection utilities
-:id: TSK_0051
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001
-
-Add text-formatting and inspection utilities `split`, `csplit`, `fold`,
-`expand`, `unexpand`, `strings`, `tsort`, `file`, and `pr` with QEMU tests
-({need}`BDR_0004`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0044 — Add POSIX.1-2024 XCU awk and ed utilities
 
 ```{task} Add POSIX.1-2024 XCU awk and ed utilities

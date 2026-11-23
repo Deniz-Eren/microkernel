@@ -17,8 +17,6 @@
 
 /* need:: COMP_LIBC_0005 */
 
-#define LS_MAX_NAMES 128
-
 static void print_entry(const char *dir, const char *name, int long_fmt) {
     if (!long_fmt) {
         printf("%s\n", name);
@@ -57,12 +55,22 @@ static int list_path(const char *path, int show_all, int long_fmt) {
         return 1;
     }
 
-    char *names[LS_MAX_NAMES];
+    char **names = NULL;
     size_t count = 0;
+    size_t cap = 0;
     struct dirent *de = NULL;
-    while ((de = readdir(d)) != NULL && count < LS_MAX_NAMES) {
+    while ((de = readdir(d)) != NULL) {
         if (!show_all && de->d_name[0] == '.') {
             continue;
+        }
+        if (count == cap) {
+            size_t ncap = (cap == 0u) ? 64u : cap * 2u;
+            char **nn = realloc(names, ncap * sizeof(*nn));
+            if (!nn) {
+                break;
+            }
+            names = nn;
+            cap = ncap;
         }
         char *dup = strdup(de->d_name);
         if (!dup) {
@@ -86,6 +94,7 @@ static int list_path(const char *path, int show_all, int long_fmt) {
         print_entry(path, names[i], long_fmt);
         free(names[i]);
     }
+    free(names);
     return 0;
 }
 

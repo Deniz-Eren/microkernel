@@ -306,3 +306,17 @@ copy-pass modes in Ring 3. It supports `<tar.h>` `ustar` and `<cpio.h>` ODC
 archives with `-s` regex path substitution ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0023`).
 ```
+
+```{comp} Ring 3 split, format, and inspection utilities
+:id: COMP_LIBC_0023
+:status: active
+:posix: XCU/split, XCU/csplit, XCU/fold, XCU/expand, XCU/unexpand, XCU/strings
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0024
+
+`bin/utils/split.c`, `csplit.c`, `fold.c`, `expand.c`, `unexpand.c`,
+`strings.c`, `tsort.c`, `file.c`, and `pr.c` implement nine Ring 3 XCU tools.
+They supply file splitting, column folding, tab conversion, string extraction,
+topological sorting, file classification, and paginated printing
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0024`).
+```

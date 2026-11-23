@@ -18,8 +18,8 @@
 #include <unistd.h>
 
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
-/* need:: VER_LIBC_0022 VER_LIBC_0023 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
- */
+/* need:: VER_LIBC_0022 VER_LIBC_0023 VER_LIBC_0024 VER_PROC_0008 */
+/* need:: VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -116,7 +116,7 @@ static int run_sh_capture(const char *script, const void *stdin_data,
 }
 
 static int test_pipelines_redirs_and_utils(void) {
-    char out[512];
+    char out[2048];
     ssize_t len = 0;
 
     /* Pipeline + redirection (> and >>) + external /boot/echo and /boot/cat. */
@@ -857,6 +857,78 @@ static int test_pax_archive_utility(void) {
     return 0;
 }
 
+static int test_split_format_inspect_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    int rc = run_sh_capture(
+        "/boot/printf 'l1\\nl2\\nl3\\nl4\\nl5\\n' > /tmp/sp.txt && "
+        "/boot/split -l 2 /tmp/sp.txt /tmp/sp_ && "
+        "/boot/cat /tmp/sp_aa /tmp/sp_ab /tmp/sp_ac > /tmp/sp_all.txt && "
+        "/boot/cmp -s /tmp/sp.txt /tmp/sp_all.txt && "
+        "/boot/printf 'abcdefgh' > /tmp/sb.txt && "
+        "/boot/split -b 3 -a 3 /tmp/sb.txt /tmp/sb_ && "
+        "/boot/cat /tmp/sb_aaa /tmp/sb_aab /tmp/sb_aac > /tmp/sb_all.txt && "
+        "/boot/cmp -s /tmp/sb.txt /tmp/sb_all.txt && "
+        "/boot/printf 'hdr\\n---\\nbody\\n' > /tmp/cs.txt && "
+        "/boot/csplit -s -f /tmp/cs_ /tmp/cs.txt '/---/' && "
+        "/boot/cat /tmp/cs_00 && /boot/cat /tmp/cs_01 && "
+        "/boot/rm /tmp/sp.txt /tmp/sp_aa /tmp/sp_ab /tmp/sp_ac /tmp/sp_all.txt "
+        "/tmp/sb.txt /tmp/sb_aaa /tmp/sb_aab /tmp/sb_aac /tmp/sb_all.txt "
+        "/tmp/cs.txt /tmp/cs_00 /tmp/cs_01",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "hdr\n---\nbody\n") != 0) {
+        printf("[FAIL] shtest split/csplit rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    rc = run_sh_capture(
+        "/boot/printf 'ab cd efgh\\n' | /boot/fold -s -w 6 && "
+        "/boot/printf 'a\\tb\\n' | /boot/expand -t 4 && "
+        "/boot/printf '    x    y\\n' | /boot/unexpand -a -t 4 | "
+        "/boot/tr '\\t' 'T'",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "ab cd \nefgh\na   b\nTxT y\n") != 0) {
+        printf("[FAIL] shtest fold/expand/unexpand rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    rc = run_sh_capture(
+        "/boot/printf '\\001\\002hello\\000ab\\000world!\\003' | "
+        "/boot/strings -n 4 -t x && "
+        "/boot/printf 'b c\\na b\\nc d\\n' | /boot/tsort",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "2 hello\nb world!\na\nb\nc\nd\n") != 0) {
+        printf("[FAIL] shtest strings/tsort rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    rc = run_sh_capture(
+        "/boot/printf '#!/boot/sh\\necho hi\\n' > /tmp/f_sh.txt && "
+        "/boot/printf 'hello world\\n' > /tmp/f_txt.txt && "
+        "/boot/file /boot/echo /tmp /tmp/f_sh.txt /tmp/f_txt.txt && "
+        "/boot/printf 'x\\ny\\n' > /tmp/pr1.txt && "
+        "/boot/printf '1\\n2\\n' > /tmp/pr2.txt && "
+        "/boot/pr -t -n:2 /tmp/pr1.txt && "
+        "/boot/pr -t -m -s, /tmp/pr1.txt /tmp/pr2.txt && "
+        "/boot/rm /tmp/f_sh.txt /tmp/f_txt.txt /tmp/pr1.txt /tmp/pr2.txt",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 ||
+        strstr(out, "/boot/echo: ELF 64-bit LSB executable, x86-64\n") ==
+            NULL ||
+        strstr(out, "/tmp: directory\n") == NULL ||
+        strstr(out, "/tmp/f_sh.txt: POSIX shell script text\n") == NULL ||
+        strstr(out, "/tmp/f_txt.txt: ASCII text\n") == NULL ||
+        strstr(out, " 1:x\n 2:y\nx,1\ny,2\n") == NULL) {
+        printf("[FAIL] shtest file/pr rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities split, csplit, fold, expand, unexpand, "
+           "strings, tsort, file, and pr verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -899,6 +971,9 @@ int main(void) {
         return 1;
     }
     if (test_pax_archive_utility() != 0) {
+        return 1;
+    }
+    if (test_split_format_inspect_utils() != 0) {
         return 1;
     }
     return 0;
