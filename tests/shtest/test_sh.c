@@ -18,8 +18,8 @@
 #include <unistd.h>
 
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
-/* need:: VER_LIBC_0022 VER_LIBC_0023 VER_LIBC_0024 VER_PROC_0008 */
-/* need:: VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0022 VER_LIBC_0023 VER_LIBC_0024 VER_LIBC_0025 */
+/* need:: VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -929,6 +929,47 @@ static int test_split_format_inspect_utils(void) {
     return 0;
 }
 
+static int test_awk_and_ed_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    int rc =
+        run_sh_capture("/boot/printf 'a:10\\nb:20\\na:5\\n' | "
+                       "/boot/awk -F: -v bonus=1 '"
+                       "function sq(n){return n*n} "
+                       "{sum[$1]+=$2; tot+=$2} "
+                       "END{printf \"%d %d %d %d\\n\", sum[\"a\"], sum[\"b\"], "
+                       "tot+bonus, int(sqrt(sq(6)))}' && "
+                       "/boot/printf 'foo123bar\\n' | "
+                       "/boot/awk '{gsub(/[0-9]+/, \"[&]\"); "
+                       "m=match($0, /\\[123\\]/); "
+                       "print $0, m, RLENGTH}'",
+                       NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "15 20 36 6\nfoo[123]bar 4 5\n") != 0) {
+        printf("[FAIL] shtest awk rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    rc = run_sh_capture(
+        "/boot/printf 'alpha\\nbeta\\ngamma\\n' > /tmp/ed_t.txt && "
+        "/boot/printf '2s/beta/BETA/\\n"
+        "1a\\ninserted\\n.\\n"
+        "g/gamma/s/gamma/GAMMA/\\n"
+        "1,2j\\n"
+        "u\\n"
+        "w\\nq\\n' | /boot/ed -s /tmp/ed_t.txt && "
+        "/boot/cat /tmp/ed_t.txt && "
+        "/boot/rm /tmp/ed_t.txt",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "alpha\ninserted\nBETA\nGAMMA\n") != 0) {
+        printf("[FAIL] shtest ed rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities awk and ed verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -974,6 +1015,9 @@ int main(void) {
         return 1;
     }
     if (test_split_format_inspect_utils() != 0) {
+        return 1;
+    }
+    if (test_awk_and_ed_utils() != 0) {
         return 1;
     }
     return 0;

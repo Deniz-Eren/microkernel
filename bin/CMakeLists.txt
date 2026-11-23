@@ -93,3 +93,11 @@ microkernel_add_user_executable(strings utils/strings.c)
 microkernel_add_user_executable(tsort utils/tsort.c)
 microkernel_add_user_executable(file utils/file.c)
 microkernel_add_user_executable(pr utils/pr.c)
+microkernel_add_user_executable(
+    awk
+    awk/main.c
+    awk/lex.c
+    awk/parse.c
+    awk/eval.c
+)
+microkernel_add_user_executable(ed utils/ed.c)

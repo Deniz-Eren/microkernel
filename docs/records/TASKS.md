@@ -21,18 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0044 — Add POSIX.1-2024 XCU awk and ed utilities
-
-```{task} Add POSIX.1-2024 XCU awk and ed utilities
-:id: TSK_0044
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001
-
-Add the pattern-scanning language `awk` and line editor `ed` over `<regex.h>`
-and `<math.h>` with QEMU runtime tests ({need}`BDR_0004`,
-{need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0052 — Add POSIX.1-2024 XCU bc and m4 language utilities
 
 ```{task} Add POSIX.1-2024 XCU bc and m4 language utilities

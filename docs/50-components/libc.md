@@ -320,3 +320,16 @@ They supply file splitting, column folding, tab conversion, string extraction,
 topological sorting, file classification, and paginated printing
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0024`).
 ```
+
+```{comp} Ring 3 awk interpreter and ed line editor
+:id: COMP_LIBC_0024
+:status: active
+:posix: XCU/awk, XCU/ed (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0025
+
+`bin/awk/` (`awk.h`, `lex.c`, `parse.c`, `eval.c`, `main.c`) implements the Ring
+3 `awk` language over `<regex.h>` and `<math.h>`. `bin/utils/ed.c` implements
+the Ring 3 `ed` line editor with BRE addressing, substitution, global commands,
+and undo ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0025`).
+```

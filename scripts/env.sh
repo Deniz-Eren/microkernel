@@ -107,7 +107,7 @@ EOF
             python3 tests/test_runner.py \
                 --arch "$ARCH" \
                 --iso build-cov/microkernel.iso \
-                --timeout 240 \
+                --timeout 420 \
                 --expect-file scripts/qemu-expects.txt \
                 --cov-out build-cov/coverage/raw \
                 --wait-cov

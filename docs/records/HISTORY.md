@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0044 — Add POSIX.1-2024 XCU awk and ed utilities
+
+```{task} Add POSIX.1-2024 XCU awk and ed utilities
+:id: TSK_0044
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0048, SWR_LIBC_0025
+
+Add the pattern-scanning language `awk` and line editor `ed` over `<regex.h>`
+and `<math.h>` with QEMU runtime tests ({need}`BDR_0004`, {need}`SWR_LIBC_0025`,
+{need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0051 — Add POSIX.1-2024 XCU split, format, and inspection utilities
 
 ```{task} Add POSIX.1-2024 XCU split, format, and inspection utilities

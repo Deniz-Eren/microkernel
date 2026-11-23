@@ -331,6 +331,18 @@ User space must supply standalone Ring 3 utilities `split`, `csplit`, `fold`,
 `vfsserv`, and `pipeserv` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU awk and ed utilities
+:id: SWR_LIBC_0025
+:status: active
+:posix: XCU/awk, XCU/ed (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0048
+
+User space must supply the Ring 3 `awk` pattern-scanning language and `ed` line
+editor over `<regex.h>`, `<math.h>`, `vfsserv`, and `pipeserv`
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

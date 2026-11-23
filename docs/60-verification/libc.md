@@ -322,3 +322,16 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`
 `unexpand`, `strings`, `tsort`, `file`, and `pr`. Gate 2 verifies all nine Base
 utilities ({need}`SWR_LIBC_0024`).
 ```
+
+```{ver} Verify XCU awk pattern-scanning language and ed line editor
+:id: VER_LIBC_0025
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0025
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `awk` field splitting, associative
+arrays, user functions, `<regex.h>`, and `<math.h>`, plus `ed` editing, `g//s`,
+undo, and file writes. Gate 2 verifies both Base utilities
+({need}`SWR_LIBC_0025`).
+```

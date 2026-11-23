@@ -77,6 +77,10 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `awk` in Ring 3 `bin/awk/` and `ed` in Ring 3
+  `bin/utils/ed.c` (`TSK_0044`, `SWR_LIBC_0025`, `ADR_0048`, `COMP_LIBC_0024`,
+  `VER_LIBC_0025`) over `<regex.h>` and `<math.h>`, advancing Gate 2 from 91/108
+  to 93/108 Base XCU utilities with QEMU tests in `tests/shtest/test_sh.c`.
 - Added POSIX.1-2024 XCU `split`, `csplit`, `fold`, `expand`, `unexpand`,
   `strings`, `tsort`, `file`, and `pr` in Ring 3 `bin/utils/` (`TSK_0051`,
   `SWR_LIBC_0024`, `ADR_0047`, `COMP_LIBC_0023`, `VER_LIBC_0024`), advancing
