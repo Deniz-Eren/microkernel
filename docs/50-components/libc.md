@@ -359,3 +359,15 @@ decimal `bc` with `-l` math functions. `bin/utils/m4.c` implements the Ring 3
 encoding, syslog logging, terminal control, messaging, and group switching
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0027`).
 ```
+
+```{comp} Ring 3 at, batch, crontab, lp, and mailx utilities
+:id: COMP_LIBC_0027
+:status: active
+:posix: XCU/at, XCU/batch, XCU/crontab, XCU/lp, XCU/mailx (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0028
+
+`bin/utils/at.c`, `batch.c`, `crontab.c`, `lp.c`, and `mailx.c` implement
+deferred job queues, cron schedule tables, print spooling, and local `mbox` mail
+in Ring 3 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0028`).
+```

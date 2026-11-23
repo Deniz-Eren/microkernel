@@ -77,6 +77,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `at`, `batch`, `crontab`, `lp`, and `mailx` in Ring 3
+  `bin/utils/` (`TSK_0053`, `SWR_LIBC_0028`, `ADR_0051`, `COMP_LIBC_0027`,
+  `VER_LIBC_0028`), reaching 108/108 Base XCU utilities (alongside 70/70 Base C
+  headers and 1037/1037 Base C interfaces) with QEMU tests in
+  `tests/shtest/test_sh.c`.
 - Added POSIX.1-2024 XCU `uuencode`, `uudecode`, `logger`, `tput`, `tabs`,
   `mesg`, `write`, and `newgrp` in Ring 3 `bin/utils/` (`TSK_0048`,
   `SWR_LIBC_0027`, `ADR_0050`, `COMP_LIBC_0026`, `VER_LIBC_0027`), advancing

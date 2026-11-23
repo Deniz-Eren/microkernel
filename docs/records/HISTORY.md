@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0053 — Add XCU scheduling, spooling, and mail utilities
+
+```{task} Add XCU scheduling, spooling, and mail utilities
+:id: TSK_0053
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0051, SWR_LIBC_0028
+
+Add `at`, `batch`, `crontab`, `lp`, and `mailx` to complete the remaining XCU
+Base utility set ({need}`BDR_0004`, {need}`SWR_LIBC_0028`,
+{need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0048 — Add XCU encoding, logging, terminal, and user utilities
 
 ```{task} Add XCU encoding, logging, terminal, and user utilities

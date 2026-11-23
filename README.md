@@ -283,9 +283,10 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   `timeout`, and `nohup`. Query POSIX limits with `getconf`, check system
   details with `uname` and `env`, and adjust terminal modes with `tty`, `stty`,
   `tput`, and `tabs`. Log events, switch groups, and send user messages with
-  `logger`, `newgrp`, `mesg`, and `write`. Work with locales, character-set
-  conversion, and message catalogs using `locale`, `localedef`, `iconv`,
-  `gencat`, `msgfmt`, `gettext`, and `ngettext`.
+  `logger`, `newgrp`, `mesg`, and `write`. Schedule jobs, spool print output,
+  and exchange local mail with `at`, `batch`, `crontab`, `lp`, and `mailx`. Work
+  with locales, character-set conversion, and message catalogs using `locale`,
+  `localedef`, `iconv`, `gencat`, `msgfmt`, `gettext`, and `ngettext`.
 
 ### For C17 application programmers
 

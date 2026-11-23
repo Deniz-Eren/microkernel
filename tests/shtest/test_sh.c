@@ -19,8 +19,8 @@
 
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
 /* need:: VER_LIBC_0022 VER_LIBC_0023 VER_LIBC_0024 VER_LIBC_0025 */
-/* need:: VER_LIBC_0026 VER_LIBC_0027 VER_PROC_0008 VER_PROC_0009 */
-/* need:: VER_IPC_0010 */
+/* need:: VER_LIBC_0026 VER_LIBC_0027 VER_LIBC_0028 VER_PROC_0008 */
+/* need:: VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -1063,6 +1063,41 @@ static int test_enc_log_term_user_utils(void) {
     return 0;
 }
 
+static int test_sched_spool_mail_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    int rc = run_sh_capture(
+        "/boot/printf 'echo job1\\n' | /boot/at -t 202611240930 2> /tmp/at.e "
+        "&& /boot/printf 'echo job2\\n' | /boot/batch 2>> /tmp/at.e && "
+        "/boot/at -l -q b | /boot/grep -q ' b$' && "
+        "/boot/at -r 1 2 && "
+        "/boot/printf '*/5 * * * * /boot/true\\n' | /boot/crontab && "
+        "/boot/crontab -l | /boot/grep -q '/boot/true' && "
+        "/boot/crontab -r && "
+        "/boot/printf 'print payload\\n' | /boot/lp -d laser -n 2 -t doc && "
+        "/boot/grep -q 'print payload' /tmp/spool/lp/laser/job-1.data && "
+        "/boot/printf 'hello inbox\\n' | /boot/mailx -s Greeting root && "
+        "/boot/mailx -e && "
+        "/boot/mailx -H | /boot/grep -q 'Greeting' && "
+        "/boot/printf 'p 1\\nd 1\\nq\\n' | /boot/mailx -N | "
+        "/boot/grep -q 'hello inbox' && "
+        "! /boot/mailx -e && "
+        "/boot/rm -r /tmp/at.e /tmp/spool /tmp/mail && "
+        "/boot/echo SPOOL_MAIL_OK",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 ||
+        strcmp(out, "request id is laser-1 (1 file(s))\nSPOOL_MAIL_OK\n") !=
+            0) {
+        printf("[FAIL] shtest at/batch/crontab/lp/mailx rc=%d out='%s'\n", rc,
+               out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities at, batch, crontab, lp, and mailx verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -1117,6 +1152,9 @@ int main(void) {
         return 1;
     }
     if (test_enc_log_term_user_utils() != 0) {
+        return 1;
+    }
+    if (test_sched_spool_mail_utils() != 0) {
         return 1;
     }
     return 0;

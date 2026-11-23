@@ -360,3 +360,16 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`
 Base64), `logger`, `tput`, `tabs`, `mesg`, `write`, and `newgrp`. Gate 2
 verifies all eight Base utilities ({need}`SWR_LIBC_0027`).
 ```
+
+```{ver} Verify XCU at, batch, crontab, lp, and mailx utilities
+:id: VER_LIBC_0028
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0028
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `at`/`batch` queueing and removal,
+`crontab` validation and listing, `lp` spooling, and `mailx` send, read, and
+delete workflows. Gate 2 verifies all 108 Base utilities
+({need}`SWR_LIBC_0028`).
+```
