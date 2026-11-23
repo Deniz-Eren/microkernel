@@ -343,6 +343,18 @@ editor over `<regex.h>`, `<math.h>`, `vfsserv`, and `pipeserv`
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU bc and m4 language utilities
+:id: SWR_LIBC_0026
+:status: active
+:posix: XCU/bc, XCU/m4 (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0049
+
+User space must supply the Ring 3 arbitrary-precision calculator `bc` (`-l`) and
+macro processor `m4` (`-D`, `-U`, `-s`) over `libc`, `vfsserv`, and `pipeserv`
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

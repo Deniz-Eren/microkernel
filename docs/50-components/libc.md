@@ -333,3 +333,16 @@ topological sorting, file classification, and paginated printing
 the Ring 3 `ed` line editor with BRE addressing, substitution, global commands,
 and undo ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0025`).
 ```
+
+```{comp} Ring 3 bc calculator and m4 macro processor
+:id: COMP_LIBC_0025
+:status: active
+:posix: XCU/bc, XCU/m4 (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0026
+
+`bin/bc/` (`bc.h`, `num.c`, `eval.c`, `main.c`) implements arbitrary-precision
+decimal `bc` with `-l` math functions. `bin/utils/m4.c` implements the Ring 3
+`m4` macro processor with pushback expansion, `eval`, and diversions
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0026`).
+```

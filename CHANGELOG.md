@@ -77,6 +77,10 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `bc` (`-l`) in Ring 3 `bin/bc/` and `m4` in Ring 3
+  `bin/utils/m4.c` (`TSK_0052`, `SWR_LIBC_0026`, `ADR_0049`, `COMP_LIBC_0025`,
+  `VER_LIBC_0026`), advancing Gate 2 from 93/108 to 95/108 Base XCU utilities
+  with QEMU tests in `tests/shtest/test_sh.c`.
 - Added POSIX.1-2024 XCU `awk` in Ring 3 `bin/awk/` and `ed` in Ring 3
   `bin/utils/ed.c` (`TSK_0044`, `SWR_LIBC_0025`, `ADR_0048`, `COMP_LIBC_0024`,
   `VER_LIBC_0025`) over `<regex.h>` and `<math.h>`, advancing Gate 2 from 91/108

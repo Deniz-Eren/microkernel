@@ -19,7 +19,7 @@
 
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
 /* need:: VER_LIBC_0022 VER_LIBC_0023 VER_LIBC_0024 VER_LIBC_0025 */
-/* need:: VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0026 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -970,6 +970,48 @@ static int test_awk_and_ed_utils(void) {
     return 0;
 }
 
+static int test_bc_and_m4_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    int rc = run_sh_capture(
+        "/boot/printf '"
+        "2^100\\n"
+        "scale=10; 1/7\\n"
+        "scale=6; sqrt(2)\\n"
+        "define f(n) { if (n <= 1) return (1); return (n * f(n - 1)); }\\n"
+        "f(10)\\n"
+        "obase=16; 255\\n' | /boot/bc && "
+        "/boot/printf 'scale=6; 4*a(1)\\n' | /boot/bc -l",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "1267650600228229401496703205376\n"
+                               ".1428571428\n"
+                               "1.414213\n"
+                               "3628800\n"
+                               "FF\n"
+                               "3.141592\n") != 0) {
+        printf("[FAIL] shtest bc rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    const char *m4_in = "define(`HI', `hello $1')dnl\n"
+                        "pushdef(`X', `1')pushdef(`X', `2')X popdef(`X')X\n"
+                        "HI(world) VER eval((2+3)*4) incr(9) len(abcd) "
+                        "translit(abc, ac, AC)\n"
+                        "divert(1)TAIL\n"
+                        "divert(0)HEAD\n";
+    rc = run_sh_capture("/boot/m4 -D VER=8", m4_in, strlen(m4_in), out,
+                        sizeof(out), &len);
+    if (rc != 0 ||
+        strcmp(out, "2 1\nhello world 8 20 10 4 AbC\nHEAD\nTAIL\n") != 0) {
+        printf("[FAIL] shtest m4 rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities bc and m4 verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -1018,6 +1060,9 @@ int main(void) {
         return 1;
     }
     if (test_awk_and_ed_utils() != 0) {
+        return 1;
+    }
+    if (test_bc_and_m4_utils() != 0) {
         return 1;
     }
     return 0;

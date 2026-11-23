@@ -110,6 +110,7 @@ XCU utilities diff, cmp, comm, and patch verified
 XCU utility pax \(ustar, cpio, -s, and -rw copy-pass\) verified
 XCU utilities split, csplit, fold, expand, unexpand, strings, tsort, file, and pr verified
 XCU utilities awk and ed verified
+XCU utilities bc and m4 verified
 uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified

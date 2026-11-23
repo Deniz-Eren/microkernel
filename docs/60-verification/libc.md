@@ -335,3 +335,16 @@ arrays, user functions, `<regex.h>`, and `<math.h>`, plus `ed` editing, `g//s`,
 undo, and file writes. Gate 2 verifies both Base utilities
 ({need}`SWR_LIBC_0025`).
 ```
+
+```{ver} Verify XCU bc calculator and m4 macro processor
+:id: VER_LIBC_0026
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0026
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `bc` arbitrary-precision arithmetic,
+`scale`, `sqrt`, `obase`, recursive functions, and `-l` math, plus `m4` macros,
+`eval`, `translit`, and diversions. Gate 2 verifies both Base utilities
+({need}`SWR_LIBC_0026`).
+```

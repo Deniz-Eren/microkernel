@@ -101,3 +101,10 @@ microkernel_add_user_executable(
     awk/eval.c
 )
 microkernel_add_user_executable(ed utils/ed.c)
+microkernel_add_user_executable(
+    bc
+    bc/main.c
+    bc/num.c
+    bc/eval.c
+)
+microkernel_add_user_executable(m4 utils/m4.c)

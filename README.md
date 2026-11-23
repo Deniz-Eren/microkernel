@@ -272,10 +272,10 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   (such as `ls`, `chmod`, `ln`, `mkfifo`, `df`, `du`, `dd`, `find`, `xargs`).
   Search, edit, sort, and filter text streams with `grep`, `sed`, `awk`, `ed`,
   `sort`, `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`, `join`, `expr`, and
-  `printf`. Split and format text with `split`, `csplit`, `fold`, `expand`,
-  `unexpand`, and `pr`. Compare, patch, archive, inspect, and checksum files
-  with `diff`, `cmp`, `comm`, `patch`, `pax`, `file`, `strings`, `tsort`, and
-  `cksum`.
+  `printf`. Split, format, calculate, and expand macros with `split`, `csplit`,
+  `fold`, `expand`, `unexpand`, `pr`, `bc`, and `m4`. Compare, patch, archive,
+  inspect, and checksum files with `diff`, `cmp`, `comm`, `patch`, `pax`,
+  `file`, `strings`, `tsort`, and `cksum`.
 - **Inspect and control processes, timing, credentials, and terminals:** View
   live processes with `ps` and check identity with `id` and `logname`. Adjust
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,

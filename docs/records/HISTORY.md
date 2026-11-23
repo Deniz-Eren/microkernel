@@ -20,6 +20,17 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0052 — Add POSIX.1-2024 XCU bc and m4 language utilities
+
+```{task} Add POSIX.1-2024 XCU bc and m4 language utilities
+:id: TSK_0052
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0049, SWR_LIBC_0026
+
+Add the arbitrary-precision calculator `bc` and macro processor `m4` with QEMU
+runtime tests ({need}`BDR_0004`, {need}`SWR_LIBC_0026`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0044 — Add POSIX.1-2024 XCU awk and ed utilities
 
 ```{task} Add POSIX.1-2024 XCU awk and ed utilities
