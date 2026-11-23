@@ -28,6 +28,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Elevated the minimal Ring 0 microkernel boundary to top-level governance in
+  `AGENTS.md`, codified `CNV_0007` and `WDR_0010` (`SWR_DOCS_0006`,
+  `VER_DOCS_0007`), and added the automated CTest gate
+  `arch.microkernel_boundary` (`tests/arch/test_microkernel_boundary.py` and
+  `tests/arch/microkernel_allowlist.json`) enforcing ADR-backed allowlists on
+  `kernel/core/*.c` modules, `SYS_*` syscalls, and `struct __k_fd_entry`.
 - Documented the headless QEMU test harness architecture, boot modes, and
   failure triage model in `docs/60-verification/qemu-harness.md`, and added the
   `qemu-debug` agent skill (`docs/skills/qemu-debug/SKILL.md`) for monitor

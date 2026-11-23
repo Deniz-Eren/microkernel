@@ -16,8 +16,9 @@ skill](docs/skills/git/SKILL.md) defines each mode and its workflow.
 
 ## Predict -> Act -> Verify
 
-1. **Predict:** examine the task, plan the steps, and find possible failures
-   before you act.
+1. **Predict:** examine the task, plan the steps, confirm Ring 0 vs. Ring 3
+   placement under `CNV_0007` (keeping filesystems, paths, drivers, and named
+   objects in Ring 3), and find possible failures before you act.
 2. **Act:** do the planned steps. Stage any newly created files (`git add -N`)
    before running verification so `tag_scan.py` includes them.
 3. **Verify (mandatory hard gate):** run `./scripts/build-agent.sh` and confirm
@@ -31,8 +32,9 @@ skill](docs/skills/git/SKILL.md) defines each mode and its workflow.
    - headless QEMU test suite
    - `clang-tidy` static analysis
    - full CTest suite (`posix.headers`, `posix.symbol_diff`,
-     `posix.async_signal_safe`, `posix.cancellation`, `traceability.unit`,
-     `docs.html`, `docs.needs`, `docs.audit`)
+     `posix.async_signal_safe`, `posix.cancellation`,
+     `arch.microkernel_boundary`, `traceability.unit`, `docs.html`,
+     `docs.needs`, `docs.audit`)
 
 If verification fails, go back to Act, repair every failure, and re-run
 `./scripts/build-agent.sh` until it prints `BUILD: PASS`. Never run `git commit`
@@ -132,6 +134,11 @@ skip gates, never check only a hand-picked subset of files, and never pass
   each new decision
 - [ ] `docs/THIRD-PARTY-NOTICES.md` attributes each new third-party component
 - [ ] All new and changed source files have the copyright header
+- [ ] Microkernel boundary preserved (`CNV_0007`): no Ring 3 policy, path
+  storage, device driver, or named-object registry added to `kernel/`; any new
+  `SYS_*` syscall or `kernel/core/*.c` module is justified in an accepted `ADR_`
+  and registered in `tests/arch/microkernel_allowlist.json`
+  (`arch.microkernel_boundary` passes)
 - [ ] New or changed `POSIX` wording uses goal-oriented `POSIX.1-2024` phrasing
   with no compliance claims, no `POSIX` product names, and original text only
 - [ ] No IMMUTABLE document was changed
@@ -145,6 +152,30 @@ For update procedures, see
 
 Rules that apply only to this project. Each rule links to its skill or document.
 
+- **Minimal Ring 0 microkernel architecture (`CNV_0007`, equal priority with
+  POSIX.1-2024):** Upholding the microkernel boundary is mandatory and must
+  never be traded away for implementation convenience.
+  - **Allowed in Ring 0 (`kernel/`):** only mechanisms that require CPU
+    privilege or direct hardware and address-space control: 256-level SMP
+    scheduling and IPIs, synchronous and scatter-gather IPC, threads and
+    `FS.base` TLS, futexes, signals, clocks and timers, PMM/VMM (`W^X`, COW,
+    `SHM`), `CAP_SYS_INTR` IRQ/MMIO/DMA/PCI routing, minimal FD slot dispatch,
+    and `syscall`/`sysret`.
+  - **Forbidden in Ring 0 (must live in Ring 3 `libc/` or `servers/`):**
+    filesystems, pathname parsing or path storage, named object registries (such
+    as named semaphores or service tables), device drivers, pipe/socket/network
+    protocols, and high-level POSIX abstractions composable over `SYS_SHM_OP`,
+    `MAP_SHARED`, `SYS_FUTEX`, and IPC channels.
+  - **Hard gate on Ring 0 expansion:** before adding any `SYS_*` syscall, new
+    `kernel/core/*.c` file, or new field on `struct __k_fd_entry`, prove the
+    feature cannot be built in Ring 3, record an accepted `ADR_`, and update
+    `tests/arch/microkernel_allowlist.json` (enforced by CTest
+    `arch.microkernel_boundary`). Keep C code concise and consistent with
+    existing modules (minimal comments). See
+    [ADR_0002](docs/30-architecture/adr/ADR_0002.md),
+    [ADR_0031](docs/30-architecture/adr/ADR_0031.md),
+    [WDR_0010](docs/00-overview/wdr/WDR_0010.md), and
+    [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0007`).
 - **Source-text and `.editorconfig` compliance (`docs-traceability-setup`):**
   All new and changed files must obey `.editorconfig` (UTF-8, LF, trailing
   newline, max line width) and pass the `docs-traceability-setup` skill's

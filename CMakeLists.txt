@@ -394,6 +394,18 @@ set_tests_properties(
     PROPERTIES LABELS "docs;coverage"
 )
 
+add_test(
+    NAME arch.microkernel_boundary
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/arch/test_microkernel_boundary.py"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_tests_properties(
+    arch.microkernel_boundary
+    PROPERTIES LABELS "arch;docs"
+)
+
 if(MICROKERNEL_ARCH STREQUAL "x86-64" AND NOT MICROKERNEL_COVERAGE)
     add_test(
         NAME boot.x86_64_v3

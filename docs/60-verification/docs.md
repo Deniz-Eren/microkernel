@@ -70,3 +70,15 @@ frame decoding, magic validation, ELF `__llvm_covmap` detection, and `llvm-cov`
 commands. `tests/test_runner.py --cov-out --wait-cov` captures Ring 0 and Ring 3
 profiles during `./scripts/env.sh coverage` ({need}`SWR_DOCS_0005`).
 ```
+
+```{ver} Verify microkernel Ring 0 boundary allowlist in CTest
+:id: VER_DOCS_0007
+:status: active
+:tags: unit
+:verifies: SWR_DOCS_0006
+
+CTest `arch.microkernel_boundary` (`tests/arch/test_microkernel_boundary.py`)
+verifies that all `kernel/core/*.c` modules, `SYS_*` syscalls, and `struct
+__k_fd_entry` fields match `tests/arch/microkernel_allowlist.json` and trace to
+accepted ADRs ({need}`SWR_DOCS_0006`).
+```

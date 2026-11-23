@@ -114,3 +114,22 @@ the next milestone before the current automated test passes. Record defect
 repairs in the commit message. Use CMake target include directories (`#include
 <arch/...>`) instead of parent-relative `../` `#include` paths in C sources.
 ```
+
+### CNV_0007 — Microkernel Ring 0 Minimality and Code Style
+
+```{con} Microkernel Ring 0 minimality and code style
+:id: CNV_0007
+:status: active
+:traces: ADR_0002, ADR_0010, ADR_0017, ADR_0027, ADR_0031, WDR_0010
+
+Keep Ring 0 (`kernel/`) restricted to privileged mechanisms. Allowed Ring 0
+mechanisms are scheduling, SMP and IPIs, IPC channels, threads and TLS, futexes,
+signals, and clocks or timers. They also include PMM/VMM (`W^X`, COW, `SHM`),
+`CAP_SYS_INTR` hardware routing, minimal FD slot dispatch, and
+`syscall`/`sysret`. Keep filesystems, pathname parsing and storage, device
+drivers, named object registries, and protocol servers in Ring 3 (`libc/` or
+`servers/`). Never add a `SYS_*` syscall, `kernel/core/*.c` module, or `struct
+__k_fd_entry` field without an accepted `ADR_` and an entry in
+`tests/arch/microkernel_allowlist.json` (`arch.microkernel_boundary`). Keep C
+code concise with minimal comments matching existing modules.
+```

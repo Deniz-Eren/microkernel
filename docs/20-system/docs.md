@@ -74,3 +74,15 @@ x86-only device dependency. `./scripts/env.sh coverage` must run `llvm-profdata`
 and `llvm-cov` in `build-cov/` to produce HTML, LCOV, and text reports while
 default builds stay uninstrumented ({need}`SYS_DOCS_0001`).
 ```
+
+```{swr} Enforce microkernel Ring 0 boundary allowlist in CTest
+:id: SWR_DOCS_0006
+:status: active
+:derives: SYS_DOCS_0001
+:traces: ADR_0002, WDR_0010
+
+The test harness must verify every `kernel/core/*.c` module, every `SYS_*`
+syscall in `libc/include/sys/microkernel.h`, and every `struct __k_fd_entry`
+field against `tests/arch/microkernel_allowlist.json`. Every cited `ADR_` must
+exist with status `accepted` ({need}`SYS_DOCS_0001`).
+```
