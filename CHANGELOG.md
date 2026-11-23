@@ -42,6 +42,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Queued three incremental milestones in `docs/records/TASKS.md` for Ring 3
+  OpenSSH Portable (`TSK_0055`: host-to-guest networking, `netserv` hardening,
+  `nc`, and `ping`; `TSK_0056`: Ring 3 PTYs, `/dev/null`, `/dev/urandom`,
+  `SCM_RIGHTS`, and OpenSSH `libc` APIs; `TSK_0057`: OpenSSH Portable `sshd` and
+  `ssh-keygen`).
 - Split `pax` out of `TSK_0046` into `TSK_0054` in `docs/records/TASKS.md` so
   file comparison/patching (`diff`, `cmp`, `comm`, `patch`) and archive
   interchange (`pax`) land as focused milestones.
