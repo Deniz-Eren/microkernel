@@ -221,3 +221,16 @@ positional I/O, `posix_getdents`, `scandir`, `statvfs`, and temp-file helpers.
 `realpath`, `touch`, `rmdir`, `df`, `du`, `dd`, `basename`, `dirname`, and
 `pathchk` ({need}`ICD_IPC_0016`, {need}`SWR_IPC_0012`).
 ```
+
+```{comp} Ring 3 PCI virtio-net driver and TCP/IP/loopback server (/dev/net)
+:id: COMP_IPC_0018
+:status: active
+:refines: ARC_IPC_0001, ICD_IPC_0001, ICD_IPC_0002, ICD_IPC_0017
+:satisfies: SWR_IPC_0013
+
+`servers/netserv/virtio_net.c` drives Modern VirtIO 1.0 PCI `virtio-net` over
+MMIO BARs, contiguous DMA RX/TX virtqueues, and IOAPIC IRQ pulses.
+`servers/netserv/net_proto.c` and `servers/netserv/main.c` supply `/dev/net`
+with loopback, Ethernet, ARP, IPv4, IPv6, ICMPv4, ICMPv6, UDP, TCP, and poll
+support ({need}`ICD_IPC_0002`, {need}`ICD_IPC_0017`, {need}`SWR_IPC_0013`).
+```

@@ -85,6 +85,8 @@ EOF
                 -m 256M -smp 2 -cdrom build/microkernel-shell.iso \
                 -drive id=hd0,file=build/disk.img,if=none,format=raw \
                 -device virtio-blk-pci,drive=hd0,disable-legacy=on \
+                -netdev user,id=net0 \
+                -device virtio-net-pci,netdev=net0,disable-legacy=on \
                 -serial mon:stdio -display none -no-reboot "$@"
         ' -- "$@"
         ;;

@@ -74,6 +74,15 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added Ring 3 Modern VirtIO 1.0 PCI `virtio-net` driver and TCP/IP/loopback
+  network server `netserv` (`/dev/net`) with zero Ring 0 syscall or kernel
+  module expansion (`TSK_0041`, `SWR_IPC_0013`, `ADR_0042`, `ICD_IPC_0017`,
+  `COMP_IPC_0018`, `VER_IPC_0011`): implemented `libc/include/sys/net.h`,
+  `servers/netserv/` (MMIO BARs, 17-page contiguous DMA RX/TX virtqueues, IOAPIC
+  IRQ pulses, loopback, Ethernet, ARP, IPv4, IPv6, ICMPv4, ICMPv6, UDP, TCP, and
+  poll), QEMU `-netdev user` + `virtio-net-pci` integration, and
+  `tests/nettest/test_net.c` verifying hardware ARP/ICMPv4 against SLIRP gateway
+  `10.0.2.2` and dual-stack IPv4/IPv6 loopback ICMP/UDP/TCP.
 - Added POSIX.1-2024 XCU `grep`, `sed`, `find`, `xargs`, `expr`, and `printf` in
   Ring 3 `bin/utils/` (`TSK_0043`, `SWR_LIBC_0019`, `ADR_0041`,
   `COMP_LIBC_0018`, `VER_LIBC_0019`): implemented BRE/ERE/fixed `grep`, full

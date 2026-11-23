@@ -135,6 +135,12 @@ blkdrv virtio-blk ready: slot=.* irq=.* gsi=.* sectors=
 blkdrv registered /dev/blk
 unprivileged VMMapMMIO, DMAAlloc, and PCIConfig rejected with EPERM
 blktest /dev/blk sector read/write and IOAPIC IRQ pulses verified
+netserv virtio-net ready: slot=.* irq=.* gsi=.* mac=
+netserv registered /dev/net \(nic=virtio-net\)
+nettest virtio-net ARP and ICMPv4 ping to 10\.0\.2\.2 verified
+nettest loopback ICMPv4 \(127\.0\.0\.1\) and ICMPv6 \(::1\) echo verified
+nettest IPv4 and IPv6 UDP bind/send/recv/poll verified
+nettest IPv4 and IPv6 TCP handshake, data, FIN, and RST verified
 vfsserv .*mounted.* ext2 on /mnt
 ext2test /mnt create, multi-block write/read, truncate, rename, and unlink verified
 SMP SysStats reports 2 online CPUs

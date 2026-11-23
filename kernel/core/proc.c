@@ -1696,6 +1696,12 @@ void proc_spawn_init(void) {
         blk->caps |= CAP_SYS_INTR;
     }
 
+    /* Ring 3 PCI virtio-net driver and TCP/IP server (/dev/net). */
+    pcb_t *net = spawn_image(tar_phys, tar_size, "netserv", 101, 0);
+    if (net) {
+        net->caps |= CAP_SYS_INTR;
+    }
+
     if (kstrstr(cmd, "init=sh") != NULL) {
         printk("[OK] interactive boot mode (init=sh): spawning /boot/sh\n");
         spawn_image(tar_phys, tar_size, "sh", 95, 0);
@@ -1747,6 +1753,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "mathtest", 100, 0);
     /* Ring 3 CAP_SYS_INTR MMIO/DMA/PCI EPERM and /dev/blk persistence test. */
     spawn_image(tar_phys, tar_size, "blktest", 98, 0);
+    /* Ring 3 PCI virtio-net driver and TCP/IP/loopback network test. */
+    spawn_image(tar_phys, tar_size, "nettest", 96, 0);
     /* Ring 3 /mnt ext2 writable on-disk filesystem persistence test. */
     spawn_image(tar_phys, tar_size, "ext2test", 95, 0);
     /* Multi-core SMP concurrency (parallelism, futex, PMM/VMM/COW, IPC) test.

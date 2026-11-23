@@ -581,11 +581,11 @@ static int run_stress_round(int round) {
 }
 
 int main(void) {
-    /* Wait until earlier concurrent boot tests have exited (8 servers + self).
+    /* Wait until earlier concurrent boot tests have exited (9 servers + self).
      */
     struct __k_sys_stats ks = {0};
     for (int wait_it = 0; wait_it < 3000; wait_it++) {
-        if (SysStats(&ks) == 0 && ks.live_procs <= 9u) {
+        if (SysStats(&ks) == 0 && ks.live_procs <= 10u) {
             break;
         }
         sleep_ms(20);

@@ -152,6 +152,19 @@ sector read and write I/O over IOAPIC IRQ pulses ({need}`SYS_IPC_0001`).
 helpers, and the 15 XCU Base file utilities ({need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply Ring 3 PCI virtio-net driver and TCP/IP/loopback server
+:id: SWR_IPC_0013
+:status: active
+:derives: SYS_IPC_0001
+:traces: BDR_0003, BDR_0004, ADR_0002, ADR_0031, ADR_0042
+
+A Ring 3 `netserv` process with `CAP_SYS_INTR` must drive Modern VirtIO 1.0 PCI
+`virtio-net` hardware over existing MMIO, DMA, and IOAPIC IRQ pulses. It must
+register `/dev/net` and supply loopback (`127.0.0.1`, `::1`), Ethernet, ARP,
+IPv4, IPv6, ICMPv4, ICMPv6, UDP, and TCP with zero new Ring 0 syscalls
+({need}`SYS_IPC_0001`).
+```
+
 [fn-pipe2]:
   https://pubs.opengroup.org/onlinepubs/9799919799/functions/pipe2.html
 [fn-ppoll]:

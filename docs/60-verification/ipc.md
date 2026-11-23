@@ -132,3 +132,17 @@ APIs. `tests/shtest/test_sh.c` exercises all 15 XCU file utilities through
 `/boot/sh`, and Gates 1 to 3 verify `<sys/statvfs.h>`, Base symbol hygiene, and
 async-signal-safety ({need}`SWR_IPC_0012`).
 ```
+
+```{ver} Verify Ring 3 PCI virtio-net driver and TCP/IP/loopback server
+:id: VER_IPC_0011
+:status: active
+:tags: integration
+:verifies: SWR_IPC_0013
+
+The headless QEMU harness `tests/test_runner.py` boots with `virtio-net-pci`
+over `-netdev user` and runs `netserv` and `nettest`
+(`tests/nettest/test_net.c`). It checks hardware ARP and ICMPv4 echo against
+SLIRP gateway `10.0.2.2` with IOAPIC IRQ pulses. It also checks loopback
+ICMPv4/ICMPv6, IPv4 and IPv6 UDP `bind`/`send`/`recv`/`poll`, and TCP handshake,
+data, `FIN`, `RST`, and leak freedom ({need}`SWR_IPC_0013`).
+```

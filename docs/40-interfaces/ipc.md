@@ -198,3 +198,15 @@ Ring 3 `/dev/blk` IPC ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0010`).
 FIFOs, positional I/O, `posix_getdents`, `statvfs`, and temp-file APIs
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0012`).
 ```
+
+```{icd} Ring 3 network stack and virtio-net IPC protocol (/dev/net)
+:id: ICD_IPC_0017
+:status: active
+:refines: ARC_IPC_0001
+:satisfies: SWR_IPC_0013
+
+`libc/include/sys/net.h` defines `NET_OP_INFO`, `NET_OP_ARP_RESOLVE`,
+`NET_OP_PING`, `NET_OP_SOCK_*`, `NET_OP_STATS`, `net_addr_t`, `net_info_t`,
+`net_req_t`, and `net_rep_t` for Ring 3 `/dev/net` IPC ({need}`ARC_IPC_0001`,
+{need}`SWR_IPC_0013`).
+```

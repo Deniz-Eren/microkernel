@@ -45,8 +45,8 @@ define the system contract inside the Sphinx-Needs traceability model (`docs/`):
   copy-on-write memory management, 256-level priority scheduling, and
   synchronous or scatter-gather IPC. It also handles IOAPIC IRQ pulse routing,
   signals, clocks/timers, futexes, and `syscall`/`sysret`. System servers
-  (`sysproc`, `pipeserv`, `vfsserv`, `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`)
-  and POSIX libraries run in isolated Ring 3 processes.
+  (`sysproc`, `pipeserv`, `vfsserv`, `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`,
+  `blkdrv`, `netserv`) and POSIX libraries run in isolated Ring 3 processes.
 - **Two-tier bidirectional traceability:** Business decisions (`BDR_`),
   architecture and workflow decisions (`ADR_`, `WDR_`), and requirements
   (`SYS_`, `SWR_`) in ASD-STE100 Issue 9 carry `:posix:` links to IEEE Std
@@ -322,15 +322,17 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
 ### For system server and driver authors
 
 Native microkernel headers (`<sys/ipc.h>`, `<sys/intr.h>`, `<sys/proc.h>`,
-`<sys/thread.h>`, `<sys/vm.h>`, `<sys/blk.h>`) let you build isolated Ring 3 OS
-services outside the kernel:
+`<sys/thread.h>`, `<sys/vm.h>`, `<sys/blk.h>`, `<sys/net.h>`) let you build
+isolated Ring 3 OS services outside the kernel:
 
 - Register named services with `sysproc` and handle synchronous or
   scatter-gather client messages and pulses across 256 priority levels with
   priority inheritance.
 - Build privileged hardware drivers (`CAP_SYS_INTR`) with IOAPIC IRQ-to-IPC
   pulses, port I/O, MMIO mapping, DMA buffers, and PCI configuration access (as
-  used by `rtcdrv`, `ttyserv`, and `blkdrv`).
+  used by `rtcdrv`, `ttyserv`, `blkdrv`, and `netserv`).
+- Use `/dev/net` (`netserv`) for PCI `virtio-net` hardware Ethernet/ARP/IPv4
+  traffic and dual-stack IPv4/IPv6 loopback, ICMP, UDP, and TCP sockets.
 
 ### Exact inventory and what is next
 
@@ -338,11 +340,11 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** Ring 3 TCP/IP networking (`virtio-net`,
-  `<netdb.h>`, `<netinet/in.h>`, `<arpa/inet.h>`, `<net/if.h>`,
-  `<netinet/tcp.h>`), followed by the remaining XCU text, archive, language, and
-  batch utilities (`sort`, `uniq`, `diff`, `patch`, `pax`, `awk`, `bc`, `m4`).
-  See [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** POSIX.1-2024 network Base C headers and
+  resolver APIs (`<netdb.h>`, `<netinet/in.h>`, `<arpa/inet.h>`, `<net/if.h>`,
+  `<netinet/tcp.h>` over `/dev/net`). Remaining XCU text, archive, language, and
+  batch utilities (`sort`, `uniq`, `diff`, `patch`, `pax`, `awk`, `bc`, `m4`)
+  follow next. See [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
@@ -350,7 +352,7 @@ services outside the kernel:
 - `kernel/` — Ring 0 kernel: boot code, platform HAL, and core subsystems
 - `libc/` — freestanding C17 and POSIX.1-2024 user-space C library
 - `servers/` — Ring 3 system servers (`sysproc`, `pipeserv`, `vfsserv`,
-  `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`)
+  `ttyserv`, `sockserv`, `ipcserv`, `rtcdrv`, `blkdrv`, `netserv`)
 - `bin/` — Ring 3 command shell (`sh`) and core utilities (`echo`, `cat`, `ls`,
   `true`, `false`, `test`) targeting POSIX.1-2024 XCU interfaces
 - `tests/` — QEMU harness (`test_runner.py`), Ring 3 tests (`ipccli`, `sigtest`,

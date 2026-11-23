@@ -12,7 +12,7 @@
 # need:: VER_PROC_0001 VER_PROC_0002 VER_PROC_0003 VER_PROC_0004
 # need:: VER_PROC_0005 VER_PROC_0006 VER_PROC_0007 VER_IPC_0001 VER_IPC_0002
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
-# need:: VER_IPC_0008 VER_IPC_0009
+# need:: VER_IPC_0008 VER_IPC_0009 VER_IPC_0011
 # need:: VER_SIG_0001 VER_SIG_0002 VER_LIBC_0001 VER_LIBC_0003 VER_LIBC_0004
 # need:: VER_LIBC_0005 VER_LIBC_0006 VER_LIBC_0007 VER_LIBC_0008 VER_LIBC_0009
 # need:: VER_LIBC_0010 VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014
@@ -83,6 +83,11 @@ def build_cmd(args):
         cmd.extend([
             "-drive", f"id=hd0,file={blk_path},if=none,format=raw",
             "-device", "virtio-blk-pci,drive=hd0,disable-legacy=on",
+        ])
+    if args.arch == "x86-64":
+        cmd.extend([
+            "-netdev", "user,id=net0",
+            "-device", "virtio-net-pci,netdev=net0,disable-legacy=on",
         ])
     for extra in args.extra_qemu_arg:
         cmd.extend(shlex.split(extra))

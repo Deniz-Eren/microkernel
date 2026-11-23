@@ -20,6 +20,19 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0041 — Add Ring 3 PCI virtio-net driver and TCP/IP/loopback server
+
+```{task} Add Ring 3 PCI virtio-net driver and TCP/IP/loopback server
+:id: TSK_0041
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0042, SWR_IPC_0013
+
+Add a Ring 3 PCI `virtio-net` driver using existing `CAP_SYS_INTR` MMIO, DMA,
+and IOAPIC IRQ pulses. Add a Ring 3 network server with loopback, Ethernet, ARP,
+IPv4, IPv6, ICMP, UDP, and TCP, verified in QEMU ({need}`BDR_0004`,
+{need}`SWR_IPC_0013`, {need}`SYS_IPC_0001`).
+```
+
 ### TSK_0043 — Add POSIX.1-2024 XCU regex, find, and core stream utilities
 
 ```{task} Add POSIX.1-2024 XCU regex, find, and core stream utilities

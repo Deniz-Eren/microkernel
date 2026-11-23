@@ -192,6 +192,10 @@ static int probe_virtio_blk(void) {
     new_cmd &= ~(1u << 10);
     (void)PCIConfigWrite32(found_bdf, 0x04u, new_cmd);
 
+    uint32_t host_id = 0u;
+    (void)PCIConfigRead32(pci_bdf(0u, 0u, 0u), 0x00u, &host_id);
+    uint32_t gsi_base = (host_id == 0x29C08086u) ? 20u : 16u;
+
     uint32_t irq_reg = 0u;
     (void)PCIConfigRead32(found_bdf, 0x3Cu, &irq_reg);
     uint8_t irq_line = (uint8_t)(irq_reg & 0xFFu);
@@ -199,7 +203,8 @@ static int probe_virtio_blk(void) {
     g_blk.irq_line = (irq_line >= 1u && irq_line < 24u) ? irq_line : 0u;
     g_blk.irq_gsi =
         (irq_pin >= 1u && irq_pin <= 4u)
-            ? (16u + (((uint32_t)found_slot + (uint32_t)irq_pin - 1u) & 3u))
+            ? (gsi_base +
+               (((uint32_t)found_slot + (uint32_t)irq_pin - 1u) & 3u))
             : 0u;
 
     /* Walk PCI capability list to map VirtIO 1.0 MMIO regions. */
@@ -312,14 +317,13 @@ static int probe_virtio_blk(void) {
         return -1;
     }
     int attached = 0;
-    if (g_blk.irq_line != 0u &&
-        AttachIntrEvent(g_blk.irq_line, g_blk.irq_chan, PULSE_CODE_IRQ,
-                        g_blk.irq_line) == 0) {
-        attached++;
-    }
-    if (g_blk.irq_gsi != 0u && g_blk.irq_gsi != g_blk.irq_line &&
+    if (g_blk.irq_gsi != 0u &&
         AttachIntrEvent(g_blk.irq_gsi, g_blk.irq_chan, PULSE_CODE_IRQ,
                         g_blk.irq_gsi) == 0) {
+        attached++;
+    } else if (g_blk.irq_line != 0u &&
+               AttachIntrEvent(g_blk.irq_line, g_blk.irq_chan, PULSE_CODE_IRQ,
+                               g_blk.irq_line) == 0) {
         attached++;
     }
     if (attached == 0) {
