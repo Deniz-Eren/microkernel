@@ -20,7 +20,9 @@ typedef struct {
     uint16_t mode;
     uint16_t nlink;
     uint32_t size;
+    uint32_t atime;
     uint32_t mtime;
+    uint32_t ctime;
 } ext2_inode_info_t;
 
 typedef int (*ext2_dir_cb_t)(const char *name, uint32_t ino, uint8_t file_type,
@@ -44,6 +46,8 @@ long ext2_read_data(uint32_t ino, size_t offset, void *buf, size_t len);
 long ext2_write_data(uint32_t ino, size_t offset, const void *buf, size_t len,
                      uint32_t mtime);
 int ext2_truncate_inode(uint32_t ino, size_t new_size, uint32_t mtime);
+int ext2_set_times(uint32_t ino, uint32_t atime, uint32_t mtime,
+                   uint32_t ctime);
 
 int ext2_unlink_entry(uint32_t parent_ino, const char *name, int is_dir,
                       uint32_t mtime, uint32_t *unlinked_ino_out);

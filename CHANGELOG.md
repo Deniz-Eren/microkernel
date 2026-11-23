@@ -59,6 +59,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 Base `futimens`/`utimensat`, `lgamma*`, and
+  `tzset`/`tzname` in Ring 3 `libc` and `vfsserv` (`TSK_0049`, `SWR_LIBC_0012`,
+  `ADR_0034`, `ICD_LIBC_0011`, `COMP_LIBC_0011`, `VER_LIBC_0012`): added
+  `UTIME_NOW`, `UTIME_OMIT`, `futimens`, and `utimensat` over `VFS_OP_UTIMENS`
+  with distinct `st_atim`/`st_mtim`/`st_ctim` tracking, `ext2_set_times()`
+  persistence, and upgraded `bin/utils/touch.c`; added Lanczos `lgamma`,
+  `lgammaf`, and `lgammal` in `<math.h>` and `<tgmath.h>`; added `tzset` and
+  `tzname[2]` in `<time.h>` without leaking XSI globals; raised Gate 2 to
+  `816/1037` Base interfaces; and verified in QEMU (`vfstest`, `mathtest`,
+  `timetest`) and CTest Gates 1 to 3 with zero Ring 0 changes.
 - Added ISO C17 and POSIX.1-2024 `<complex.h>` and `<tgmath.h>` in Ring 3 `libc`
   (`TSK_0036`, `SWR_LIBC_0011`, `ADR_0033`, `ICD_LIBC_0010`, `COMP_LIBC_0010`,
   `VER_LIBC_0011`): implemented `CMPLX`/`CMPLXF`/`CMPLXL` and all 66 `float`,

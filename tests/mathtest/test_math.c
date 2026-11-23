@@ -8,7 +8,7 @@
  *
  */
 
-/* need:: VER_LIBC_0009 VER_LIBC_0011 */
+/* need:: VER_LIBC_0009 VER_LIBC_0011 VER_LIBC_0012 */
 
 #include <complex.h>
 #include <errno.h>
@@ -213,7 +213,34 @@ static int test_exp_log_pow_and_special(void) {
         return -1;
     }
 
-    printf("[OK] <math.h> exp, log, pow, erf/erfc, and tgamma verified\n");
+    /* lgamma / lgammaf / lgammal values and poles. */
+    const double pi = 3.14159265358979323846;
+    if (lgamma(1.0) != 0.0 || lgamma(2.0) != 0.0 ||
+        !approx(lgamma(5.0), log(24.0), 1e-13) ||
+        !approx(lgamma(0.5), 0.5 * log(pi), 1e-13) ||
+        !approx(lgamma(100.0), 359.1342053695754, 1e-11) ||
+        !approx(lgamma(-0.5), log(2.0 * sqrt(pi)), 1e-12) ||
+        !approx((double)lgammaf(5.0f), log(24.0), 1e-5) ||
+        !approx((double)lgammal(5.0L), log(24.0), 1e-12) ||
+        !isinf(lgamma(-(double)INFINITY)) || lgamma(-(double)INFINITY) < 0.0) {
+        printf("[FAIL] mathtest: lgamma accuracy/infinity failed\n");
+        return -1;
+    }
+    errno = 0;
+    double lg0 = lgamma(0.0);
+    if (!isinf(lg0) || lg0 < 0.0 || errno != ERANGE) {
+        printf("[FAIL] mathtest: lgamma(0.0) pole check failed\n");
+        return -1;
+    }
+    errno = 0;
+    double lgm2 = lgamma(-2.0);
+    if (!isinf(lgm2) || lgm2 < 0.0 || errno != ERANGE) {
+        printf("[FAIL] mathtest: lgamma(-2.0) pole check failed\n");
+        return -1;
+    }
+
+    printf("[OK] <math.h> exp, log, pow, erf/erfc, tgamma, and lgamma* "
+           "verified\n");
     return 0;
 }
 
@@ -370,8 +397,10 @@ static int test_tgmath_dispatch(void) {
     }
     if (!capprox(exp(CMPLX(0.0, 3.14159265358979323846)), CMPLX(-1.0, 0.0),
                  1e-14) ||
-        !approx((double)sin(0.5f), (double)sinf(0.5f), 1e-6)) {
-        printf("[FAIL] mathtest: tgmath exp/sin values failed\n");
+        !approx((double)sin(0.5f), (double)sinf(0.5f), 1e-6) ||
+        TG_TYPE_ID(lgamma(f)) != 1 || TG_TYPE_ID(lgamma(d)) != 2 ||
+        TG_TYPE_ID(lgamma(5)) != 2 || TG_TYPE_ID(lgamma(ld)) != 3) {
+        printf("[FAIL] mathtest: tgmath exp/sin/lgamma values failed\n");
         return -1;
     }
 

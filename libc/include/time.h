@@ -11,7 +11,7 @@
 #ifndef _TIME_H
 #define _TIME_H
 
-/* need:: ICD_PROC_0005 ICD_LIBC_0009 */
+/* need:: ICD_PROC_0005 ICD_LIBC_0009 ICD_LIBC_0011 */
 
 #include <stddef.h>
 #include <sys/types.h>
@@ -65,10 +65,13 @@ struct sigevent {
 };
 #endif /* _SIGEVENT_DEFINED */
 
+extern char *tzname[2];
+
 clock_t clock(void);
 double difftime(time_t time1, time_t time0);
 time_t time(time_t *tloc);
 int timespec_get(struct timespec *ts, int base);
+void tzset(void);
 
 struct tm *gmtime(const time_t *timer);
 struct tm *gmtime_r(const time_t *restrict timer, struct tm *restrict result);

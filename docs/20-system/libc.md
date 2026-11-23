@@ -161,6 +161,20 @@ type-generic macros over `<math.h>` and `<complex.h>` in Ring 3
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply Base futimens, utimensat, lgamma*, tzset, and tzname
+:id: SWR_LIBC_0012
+:status: active
+:posix: XBD/sys_stat.h (CX), XBD/math.h (CX), XBD/time.h (CX)
+:derives: SYS_LIBC_0001, SYS_IPC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0034
+
+`libc` and `vfsserv` must supply async-signal-safe `futimens` and `utimensat`
+with `UTIME_NOW` and `UTIME_OMIT` in Ring 3. `libc` must supply `lgamma`,
+`lgammaf`, and `lgammal` in `<math.h>` and `<tgmath.h>`, plus `tzset` and
+`tzname` in `<time.h>`, with no XSI symbol leakage under
+`_POSIX_C_SOURCE=202405L` ({need}`SYS_LIBC_0001`, {need}`SYS_IPC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

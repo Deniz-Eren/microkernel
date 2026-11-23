@@ -10,7 +10,7 @@
 
 #include "math_internal.h"
 
-/* need:: COMP_LIBC_0007 */
+/* need:: COMP_LIBC_0007 COMP_LIBC_0011 */
 
 /* Evaluate exp(r) - 1 for |r| <= ln(2)/2 using FMA Horner (degree 13). */
 static double expm1_core(double r) {
@@ -475,16 +475,72 @@ long double erfcl(long double x) {
 }
 
 /* Lanczos approximation (g=7, 9-term Godfrey coefficients) for Gamma(z). */
-double tgamma(double x) {
-    static const double p[9] = {
-        0.99999999999980993227684700473478,  676.520368121885098567009190444019,
-        -1259.13921672240287047156078755283, 771.3234287776530788486528258894,
-        -176.61502916214059906584551354,     12.507343278686904814458936853,
-        -0.13857109526572011689554707,       9.984369578019570859563e-6,
-        1.50563273514931155834e-7,
-    };
-    const double sqrt_2pi = 2.50662827463100050241576528481104525;
+static const double k_lanczos_p[9] = {
+    0.99999999999980993227684700473478,  676.520368121885098567009190444019,
+    -1259.13921672240287047156078755283, 771.3234287776530788486528258894,
+    -176.61502916214059906584551354,     12.507343278686904814458936853,
+    -0.13857109526572011689554707,       9.984369578019570859563e-6,
+    1.50563273514931155834e-7,
+};
+static const double k_sqrt_2pi = 2.50662827463100050241576528481104525;
 
+static double lanczos_log_gamma(double x) {
+    double z = x - 1.0;
+    double acc = k_lanczos_p[0];
+    for (int i = 1; i < 9; i++) {
+        acc += k_lanczos_p[i] / (z + (double)i);
+    }
+    double t = z + 7.5;
+    return log(k_sqrt_2pi * acc) + (z + 0.5) * log(t) - t;
+}
+
+double lgamma(double x) {
+    if (isnan(x)) {
+        return x;
+    }
+    if (isinf(x)) {
+        return (double)INFINITY;
+    }
+    if (x <= 0.0 && floor(x) == x) {
+        return math_pole_err(0);
+    }
+    if (x == 1.0 || x == 2.0) {
+        return 0.0;
+    }
+    if (x < 0.5) {
+        double r = x - floor(x);
+        if (r > 0.5) {
+            r = 1.0 - r;
+        }
+        double s = sin(K_PI * r);
+        if (s == 0.0) {
+            return math_pole_err(0);
+        }
+        double res = log(K_PI / s) - lgamma(1.0 - x);
+        if (isinf(res)) {
+            return math_overflow_err(signbit(res));
+        }
+        return res;
+    }
+    if (x > 2.55e305) {
+        return math_overflow_err(0);
+    }
+    double res = lanczos_log_gamma(x);
+    if (isinf(res)) {
+        return math_overflow_err(signbit(res));
+    }
+    return res;
+}
+
+float lgammaf(float x) {
+    return (float)lgamma((double)x);
+}
+
+long double lgammal(long double x) {
+    return (long double)lgamma((double)x);
+}
+
+double tgamma(double x) {
     if (isnan(x)) {
         return x;
     }
@@ -520,14 +576,7 @@ double tgamma(double x) {
         }
         return res;
     }
-    double z = x - 1.0;
-    double acc = p[0];
-    for (int i = 1; i < 9; i++) {
-        acc += p[i] / (z + (double)i);
-    }
-    double t = z + 7.5;
-    double log_g = log(sqrt_2pi * acc) + (z + 0.5) * log(t) - t;
-    return exp(log_g);
+    return exp(lanczos_log_gamma(x));
 }
 
 float tgammaf(float x) {

@@ -19,7 +19,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-/* need:: VER_IPC_0005 */
+/* need:: VER_IPC_0005 VER_LIBC_0012 */
 
 static int test_bootfs_readonly(void) {
     DIR *d = opendir("/boot");
@@ -282,6 +282,109 @@ static int test_dup_fork_unlink_and_rmdir(void) {
     return 0;
 }
 
+static int test_futimens_and_utimensat(void) {
+    int fd = open("/tmp/utime_file.txt", O_CREAT | O_RDWR | O_TRUNC, 0644u);
+    if (fd < 0) {
+        printf("[FAIL] utimens open errno=%d\n", errno);
+        return 1;
+    }
+    struct timespec ts[2] = {
+        {.tv_sec = 1700000100L, .tv_nsec = 123456789L},
+        {.tv_sec = 1700000200L, .tv_nsec = 987654321L},
+    };
+    if (futimens(fd, ts) != 0) {
+        printf("[FAIL] futimens explicit failed errno=%d\n", errno);
+        close(fd);
+        return 1;
+    }
+    struct stat st = {0};
+    if (fstat(fd, &st) != 0 || st.st_atim.tv_sec != 1700000100L ||
+        st.st_atim.tv_nsec != 123456789L || st.st_mtim.tv_sec != 1700000200L ||
+        st.st_mtim.tv_nsec != 987654321L) {
+        printf("[FAIL] futimens stat mismatch atim=%ld.%ld mtim=%ld.%ld\n",
+               (long)st.st_atim.tv_sec, st.st_atim.tv_nsec,
+               (long)st.st_mtim.tv_sec, st.st_mtim.tv_nsec);
+        close(fd);
+        return 1;
+    }
+
+    /* UTIME_OMIT preserves atime while updating mtime; NULL sets both to NOW.
+     */
+    struct timespec partial[2] = {
+        {.tv_sec = 0, .tv_nsec = UTIME_OMIT},
+        {.tv_sec = 1700000300L, .tv_nsec = 500L},
+    };
+    if (utimensat(AT_FDCWD, "/tmp/utime_file.txt", partial, 0) != 0 ||
+        fstat(fd, &st) != 0 || st.st_atim.tv_sec != 1700000100L ||
+        st.st_atim.tv_nsec != 123456789L || st.st_mtim.tv_sec != 1700000300L ||
+        st.st_mtim.tv_nsec != 500L) {
+        printf("[FAIL] utimensat UTIME_OMIT failed errno=%d\n", errno);
+        close(fd);
+        return 1;
+    }
+    if (utimensat(AT_FDCWD, "/tmp/utime_file.txt", NULL, 0) != 0 ||
+        fstat(fd, &st) != 0 || st.st_mtim.tv_sec == 1700000300L) {
+        printf("[FAIL] utimensat NULL UTIME_NOW failed errno=%d\n", errno);
+        close(fd);
+        return 1;
+    }
+    close(fd);
+
+    /* Symlink AT_SYMLINK_NOFOLLOW updates the link without changing target. */
+    if (symlink("/tmp/utime_file.txt", "/tmp/utime_link") != 0) {
+        printf("[FAIL] symlink for utimensat failed errno=%d\n", errno);
+        return 1;
+    }
+    struct timespec link_ts[2] = {
+        {.tv_sec = 1600000001L, .tv_nsec = 111L},
+        {.tv_sec = 1600000002L, .tv_nsec = 222L},
+    };
+    if (utimensat(AT_FDCWD, "/tmp/utime_link", link_ts, AT_SYMLINK_NOFOLLOW) !=
+            0 ||
+        lstat("/tmp/utime_link", &st) != 0 ||
+        st.st_atim.tv_sec != 1600000001L || st.st_mtim.tv_sec != 1600000002L ||
+        stat("/tmp/utime_file.txt", &st) != 0 ||
+        st.st_mtim.tv_sec == 1600000002L) {
+        printf("[FAIL] utimensat AT_SYMLINK_NOFOLLOW failed\n");
+        return 1;
+    }
+
+    /* Error paths: invalid tv_nsec -> EINVAL, bad flag -> EINVAL, EROFS, EBADF.
+     */
+    struct timespec bad_ts[2] = {
+        {.tv_sec = 0, .tv_nsec = 1000000000L},
+        {.tv_sec = 0, .tv_nsec = 0},
+    };
+    errno = 0;
+    if (utimensat(AT_FDCWD, "/tmp/utime_file.txt", bad_ts, 0) != -1 ||
+        errno != EINVAL) {
+        printf("[FAIL] utimensat bad tv_nsec expected EINVAL, got %d\n", errno);
+        return 1;
+    }
+    errno = 0;
+    if (utimensat(AT_FDCWD, "/tmp/utime_file.txt", NULL, 0x1234) != -1 ||
+        errno != EINVAL) {
+        printf("[FAIL] utimensat bad flag expected EINVAL, got %d\n", errno);
+        return 1;
+    }
+    errno = 0;
+    if (utimensat(AT_FDCWD, "/boot/sysproc", NULL, 0) != -1 || errno != EROFS) {
+        printf("[FAIL] utimensat /boot expected EROFS, got %d\n", errno);
+        return 1;
+    }
+    errno = 0;
+    if (futimens(999, NULL) != -1 || errno != EBADF) {
+        printf("[FAIL] futimens bad fd expected EBADF, got %d\n", errno);
+        return 1;
+    }
+
+    (void)unlink("/tmp/utime_link");
+    (void)unlink("/tmp/utime_file.txt");
+    printf("[OK] futimens and utimensat (UTIME_NOW, UTIME_OMIT, NOFOLLOW, "
+           "EROFS) verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_bootfs_readonly() != 0) {
         return 1;
@@ -290,6 +393,9 @@ int main(void) {
         return 1;
     }
     if (test_dup_fork_unlink_and_rmdir() != 0) {
+        return 1;
+    }
+    if (test_futimens_and_utimensat() != 0) {
         return 1;
     }
     return 0;

@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include "ext2.h"
 
-/* need:: COMP_IPC_0008 COMP_IPC_0016 COMP_IPC_0017 */
+/* need:: COMP_IPC_0008 COMP_IPC_0016 COMP_IPC_0017 COMP_LIBC_0011 */
 
 #define VFS_NAME_MAX 128u
 #define VFS_MAX_HANDLES 128u
@@ -63,8 +63,12 @@ struct vfs_node {
     size_t fifo_len;
     uint32_t fifo_readers;
     uint32_t fifo_writers;
+    int64_t atime_sec;
+    int64_t atime_nsec;
     int64_t mtime_sec;
     int64_t mtime_nsec;
+    int64_t ctime_sec;
+    int64_t ctime_nsec;
     vfs_node_t *parent;
     vfs_child_t *children;
     size_t child_count;
@@ -121,6 +125,10 @@ static vfs_node_t *node_new(uint64_t dev, uint32_t mode, uint8_t ro,
     n->readonly = ro;
     n->parent = parent ? parent : n;
     get_now(&n->mtime_sec, &n->mtime_nsec);
+    n->atime_sec = n->mtime_sec;
+    n->atime_nsec = n->mtime_nsec;
+    n->ctime_sec = n->mtime_sec;
+    n->ctime_nsec = n->mtime_nsec;
     return n;
 }
 
@@ -489,8 +497,12 @@ static void fill_stat(const vfs_node_t *n, vfs_stat_t *st) {
     st->st_uid = n->uid;
     st->st_gid = n->gid;
     st->st_size = (uint64_t)n->size;
+    st->st_atime_sec = n->atime_sec;
+    st->st_atime_nsec = n->atime_nsec;
     st->st_mtime_sec = n->mtime_sec;
     st->st_mtime_nsec = n->mtime_nsec;
+    st->st_ctime_sec = n->ctime_sec;
+    st->st_ctime_nsec = n->ctime_nsec;
 }
 
 static int build_canonical_path(const vfs_node_t *node, char *out, size_t cap) {
@@ -1504,7 +1516,7 @@ static void handle_chmod(const vfs_req_t *req, vfs_rep_t *rep) {
         return;
     }
     node->mode = (node->mode & S_IFMT) | (req->mode & 07777u);
-    get_now(&node->mtime_sec, &node->mtime_nsec);
+    get_now(&node->ctime_sec, &node->ctime_nsec);
     rep->err = 0;
 }
 
@@ -1526,7 +1538,81 @@ static void handle_chown(const vfs_req_t *req, vfs_rep_t *rep) {
     if (req->whence != (uint32_t)-1) {
         node->gid = req->whence;
     }
-    get_now(&node->mtime_sec, &node->mtime_nsec);
+    get_now(&node->ctime_sec, &node->ctime_nsec);
+    rep->err = 0;
+}
+
+static int valid_utime_nsec(int64_t ns) {
+    if (ns == (int64_t)UTIME_NOW || ns == (int64_t)UTIME_OMIT) {
+        return 1;
+    }
+    return ns >= 0 && ns < 1000000000L;
+}
+
+static void handle_utimens(const vfs_req_t *req, vfs_rep_t *rep) {
+    int64_t an = req->u.utimes.atime_nsec;
+    int64_t mn = req->u.utimes.mtime_nsec;
+    if (!valid_utime_nsec(an) || !valid_utime_nsec(mn)) {
+        rep->err = -EINVAL;
+        return;
+    }
+    int err = 0;
+    vfs_node_t *node = NULL;
+    if (req->flags & VFS_FLAG_BY_FD) {
+        vfs_file_t *f = get_file(req->handle);
+        if (!f) {
+            rep->err = -EBADF;
+            return;
+        }
+        node = f->node;
+    } else {
+        vfs_node_t *start = resolve_start_dir(req->handle, &err);
+        if (!start) {
+            rep->err = err;
+            return;
+        }
+        int follow = (req->flags & (uint32_t)AT_SYMLINK_NOFOLLOW) == 0u;
+        int r = resolve_path_ex(start, req->u.utimes.path, follow, 0, NULL,
+                                NULL, 0u, &node);
+        if (r < 0 || !node) {
+            rep->err = r < 0 ? r : -ENOENT;
+            return;
+        }
+    }
+    if (node->readonly) {
+        rep->err = -EROFS;
+        return;
+    }
+    int64_t now_sec = 0;
+    int64_t now_nsec = 0;
+    get_now(&now_sec, &now_nsec);
+    if (an == (int64_t)UTIME_NOW) {
+        node->atime_sec = now_sec;
+        node->atime_nsec = now_nsec;
+    } else if (an != (int64_t)UTIME_OMIT) {
+        node->atime_sec = req->u.utimes.atime_sec;
+        node->atime_nsec = an;
+    }
+    if (mn == (int64_t)UTIME_NOW) {
+        node->mtime_sec = now_sec;
+        node->mtime_nsec = now_nsec;
+    } else if (mn != (int64_t)UTIME_OMIT) {
+        node->mtime_sec = req->u.utimes.mtime_sec;
+        node->mtime_nsec = mn;
+    }
+    if (an != (int64_t)UTIME_OMIT || mn != (int64_t)UTIME_OMIT) {
+        node->ctime_sec = now_sec;
+        node->ctime_nsec = now_nsec;
+        if (node->dev == VFS_DEV_EXT2 && node->ext2_ino != 0u) {
+            int er = ext2_set_times(node->ext2_ino, (uint32_t)node->atime_sec,
+                                    (uint32_t)node->mtime_sec,
+                                    (uint32_t)node->ctime_sec);
+            if (er < 0) {
+                rep->err = er;
+                return;
+            }
+        }
+    }
     rep->err = 0;
 }
 
@@ -1812,7 +1898,12 @@ static int populate_ext2_cb(const char *name, uint32_t ino, uint8_t ftype,
     }
     child->ext2_ino = ino;
     child->size = info.size;
+    child->atime_sec = (int64_t)info.atime;
+    child->atime_nsec = 0;
     child->mtime_sec = (int64_t)info.mtime;
+    child->mtime_nsec = 0;
+    child->ctime_sec = (int64_t)info.ctime;
+    child->ctime_nsec = 0;
     if (dir_add_child(parent, name, child) != 0) {
         node_destroy(child);
         return 0;
@@ -2000,6 +2091,9 @@ int main(void) {
             break;
         case VFS_OP_STATVFS:
             handle_statvfs(&req, &rep);
+            break;
+        case VFS_OP_UTIMENS:
+            handle_utimens(&req, &rep);
             break;
         case VFS_OP_STATS: {
             uint32_t open_handles = 0;

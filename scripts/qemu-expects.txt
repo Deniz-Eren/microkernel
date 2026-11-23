@@ -41,7 +41,7 @@ unprivileged IOPLSet and AttachIntrEvent rejected with EPERM
 drvtest ReadMsgV/WriteMsgV /dev/rtc round trip succeeded
 CLOCK_MONOTONIC, CLOCK_REALTIME, and clock_nanosleep verified
 POSIX timer_create/timer_settime fired .* SIGUSR1 ticks
-Base time\.h calendar, mktime, asctime/ctime, strftime, clock, and timespec_get verified
+Base time\.h calendar, tzset/tzname, mktime, asctime/ctime, strftime, clock, and timespec_get verified
 pthreads FS\.base TLS, mutex, spinlock, barrier, rwlock
 pthread_cond_clockwait and sem_wait/sem_clockwait verified
 threads\.h thrd_create, thrd_join, and thrd_equal verified
@@ -72,6 +72,7 @@ vfsserv registered /dev/vfs
 bootfs /boot readdir, ELF read, fstat, and EROFS verified
 tmpfs mkdir, chdir, getcwd, openat, lseek, ftruncate, and stat
 VFS shared dup/fork offsets, unlinked open persistence
+futimens and utimensat \(UTIME_NOW, UTIME_OMIT, NOFOLLOW, EROFS\) verified
 SHM shm_open/shm_unlink, ftruncate, and cross-process
 ML/MLR mlock, munlock, mlockall, and munlockall verified
 ttyserv handled COM1 IRQ 4 pulse via IOAPIC
@@ -117,7 +118,7 @@ x86-64-v3 AVX2, FMA, BMI1/BMI2, and bootinfo flags verified
 preemptive XSAVE/XRSTOR YMM and MXCSR thread isolation verified
 <fenv\.h> MXCSR rounding, exceptions, and math rounding verified
 <math\.h> classification, hardware FMA, sqrt, cbrt, and hypot verified
-<math\.h> exp, log, pow, erf/erfc, and tgamma verified
+<math\.h> exp, log, pow, erf/erfc, tgamma, and lgamma\* verified
 <math\.h> trig, inverse trig \(acos/asin/atan2\), and hyperbolic verified
 <complex\.h> and <tgmath\.h> arithmetic, trig, hyperbolic, and generic dispatch verified
 blkdrv virtio-blk ready: slot=.* irq=.* gsi=.* sectors=

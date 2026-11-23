@@ -20,6 +20,20 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0049 — Add Base futimens, utimensat, lgamma*, tzset, and tzname
+
+```{task} Add Base futimens, utimensat, lgamma*, tzset, and tzname
+:id: TSK_0049
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0034, SWR_LIBC_0012
+
+Add `futimens` and `utimensat` (`UTIME_NOW`, `UTIME_OMIT`) in `<sys/stat.h>` and
+Ring 3 `vfsserv`. Add `lgamma`, `lgammaf`, and `lgammal` in `<math.h>` and
+`<tgmath.h>`. Add `tzset` and `tzname` in `<time.h>`, verified in QEMU and Gates
+1 and 2 ({need}`BDR_0004`, {need}`SWR_LIBC_0012`, {need}`SYS_LIBC_0001`,
+{need}`SYS_IPC_0001`).
+```
+
 ### TSK_0036 — Add ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h>
 
 ```{task} Add ISO C17 and POSIX.1-2024 <complex.h> and <tgmath.h>

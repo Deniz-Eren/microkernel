@@ -11,7 +11,7 @@
 #ifndef _SYS_STAT_H
 #define _SYS_STAT_H
 
-/* need:: ICD_IPC_0008 ICD_IPC_0016 */
+/* need:: ICD_IPC_0008 ICD_IPC_0016 ICD_LIBC_0011 */
 
 #include <sys/types.h>
 #include <time.h>
@@ -74,6 +74,10 @@ struct stat {
 #define st_mtime st_mtim.tv_sec
 #define st_ctime st_ctim.tv_sec
 
+/* Special tv_nsec values for futimens() and utimensat(). */
+#define UTIME_NOW ((1L << 30) - 1L)
+#define UTIME_OMIT ((1L << 30) - 2L)
+
 int stat(const char *restrict path, struct stat *restrict buf);
 int fstat(int fildes, struct stat *buf);
 int lstat(const char *restrict path, struct stat *restrict buf);
@@ -86,6 +90,9 @@ int mkfifoat(int fd, const char *path, mode_t mode);
 int chmod(const char *path, mode_t mode);
 int fchmod(int fildes, mode_t mode);
 int fchmodat(int fd, const char *path, mode_t mode, int flag);
+int futimens(int fd, const struct timespec times[2]);
+int utimensat(int fd, const char *path, const struct timespec times[2],
+              int flag);
 mode_t umask(mode_t cmask);
 
 #endif /* _SYS_STAT_H */

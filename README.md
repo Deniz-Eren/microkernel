@@ -287,15 +287,16 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   helpers, deferred cancellation, and thread-local `errno`. Use Base signals
   (`sigaction`, `sigsuspend`, `sigwait*`, `sigqueue`, `sig2str`/`str2sig`,
   `pause`), monotonic/realtime clocks, timers, and `<time.h>` calendar functions
-  (`gmtime*`, `localtime*`, `mktime`, `strftime`, `clock`, `timespec_get`).
+  (`gmtime*`, `localtime*`, `mktime`, `strftime`, `tzset`/`tzname`, `clock`,
+  `timespec_get`).
 - **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered and
   memory-backed `<stdio.h>` streams (`fmemopen`, `open_memstream`, `freopen`,
   `scanf*`, `getline`, `dprintf`, `asprintf`, `fgetpos`/`fsetpos`). Use
-  permissions, hard and symbolic links, FIFOs, positional I/O, directory
-  traversal (`posix_getdents`, `scandir`), `<sys/statvfs.h>`, and temp-file
-  helpers. Communicate over pipes, `AF_UNIX` sockets, `<aio.h>`, and
-  `<termios.h>`, and multiplex descriptors across servers with `poll`, `ppoll`,
-  `select`, or `pselect`.
+  permissions, nanosecond timestamps (`futimens`, `utimensat`), hard and
+  symbolic links, FIFOs, positional I/O, directory traversal (`posix_getdents`,
+  `scandir`), `<sys/statvfs.h>`, and temp-file helpers. Communicate over pipes,
+  `AF_UNIX` sockets, `<aio.h>`, and `<termios.h>`, and multiplex descriptors
+  across servers with `poll`, `ppoll`, `select`, or `pselect`.
 - **Memory, math, and standard C utilities:** Allocate memory from an
   `mmap`-backed coalescing heap (`malloc`, `aligned_alloc`, `reallocarray`), map
   shared memory (`shm_open`), enforce W^X page protections, or lock pages in RAM

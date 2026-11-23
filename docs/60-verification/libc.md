@@ -148,3 +148,17 @@ The headless QEMU harness `tests/test_runner.py` runs `mathtest`
 round-trips, and `<tgmath.h>` `_Generic` type dispatch. CTest Gates 1 and 2
 check standalone compilation and all 69 Base/CX exports ({need}`SWR_LIBC_0011`).
 ```
+
+```{ver} Verify Base futimens, utimensat, lgamma*, tzset, and tzname in QEMU
+:id: VER_LIBC_0012
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0012
+
+The headless QEMU harness `tests/test_runner.py` runs `vfstest`
+(`tests/vfstest/test_vfs.c`), `mathtest` (`tests/mathtest/test_math.c`), and
+`timetest` (`tests/timetest/main.c`). They check `futimens`/`utimensat`
+(`UTIME_NOW`, `UTIME_OMIT`, `AT_SYMLINK_NOFOLLOW`, `EROFS`), `lgamma*` values
+and poles, and `tzset`/`tzname`. CTest Gates 1 to 3 check standalone headers,
+XSI isolation, Base exports, and async-signal-safety ({need}`SWR_LIBC_0012`).
+```

@@ -680,8 +680,23 @@ int ext2_stat_inode(uint32_t ino, ext2_inode_info_t *out) {
     out->mode = in.i_mode;
     out->nlink = in.i_links_count;
     out->size = in.i_size;
+    out->atime = in.i_atime;
     out->mtime = in.i_mtime;
+    out->ctime = in.i_ctime;
     return 0;
+}
+
+int ext2_set_times(uint32_t ino, uint32_t atime, uint32_t mtime,
+                   uint32_t ctime) {
+    ext2_inode_t in = {0};
+    int rc = read_inode(ino, &in);
+    if (rc < 0) {
+        return rc;
+    }
+    in.i_atime = atime;
+    in.i_mtime = mtime;
+    in.i_ctime = ctime;
+    return write_inode(ino, &in);
 }
 
 int ext2_iterate_dir(uint32_t dir_ino, ext2_dir_cb_t cb, void *ctx) {

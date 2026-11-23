@@ -139,3 +139,17 @@ functions. `libc/include/tgmath.h` provides pure C17 `_Generic` type-generic
 macros over `<math.h>` and `<complex.h>` ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0011`).
 ```
+
+```{icd} Base futimens, utimensat, lgamma*, tzset, and tzname interfaces
+:id: ICD_LIBC_0011
+:status: active
+:posix: XBD/sys_stat.h (CX), XBD/math.h (CX), XBD/time.h (CX)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0012
+
+`<sys/stat.h>` declares `UTIME_NOW`, `UTIME_OMIT`, `futimens`, and `utimensat`.
+`<math.h>` and `<tgmath.h>` declare `lgamma`, `lgammaf`, `lgammal`, and the
+type-generic `lgamma` macro. `<time.h>` declares `tzset` and `extern char
+*tzname[2]` without exposing XSI globals under `_POSIX_C_SOURCE=202405L`
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0012`).
+```

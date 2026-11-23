@@ -14,7 +14,7 @@
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
-# need:: VER_LIBC_0011
+# need:: VER_LIBC_0011 VER_LIBC_0012
 
 from __future__ import annotations
 
@@ -1296,6 +1296,50 @@ class PosixHeaderMatrixTests(unittest.TestCase):
             with self.subTest(profile=label):
                 rc, err = _compile_snippet(src, ["-fhosted", macro])
                 self.assertEqual(rc, 0, f"complex/tgmath check failed:\n{err}")
+
+    def test_base_utimens_lgamma_and_tzset_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <fcntl.h>",
+                "#include <math.h>",
+                "#include <sys/stat.h>",
+                "#include <tgmath.h>",
+                "#include <time.h>",
+                "#ifdef VFS_OP_UTIMENS",
+                '#error "sys/stat.h leaked VFS_OP_UTIMENS"',
+                "#endif",
+                "#if !defined(_XOPEN_SOURCE)",
+                "static int signgam = 0;",
+                "static int timezone = 0;",
+                "static int daylight = 0;",
+                "#endif",
+                "static double __check_utimens_lgamma_tz(int fd) {",
+                "    struct timespec ts[2] = {{0, UTIME_NOW},",
+                "                             {0, UTIME_OMIT}};",
+                "    (void)futimens(fd, ts);",
+                "    (void)utimensat(AT_FDCWD, \"/tmp\", ts,",
+                "                    AT_SYMLINK_NOFOLLOW);",
+                "    tzset();",
+                "    const char *z0 = tzname[0];",
+                "    const char *z1 = tzname[1];",
+                "    double a = lgamma(2.5) + (double)lgammaf(2.5f) +",
+                "               (double)lgammal(2.5L);",
+                "#if !defined(_XOPEN_SOURCE)",
+                "    a += (double)(signgam + timezone + daylight);",
+                "#endif",
+                "    return a + (double)(z0 != (const char *)0) +",
+                "           (double)(z1 != (const char *)0);",
+                "}",
+                "double (*__ult_ref)(int) = __check_utimens_lgamma_tz;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, ["-fhosted", macro])
+                self.assertEqual(
+                    rc, 0, f"utimens/lgamma/tzset check failed:\n{err}"
+                )
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -11,7 +11,7 @@
 #ifndef _TGMATH_H
 #define _TGMATH_H
 
-/* need:: ICD_LIBC_0010 */
+/* need:: ICD_LIBC_0010 ICD_LIBC_0011 */
 
 #include <complex.h>
 #include <math.h>
@@ -125,6 +125,7 @@
 #define hypot(x, y) __TG_R2((x), (y), hypot, hypotf, hypotl)
 #define ilogb(x) __TG_R1((x), ilogb, ilogbf, ilogbl)
 #define ldexp(x, e) __TG_R1_EX((x), (e), ldexp, ldexpf, ldexpl)
+#define lgamma(x) __TG_R1((x), lgamma, lgammaf, lgammal)
 #define llrint(x) __TG_R1((x), llrint, llrintf, llrintl)
 #define llround(x) __TG_R1((x), llround, llroundf, llroundl)
 #define log10(x) __TG_R1((x), log10, log10f, log10l)

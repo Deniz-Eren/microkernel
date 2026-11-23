@@ -30,7 +30,7 @@
 #include "fd_internal.h"
 #include "tls_internal.h"
 
-/* need:: COMP_IPC_0009 COMP_IPC_0017 COMP_LIBC_0006 */
+/* need:: COMP_IPC_0009 COMP_IPC_0017 COMP_LIBC_0006 COMP_LIBC_0011 */
 
 struct __dirstream {
     int fd;
@@ -173,12 +173,12 @@ static void convert_stat(const vfs_stat_t *src, struct stat *dst) {
     dst->st_uid = (uid_t)src->st_uid;
     dst->st_gid = (gid_t)src->st_gid;
     dst->st_size = (off_t)src->st_size;
-    dst->st_atim.tv_sec = (time_t)src->st_mtime_sec;
-    dst->st_atim.tv_nsec = (long)src->st_mtime_nsec;
+    dst->st_atim.tv_sec = (time_t)src->st_atime_sec;
+    dst->st_atim.tv_nsec = (long)src->st_atime_nsec;
     dst->st_mtim.tv_sec = (time_t)src->st_mtime_sec;
     dst->st_mtim.tv_nsec = (long)src->st_mtime_nsec;
-    dst->st_ctim.tv_sec = (time_t)src->st_mtime_sec;
-    dst->st_ctim.tv_nsec = (long)src->st_mtime_nsec;
+    dst->st_ctim.tv_sec = (time_t)src->st_ctime_sec;
+    dst->st_ctim.tv_nsec = (long)src->st_ctime_nsec;
     dst->st_blksize = 4096;
     dst->st_blocks = (blkcnt_t)((src->st_size + 511ULL) / 512ULL);
 }
@@ -926,6 +926,89 @@ int fchmod(int fildes, mode_t mode) {
     req.op = VFS_OP_CHMOD;
     req.handle = e.srv_handle;
     req.mode = (uint32_t)(mode & 07777u);
+    req.flags = VFS_FLAG_BY_FD;
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+static int pack_utimens(const struct timespec times[2], vfs_req_t *req) {
+    if (!times) {
+        req->u.utimes.atime_sec = 0;
+        req->u.utimes.atime_nsec = (int64_t)UTIME_NOW;
+        req->u.utimes.mtime_sec = 0;
+        req->u.utimes.mtime_nsec = (int64_t)UTIME_NOW;
+        return 0;
+    }
+    for (int i = 0; i < 2; i++) {
+        long ns = times[i].tv_nsec;
+        if (ns != UTIME_NOW && ns != UTIME_OMIT &&
+            (ns < 0L || ns >= 1000000000L)) {
+            return -EINVAL;
+        }
+    }
+    req->u.utimes.atime_sec = (int64_t)times[0].tv_sec;
+    req->u.utimes.atime_nsec = (int64_t)times[0].tv_nsec;
+    req->u.utimes.mtime_sec = (int64_t)times[1].tv_sec;
+    req->u.utimes.mtime_nsec = (int64_t)times[1].tv_nsec;
+    return 0;
+}
+
+int utimensat(int fd, const char *path, const struct timespec times[2],
+              int flag) {
+    if (flag & ~AT_SYMLINK_NOFOLLOW) {
+        errno = EINVAL;
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    int vr = pack_utimens(times, &req);
+    if (vr < 0) {
+        errno = -vr;
+        return -1;
+    }
+    req.op = VFS_OP_UTIMENS;
+    req.flags = (uint32_t)flag;
+    int pr = build_req_path(fd, path, &req.handle, req.u.utimes.path);
+    if (pr < 0) {
+        errno = -pr;
+        return -1;
+    }
+    long r = vfs_rpc(&req, &rep);
+    if (r < 0) {
+        errno = (int)(-r);
+        return -1;
+    }
+    return 0;
+}
+
+int futimens(int fd, const struct timespec times[2]) {
+    if (fd < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    struct __k_fd_entry e = {0};
+    long gr = __sys5(SYS_FD_OP, FD_OP_GET, fd, (long)(uintptr_t)&e, 0, 0);
+    if (gr < 0) {
+        errno = (int)(-gr);
+        return -1;
+    }
+    vfs_req_t req = {0};
+    vfs_rep_t rep = {0};
+    int vr = pack_utimens(times, &req);
+    if (vr < 0) {
+        errno = -vr;
+        return -1;
+    }
+    if (e.kind != FD_KIND_VFS) {
+        errno = EINVAL;
+        return -1;
+    }
+    req.op = VFS_OP_UTIMENS;
+    req.handle = e.srv_handle;
     req.flags = VFS_FLAG_BY_FD;
     long r = vfs_rpc(&req, &rep);
     if (r < 0) {

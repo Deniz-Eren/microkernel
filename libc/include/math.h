@@ -11,7 +11,7 @@
 #ifndef _MATH_H
 #define _MATH_H
 
-/* need:: ICD_LIBC_0007 */
+/* need:: ICD_LIBC_0007 ICD_LIBC_0011 */
 
 typedef float float_t;
 typedef double double_t;
@@ -199,6 +199,9 @@ long double erfl(long double x);
 double erfc(double x);
 float erfcf(float x);
 long double erfcl(long double x);
+double lgamma(double x);
+float lgammaf(float x);
+long double lgammal(long double x);
 double tgamma(double x);
 float tgammaf(float x);
 long double tgammal(long double x);

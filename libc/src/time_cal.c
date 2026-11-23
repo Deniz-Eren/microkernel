@@ -17,7 +17,7 @@
 #include <string.h>
 #include <time.h>
 
-/* need:: COMP_LIBC_0009 */
+/* need:: COMP_LIBC_0009 COMP_LIBC_0011 */
 
 static const char *const k_wday_abbr[7] = {"Sun", "Mon", "Tue", "Wed",
                                            "Thu", "Fri", "Sat"};
@@ -101,71 +101,112 @@ static int secs_to_tm(int64_t sec, long gmtoff, const char *zone,
     return 0;
 }
 
-static char g_tz_name[16] = "UTC";
+static char g_tz_std[16] = "UTC";
+static char g_tz_dst[16] = "UTC";
+static long g_tz_gmtoff;
 
-static void parse_tz(long *gmtoff_out, const char **zone_out) {
+char *tzname[2] = {g_tz_std, g_tz_dst};
+
+static const char *parse_tz_abbr(const char *p, char out[16], size_t *len_out) {
+    size_t n = 0u;
+    if (*p == '<') {
+        p++;
+        while (*p && *p != '>') {
+            if (n < 15u) {
+                out[n++] = *p;
+            }
+            p++;
+        }
+        if (*p == '>') {
+            p++;
+        }
+    } else {
+        while (*p && isalpha((unsigned char)*p)) {
+            if (n < 15u) {
+                out[n++] = *p;
+            }
+            p++;
+        }
+    }
+    out[n] = '\0';
+    *len_out = n;
+    return p;
+}
+
+static void set_tz_utc(void) {
+    memcpy(g_tz_std, "UTC", 4u);
+    memcpy(g_tz_dst, "UTC", 4u);
+    tzname[0] = g_tz_std;
+    tzname[1] = g_tz_dst;
+    g_tz_gmtoff = 0L;
+}
+
+void tzset(void) {
     const char *tz = getenv("TZ");
     if (!tz || !*tz) {
-        *gmtoff_out = 0;
-        *zone_out = "UTC";
+        set_tz_utc();
         return;
     }
     if (*tz == ':') {
         tz++;
     }
-    size_t nlen = 0;
-    while (tz[nlen] && isalpha((unsigned char)tz[nlen]) &&
-           nlen < sizeof(g_tz_name) - 1u) {
-        g_tz_name[nlen] = tz[nlen];
-        nlen++;
-    }
-    if (nlen == 0u) {
-        *gmtoff_out = 0;
-        *zone_out = "UTC";
+    char std_buf[16] = {0};
+    size_t slen = 0u;
+    const char *p = parse_tz_abbr(tz, std_buf, &slen);
+    if (slen == 0u) {
+        set_tz_utc();
         return;
     }
-    g_tz_name[nlen] = '\0';
-    const char *p = tz + nlen;
-    if (!*p) {
-        *gmtoff_out = 0;
-        *zone_out = g_tz_name;
-        return;
+    memcpy(g_tz_std, std_buf, slen + 1u);
+    long gmtoff = 0L;
+
+    if (*p) {
+        /* POSIX TZ sign: positive offset is WEST of UTC (negative tm_gmtoff).
+         */
+        int west = 1;
+        if (*p == '+') {
+            p++;
+        } else if (*p == '-') {
+            west = 0;
+            p++;
+        }
+        if (isdigit((unsigned char)*p)) {
+            long hh = 0L;
+            long mm = 0L;
+            long ss = 0L;
+            while (isdigit((unsigned char)*p)) {
+                hh = hh * 10L + (*p++ - '0');
+            }
+            if (*p == ':') {
+                p++;
+                while (isdigit((unsigned char)*p)) {
+                    mm = mm * 10L + (*p++ - '0');
+                }
+                if (*p == ':') {
+                    p++;
+                    while (isdigit((unsigned char)*p)) {
+                        ss = ss * 10L + (*p++ - '0');
+                    }
+                }
+            }
+            long total = hh * 3600L + mm * 60L + ss;
+            gmtoff = west ? -total : total;
+        }
     }
 
-    /* POSIX TZ sign: positive offset is WEST of UTC (negative tm_gmtoff). */
-    int west = 1;
-    if (*p == '+') {
-        p++;
-    } else if (*p == '-') {
-        west = 0;
-        p++;
+    char dst_buf[16] = {0};
+    size_t dlen = 0u;
+    if (*p) {
+        (void)parse_tz_abbr(p, dst_buf, &dlen);
     }
-    long hh = 0;
-    long mm = 0;
-    long ss = 0;
-    if (!isdigit((unsigned char)*p)) {
-        *gmtoff_out = 0;
-        *zone_out = g_tz_name;
-        return;
+    if (dlen > 0u) {
+        memcpy(g_tz_dst, dst_buf, dlen + 1u);
+    } else {
+        memcpy(g_tz_dst, g_tz_std, slen + 1u);
     }
-    while (isdigit((unsigned char)*p)) {
-        hh = hh * 10 + (*p++ - '0');
-    }
-    if (*p == ':') {
-        p++;
-        while (isdigit((unsigned char)*p)) {
-            mm = mm * 10 + (*p++ - '0');
-        }
-        if (*p == ':') {
-            p++;
-            while (isdigit((unsigned char)*p)) {
-                ss = ss * 10 + (*p++ - '0');
-            }
-        }
-    }
-    long total = hh * 3600L + mm * 60L + ss;
-    *gmtoff_out = west ? -total : total;
-    *zone_out = g_tz_name;
+    tzname[0] = g_tz_std;
+    tzname[1] = g_tz_dst;
+    g_tz_gmtoff = gmtoff;
 }
 
 struct tm *gmtime_r(const time_t *restrict timer, struct tm *restrict result) {
@@ -190,11 +231,9 @@ struct tm *localtime_r(const time_t *restrict timer,
         errno = EINVAL;
         return 0;
     }
-    long gmtoff = 0L;
-    const char *zone = "UTC";
-    parse_tz(&gmtoff, &zone);
-    if (secs_to_tm((int64_t)*timer + (int64_t)gmtoff, gmtoff, zone, result) !=
-        0) {
+    tzset();
+    if (secs_to_tm((int64_t)*timer + (int64_t)g_tz_gmtoff, g_tz_gmtoff,
+                   tzname[0], result) != 0) {
         return 0;
     }
     return result;
@@ -236,13 +275,11 @@ time_t mktime(struct tm *timeptr) {
     int64_t days = days_from_civil(year, mon + 1, 1) + (mday - 1);
     int64_t local_sec = days * 86400 + hour * 3600 + min * 60 + sec;
 
-    long gmtoff = 0L;
-    const char *zone = "UTC";
-    parse_tz(&gmtoff, &zone);
-    int64_t utc_sec = local_sec - (int64_t)gmtoff;
+    tzset();
+    int64_t utc_sec = local_sec - (int64_t)g_tz_gmtoff;
 
     time_t res = (time_t)utc_sec;
-    if (secs_to_tm(local_sec, gmtoff, zone, timeptr) != 0) {
+    if (secs_to_tm(local_sec, g_tz_gmtoff, tzname[0], timeptr) != 0) {
         return (time_t)-1;
     }
     return res;

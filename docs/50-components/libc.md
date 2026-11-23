@@ -140,3 +140,17 @@ exponential, logarithmic, trigonometric, and hyperbolic functions over
 `__mulxc3`, `__divsc3`, `__divdc3`, and `__divxc3` runtime helpers
 ({need}`ICD_LIBC_0010`, {need}`SWR_LIBC_0011`).
 ```
+
+```{comp} Ring 3 file timestamp, lgamma*, and timezone state components
+:id: COMP_LIBC_0011
+:status: active
+:posix: XBD/sys_stat.h (CX), XBD/math.h (CX), XBD/time.h (CX)
+:refines: ARC_LIBC_0001, ICD_LIBC_0011
+:satisfies: SWR_LIBC_0012
+
+`libc/src/vfs.c`, `servers/vfsserv/main.c`, and `bin/utils/touch.c` implement
+`futimens`, `utimensat`, and `VFS_OP_UTIMENS` with `ext2` persistence.
+`libc/src/math_exp.c` implements Lanczos `lgamma`, `lgammaf`, and `lgammal`.
+`libc/src/time_cal.c` implements `tzset` and `tzname[2]` over `TZ`
+({need}`ICD_LIBC_0011`, {need}`SWR_LIBC_0012`).
+```

@@ -41,6 +41,7 @@
 #define VFS_OP_PREAD 22u
 #define VFS_OP_PWRITE 23u
 #define VFS_OP_STATVFS 24u
+#define VFS_OP_UTIMENS 25u
 
 #define VFS_FLAG_BY_FD 0x80000000u
 #define VFS_READDIR_NEXT 0x40000000u
@@ -55,8 +56,12 @@ typedef struct {
     uint32_t st_uid;
     uint32_t st_gid;
     uint64_t st_size;
+    int64_t st_atime_sec;
+    int64_t st_atime_nsec;
     int64_t st_mtime_sec;
     int64_t st_mtime_nsec;
+    int64_t st_ctime_sec;
+    int64_t st_ctime_nsec;
 } vfs_stat_t;
 
 typedef struct {
@@ -89,6 +94,13 @@ typedef struct {
             char old_path[VFS_RENAME_PATH_MAX];
             char new_path[VFS_RENAME_PATH_MAX];
         } ren;
+        struct {
+            int64_t atime_sec;
+            int64_t atime_nsec;
+            int64_t mtime_sec;
+            int64_t mtime_nsec;
+            char path[VFS_PATH_MAX];
+        } utimes;
     } u;
 } vfs_req_t;
 

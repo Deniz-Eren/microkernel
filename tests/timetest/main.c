@@ -196,12 +196,37 @@ int main(void) {
         return 1;
     }
 
+    /* tzset() and tzname[] with POSIX TZ strings (STD, STD+DST, quoted). */
+    (void)unsetenv("TZ");
+    tzset();
+    if (!tzname[0] || !tzname[1] || strcmp(tzname[0], "UTC") != 0 ||
+        strcmp(tzname[1], "UTC") != 0) {
+        printf("[FAIL] timetest tzset(unset) mismatch\n");
+        return 1;
+    }
+    (void)setenv("TZ", "EST5EDT", 1);
+    tzset();
+    if (strcmp(tzname[0], "EST") != 0 || strcmp(tzname[1], "EDT") != 0) {
+        printf("[FAIL] timetest tzset(EST5EDT) got '%s'/'%s'\n", tzname[0],
+               tzname[1]);
+        return 1;
+    }
+    (void)setenv("TZ", "<+0530>-5:30", 1);
+    tzset();
+    struct tm tm_ist = {0};
+    if (strcmp(tzname[0], "+0530") != 0 || !localtime_r(&epoch0, &tm_ist) ||
+        tm_ist.tm_hour != 5 || tm_ist.tm_min != 30 ||
+        tm_ist.tm_gmtoff != 19800L) {
+        printf("[FAIL] timetest tzset(<+0530>-5:30) mismatch\n");
+        return 1;
+    }
+
     /* localtime_r + mktime with POSIX TZ offset (EST5 = UTC-5). */
     (void)setenv("TZ", "EST5", 1);
     struct tm tml = {0};
     if (!localtime_r(&leap_t, &tml) || tml.tm_hour != 7 ||
         tml.tm_gmtoff != -18000L || !tml.tm_zone ||
-        strcmp(tml.tm_zone, "EST") != 0) {
+        strcmp(tml.tm_zone, "EST") != 0 || strcmp(tzname[0], "EST") != 0) {
         printf("[FAIL] timetest localtime_r(EST5) hour=%d off=%ld\n",
                tml.tm_hour, tml.tm_gmtoff);
         return 1;
@@ -214,6 +239,7 @@ int main(void) {
         return 1;
     }
     (void)unsetenv("TZ");
+    tzset();
 
     char abuf[32] = {0};
     char cbuf[32] = {0};
@@ -238,7 +264,7 @@ int main(void) {
         printf("[FAIL] timetest strftime overflow did not return 0\n");
         return 1;
     }
-    printf("[OK] Base time.h calendar, mktime, asctime/ctime, strftime, clock, "
-           "and timespec_get verified\n");
+    printf("[OK] Base time.h calendar, tzset/tzname, mktime, asctime/ctime, "
+           "strftime, clock, and timespec_get verified\n");
     return 0;
 }

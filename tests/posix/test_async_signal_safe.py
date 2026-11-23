@@ -104,6 +104,8 @@ ASYNC_SIGNAL_SAFE_FNS: tuple[str, ...] = (
     "chmod",
     "fchmod",
     "fchmodat",
+    "futimens",
+    "utimensat",
     "chown",
     "fchown",
     "lchown",
