@@ -69,28 +69,41 @@ static const char *loc_id_name(uint8_t id) {
     return (id == LOC_ID_UTF8) ? "C.UTF-8" : "C";
 }
 
-static int parse_locale_name(const char *name, uint8_t *out_id) {
+static const char *loc_cat_name(const struct __microkernel_locale *loc,
+                                int idx) {
+    if (loc->name[idx][0] != '\0') {
+        return loc->name[idx];
+    }
+    return loc_id_name(loc->cat[idx]);
+}
+
+static int parse_locale_name(const char *name, uint8_t *out_id,
+                             char out_name[LOC_NAME_MAX]) {
     if (!name) {
         return -1;
     }
     if (strcmp(name, "C") == 0 || strcmp(name, "POSIX") == 0) {
         *out_id = LOC_ID_C;
+        (void)strlcpy(out_name, "C", LOC_NAME_MAX);
         return 0;
     }
     if (strcmp(name, "C.UTF-8") == 0 || strcmp(name, "C.utf8") == 0 ||
         strcmp(name, "UTF-8") == 0 || strcmp(name, "utf8") == 0) {
         *out_id = LOC_ID_UTF8;
+        (void)strlcpy(out_name, "C.UTF-8", LOC_NAME_MAX);
         return 0;
     }
     const char *dot = strchr(name, '.');
     if (dot && (strcmp(dot, ".UTF-8") == 0 || strcmp(dot, ".utf8") == 0)) {
         *out_id = LOC_ID_UTF8;
+        (void)strlcpy(out_name, name, LOC_NAME_MAX);
         return 0;
     }
     return -1;
 }
 
-static int resolve_env_locale(int cat_idx, uint8_t *out_id) {
+static int resolve_env_locale(int cat_idx, uint8_t *out_id,
+                              char out_name[LOC_NAME_MAX]) {
     const char *v = getenv("LC_ALL");
     if (!v || !*v) {
         v = getenv(k_cat_env[cat_idx]);
@@ -100,17 +113,18 @@ static int resolve_env_locale(int cat_idx, uint8_t *out_id) {
     }
     if (!v || !*v) {
         *out_id = LOC_ID_C;
+        (void)strlcpy(out_name, "C", LOC_NAME_MAX);
         return 0;
     }
-    return parse_locale_name(v, out_id);
+    return parse_locale_name(v, out_id, out_name);
 }
 
-static int resolve_category_id(const char *locale, int cat_idx,
-                               uint8_t *out_id) {
+static int resolve_category_id(const char *locale, int cat_idx, uint8_t *out_id,
+                               char out_name[LOC_NAME_MAX]) {
     if (locale[0] == '\0') {
-        return resolve_env_locale(cat_idx, out_id);
+        return resolve_env_locale(cat_idx, out_id, out_name);
     }
-    return parse_locale_name(locale, out_id);
+    return parse_locale_name(locale, out_id, out_name);
 }
 
 int __libc_locale_is_utf8(locale_t loc) {
@@ -136,25 +150,23 @@ size_t __libc_mb_cur_max(void) {
 }
 
 static char *format_global_all(void) {
-    static char g_all_buf[128];
-    uint8_t first = g_global_locale.cat[0];
+    static char g_all_buf[256];
+    const char *first = loc_cat_name(&g_global_locale, 0);
     int same = 1;
-    for (size_t i = 1u; i < LOC_CAT_COUNT; i++) {
-        if (g_global_locale.cat[i] != first) {
+    for (int i = 1; i < (int)LOC_CAT_COUNT; i++) {
+        if (strcmp(loc_cat_name(&g_global_locale, i), first) != 0) {
             same = 0;
             break;
         }
     }
     if (same) {
-        return (char *)loc_id_name(first);
+        return (char *)first;
     }
-    (void)snprintf(g_all_buf, sizeof(g_all_buf), "%s;%s;%s;%s;%s;%s",
-                   loc_id_name(g_global_locale.cat[0]),
-                   loc_id_name(g_global_locale.cat[1]),
-                   loc_id_name(g_global_locale.cat[2]),
-                   loc_id_name(g_global_locale.cat[3]),
-                   loc_id_name(g_global_locale.cat[4]),
-                   loc_id_name(g_global_locale.cat[5]));
+    (void)snprintf(
+        g_all_buf, sizeof(g_all_buf), "%s;%s;%s;%s;%s;%s",
+        loc_cat_name(&g_global_locale, 0), loc_cat_name(&g_global_locale, 1),
+        loc_cat_name(&g_global_locale, 2), loc_cat_name(&g_global_locale, 3),
+        loc_cat_name(&g_global_locale, 4), loc_cat_name(&g_global_locale, 5));
     return g_all_buf;
 }
 
@@ -167,15 +179,16 @@ char *setlocale(int category, const char *locale) {
     if (!locale) {
         char *res = (category == LC_ALL)
                         ? format_global_all()
-                        : (char *)loc_id_name(
-                              g_global_locale.cat[cat_to_index(category)]);
+                        : (char *)loc_cat_name(&g_global_locale,
+                                               cat_to_index(category));
         (void)pthread_mutex_unlock(&g_locale_lock);
         return res;
     }
     if (category == LC_ALL) {
         uint8_t next[LOC_CAT_COUNT];
+        char next_names[LOC_CAT_COUNT][LOC_NAME_MAX];
         for (int i = 0; i < (int)LOC_CAT_COUNT; i++) {
-            if (resolve_category_id(locale, i, &next[i]) != 0) {
+            if (resolve_category_id(locale, i, &next[i], next_names[i]) != 0) {
                 (void)pthread_mutex_unlock(&g_locale_lock);
                 return NULL;
             }
@@ -183,6 +196,7 @@ char *setlocale(int category, const char *locale) {
         for (size_t i = 0u; i < LOC_CAT_COUNT; i++) {
             __atomic_store_n(&g_global_locale.cat[i], next[i],
                              __ATOMIC_RELAXED);
+            memcpy(g_global_locale.name[i], next_names[i], LOC_NAME_MAX);
         }
         char *res = format_global_all();
         (void)pthread_mutex_unlock(&g_locale_lock);
@@ -190,12 +204,14 @@ char *setlocale(int category, const char *locale) {
     }
     int idx = cat_to_index(category);
     uint8_t id = LOC_ID_C;
-    if (resolve_category_id(locale, idx, &id) != 0) {
+    char nm[LOC_NAME_MAX];
+    if (resolve_category_id(locale, idx, &id, nm) != 0) {
         (void)pthread_mutex_unlock(&g_locale_lock);
         return NULL;
     }
     __atomic_store_n(&g_global_locale.cat[idx], id, __ATOMIC_RELAXED);
-    char *res = (char *)loc_id_name(id);
+    memcpy(g_global_locale.name[idx], nm, LOC_NAME_MAX);
+    char *res = (char *)loc_cat_name(&g_global_locale, idx);
     (void)pthread_mutex_unlock(&g_locale_lock);
     return res;
 }
@@ -211,9 +227,12 @@ locale_t newlocale(int category_mask, const char *locale, locale_t base) {
         return (locale_t)0;
     }
     uint8_t resolved[LOC_CAT_COUNT] = {0};
+    char res_names[LOC_CAT_COUNT][LOC_NAME_MAX];
+    memset(res_names, 0, sizeof(res_names));
     for (int i = 0; i < (int)LOC_CAT_COUNT; i++) {
         if (category_mask & (1 << i)) {
-            if (resolve_category_id(locale, i, &resolved[i]) != 0) {
+            if (resolve_category_id(locale, i, &resolved[i], res_names[i]) !=
+                0) {
                 errno = ENOENT;
                 return (locale_t)0;
             }
@@ -230,6 +249,7 @@ locale_t newlocale(int category_mask, const char *locale, locale_t base) {
     for (int i = 0; i < (int)LOC_CAT_COUNT; i++) {
         if (category_mask & (1 << i)) {
             loc->cat[i] = resolved[i];
+            memcpy(loc->name[i], res_names[i], LOC_NAME_MAX);
         }
     }
     return loc;
@@ -283,9 +303,10 @@ const char *getlocalename_l(int category, locale_t locobj) {
         return NULL;
     }
     if (locobj == LC_GLOBAL_LOCALE) {
-        uint8_t id =
-            __atomic_load_n(&g_global_locale.cat[idx], __ATOMIC_RELAXED);
-        return loc_id_name(id);
+        (void)pthread_mutex_lock(&g_locale_lock);
+        const char *res = loc_cat_name(&g_global_locale, idx);
+        (void)pthread_mutex_unlock(&g_locale_lock);
+        return res;
     }
-    return loc_id_name(locobj->cat[idx]);
+    return loc_cat_name(locobj, idx);
 }

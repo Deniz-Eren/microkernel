@@ -17,8 +17,14 @@
 #include <fnmatch.h>
 #include <glob.h>
 #include <grp.h>
+#include <iconv.h>
 #include <iso646.h>
+#include <langinfo.h>
+#include <libintl.h>
 #include <limits.h>
+#include <locale.h>
+#include <monetary.h>
+#include <nl_types.h>
 #include <pwd.h>
 #include <regex.h>
 #include <sched.h>
@@ -45,8 +51,8 @@
 #include <unistd.h>
 #include <wordexp.h>
 
-/* need:: VER_LIBC_0008 VER_LIBC_0015 VER_PROC_0008 VER_PROC_0009 */
-/* need:: VER_PROC_0010 VER_IPC_0010 */
+/* need:: VER_LIBC_0008 VER_LIBC_0015 VER_LIBC_0016 VER_PROC_0008 */
+/* need:: VER_PROC_0009 VER_PROC_0010 VER_IPC_0010 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -1284,6 +1290,255 @@ static int test_regex_glob_wordexp_tar_cpio(void) {
     return 0;
 }
 
+static int run_cmd_capture(const char *cmd, char *buf, size_t sz) {
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        return -1;
+    }
+    size_t n = fread(buf, 1u, sz - 1u, fp);
+    buf[n] = '\0';
+    int st = pclose(fp);
+    return (WIFEXITED(st) && WEXITSTATUS(st) == 0) ? (int)n : -1;
+}
+
+static int test_i18n_headers_and_cli(void) {
+    /* 1. <langinfo.h> in C and C.UTF-8 locales. */
+    locale_t cloc = newlocale(LC_ALL_MASK, "C", (locale_t)0);
+    locale_t uloc = newlocale(LC_ALL_MASK, "C.UTF-8", (locale_t)0);
+    if (!cloc || !uloc || strcmp(nl_langinfo(CODESET), "US-ASCII") != 0 ||
+        strcmp(nl_langinfo_l(CODESET, uloc), "UTF-8") != 0 ||
+        strcmp(nl_langinfo_l(DAY_1, cloc), "Sunday") != 0 ||
+        strcmp(nl_langinfo_l(ALTMON_1, uloc), "January") != 0 ||
+        strcmp(nl_langinfo(RADIXCHAR), ".") != 0 ||
+        strcmp(nl_langinfo(YESEXPR), "^[yY]") != 0) {
+        printf("[FAIL] langinfo checks failed\n");
+        freelocale(cloc);
+        freelocale(uloc);
+        return -1;
+    }
+
+    /* 2. <monetary.h>: strfmon and strfmon_l formatting and E2BIG. */
+    char mbuf[64] = {0};
+    ssize_t mn1 =
+        strfmon(mbuf, sizeof(mbuf), "[%n|%(.2n|%=0#5.2n]", 12.5, -3.25, 7.5);
+    if (mn1 <= 0 || strcmp(mbuf, "[12.50|(3.25)|00007.50]") != 0) {
+        printf("[FAIL] strfmon got '%s' (%ld)\n", mbuf, (long)mn1);
+        freelocale(cloc);
+        freelocale(uloc);
+        return -1;
+    }
+    ssize_t mn2 = strfmon_l(mbuf, sizeof(mbuf), uloc, "%!10.2n", 42.0);
+    errno = 0;
+    ssize_t mn3 = strfmon(mbuf, 3u, "%n", 1234.56);
+    if (mn2 != 10 || mn3 != -1 || errno != E2BIG) {
+        printf("[FAIL] strfmon_l/E2BIG failed mn2=%ld mn3=%ld errno=%d\n",
+               (long)mn2, (long)mn3, errno);
+        freelocale(cloc);
+        freelocale(uloc);
+        return -1;
+    }
+    freelocale(cloc);
+    freelocale(uloc);
+
+    /* 3. <iconv.h>: UTF-8 <-> ISO-8859-1, UTF-16LE surrogate, //TRANSLIT. */
+    iconv_t cd = iconv_open("ISO-8859-1", "UTF-8");
+    if (cd == (iconv_t)-1) {
+        printf("[FAIL] iconv_open UTF-8->ISO-8859-1 failed\n");
+        return -1;
+    }
+    char in_u8[] = "caf\xC3\xA9";
+    char out_l1[16] = {0};
+    char *ip = in_u8;
+    char *op = out_l1;
+    size_t il = 5u;
+    size_t ol = sizeof(out_l1);
+    if (iconv(cd, &ip, &il, &op, &ol) != 0u || il != 0u ||
+        (size_t)(op - out_l1) != 4u || (unsigned char)out_l1[3] != 0xE9u) {
+        printf("[FAIL] iconv UTF-8->ISO-8859-1 failed\n");
+        (void)iconv_close(cd);
+        return -1;
+    }
+    (void)iconv_close(cd);
+
+    iconv_t cd16 = iconv_open("UTF-16LE", "UTF-8");
+    iconv_t cd8 = iconv_open("UTF-8", "UTF-16LE");
+    char emoji_u8[] = "\xF0\x9F\x98\x80";
+    char buf16[16] = {0};
+    char back8[16] = {0};
+    ip = emoji_u8;
+    op = buf16;
+    il = 4u;
+    ol = sizeof(buf16);
+    size_t r1 = iconv(cd16, &ip, &il, &op, &ol);
+    size_t len16 = (size_t)(op - buf16);
+    ip = buf16;
+    op = back8;
+    il = len16;
+    ol = sizeof(back8);
+    size_t r2 = iconv(cd8, &ip, &il, &op, &ol);
+    (void)iconv_close(cd16);
+    (void)iconv_close(cd8);
+    if (r1 != 0u || r2 != 0u || len16 != 4u ||
+        memcmp(back8, emoji_u8, 4u) != 0) {
+        printf("[FAIL] iconv UTF-16LE surrogate round-trip failed\n");
+        return -1;
+    }
+
+    iconv_t cd_tr = iconv_open("US-ASCII//TRANSLIT", "UTF-8");
+    ip = in_u8;
+    op = out_l1;
+    il = 5u;
+    ol = sizeof(out_l1);
+    size_t nr = iconv(cd_tr, &ip, &il, &op, &ol);
+    (void)iconv_close(cd_tr);
+    if (nr != 1u || memcmp(out_l1, "caf?", 4u) != 0) {
+        printf("[FAIL] iconv //TRANSLIT failed nr=%zu\n", nr);
+        return -1;
+    }
+
+    /* 4. gencat CLI + <nl_types.h> catopen/catgets/catclose. */
+    FILE *mf = fopen("/tmp/i18n.msg", "w");
+    if (!mf) {
+        printf("[FAIL] create /tmp/i18n.msg failed\n");
+        return -1;
+    }
+    fputs("$set 1\n$quote \"\n1 \"Hello catalog\"\n2 \"Second\\tmsg\"\n", mf);
+    (void)fclose(mf);
+    char cap[256] = {0};
+    if (run_cmd_capture("/bin/gencat /tmp/i18n.cat /tmp/i18n.msg", cap,
+                        sizeof(cap)) < 0) {
+        printf("[FAIL] gencat CLI failed\n");
+        return -1;
+    }
+    nl_catd catd = catopen("/tmp/i18n.cat", 0);
+    if (catd == (nl_catd)-1 ||
+        strcmp(catgets(catd, 1, 1, "def"), "Hello catalog") != 0 ||
+        strcmp(catgets(catd, 1, 2, "def"), "Second\tmsg") != 0 ||
+        strcmp(catgets(catd, 1, 99, "fallback"), "fallback") != 0 ||
+        catclose(catd) != 0) {
+        printf("[FAIL] catopen/catgets/catclose failed\n");
+        return -1;
+    }
+
+    /* 5. msgfmt CLI + <libintl.h> + gettext/ngettext CLIs. */
+    (void)mkdir("/tmp/lc", 0755u);
+    (void)mkdir("/tmp/lc/fr", 0755u);
+    (void)mkdir("/tmp/lc/fr/LC_MESSAGES", 0755u);
+    FILE *pf = fopen("/tmp/i18n.po", "w");
+    if (!pf) {
+        printf("[FAIL] create /tmp/i18n.po failed\n");
+        return -1;
+    }
+    fputs("msgid \"\"\n"
+          "msgstr \"Content-Type: text/plain; charset=UTF-8\\n\"\n"
+          "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n"
+          "msgid \"hello\"\n"
+          "msgstr \"bonjour\"\n\n"
+          "msgid \"item\"\n"
+          "msgid_plural \"items\"\n"
+          "msgstr[0] \"article\"\n"
+          "msgstr[1] \"articles\"\n",
+          pf);
+    (void)fclose(pf);
+
+    if (run_cmd_capture(
+            "/bin/msgfmt -o /tmp/lc/fr/LC_MESSAGES/demo.mo /tmp/i18n.po", cap,
+            sizeof(cap)) < 0) {
+        printf("[FAIL] msgfmt CLI failed\n");
+        return -1;
+    }
+    if (!bindtextdomain("demo", "/tmp/lc") || !textdomain("demo") ||
+        !bind_textdomain_codeset("demo", "UTF-8")) {
+        printf("[FAIL] textdomain/bindtextdomain failed\n");
+        return -1;
+    }
+    locale_t frloc = newlocale(LC_ALL_MASK, "fr_FR.UTF-8", (locale_t)0);
+    locale_t c2 = newlocale(LC_ALL_MASK, "C", (locale_t)0);
+    if (!frloc || !c2 || strcmp(gettext_l("hello", frloc), "bonjour") != 0 ||
+        strcmp(dgettext_l("demo", "hello", frloc), "bonjour") != 0 ||
+        strcmp(dcgettext_l("demo", "hello", LC_MESSAGES, frloc), "bonjour") !=
+            0 ||
+        strcmp(gettext_l("hello", c2), "hello") != 0 ||
+        strcmp(ngettext_l("item", "items", 1ul, frloc), "article") != 0 ||
+        strcmp(dngettext_l("demo", "item", "items", 5ul, frloc), "articles") !=
+            0 ||
+        strcmp(dcngettext_l("demo", "item", "items", 5ul, LC_MESSAGES, frloc),
+               "articles") != 0) {
+        printf("[FAIL] libintl *_l translation checks failed\n");
+        freelocale(frloc);
+        freelocale(c2);
+        return -1;
+    }
+    locale_t prev = uselocale(frloc);
+    int g_ok =
+        strcmp(gettext("hello"), "bonjour") == 0 &&
+        strcmp(dgettext("demo", "hello"), "bonjour") == 0 &&
+        strcmp(dcgettext("demo", "hello", LC_MESSAGES), "bonjour") == 0 &&
+        strcmp(ngettext("item", "items", 1ul), "article") == 0 &&
+        strcmp(dngettext("demo", "item", "items", 2ul), "articles") == 0 &&
+        strcmp(dcngettext("demo", "item", "items", 2ul, LC_MESSAGES),
+               "articles") == 0;
+    (void)uselocale(prev);
+    freelocale(frloc);
+    freelocale(c2);
+    if (!g_ok) {
+        printf("[FAIL] libintl thread-locale gettext/ngettext failed\n");
+        return -1;
+    }
+
+    /* 6. CLI verification for gettext, ngettext, iconv, locale, localedef. */
+    if (run_cmd_capture("LC_ALL=fr_FR.UTF-8 TEXTDOMAINDIR=/tmp/lc "
+                        "/bin/gettext demo hello",
+                        cap, sizeof(cap)) < 0 ||
+        strcmp(cap, "bonjour") != 0) {
+        printf("[FAIL] gettext CLI got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("LC_ALL=fr_FR.UTF-8 TEXTDOMAINDIR=/tmp/lc "
+                        "/bin/ngettext demo item items 3",
+                        cap, sizeof(cap)) < 0 ||
+        strcmp(cap, "articles") != 0) {
+        printf("[FAIL] ngettext CLI got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("echo hello | /bin/iconv -f UTF-8 -t US-ASCII", cap,
+                        sizeof(cap)) < 0 ||
+        strncmp(cap, "hello", 5u) != 0) {
+        printf("[FAIL] iconv CLI got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/bin/locale -a", cap, sizeof(cap)) < 0 ||
+        !strstr(cap, "C.UTF-8")) {
+        printf("[FAIL] locale -a CLI got '%s'\n", cap);
+        return -1;
+    }
+    FILE *lf = fopen("/tmp/i18n.loc", "w");
+    if (!lf) {
+        return -1;
+    }
+    fputs("LC_CTYPE\nEND LC_CTYPE\n", lf);
+    (void)fclose(lf);
+    if (run_cmd_capture("/bin/localedef -i /tmp/i18n.loc /tmp/i18n.out", cap,
+                        sizeof(cap)) < 0) {
+        printf("[FAIL] localedef CLI failed\n");
+        return -1;
+    }
+
+    (void)unlink("/tmp/i18n.msg");
+    (void)unlink("/tmp/i18n.cat");
+    (void)unlink("/tmp/i18n.po");
+    (void)unlink("/tmp/i18n.loc");
+    (void)unlink("/tmp/i18n.out");
+    (void)unlink("/tmp/lc/fr/LC_MESSAGES/demo.mo");
+    (void)rmdir("/tmp/lc/fr/LC_MESSAGES");
+    (void)rmdir("/tmp/lc/fr");
+    (void)rmdir("/tmp/lc");
+
+    printf("[OK] <langinfo.h>, <monetary.h>, <nl_types.h>, <iconv.h>, "
+           "<libintl.h>, and i18n CLIs verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -1295,6 +1550,9 @@ int main(void) {
         return 1;
     }
     if (test_regex_glob_wordexp_tar_cpio() != 0) {
+        return 1;
+    }
+    if (test_i18n_headers_and_cli() != 0) {
         return 1;
     }
     if (test_atexit_qsort_bsearch_strto_getopt() != 0) {

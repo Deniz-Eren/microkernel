@@ -198,3 +198,17 @@ implements `wordexp` and `wordfree` over quoting, parameter and arithmetic
 expansion, `popen`, `IFS` splitting, and `glob` ({need}`ICD_LIBC_0014`,
 {need}`SWR_LIBC_0015`).
 ```
+
+```{comp} Ring 3 i18n libc components and CLI utilities
+:id: COMP_LIBC_0015
+:status: active
+:posix: XBD/langinfo.h, monetary.h, nl_types.h, iconv.h, libintl.h (BASE)
+:refines: ARC_LIBC_0001, ICD_LIBC_0015
+:satisfies: SWR_LIBC_0016
+
+`libc/src/langinfo.c`, `monetary.c`, `iconv.c`, `nl_types.c`, and `libintl.c`
+implement all 25 Base i18n interfaces in Ring 3. `bin/utils/locale.c`,
+`localedef.c`, `iconv.c`, `gencat.c`, `msgfmt.c`, `gettext.c`, and `ngettext.c`
+implement the seven POSIX.1-2024 i18n CLI utilities ({need}`ICD_LIBC_0015`,
+{need}`SWR_LIBC_0016`).
+```

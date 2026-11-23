@@ -219,6 +219,18 @@ expansion (`wordexp`, `wordfree`) in Ring 3. It must also supply `<tar.h>` and
 `<cpio.h>` archive format headers ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply i18n headers, message catalogs, and i18n CLI utilities
+:id: SWR_LIBC_0016
+:status: active
+:posix: XBD/langinfo.h, monetary.h, nl_types.h, iconv.h, libintl.h (BASE)
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0038
+
+`libc` must supply `<langinfo.h>`, `<monetary.h>`, `<nl_types.h>`, `<iconv.h>`,
+and `<libintl.h>` in Ring 3. User space must supply `locale`, `localedef`,
+`iconv`, `gencat`, `msgfmt`, `gettext`, and `ngettext` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

@@ -200,3 +200,19 @@ macros ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0014`).
 POSIX.1-2024 `ustar` and `cpio` header macros ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0015`).
 ```
+
+```{icd} Language info, monetary, message catalog, iconv, and libintl headers
+:id: ICD_LIBC_0015
+:status: active
+:posix: XBD/langinfo.h, monetary.h, nl_types.h, iconv.h, libintl.h (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0016
+
+`<langinfo.h>` declares `nl_langinfo`, `nl_langinfo_l`, `CODESET`, and
+`ALTMON_*`/`ABALTMON_*`. `<monetary.h>` declares `strfmon` and `strfmon_l`.
+`<nl_types.h>` declares `nl_item`, `nl_catd`, `catopen`, `catgets`, and
+`catclose`. `<iconv.h>` declares `iconv_t`, `iconv_open`, `iconv`, and
+`iconv_close`. `<libintl.h>` declares all 15 `gettext*`, `ngettext*`, and
+`*textdomain*` interfaces ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
+{need}`SWR_LIBC_0016`).
+```

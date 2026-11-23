@@ -64,6 +64,17 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 `<langinfo.h>`, `<monetary.h>`, `<nl_types.h>`,
+  `<iconv.h>`, and `<libintl.h>` plus seven i18n CLI utilities strictly in Ring
+  3 (`TSK_0038`, `SWR_LIBC_0016`, `ADR_0038`, `ICD_LIBC_0015`, `COMP_LIBC_0015`,
+  `VER_LIBC_0016`): implemented `nl_langinfo*`, `strfmon*`, streaming `iconv`
+  (`US-ASCII`/`ISO-8859-1`/`UTF-8`/`UTF-16`/`UTF-32` with `//IGNORE` and
+  `//TRANSLIT`), `catopen`/`catgets`/`catclose`, and binary `.mo` `<libintl.h>`
+  (`gettext*`/`ngettext*`/`*textdomain*` with `Plural-Forms`); added `locale`,
+  `localedef`, `iconv`, `gencat`, `msgfmt`, `gettext`, and `ngettext`; raised
+  Gate 2 to `64/70` Base headers (+5), `995/1037` Base interfaces (+25), and
+  `55/108` Base utilities (+7); and verified in QEMU (`utilstest`) and CTest
+  Gates 1 and 2 with zero Ring 0 changes.
 - Added POSIX.1-2024 `<regex.h>`, `<glob.h>`, `<wordexp.h>`, `<tar.h>`, and
   `<cpio.h>` in Ring 3 `libc` (`TSK_0039`, `SWR_LIBC_0015`, `ADR_0037`,
   `ICD_LIBC_0014`, `COMP_LIBC_0014`, `VER_LIBC_0015`): implemented BRE/ERE

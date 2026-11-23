@@ -21,21 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0038 — Add <langinfo.h>, <monetary.h>, <iconv.h>, and <libintl.h>
-
-```{task} Add <langinfo.h>, <monetary.h>, <iconv.h>, and <libintl.h>
-:id: TSK_0038
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001
-
-Supply `nl_langinfo`/`nl_langinfo_l`, `strfmon`/`strfmon_l`,
-`iconv_open`/`iconv`/`iconv_close`, `<nl_types.h>`
-(`catopen`/`catgets`/`catclose`), and Issue 8 Base `<libintl.h>` (`gettext*`,
-`ngettext*`, `textdomain`, `bindtextdomain`, `bind_textdomain_codeset`). Add
-`locale`, `localedef`, `iconv`, `gencat`, `gettext`, `ngettext`, and `msgfmt`
-({need}`BDR_0004`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0040 — Add Ring 3 ELF dynamic symbol resolution and <dlfcn.h>
 
 ```{task} Add Ring 3 ELF dynamic symbol resolution and <dlfcn.h>

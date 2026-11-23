@@ -15,6 +15,7 @@
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
 # need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014 VER_LIBC_0015
+# need:: VER_LIBC_0016
 
 from __future__ import annotations
 
@@ -43,11 +44,16 @@ POSIX_HEADERS: tuple[str, ...] = (
     "fnmatch.h",
     "glob.h",
     "grp.h",
+    "iconv.h",
     "inttypes.h",
     "iso646.h",
+    "langinfo.h",
+    "libintl.h",
     "limits.h",
     "locale.h",
     "math.h",
+    "monetary.h",
+    "nl_types.h",
     "poll.h",
     "pthread.h",
     "pwd.h",
@@ -1508,6 +1514,62 @@ class PosixHeaderMatrixTests(unittest.TestCase):
                 self.assertEqual(
                     rc, 0, f"regex/glob/wordexp/tar/cpio check failed:\n{err}"
                 )
+
+    def test_i18n_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <iconv.h>",
+                "#include <langinfo.h>",
+                "#include <libintl.h>",
+                "#include <monetary.h>",
+                "#include <nl_types.h>",
+                "#ifdef SYS_FD_OP",
+                '#error "i18n headers leaked SYS_FD_OP"',
+                "#endif",
+                "#ifdef BUFSIZ",
+                '#error "i18n headers leaked stdio.h BUFSIZ"',
+                "#endif",
+                "static int __check_i18n(locale_t loc) {",
+                "    char buf[32] = {0};",
+                "    char *ip = buf;",
+                "    char *op = buf;",
+                "    size_t il = 0u;",
+                "    size_t ol = sizeof(buf);",
+                "    (void)nl_langinfo(CODESET);",
+                "    (void)nl_langinfo_l(ALTMON_1, loc);",
+                "    (void)strfmon(buf, sizeof(buf), \"%n\", 1.0);",
+                "    (void)strfmon_l(buf, sizeof(buf), loc, \"%i\", 1.0);",
+                "    nl_catd c = catopen(\"demo\", NL_CAT_LOCALE);",
+                "    (void)catgets(c, NL_SETD, 1, \"d\");",
+                "    (void)catclose(c);",
+                "    iconv_t cd = iconv_open(\"UTF-8\", \"US-ASCII\");",
+                "    (void)iconv(cd, &ip, &il, &op, &ol);",
+                "    (void)iconv_close(cd);",
+                "    (void)textdomain(\"demo\");",
+                "    (void)bindtextdomain(\"demo\", \"/tmp\");",
+                "    (void)bind_textdomain_codeset(\"demo\", \"UTF-8\");",
+                "    (void)gettext(\"a\");",
+                "    (void)gettext_l(\"a\", loc);",
+                "    (void)dgettext(\"demo\", \"a\");",
+                "    (void)dgettext_l(\"demo\", \"a\", loc);",
+                "    (void)dcgettext(\"demo\", \"a\", 0);",
+                "    (void)dcgettext_l(\"demo\", \"a\", 0, loc);",
+                "    (void)ngettext(\"a\", \"b\", 1ul);",
+                "    (void)ngettext_l(\"a\", \"b\", 1ul, loc);",
+                "    (void)dngettext(\"demo\", \"a\", \"b\", 1ul);",
+                "    (void)dngettext_l(\"demo\", \"a\", \"b\", 1ul, loc);",
+                "    (void)dcngettext(\"demo\", \"a\", \"b\", 1ul, 0);",
+                "    (void)dcngettext_l(\"demo\", \"a\", \"b\", 1ul, 0, loc);",
+                "    return 0;",
+                "}",
+                "int (*__i18n_ref)(locale_t) = __check_i18n;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"i18n headers check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:

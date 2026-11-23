@@ -106,6 +106,7 @@ uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified
 <regex\.h>, <glob\.h>, <wordexp\.h>, <tar\.h>, and <cpio\.h> verified
+<langinfo\.h>, <monetary\.h>, <nl_types\.h>, <iconv\.h>, <libintl\.h>, and i18n CLIs verified
 atexit LIFO, qsort/bsearch, strtol/strtoul, and getopt verified
 alarm SIGALRM, rename/renameat, and realpath verified
 sysconf, confstr, pathconf, gethostname, ttyname, tcgetwinsize, and ProcList verified

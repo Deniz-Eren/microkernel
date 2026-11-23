@@ -20,6 +20,21 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0038 — Add <langinfo.h>, <monetary.h>, <iconv.h>, and <libintl.h>
+
+```{task} Add <langinfo.h>, <monetary.h>, <iconv.h>, and <libintl.h>
+:id: TSK_0038
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0038, SWR_LIBC_0016
+
+Supply `nl_langinfo`/`nl_langinfo_l`, `strfmon`/`strfmon_l`,
+`iconv_open`/`iconv`/`iconv_close`, `<nl_types.h>`
+(`catopen`/`catgets`/`catclose`), and Issue 8 Base `<libintl.h>` (`gettext*`,
+`ngettext*`, `textdomain`, `bindtextdomain`, `bind_textdomain_codeset`). Add
+`locale`, `localedef`, `iconv`, `gencat`, `gettext`, `ngettext`, and `msgfmt`
+({need}`BDR_0004`, {need}`SWR_LIBC_0016`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0039 — Add <regex.h>, <glob.h>, <wordexp.h>, <tar.h>, and <cpio.h>
 
 ```{task} Add <regex.h>, <glob.h>, <wordexp.h>, <tar.h>, and <cpio.h>

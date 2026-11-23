@@ -203,3 +203,17 @@ and sorting, `wordexp` expansions and error flags, and `<tar.h>`/`<cpio.h>`
 constants. CTest Gates 1 and 2 check standalone header hygiene and all 8 Base
 exports ({need}`SWR_LIBC_0015`).
 ```
+
+```{ver} Verify i18n headers, message catalogs, iconv, and i18n CLI utilities
+:id: VER_LIBC_0016
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0016
+
+The headless QEMU harness `tests/test_runner.py` runs `utilstest`
+(`tests/utilstest/test_utils.c`). It checks `nl_langinfo*`, `strfmon*`, `iconv`
+conversions, `gencat` with `catopen`/`catgets`, `msgfmt` with `<libintl.h>`
+plural forms, and `locale`, `localedef`, `iconv`, `gettext`, and `ngettext`
+CLIs. CTest Gates 1 and 2 check all five headers, 25 interfaces, and seven
+utilities ({need}`SWR_LIBC_0016`).
+```
