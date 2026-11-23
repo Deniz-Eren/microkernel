@@ -77,6 +77,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `diff`, `cmp`, `comm`, and `patch` in Ring 3
+  `bin/utils/` (`TSK_0046`, `SWR_LIBC_0022`, `ADR_0045`, `COMP_LIBC_0021`,
+  `VER_LIBC_0022`), advancing Gate 2 from 77/108 to 81/108 Base XCU utilities
+  with unified/normal/context/reverse round-trip tests in
+  `tests/shtest/test_sh.c`.
 - Added POSIX.1-2024 XCU `sort`, `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`,
   `join`, and `cksum` in Ring 3 `bin/utils/` (`TSK_0050`, `SWR_LIBC_0021`,
   `ADR_0044`, `COMP_LIBC_0020`, `VER_LIBC_0021`), advancing Gate 2 from 68/108

@@ -270,9 +270,10 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   persistent disk storage at `/mnt` (`ext2` over `virtio-blk`). Manage file
   modes, ownership, links, FIFOs, and disk usage with standard XCU utilities
   (such as `ls`, `chmod`, `ln`, `mkfifo`, `df`, `du`, `dd`, `find`, `xargs`).
-  Search, edit, sort, filter, join, format, and checksum text streams with
-  `grep`, `sed`, `sort`, `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`, `join`,
-  `cksum`, `expr`, and `printf`.
+  Search, edit, sort, filter, and format text streams with `grep`, `sed`,
+  `sort`, `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`, `join`, `expr`, and
+  `printf`. Compare, patch, and checksum files with `diff`, `cmp`, `comm`,
+  `patch`, and `cksum`.
 - **Inspect and control processes, timing, credentials, and terminals:** View
   live processes with `ps` and check identity with `id` and `logname`. Adjust
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,
@@ -345,9 +346,9 @@ isolated Ring 3 OS services outside the kernel:
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
 - **Not available yet (planned next):** All 70 POSIX.1-2024 Base C headers and
-  all 1037 Base C interfaces are in place. Remaining XCU comparison, archive,
-  formatting, language, and batch utilities (`diff`, `patch`, `pax`, `split`,
-  `awk`, `ed`, `bc`, `m4`, `at`, `crontab`, `mailx`) follow next. See
+  all 1037 Base C interfaces are in place. Remaining XCU archive, formatting,
+  language, and batch utilities (`pax`, `split`, `csplit`, `awk`, `ed`, `bc`,
+  `m4`, `at`, `crontab`, `mailx`) follow next. See
   [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 

@@ -285,3 +285,16 @@ The headless QEMU harness `tests/test_runner.py` runs `shtest`
 `cksum` CRC-32 vectors. Gate 2 verifies all nine Base utilities
 ({need}`SWR_LIBC_0021`).
 ```
+
+```{ver} Verify XCU diff, cmp, comm, and patch utilities
+:id: VER_LIBC_0022
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0022
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It checks `cmp` (`-s`), `comm` (`-12`/`-23`/`-13`),
+and `diff`/`patch` round trips across unified (`-u`), normal, context (`-c`),
+and reverse (`-R`) modes. Gate 2 verifies all four Base utilities
+({need}`SWR_LIBC_0022`).
+```

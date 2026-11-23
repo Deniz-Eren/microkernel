@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0046 — Add POSIX.1-2024 XCU diff, cmp, comm, and patch utilities
+
+```{task} Add POSIX.1-2024 XCU diff, cmp, comm, and patch utilities
+:id: TSK_0046
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0045, SWR_LIBC_0022
+
+Add file comparison and patching utilities `diff`, `cmp`, `comm`, and `patch`
+with QEMU runtime tests ({need}`BDR_0004`, {need}`SWR_LIBC_0022`,
+{need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0050 — Add POSIX.1-2024 XCU sort, field, and checksum text utilities
 
 ```{task} Add POSIX.1-2024 XCU sort, field, and checksum text utilities

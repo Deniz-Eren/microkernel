@@ -106,6 +106,7 @@ sh compound grammar, functions, expansions, heredocs, glob, and trap verified
 sh built-ins dot, colon, alias, command, eval, exec, getopts, hash, shift, times verified
 XCU utilities grep, sed, find, xargs, expr, and printf verified
 XCU utilities sort, uniq, cut, tr, tail, tee, paste, join, and cksum verified
+XCU utilities diff, cmp, comm, and patch verified
 uname, endian\.h, sched_yield, and times verified
 setjmp/longjmp and sigsetjmp/siglongjmp signal masks verified
 fnmatch wildcards, classes, FNM_PATHNAME/PERIOD/IGNORECASE verified

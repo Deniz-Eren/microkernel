@@ -281,3 +281,15 @@ multi-key sorting, deduplication, field cutting, byte translation, tail/tee,
 pasting, joining, and POSIX.1-2024 CRC-32 checksums ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0021`).
 ```
+
+```{comp} Ring 3 diff, cmp, comm, and patch utilities
+:id: COMP_LIBC_0021
+:status: active
+:posix: XCU/diff, XCU/cmp, XCU/comm, XCU/patch (BASE)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0022
+
+`bin/utils/cmp.c`, `comm.c`, `diff.c`, and `patch.c` implement byte and sorted
+file comparisons, LCS unified/context/normal/ed diffs, and reversible patch
+application in Ring 3 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0022`).
+```

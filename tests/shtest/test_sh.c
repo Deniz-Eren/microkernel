@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 /* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
-/* need:: VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0022 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -772,6 +772,54 @@ static int test_sort_field_checksum_utils(void) {
     return 0;
 }
 
+static int test_diff_cmp_comm_patch_utils(void) {
+    char out[512];
+    ssize_t len = 0;
+
+    /* 1. cmp (-s, -l) and comm (-12, -23, default). */
+    int rc = run_sh_capture(
+        "/boot/printf 'a\\nb\\nc\\n' > /tmp/c1.txt && "
+        "/boot/printf 'a\\nc\\nd\\n' > /tmp/c2.txt && "
+        "/boot/cmp -s /tmp/c1.txt /tmp/c1.txt && "
+        "if /boot/cmp -s /tmp/c1.txt /tmp/c2.txt; then exit 1; fi && "
+        "/boot/comm -12 /tmp/c1.txt /tmp/c2.txt && "
+        "/boot/comm -23 /tmp/c1.txt /tmp/c2.txt && "
+        "/boot/comm -13 /tmp/c1.txt /tmp/c2.txt && "
+        "/boot/rm /tmp/c1.txt /tmp/c2.txt",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "a\nc\nb\nd\n") != 0) {
+        printf("[FAIL] shtest cmp/comm rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 2. diff (-u, -c, normal) + patch (-o, -R) full round-trips. */
+    rc = run_sh_capture(
+        "/boot/printf 'one\\ntwo\\nthree\\nfour\\n' > /tmp/da.txt && "
+        "/boot/printf 'one\\nTWO\\nthree\\nfive\\nsix\\n' > /tmp/db.txt && "
+        "/boot/diff -u /tmp/da.txt /tmp/db.txt > /tmp/d.patch; "
+        "/boot/patch -o /tmp/du.out /tmp/da.txt < /tmp/d.patch && "
+        "/boot/cmp -s /tmp/db.txt /tmp/du.out && "
+        "/boot/patch -R -o /tmp/dr.out /tmp/du.out < /tmp/d.patch && "
+        "/boot/cmp -s /tmp/da.txt /tmp/dr.out && "
+        "/boot/diff /tmp/da.txt /tmp/db.txt > /tmp/dn.patch; "
+        "/boot/patch -o /tmp/dn.out /tmp/da.txt < /tmp/dn.patch && "
+        "/boot/cmp -s /tmp/db.txt /tmp/dn.out && "
+        "/boot/diff -c /tmp/da.txt /tmp/db.txt > /tmp/dc.patch; "
+        "/boot/patch -o /tmp/dc.out /tmp/da.txt < /tmp/dc.patch && "
+        "/boot/cmp -s /tmp/db.txt /tmp/dc.out && "
+        "/boot/rm /tmp/da.txt /tmp/db.txt /tmp/d.patch /tmp/du.out "
+        "/tmp/dr.out /tmp/dn.patch /tmp/dn.out /tmp/dc.patch /tmp/dc.out && "
+        "/boot/echo PATCH_OK",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "PATCH_OK\n") != 0) {
+        printf("[FAIL] shtest diff/patch rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities diff, cmp, comm, and patch verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -808,6 +856,9 @@ int main(void) {
         return 1;
     }
     if (test_sort_field_checksum_utils() != 0) {
+        return 1;
+    }
+    if (test_diff_cmp_comm_patch_utils() != 0) {
         return 1;
     }
     return 0;
