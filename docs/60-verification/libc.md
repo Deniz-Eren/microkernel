@@ -176,3 +176,17 @@ conversions, `<wctype.h>`, `wmem*`, `wcs*`, `wcsto*`, and `wcsftime`. CTest
 Gates 1 to 3 check standalone headers, Base exports, and async-signal-safety
 ({need}`SWR_LIBC_0013`).
 ```
+
+```{ver} Verify wide-oriented FILE I/O, *wprintf, *wscanf, and open_wmemstream
+:id: VER_LIBC_0014
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0014
+
+The headless QEMU harness `tests/test_runner.py` runs `stdiotest`
+(`tests/stdiotest/test_stdio.c`). It checks `fwide`, `fgetwc`/`fputwc`,
+`ungetwc`, `fgetws`/`fputws`, `fwprintf`/`swprintf`/`vswprintf` (including
+`EOVERFLOW`), `fwscanf`/`swscanf`/`vswscanf`, and `open_wmemstream`. CTest Gates
+1 and 2 check standalone `<wchar.h>` hygiene and all 23 Base exports
+({need}`SWR_LIBC_0014`).
+```

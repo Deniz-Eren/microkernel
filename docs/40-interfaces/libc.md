@@ -170,3 +170,18 @@ declare `*_l` helpers, `strcoll*`, and `strxfrm*`. `<stdlib.h>`, `<wctype.h>`,
 `wcstoimax`/`wcstoumax` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`,
 {need}`SWR_LIBC_0013`).
 ```
+
+```{icd} Wide-oriented FILE streams, *wprintf, *wscanf, and open_wmemstream
+:id: ICD_LIBC_0013
+:status: active
+:posix: XBD/wchar.h (CX), XBD/stdio.h (CX)
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0002, SWR_LIBC_0014
+
+`<wchar.h>` declares `FILE` (shared via `_FILE_DEFINED`), `fwide`,
+`open_wmemstream`, `fgetwc`, `fgetws`, `fputwc`, `fputws`, `getwc`, `getwchar`,
+`putwc`, `putwchar`, and `ungetwc`. It also declares `fwprintf`, `wprintf`,
+`swprintf`, `vfwprintf`, `vwprintf`, `vswprintf`, `fwscanf`, `wscanf`,
+`swscanf`, `vfwscanf`, `vwscanf`, and `vswscanf` without leaking `<stdio.h>`
+macros ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0002`, {need}`SWR_LIBC_0014`).
+```

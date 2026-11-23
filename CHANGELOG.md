@@ -59,6 +59,16 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added wide-oriented Ring 3 `FILE` streams, `*wprintf`, `*wscanf`, and
+  `open_wmemstream` (`TSK_0045`, `SWR_LIBC_0014`, `ADR_0036`, `ICD_LIBC_0013`,
+  `COMP_LIBC_0013`, `VER_LIBC_0014`): extended `libc/src/stdio.c` with `fwide`,
+  `open_wmemstream`, `fgetwc`/`fgetws`/`fputwc`/`fputws`/`getwc`/`getwchar`/
+  `putwc`/`putwchar`/`ungetwc`, and per-stream `mbstate_t`; implemented
+  `fwprintf`/`wprintf`/`swprintf`/`v*wprintf` in `libc/src/wchar_printf.c` and
+  `fwscanf`/`wscanf`/`swscanf`/`v*wscanf` in `libc/src/wchar_scanf.c`; completed
+  100% of Base `<stdio.h>` and `<wchar.h>` in Gate 2 (`962/1037` Base
+  interfaces, +23); and verified in QEMU (`stdiotest`) and CTest Gates 1 and 2
+  with zero Ring 0 changes.
 - Added POSIX.1-2024 `<locale.h>`, `*_l` locale helpers, `<stdlib.h>` multibyte
   conversions, `<wctype.h>`, and core `<wchar.h>` in Ring 3 `libc` (`TSK_0037`,
   `SWR_LIBC_0013`, `ADR_0035`, `ICD_LIBC_0012`, `COMP_LIBC_0012`,

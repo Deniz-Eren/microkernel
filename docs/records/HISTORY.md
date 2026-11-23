@@ -20,6 +20,21 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0045 — Add wide-oriented <stdio.h>/<wchar.h> I/O and open_wmemstream
+
+```{task} Add wide-oriented <stdio.h>/<wchar.h> I/O and open_wmemstream
+:id: TSK_0045
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0036, SWR_LIBC_0014
+
+Extend Ring 3 `FILE` streams with wide orientation (`fwide`) and wide character
+I/O (`fgetwc`, `fgetws`, `fputwc`, `fputws`, `getwc`, `getwchar`, `putwc`,
+`putwchar`, `ungetwc`). Add wide formatted I/O (`fwprintf`, `wprintf`,
+`swprintf`, `vfwprintf`, `vwprintf`, `vswprintf`, `fwscanf`, `wscanf`,
+`swscanf`, `vfwscanf`, `vwscanf`, `vswscanf`) and `open_wmemstream` with QEMU
+tests ({need}`BDR_0004`, {need}`SWR_LIBC_0014`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0037 — Add <locale.h>, *_l helpers, multibyte, and core wchar/wctype
 
 ```{task} Add <locale.h>, *_l helpers, multibyte, and core wchar/wctype

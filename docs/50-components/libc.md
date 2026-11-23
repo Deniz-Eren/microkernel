@@ -169,3 +169,17 @@ and `wchar_conv.c` implement `<wctype.h>`, UTF-8 multibyte conversions, `wmem*`,
 `wcs*`, `wcsto*`, `wcstoimax`/`wcstoumax`, and `wcsftime`
 ({need}`ICD_LIBC_0012`, {need}`SWR_LIBC_0013`).
 ```
+
+```{comp} Ring 3 wide-oriented stdio, *wprintf, *wscanf, and open_wmemstream
+:id: COMP_LIBC_0013
+:status: active
+:posix: XBD/wchar.h (CX), XBD/stdio.h (CX)
+:refines: ARC_LIBC_0001, ICD_LIBC_0013
+:satisfies: SWR_LIBC_0014
+
+`libc/src/stdio.c` implements stream orientation (`fwide`), wide character I/O
+(`fgetwc*`, `fputwc*`, `getwc*`, `putwc*`, `ungetwc`), and `open_wmemstream`.
+`libc/src/wchar_printf.c` implements `fwprintf`, `wprintf`, `swprintf`, and
+`v*wprintf`. `libc/src/wchar_scanf.c` implements `fwscanf`, `wscanf`, `swscanf`,
+and `v*wscanf` ({need}`ICD_LIBC_0013`, {need}`SWR_LIBC_0014`).
+```

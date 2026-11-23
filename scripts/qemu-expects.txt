@@ -89,6 +89,7 @@ setenv/unsetenv and execvp PATH lookup with environ
 ctype, strings, inttypes, limits, assert, strdup, strstr, and
 Base stdio scanf\*, getline/getdelim, dprintf, asprintf, fmemopen, open_memstream, freopen, and fgetpos/fsetpos verified
 Base stdlib strtod\*, aligned_alloc, quick_exit, div\*, rand, qsort_r, getsubopt, and string stpcpy/memmem/strerror_r verified
+Wide stdio fwide, fgetwc/fputwc/ungetwc, fwprintf/swprintf, fwscanf/swscanf, and open_wmemstream verified
 sockserv registered /dev/sock
 AF_UNIX socketpair, SOCK_CLOEXEC/SOCK_NONBLOCK, MSG_PEEK, and
 AF_UNIX bind, listen, connect, and accept4 atomic flags

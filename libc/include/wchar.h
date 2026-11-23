@@ -11,13 +11,19 @@
 #ifndef _WCHAR_H
 #define _WCHAR_H
 
-/* need:: ICD_LIBC_0012 */
+/* need:: ICD_LIBC_0012 ICD_LIBC_0013 */
 
+#include <stdarg.h>
 #include <stddef.h>
 #define __need_wint_t
 #include <stddef.h>
 #include <sys/_locale_t.h>
 #include <sys/_mbstate_t.h>
+
+#ifndef _FILE_DEFINED
+#define _FILE_DEFINED
+typedef struct __microkernel_file FILE;
+#endif /* _FILE_DEFINED */
 
 #ifndef WEOF
 #define WEOF ((wint_t)-1)
@@ -111,5 +117,37 @@ unsigned long long wcstoull(const wchar_t *restrict nptr,
 size_t wcsftime(wchar_t *restrict wcs, size_t maxsize,
                 const wchar_t *restrict format,
                 const struct tm *restrict timeptr);
+
+/* Wide-oriented stream I/O and wide memory streams. */
+int fwide(FILE *stream, int mode);
+FILE *open_wmemstream(wchar_t **bufp, size_t *sizep);
+wint_t fgetwc(FILE *stream);
+wchar_t *fgetws(wchar_t *restrict ws, int n, FILE *restrict stream);
+wint_t fputwc(wchar_t wc, FILE *stream);
+int fputws(const wchar_t *restrict ws, FILE *restrict stream);
+wint_t getwc(FILE *stream);
+wint_t getwchar(void);
+wint_t putwc(wchar_t wc, FILE *stream);
+wint_t putwchar(wchar_t wc);
+wint_t ungetwc(wint_t wc, FILE *stream);
+
+int vfwprintf(FILE *restrict stream, const wchar_t *restrict format,
+              va_list arg);
+int vwprintf(const wchar_t *restrict format, va_list arg);
+int vswprintf(wchar_t *restrict ws, size_t n, const wchar_t *restrict format,
+              va_list arg);
+int fwprintf(FILE *restrict stream, const wchar_t *restrict format, ...);
+int wprintf(const wchar_t *restrict format, ...);
+int swprintf(wchar_t *restrict ws, size_t n, const wchar_t *restrict format,
+             ...);
+
+int vfwscanf(FILE *restrict stream, const wchar_t *restrict format,
+             va_list arg);
+int vwscanf(const wchar_t *restrict format, va_list arg);
+int vswscanf(const wchar_t *restrict ws, const wchar_t *restrict format,
+             va_list arg);
+int fwscanf(FILE *restrict stream, const wchar_t *restrict format, ...);
+int wscanf(const wchar_t *restrict format, ...);
+int swscanf(const wchar_t *restrict ws, const wchar_t *restrict format, ...);
 
 #endif /* _WCHAR_H */

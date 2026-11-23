@@ -22,9 +22,10 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <wchar.h>
 #include "stdio_internal.h"
 
-/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0009 */
+/* need:: COMP_LIBC_0001 COMP_LIBC_0004 COMP_LIBC_0009 COMP_LIBC_0013 */
 
 #define STDIO_FLAG_READ 0x01u
 #define STDIO_FLAG_WRITE 0x02u
@@ -39,10 +40,12 @@
 #define STDIO_KIND_FD 0
 #define STDIO_KIND_MEM 1
 #define STDIO_KIND_MEMSTREAM 2
+#define STDIO_KIND_WMEMSTREAM 3
 
 struct __microkernel_file {
     int fd;
     int kind;
+    int orient;
     pthread_mutex_t lock;
     unsigned int flags;
     int buf_mode;
@@ -52,11 +55,15 @@ struct __microkernel_file {
     size_t rlen;
     size_t wlen;
     int unget_char;
+    int has_unget_wc;
+    wint_t unget_wc;
+    mbstate_t wc_state;
     unsigned char *mem_buf;
     size_t mem_cap;
     size_t mem_size;
     size_t mem_pos;
     char **ms_bufp;
+    wchar_t **wms_bufp;
     size_t *ms_sizep;
     unsigned char inline_buf[BUFSIZ];
     struct __microkernel_file *next;
@@ -260,6 +267,35 @@ static int memstream_ensure(FILE *f, size_t need) {
     return 0;
 }
 
+static int wmemstream_ensure(FILE *f, size_t need_wcs) {
+    if (need_wcs >= (SIZE_MAX / sizeof(wchar_t))) {
+        errno = ENOMEM;
+        f->flags |= STDIO_FLAG_ERR;
+        return -1;
+    }
+    if (need_wcs + 1u <= f->mem_cap) {
+        return 0;
+    }
+    size_t ncap = f->mem_cap ? f->mem_cap : 64u;
+    size_t max_wcs = SIZE_MAX / sizeof(wchar_t);
+    while (ncap < need_wcs + 1u) {
+        if (ncap > max_wcs / 2u) {
+            ncap = need_wcs + 1u;
+            break;
+        }
+        ncap *= 2u;
+    }
+    wchar_t *nb = (wchar_t *)reallocarray(f->mem_buf, ncap, sizeof(wchar_t));
+    if (!nb) {
+        errno = ENOMEM;
+        f->flags |= STDIO_FLAG_ERR;
+        return -1;
+    }
+    f->mem_buf = (unsigned char *)nb;
+    f->mem_cap = ncap;
+    return 0;
+}
+
 static int flush_write_unlocked(FILE *f) {
     if (!f) {
         return 0;
@@ -291,6 +327,24 @@ static int flush_write_unlocked(FILE *f) {
         }
         return 0;
     }
+    if (f->kind == STDIO_KIND_WMEMSTREAM) {
+        if (wmemstream_ensure(f, f->mem_pos) != 0) {
+            return EOF;
+        }
+        wchar_t *wb = (wchar_t *)f->mem_buf;
+        if (f->mem_pos > f->mem_size) {
+            (void)wmemset(wb + f->mem_size, L'\0', f->mem_pos - f->mem_size);
+            f->mem_size = f->mem_pos;
+        }
+        wb[f->mem_pos] = L'\0';
+        if (f->wms_bufp) {
+            *f->wms_bufp = wb;
+        }
+        if (f->ms_sizep) {
+            *f->ms_sizep = f->mem_pos;
+        }
+        return 0;
+    }
     if (f->wlen == 0) {
         return 0;
     }
@@ -310,9 +364,13 @@ static size_t fwrite_unlocked_body(FILE *f, const unsigned char *src,
         f->flags |= STDIO_FLAG_ERR;
         return 0;
     }
+    if (f->orient == 0) {
+        f->orient = -1;
+    }
     f->rpos = 0;
     f->rlen = 0;
     f->unget_char = -1;
+    f->has_unget_wc = 0;
 
     if (f->kind == STDIO_KIND_MEM) {
         if (f->flags & STDIO_FLAG_APPEND) {
@@ -398,6 +456,9 @@ static int fgetc_unlocked_body(FILE *f) {
         errno = EBADF;
         f->flags |= STDIO_FLAG_ERR;
         return EOF;
+    }
+    if (f->orient == 0) {
+        f->orient = -1;
     }
     if (f->unget_char != -1) {
         int c = f->unget_char;
@@ -533,6 +594,9 @@ FILE *freopen(const char *restrict pathname, const char *restrict mode,
             stream->rlen = 0;
             stream->wlen = 0;
             stream->unget_char = -1;
+            stream->has_unget_wc = 0;
+            stream->orient = 0;
+            memset(&stream->wc_state, 0, sizeof(stream->wc_state));
             stream->flags =
                 (stream->flags & (STDIO_FLAG_STATIC | STDIO_FLAG_OWNBUF)) |
                 sflags;
@@ -552,12 +616,16 @@ FILE *freopen(const char *restrict pathname, const char *restrict mode,
         stream->mem_size = 0;
         stream->mem_pos = 0;
         stream->ms_bufp = 0;
+        stream->wms_bufp = 0;
         stream->ms_sizep = 0;
         stream->kind = STDIO_KIND_FD;
+        stream->orient = 0;
         stream->rpos = 0;
         stream->rlen = 0;
         stream->wlen = 0;
         stream->unget_char = -1;
+        stream->has_unget_wc = 0;
+        memset(&stream->wc_state, 0, sizeof(stream->wc_state));
 
         int new_fd = open(pathname, oflags, (mode_t)0666u);
         if (new_fd < 0) {
@@ -676,6 +744,36 @@ FILE *open_memstream(char **bufp, size_t *sizep) {
     f->ms_bufp = bufp;
     f->ms_sizep = sizep;
     *bufp = (char *)mbuf;
+    *sizep = 0u;
+    return f;
+}
+
+FILE *open_wmemstream(wchar_t **bufp, size_t *sizep) {
+    if (!bufp || !sizep) {
+        errno = EINVAL;
+        return 0;
+    }
+    wchar_t *wbuf = (wchar_t *)calloc(64u, sizeof(wchar_t));
+    if (!wbuf) {
+        return 0;
+    }
+    FILE *f = alloc_stream(-1, STDIO_FLAG_WRITE);
+    if (!f) {
+        free(wbuf);
+        return 0;
+    }
+    f->kind = STDIO_KIND_WMEMSTREAM;
+    f->orient = 1;
+    f->buf_mode = _IONBF;
+    f->buf = 0;
+    f->buf_cap = 0;
+    f->mem_buf = (unsigned char *)wbuf;
+    f->mem_cap = 64u;
+    f->mem_size = 0u;
+    f->mem_pos = 0u;
+    f->wms_bufp = bufp;
+    f->ms_sizep = sizep;
+    *bufp = wbuf;
     *sizep = 0u;
     return f;
 }
@@ -968,7 +1066,8 @@ int fseeko(FILE *stream, off_t offset, int whence) {
     flockfile(stream);
     pthread_cleanup_push(stdio_unlock_cleanup, stream);
     if (stream->kind == STDIO_KIND_MEM ||
-        stream->kind == STDIO_KIND_MEMSTREAM) {
+        stream->kind == STDIO_KIND_MEMSTREAM ||
+        stream->kind == STDIO_KIND_WMEMSTREAM) {
         off_t base = 0;
         if (whence == SEEK_CUR) {
             base = (off_t)stream->mem_pos - (stream->unget_char != -1 ? 1 : 0);
@@ -982,6 +1081,8 @@ int fseeko(FILE *stream, off_t offset, int whence) {
         } else {
             stream->mem_pos = (size_t)target;
             stream->unget_char = -1;
+            stream->has_unget_wc = 0;
+            memset(&stream->wc_state, 0, sizeof(stream->wc_state));
             stream->flags &= ~STDIO_FLAG_EOF;
             res = 0;
         }
@@ -997,6 +1098,8 @@ int fseeko(FILE *stream, off_t offset, int whence) {
             stream->rpos = 0;
             stream->rlen = 0;
             stream->unget_char = -1;
+            stream->has_unget_wc = 0;
+            memset(&stream->wc_state, 0, sizeof(stream->wc_state));
             stream->flags &= ~STDIO_FLAG_EOF;
             res = 0;
         }
@@ -1017,7 +1120,8 @@ off_t ftello(FILE *stream) {
     off_t res = (off_t)-1;
     flockfile(stream);
     if (stream->kind == STDIO_KIND_MEM ||
-        stream->kind == STDIO_KIND_MEMSTREAM) {
+        stream->kind == STDIO_KIND_MEMSTREAM ||
+        stream->kind == STDIO_KIND_WMEMSTREAM) {
         res = (off_t)stream->mem_pos - (stream->unget_char != -1 ? 1 : 0);
     } else {
         off_t pos = lseek(stream->fd, 0, SEEK_CUR);
@@ -1882,6 +1986,222 @@ int putc(int c, FILE *stream) {
 
 int putchar(int c) {
     return fputc(c, stdout);
+}
+
+int fwide(FILE *stream, int mode) {
+    if (!stream) {
+        return 0;
+    }
+    flockfile(stream);
+    if (stream->orient == 0) {
+        if (mode > 0) {
+            stream->orient = 1;
+        } else if (mode < 0) {
+            stream->orient = -1;
+        }
+    }
+    int res = stream->orient;
+    funlockfile(stream);
+    return res;
+}
+
+wint_t __stdio_fputwc_unlocked(wchar_t wc, FILE *stream) {
+    if (!stream) {
+        errno = EBADF;
+        return WEOF;
+    }
+    if (stream->orient == 0) {
+        stream->orient = 1;
+    }
+    if (!(stream->flags & STDIO_FLAG_WRITE)) {
+        errno = EBADF;
+        stream->flags |= STDIO_FLAG_ERR;
+        return WEOF;
+    }
+    if (stream->kind == STDIO_KIND_WMEMSTREAM) {
+        if (wmemstream_ensure(stream, stream->mem_pos + 1u) != 0) {
+            return WEOF;
+        }
+        wchar_t *wb = (wchar_t *)stream->mem_buf;
+        if (stream->mem_pos > stream->mem_size) {
+            (void)wmemset(wb + stream->mem_size, L'\0',
+                          stream->mem_pos - stream->mem_size);
+        }
+        wb[stream->mem_pos++] = wc;
+        if (stream->mem_pos > stream->mem_size) {
+            stream->mem_size = stream->mem_pos;
+            wb[stream->mem_size] = L'\0';
+        }
+        return (wint_t)wc;
+    }
+    char mb[8];
+    size_t nb = wcrtomb(mb, wc, &stream->wc_state);
+    if (nb == (size_t)-1) {
+        stream->flags |= STDIO_FLAG_ERR;
+        return WEOF;
+    }
+    if (fwrite_unlocked_body(stream, (const unsigned char *)mb, nb) != nb) {
+        return WEOF;
+    }
+    return (wint_t)wc;
+}
+
+wint_t __stdio_fgetwc_unlocked(FILE *stream) {
+    if (!stream) {
+        errno = EBADF;
+        return WEOF;
+    }
+    if (stream->orient == 0) {
+        stream->orient = 1;
+    }
+    if (stream->has_unget_wc) {
+        wint_t wc = stream->unget_wc;
+        stream->has_unget_wc = 0;
+        stream->flags &= ~STDIO_FLAG_EOF;
+        return wc;
+    }
+    if (!(stream->flags & STDIO_FLAG_READ)) {
+        errno = EBADF;
+        stream->flags |= STDIO_FLAG_ERR;
+        return WEOF;
+    }
+    int started = 0;
+    for (;;) {
+        int b = fgetc_unlocked_body(stream);
+        if (b == EOF) {
+            if (started) {
+                errno = EILSEQ;
+                stream->flags |= STDIO_FLAG_ERR;
+                memset(&stream->wc_state, 0, sizeof(stream->wc_state));
+            }
+            return WEOF;
+        }
+        char ch = (char)(unsigned char)b;
+        wchar_t wc = 0;
+        size_t rc = mbrtowc(&wc, &ch, 1u, &stream->wc_state);
+        if (rc == (size_t)-1) {
+            stream->flags |= STDIO_FLAG_ERR;
+            return WEOF;
+        }
+        if (rc == (size_t)-2) {
+            started = 1;
+            continue;
+        }
+        return (wint_t)wc;
+    }
+}
+
+wint_t __stdio_ungetwc_unlocked(wint_t wc, FILE *stream) {
+    if (wc == WEOF || !stream) {
+        return WEOF;
+    }
+    if (stream->orient == 0) {
+        stream->orient = 1;
+    }
+    if (stream->has_unget_wc) {
+        return WEOF;
+    }
+    stream->unget_wc = wc;
+    stream->has_unget_wc = 1;
+    stream->flags &= ~STDIO_FLAG_EOF;
+    return wc;
+}
+
+wint_t fgetwc(FILE *stream) {
+    if (!stream) {
+        return WEOF;
+    }
+    wint_t res = WEOF;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    res = __stdio_fgetwc_unlocked(stream);
+    pthread_cleanup_pop(1);
+    return res;
+}
+
+wint_t getwc(FILE *stream) {
+    return fgetwc(stream);
+}
+
+wint_t getwchar(void) {
+    return fgetwc(stdin);
+}
+
+wint_t fputwc(wchar_t wc, FILE *stream) {
+    if (!stream) {
+        return WEOF;
+    }
+    wint_t res = WEOF;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    res = __stdio_fputwc_unlocked(wc, stream);
+    pthread_cleanup_pop(1);
+    return res;
+}
+
+wint_t putwc(wchar_t wc, FILE *stream) {
+    return fputwc(wc, stream);
+}
+
+wint_t putwchar(wchar_t wc) {
+    return fputwc(wc, stdout);
+}
+
+wint_t ungetwc(wint_t wc, FILE *stream) {
+    if (wc == WEOF || !stream) {
+        return WEOF;
+    }
+    wint_t res = WEOF;
+    flockfile(stream);
+    res = __stdio_ungetwc_unlocked(wc, stream);
+    funlockfile(stream);
+    return res;
+}
+
+wchar_t *fgetws(wchar_t *restrict ws, int n, FILE *restrict stream) {
+    if (!ws || n <= 0 || !stream) {
+        return 0;
+    }
+    int i = 0;
+    int err = 0;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    while (i < n - 1) {
+        wint_t wc = __stdio_fgetwc_unlocked(stream);
+        if (wc == WEOF) {
+            if (stream->flags & STDIO_FLAG_ERR) {
+                err = 1;
+            }
+            break;
+        }
+        ws[i++] = (wchar_t)wc;
+        if (wc == (wint_t)L'\n') {
+            break;
+        }
+    }
+    pthread_cleanup_pop(1);
+    if (err || i == 0) {
+        return 0;
+    }
+    ws[i] = L'\0';
+    return ws;
+}
+
+int fputws(const wchar_t *restrict ws, FILE *restrict stream) {
+    if (!ws || !stream) {
+        return -1;
+    }
+    int rc = 0;
+    flockfile(stream);
+    pthread_cleanup_push(stdio_unlock_cleanup, stream);
+    for (size_t i = 0u; ws[i] != L'\0'; i++) {
+        if (__stdio_fputwc_unlocked(ws[i], stream) == WEOF) {
+            rc = -1;
+            break;
+        }
+    }
+    pthread_cleanup_pop(1);
+    return rc;
 }
 
 #define POPEN_MAX 16

@@ -36,7 +36,10 @@
 #define SEEK_END 2
 #endif
 
+#ifndef _FILE_DEFINED
+#define _FILE_DEFINED
 typedef struct __microkernel_file FILE;
+#endif /* _FILE_DEFINED */
 
 typedef struct {
     off_t __pos;

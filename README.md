@@ -289,10 +289,11 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   `pause`), monotonic/realtime clocks, timers, and `<time.h>` calendar functions
   (`gmtime*`, `localtime*`, `mktime`, `strftime`, `tzset`/`tzname`, `clock`,
   `timespec_get`).
-- **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered and
-  memory-backed `<stdio.h>` streams (`fmemopen`, `open_memstream`, `freopen`,
-  `scanf*`, `getline`, `dprintf`, `asprintf`, `fgetpos`/`fsetpos`). Use
-  permissions, nanosecond timestamps (`futimens`, `utimensat`), hard and
+- **Files, links, FIFOs, IPC, terminals, and event loops:** Use buffered,
+  wide-oriented, and memory-backed `<stdio.h>`/`<wchar.h>` streams (`fmemopen`,
+  `open_memstream`, `open_wmemstream`, `freopen`, `fwide`, `*wprintf`,
+  `*wscanf`, `scanf*`, `getline`, `dprintf`, `asprintf`, `fgetpos`/`fsetpos`).
+  Use permissions, nanosecond timestamps (`futimens`, `utimensat`), hard and
   symbolic links, FIFOs, positional I/O, directory traversal (`posix_getdents`,
   `scandir`), `<sys/statvfs.h>`, and temp-file helpers. Communicate over pipes,
   `AF_UNIX` sockets, `<aio.h>`, and `<termios.h>`, and multiplex descriptors
@@ -327,10 +328,10 @@ services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** Wide-oriented `FILE` streams,
-  `<regex.h>`, `<glob.h>`, `<wordexp.h>`, `<iconv.h>`, `<libintl.h>`, and
-  `<dlfcn.h>`. Ring 3 TCP/IP networking and remaining shell grammar and XCU
-  utilities follow. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** `<regex.h>`, `<glob.h>`, `<wordexp.h>`,
+  `<iconv.h>`, `<libintl.h>`, and `<dlfcn.h>`. Ring 3 TCP/IP networking and
+  remaining shell grammar and XCU utilities follow. See
+  [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree

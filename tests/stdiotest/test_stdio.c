@@ -15,6 +15,7 @@
 #include <float.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <locale.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -24,8 +25,10 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <wchar.h>
+#include <wctype.h>
 
-/* need:: VER_LIBC_0006 VER_LIBC_0010 */
+/* need:: VER_LIBC_0006 VER_LIBC_0010 VER_LIBC_0014 */
 
 static_assert(CHAR_BIT == 8, "CHAR_BIT");
 static_assert(PATH_MAX >= _POSIX_PATH_MAX, "PATH_MAX");
@@ -889,6 +892,151 @@ static int test_stdlib_and_string_completion(void) {
     return 0;
 }
 
+static int vswprintf_helper(wchar_t *ws, size_t n, const wchar_t *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vswprintf(ws, n, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+static int vswscanf_helper(const wchar_t *ws, const wchar_t *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vswscanf(ws, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+static int vfwscanf_helper(FILE *fp, const wchar_t *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vfwscanf(fp, fmt, ap);
+    va_end(ap);
+    return r;
+}
+
+static int test_wide_stdio_and_wmemstream(void) {
+    if (!setlocale(LC_ALL, "C.UTF-8")) {
+        printf("[FAIL] stdiotest setlocale(C.UTF-8) failed\n");
+        return -1;
+    }
+
+    /* 1. fwide, fputwc/putwc/fputws, fwprintf, fgetwc/ungetwc/getwc/fgetws. */
+    FILE *fp = fopen("/tmp/wide_io.txt", "w+");
+    if (!fp) {
+        printf("[FAIL] stdiotest fopen(/tmp/wide_io.txt) errno=%d\n", errno);
+        return -1;
+    }
+    if (fwide(fp, 0) != 0 || fwide(fp, 1) <= 0 || fwide(fp, -1) <= 0) {
+        printf("[FAIL] stdiotest fwide sticky orientation failed\n");
+        (void)fclose(fp);
+        return -1;
+    }
+    int nwritten = 0;
+    if (fputwc(L'A', fp) != (wint_t)L'A' ||
+        putwc((wchar_t)0x00E9, fp) != (wint_t)0x00E9 ||
+        fputws(L" \u20ac\n", fp) < 0 ||
+        fwprintf(fp, L"val=%d hex=%#x flt=%.2f s=%s ls=%ls%n\n", -42, 0x2au,
+                 3.25, "utf\xC3\xA9", L"\u03c0", &nwritten) < 0 ||
+        nwritten <= 0) {
+        printf("[FAIL] stdiotest wide file output failed\n");
+        (void)fclose(fp);
+        return -1;
+    }
+    rewind(fp);
+
+    wint_t c0 = fgetwc(fp);
+    wint_t c1 = getwc(fp);
+    if (c0 != (wint_t)L'A' || c1 != (wint_t)0x00E9 || ungetwc(c1, fp) != c1 ||
+        fgetwc(fp) != (wint_t)0x00E9) {
+        printf("[FAIL] stdiotest fgetwc/getwc/ungetwc failed\n");
+        (void)fclose(fp);
+        return -1;
+    }
+    wchar_t line[64] = {0};
+    if (!fgetws(line, 64, fp) || wcscmp(line, L" \u20ac\n") != 0) {
+        printf("[FAIL] stdiotest fgetws line 1 mismatch\n");
+        (void)fclose(fp);
+        return -1;
+    }
+    int iv = 0;
+    unsigned int hv = 0u;
+    double dv = 0.0;
+    char ns[16] = {0};
+    wchar_t ws_in[16] = {0};
+    int sc = vfwscanf_helper(fp, L"val=%d hex=%x flt=%lf s=%15s ls=%15ls", &iv,
+                             &hv, &dv, ns, ws_in);
+    (void)fclose(fp);
+    (void)unlink("/tmp/wide_io.txt");
+    if (sc != 5 || iv != -42 || hv != 0x2au || fabs(dv - 3.25) > 1e-6 ||
+        strcmp(ns, "utf\xC3\xA9") != 0 || wcscmp(ws_in, L"\u03c0") != 0) {
+        printf("[FAIL] stdiotest vfwscanf sc=%d iv=%d hv=%x\n", sc, iv, hv);
+        return -1;
+    }
+
+    /* 2. swprintf / vswprintf formatting and EOVERFLOW on small buffer. */
+    wchar_t wout[32] = {0};
+    int sn = vswprintf_helper(wout, 32u, L"[%04d %lc %ls]", 7, (wint_t)0x00E9u,
+                              L"ok");
+    if (sn != 11 || wcscmp(wout, L"[0007 \u00e9 ok]") != 0) {
+        printf("[FAIL] stdiotest vswprintf sn=%d\n", sn);
+        return -1;
+    }
+    wchar_t tiny[4] = {0};
+    errno = 0;
+    if (swprintf(tiny, 4u, L"abcdef") >= 0 || errno != EOVERFLOW ||
+        tiny[3] != L'\0') {
+        printf("[FAIL] stdiotest swprintf overflow check failed\n");
+        return -1;
+    }
+
+    /* 3. swscanf / vswscanf with scanset, %mls allocation, and %n. */
+    wchar_t *alloc_ws = NULL;
+    wchar_t set_out[16] = {0};
+    int npos = 0;
+    int s2 = vswscanf_helper(L"  abc123 caf\u00e9", L" %l[a-z]%*d %mls%n",
+                             set_out, &alloc_ws, &npos);
+    if (s2 != 2 || wcscmp(set_out, L"abc") != 0 || !alloc_ws ||
+        wcscmp(alloc_ws, L"caf\u00e9") != 0 || npos != 13) {
+        printf("[FAIL] stdiotest vswscanf s2=%d npos=%d\n", s2, npos);
+        free(alloc_ws);
+        return -1;
+    }
+    free(alloc_ws);
+
+    /* 4. open_wmemstream growth, fseek, flush, and close. */
+    wchar_t *wmbuf = NULL;
+    size_t wmsize = 0u;
+    FILE *wm = open_wmemstream(&wmbuf, &wmsize);
+    if (!wm || fwide(wm, 0) <= 0) {
+        printf("[FAIL] stdiotest open_wmemstream failed\n");
+        return -1;
+    }
+    if (fwprintf(wm, L"hello %ls", L"\u03c0") < 0 || fflush(wm) != 0 ||
+        !wmbuf || wmsize != 7u || wcscmp(wmbuf, L"hello \u03c0") != 0) {
+        printf("[FAIL] stdiotest open_wmemstream flush mismatch size=%zu\n",
+               wmsize);
+        (void)fclose(wm);
+        free(wmbuf);
+        return -1;
+    }
+    if (fseek(wm, 0L, SEEK_SET) != 0 || fputwc(L'H', wm) != (wint_t)L'H' ||
+        fseek(wm, 0L, SEEK_END) != 0 || fputws(L"!", wm) < 0 ||
+        fclose(wm) != 0 || wmsize != 8u ||
+        wcscmp(wmbuf, L"Hello \u03c0!") != 0) {
+        printf("[FAIL] stdiotest open_wmemstream seek/close mismatch\n");
+        free(wmbuf);
+        return -1;
+    }
+    free(wmbuf);
+    (void)setlocale(LC_ALL, "C");
+
+    printf("[OK] Wide stdio fwide, fgetwc/fputwc/ungetwc, fwprintf/swprintf, "
+           "fwscanf/swscanf, and open_wmemstream verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_buffered_stdio() != 0) {
         return 1;
@@ -903,6 +1051,9 @@ int main(void) {
         return 1;
     }
     if (test_stdlib_and_string_completion() != 0) {
+        return 1;
+    }
+    if (test_wide_stdio_and_wmemstream() != 0) {
         return 1;
     }
     return 0;

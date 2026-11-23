@@ -14,7 +14,7 @@
 # need:: VER_PROC_0002 VER_PROC_0003 VER_PROC_0004 VER_PROC_0005 VER_PROC_0006
 # need:: VER_IPC_0003 VER_IPC_0004 VER_IPC_0005 VER_IPC_0006 VER_IPC_0007
 # need:: VER_DOCS_0004 VER_BOOT_0003 VER_PROC_0008 VER_PROC_0009 VER_IPC_0010
-# need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013
+# need:: VER_LIBC_0011 VER_LIBC_0012 VER_LIBC_0013 VER_LIBC_0014
 
 from __future__ import annotations
 
@@ -1414,6 +1414,50 @@ class PosixHeaderMatrixTests(unittest.TestCase):
                 self.assertEqual(
                     rc, 0, f"locale/wchar/wctype check failed:\n{err}"
                 )
+
+    def test_wide_stdio_headers_and_hygiene(self) -> None:
+        src = "\n".join(
+            (
+                "#include <wchar.h>",
+                "#ifdef BUFSIZ",
+                '#error "wchar.h leaked stdio.h BUFSIZ"',
+                "#endif",
+                "static int __check_wide_stdio(FILE *fp, va_list ap) {",
+                "    wchar_t wbuf[16] = {0};",
+                "    wchar_t *mp = (wchar_t *)0;",
+                "    size_t msz = 0u;",
+                "    (void)fwide(fp, 0);",
+                "    (void)open_wmemstream(&mp, &msz);",
+                "    (void)fgetwc(fp);",
+                "    (void)fgetws(wbuf, 16, fp);",
+                "    (void)fputwc(L'a', fp);",
+                "    (void)fputws(L\"a\", fp);",
+                "    (void)getwc(fp);",
+                "    (void)getwchar();",
+                "    (void)putwc(L'a', fp);",
+                "    (void)putwchar(L'a');",
+                "    (void)ungetwc((wint_t)L'a', fp);",
+                "    (void)fwprintf(fp, L\"%d\", 1);",
+                "    (void)wprintf(L\"%d\", 1);",
+                "    (void)swprintf(wbuf, 16u, L\"%d\", 1);",
+                "    (void)vfwprintf(fp, L\"%d\", ap);",
+                "    (void)vwprintf(L\"%d\", ap);",
+                "    (void)vswprintf(wbuf, 16u, L\"%d\", ap);",
+                "    (void)fwscanf(fp, L\"%ls\", wbuf);",
+                "    (void)wscanf(L\"%ls\", wbuf);",
+                "    (void)swscanf(wbuf, L\"%ls\", wbuf);",
+                "    (void)vfwscanf(fp, L\"%ls\", ap);",
+                "    (void)vwscanf(L\"%ls\", ap);",
+                "    return vswscanf(wbuf, L\"%ls\", ap);",
+                "}",
+                "int (*__ws_ref)(FILE *, va_list) = __check_wide_stdio;",
+                "",
+            )
+        )
+        for label, macro in FEATURE_PROFILES:
+            with self.subTest(profile=label):
+                rc, err = _compile_snippet(src, [macro])
+                self.assertEqual(rc, 0, f"wide stdio check failed:\n{err}")
 
 
 def main(argv: list[str] | None = None) -> int:
