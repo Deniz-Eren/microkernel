@@ -77,6 +77,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added POSIX.1-2024 XCU `sort`, `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`,
+  `join`, and `cksum` in Ring 3 `bin/utils/` (`TSK_0050`, `SWR_LIBC_0021`,
+  `ADR_0044`, `COMP_LIBC_0020`, `VER_LIBC_0021`), advancing Gate 2 from 68/108
+  to 77/108 Base XCU utilities with QEMU pipeline tests in
+  `tests/shtest/test_sh.c`.
 - Added the remaining five POSIX.1-2024 Base network headers (`<netinet/in.h>`,
   `<netinet/tcp.h>`, `<arpa/inet.h>`, `<net/if.h>`, and `<netdb.h>`) and wired
   `AF_INET`/`AF_INET6` sockets, `sendmsg`, `recvmsg`, `sockatmark`, and

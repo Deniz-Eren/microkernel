@@ -20,6 +20,18 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0050 — Add POSIX.1-2024 XCU sort, field, and checksum text utilities
+
+```{task} Add POSIX.1-2024 XCU sort, field, and checksum text utilities
+:id: TSK_0050
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0044, SWR_LIBC_0021
+
+Add text pipeline utilities `sort`, `uniq`, `cut`, `tr`, `tail`, `tee`, `paste`,
+`join`, and `cksum` with QEMU runtime tests ({need}`BDR_0004`,
+{need}`SWR_LIBC_0021`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0047 — Add 5 network Base headers and socket/resolver libc APIs
 
 ```{task} Add 5 network Base headers and socket/resolver libc APIs

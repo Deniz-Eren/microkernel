@@ -17,8 +17,8 @@
 #include <time.h>
 #include <unistd.h>
 
-/* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_PROC_0008 */
-/* need:: VER_PROC_0009 VER_IPC_0010 */
+/* need:: VER_LIBC_0007 VER_LIBC_0018 VER_LIBC_0019 VER_LIBC_0021 */
+/* need:: VER_PROC_0008 VER_PROC_0009 VER_IPC_0010 */
 
 static void wait_for_vfs(void) {
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 20000000L};
@@ -710,6 +710,68 @@ static int test_regex_find_stream_utils(void) {
     return 0;
 }
 
+static int test_sort_field_checksum_utils(void) {
+    char out[256];
+    ssize_t len = 0;
+
+    /* 1. sort (-n, -r, -u, -t/-k, -c) and uniq (-c, -d, -u). */
+    int rc = run_sh_capture(
+        "/boot/printf 'b:10\\na:2\\nb:10\\nc:3\\n' | "
+        "/boot/sort -t: -k2,2n -u && "
+        "/boot/printf 'x\\nx\\ny\\nz\\nz\\nz\\n' | /boot/uniq -c && "
+        "/boot/printf '1\\n2\\n3\\n' | /boot/sort -c",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "a:2\nc:3\nb:10\n2 x\n1 y\n3 z\n") != 0) {
+        printf("[FAIL] shtest sort/uniq rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 2. cut (-d/-f/-s, -c) and tr (ranges, classes, -d, -s). */
+    rc = run_sh_capture(
+        "/boot/printf 'a:b:c\\nnodlm\\nx:y:z\\n' | /boot/cut -d: -f1,3 -s && "
+        "/boot/printf 'abcdef\\n' | /boot/cut -c2-4 && "
+        "/boot/printf 'hello   123\\n' | /boot/tr '[:lower:]' '[:upper:]' | "
+        "/boot/tr -d '0-9' | /boot/tr -s ' '",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "a:c\nx:z\nbcd\nHELLO \n") != 0) {
+        printf("[FAIL] shtest cut/tr rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 3. tail (-n, -n +2, -c), tee (-a), paste (-d, -s), and join. */
+    rc = run_sh_capture(
+        "/boot/printf '1\\n2\\n3\\n4\\n' | /boot/tail -n 2 && "
+        "/boot/printf '1\\n2\\n3\\n' | /boot/tail -n +3 && "
+        "/boot/printf 'abcd' | /boot/tail -c 2 && "
+        "/boot/printf '\\n' && "
+        "/boot/printf 'k1 v1\\n' | /boot/tee /tmp/j1.txt && "
+        "/boot/printf 'k2 v2\\n' | /boot/tee -a /tmp/j1.txt && "
+        "/boot/printf 'k1 x1\\nk3 x3\\n' > /tmp/j2.txt && "
+        "/boot/join -a 1 -e NONE -o 0,1.2,2.2 /tmp/j1.txt /tmp/j2.txt && "
+        "/boot/printf 'p\\nq\\n' | /boot/paste -s -d ',' && "
+        "/boot/rm /tmp/j1.txt /tmp/j2.txt",
+        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 ||
+        strcmp(out, "3\n4\n3\ncd\nk1 v1\nk2 v2\nk1 v1 x1\nk2 v2 NONE\np,q\n") !=
+            0) {
+        printf("[FAIL] shtest tail/tee/paste/join rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    /* 4. cksum POSIX.1-2024 CRC-32 golden vectors (empty + 123456789). */
+    rc = run_sh_capture("/boot/printf '' | /boot/cksum && "
+                        "/boot/printf '123456789' | /boot/cksum",
+                        NULL, 0, out, sizeof(out), &len);
+    if (rc != 0 || strcmp(out, "4294967295 0\n930766865 9\n") != 0) {
+        printf("[FAIL] shtest cksum rc=%d out='%s'\n", rc, out);
+        return -1;
+    }
+
+    printf("[OK] XCU utilities sort, uniq, cut, tr, tail, tee, paste, join, "
+           "and cksum verified\n");
+    return 0;
+}
+
 int main(void) {
     wait_for_vfs();
     if (test_pipelines_redirs_and_utils() != 0) {
@@ -743,6 +805,9 @@ int main(void) {
         return 1;
     }
     if (test_regex_find_stream_utils() != 0) {
+        return 1;
+    }
+    if (test_sort_field_checksum_utils() != 0) {
         return 1;
     }
     return 0;

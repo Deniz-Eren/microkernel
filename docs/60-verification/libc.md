@@ -271,3 +271,17 @@ sockets, `sendmsg`/`recvmsg`, `sockatmark`, and multi-server `select`. CTest
 Gates 1 to 3 verify all 70 Base headers, 1037 Base interfaces,
 async-signal-safety, and cancellation points ({need}`SWR_LIBC_0020`).
 ```
+
+```{ver} Verify XCU sort, uniq, cut, tr, tail, tee, paste, join, and cksum
+:id: VER_LIBC_0021
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0021
+
+The headless QEMU harness `tests/test_runner.py` runs `shtest`
+(`tests/shtest/test_sh.c`). It verifies `sort` (`-t`, `-k`, `-n`, `-u`, `-c`),
+`uniq` (`-c`), `cut` (`-d`/`-f`/`-s`, `-c`), `tr` (classes, `-d`, `-s`), `tail`
+(`-n`, `+N`, `-c`), `tee`, `paste` (`-s`, `-d`), `join` (`-a`, `-e`, `-o`), and
+`cksum` CRC-32 vectors. Gate 2 verifies all nine Base utilities
+({need}`SWR_LIBC_0021`).
+```

@@ -267,3 +267,17 @@ over `/dev/net`. `libc/src/inet.c` and `libc/src/netdb.c` implement byte-order
 helpers, `inet_*`, live `/dev/net` `if_*` queries, `getaddrinfo`, `getnameinfo`,
 `gai_strerror`, and `get*ent` ({need}`ICD_LIBC_0017`, {need}`SWR_LIBC_0020`).
 ```
+
+```{comp} Ring 3 sort, uniq, cut, tr, tail, tee, paste, join, and cksum tools
+:id: COMP_LIBC_0020
+:status: active
+:posix: XCU/sort, XCU/uniq, XCU/cut, XCU/tr, XCU/tail, XCU/tee, XCU/paste
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0021
+
+`bin/utils/sort.c`, `uniq.c`, `cut.c`, `tr.c`, `tail.c`, `tee.c`, `paste.c`,
+`join.c`, and `cksum.c` implement Ring 3 text-pipeline tools. They supply
+multi-key sorting, deduplication, field cutting, byte translation, tail/tee,
+pasting, joining, and POSIX.1-2024 CRC-32 checksums ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0021`).
+```

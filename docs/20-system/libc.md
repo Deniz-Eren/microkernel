@@ -284,6 +284,18 @@ User space must supply standalone Ring 3 utilities `grep`, `sed`, `find`,
 `gai_strerror`, `get*ent`) ({need}`SYS_LIBC_0001`, {need}`SYS_IPC_0001`).
 ```
 
+```{swr} Supply POSIX.1-2024 XCU sort, field, and checksum text utilities
+:id: SWR_LIBC_0021
+:status: active
+:posix: XCU/sort, XCU/uniq, XCU/cut, XCU/tr, XCU/tail, XCU/tee, XCU/paste
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0003, ADR_0044
+
+User space must supply standalone Ring 3 utilities `sort`, `uniq`, `cut`, `tr`,
+`tail`, `tee`, `paste`, `join`, and `cksum` over `libc`, `vfsserv`, and
+`pipeserv` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:
