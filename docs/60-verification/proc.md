@@ -132,3 +132,17 @@ mutex `EOWNERDEAD`, `MAP_SHARED` named semaphores, `sleep`, `time`, `timeout`,
 `nohup`, and `sh` `wait`. CTest Gates 1 to 3 verify header hygiene,
 async-signal-safety, and cancellation points ({need}`SWR_PROC_0012`).
 ```
+
+```{ver} Verify kernel PT_INTERP loading and SysV auxv in QEMU
+:id: VER_PROC_0011
+:status: active
+:tags: integration
+:verifies: SWR_PROC_0013
+
+The headless QEMU harness runs `dlsoctest` (`tests/dlsoctest/test_dlsoctest.c`),
+which execs the freestanding dynamic executable `dlsoctest_dyn`
+(`tests/dlsoctest/dlsoctest_dyn.c`) with `PT_INTERP=/boot/ld.so`. It verifies
+the `AT_BASE`/`AT_ENTRY`/`AT_PHDR`/`AT_PHENT`/`AT_PHNUM` auxv entries, mapped
+program headers for both images, and the kernel W^X `mprotect` policy
+({need}`SWR_PROC_0013`).
+```

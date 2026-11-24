@@ -167,6 +167,19 @@ helpers, and Ring 3 `MAP_SHARED` named `sem_open`/`sem_close`/`sem_unlink`. Ring
 ({need}`SYS_PROC_0001`, {need}`SYS_SIG_0001`).
 ```
 
+```{swr} Load ET_DYN executables with PT_INTERP and SysV auxv
+:id: SWR_PROC_0013
+:status: active
+:derives: SYS_PROC_0001, SYS_BOOT_0001
+:traces: ADR_0002, ADR_0057
+
+The kernel must load `ET_DYN` user executables at a fixed load base and map the
+`PT_INTERP` interpreter (`/boot/ld.so`) from the bootfs without new syscalls. It
+must emit the SysV `auxv` entries `AT_PHDR`, `AT_PHENT`, `AT_PHNUM`, `AT_BASE`,
+and `AT_ENTRY` on the initial stack for dynamic and static executables
+({need}`SYS_PROC_0001`, {need}`SYS_BOOT_0001`).
+```
+
 [hdr-wait]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_wait.h.html
 [fn-waitpid]:

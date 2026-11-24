@@ -167,3 +167,4 @@ SMP concurrent IPC and XSAVE/FMA isolation
 <sys/select\.h> select, pselect, multi-server FDs, and sigmask
 cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,
 zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks
+dlsoctest PT_INTERP ld\.so, auxv, relocations, DT_INIT_ARRAY, and LD_LIBRARY_PATH search verified

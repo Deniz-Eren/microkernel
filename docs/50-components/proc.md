@@ -133,3 +133,16 @@ keep per-CPU `GS.base` state and idle threads. SMP-hardened `sched.c`, `pmm.c`,
 and `bin/sh/` supply `id`, `logname`, `nice`, `renice`, `umask`, and `ulimit`
 ({need}`ICD_PROC_0010`, {need}`SWR_PROC_0011`).
 ```
+
+```{comp} Kernel ET_DYN and PT_INTERP executable loader
+:id: COMP_PROC_0011
+:status: active
+:refines: ARC_PROC_0001, ARC_BOOT_0001
+:satisfies: SWR_PROC_0013
+
+`kernel/core/elf.c` maps `ET_DYN` images at `ELF_DYN_BASE` and `PT_INTERP`
+interpreters at `ELF_INTERP_BASE` with per-segment W^X page permissions.
+`kernel/core/proc.c` resolves the interpreter from the bootfs and builds the
+initial stack with `AT_PHDR`, `AT_PHENT`, `AT_PHNUM`, `AT_BASE`, and `AT_ENTRY`
+auxv entries ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0013`).
+```

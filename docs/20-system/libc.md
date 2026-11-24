@@ -418,6 +418,19 @@ in git. It must support `/dev/urandom` seeding, SHA-256, AES-GCM, RSA, ECDSA,
 Ed25519, X.509 certificates, and TLS 1.3 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply the freestanding Ring 3 dynamic linker /boot/ld.so
+:id: SWR_LIBC_0032
+:status: active
+:derives: SYS_PROC_0001
+:traces: ADR_0057, BDR_0003, BDR_0004
+
+The freestanding `/boot/ld.so` must self-relocate and load `DT_NEEDED` libraries
+over `/dev/vfs` with `LD_LIBRARY_PATH` search before the `/boot`, `/lib`, and
+`/usr/lib` defaults. It must apply `R_X86_64_*` relocations, enforce W^X per
+`PT_LOAD`, run `DT_INIT` and `DT_INIT_ARRAY`, and jump to `AT_ENTRY` with the
+original stack ({need}`SYS_PROC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

@@ -36,7 +36,8 @@
 #include <sys/vm.h>
 #include "channel.h"
 
-/* need:: COMP_BOOT_0002 COMP_PROC_0002 COMP_PROC_0009 COMP_PROC_0010 */
+/* need:: COMP_BOOT_0002 COMP_PROC_0002 COMP_PROC_0009 COMP_PROC_0010
+ * need:: COMP_PROC_0011 */
 
 #define MAIN_STACK_TOP 0x700000000000ULL
 #define MAIN_STACK_SIZE (64ULL * 1024ULL)
@@ -98,11 +99,42 @@ static int find_bootfs_image(uint64_t tar_phys, uint64_t tar_size,
     return -1;
 }
 
+/* Load a bootfs image and, when it requests PT_INTERP, map the dynamic linker
+ * from the same bootfs. The entry switches to the interpreter and the
+ * auxv reports the main image through AT_ENTRY/AT_PHDR and AT_BASE. */
+static int proc_load_image(uint64_t pml4_phys, const void *image,
+                           size_t image_size, uint64_t tar_phys,
+                           uint64_t tar_size, elf_load_info_t *out) {
+    if (elf_load_user(pml4_phys, image, image_size, ELF_DYN_BASE, out) != 0) {
+        return -1;
+    }
+    if (!out->interp[0]) {
+        return 0;
+    }
+    const void *interp_image = NULL;
+    uint64_t interp_size = 0;
+    if (find_bootfs_image(tar_phys, tar_size, out->interp, &interp_image,
+                          &interp_size) != 0) {
+        printk("[proc] interpreter '%s' not found in bootfs\n", out->interp);
+        return -1;
+    }
+    elf_load_info_t li;
+    if (elf_load_user(pml4_phys, interp_image, interp_size, ELF_INTERP_BASE,
+                      &li) != 0) {
+        printk("[proc] failed to load interpreter '%s'\n", out->interp);
+        return -1;
+    }
+    out->base = li.bias;
+    out->start = li.entry;
+    return 0;
+}
+
 /* Build the initial user stack with argv/envp/auxv per SysV ABI. */
 static uint64_t build_user_stack_argv(uint64_t pml4_phys,
                                       const char *const *argv, int argc,
                                       const char *const *envp, int envc,
-                                      const boot_info_t *bi) {
+                                      const boot_info_t *bi,
+                                      const elf_load_info_t *ei) {
     for (uint64_t va = MAIN_STACK_TOP - MAIN_STACK_SIZE; va < MAIN_STACK_TOP;
          va += 4096) {
         uint64_t frame = pmm_alloc_frame();
@@ -149,7 +181,7 @@ static uint64_t build_user_stack_argv(uint64_t pml4_phys,
     }
 
     off &= ~15ULL;
-    uint64_t nwords = (uint64_t)(1 + argc + 1 + envc + 1 + 6);
+    uint64_t nwords = (uint64_t)(1 + argc + 1 + envc + 1 + 16);
     uint64_t table_bytes = nwords * sizeof(uint64_t);
     if (table_bytes + 16 > off) {
         kfree(block);
@@ -172,6 +204,16 @@ static uint64_t build_user_stack_argv(uint64_t pml4_phys,
     w[k++] = 4096;
     w[k++] = AT_MICROKERNEL_BOOTINFO;
     w[k++] = BOOTINFO_VA;
+    w[k++] = 3; /* AT_PHDR */
+    w[k++] = ei->phdr;
+    w[k++] = 4; /* AT_PHENT */
+    w[k++] = ei->phent;
+    w[k++] = 5; /* AT_PHNUM */
+    w[k++] = ei->phnum;
+    w[k++] = 7; /* AT_BASE */
+    w[k++] = ei->base;
+    w[k++] = 9; /* AT_ENTRY */
+    w[k++] = ei->entry;
     w[k++] = 0; /* AT_NULL */
     w[k++] = 0;
 
@@ -297,8 +339,9 @@ static pcb_t *proc_spawn_from_bootfs_argv(pcb_t *parent, uint64_t tar_phys,
         }
         return NULL;
     }
-    uint64_t entry = 0, brk = 0;
-    if (elf_load_user(p->pml4_phys, image, image_size, &entry, &brk) != 0) {
+    elf_load_info_t ei;
+    if (proc_load_image(p->pml4_phys, image, image_size, tar_phys, tar_size,
+                        &ei) != 0) {
         printk("[proc] failed to load '%s' ELF\n", name);
         p->state = PROC_DEAD;
         vmm_destroy_user_pml4(p->pml4_phys);
@@ -308,14 +351,19 @@ static pcb_t *proc_spawn_from_bootfs_argv(pcb_t *parent, uint64_t tar_phys,
         }
         return NULL;
     }
-    p->brk = brk;
+    if (ei.interp[0]) {
+        printk("[proc] dynamic '%s' interp=%s base=%llx entry=%llx\n", name,
+               ei.interp, (unsigned long long)ei.base,
+               (unsigned long long)ei.entry);
+    }
+    p->brk = ei.brk;
 
     const char *argv_one[1] = {name};
     const char *const *use_argv = (argv && argc > 0) ? argv : argv_one;
     int use_argc = (argv && argc > 0) ? argc : 1;
     proc_format_comm_args(p->comm, p->args, name, use_argv, use_argc);
     uint64_t user_rsp = build_user_stack_argv(p->pml4_phys, use_argv, use_argc,
-                                              NULL, 0, &g_bootinfo);
+                                              NULL, 0, &g_bootinfo, &ei);
     if (!user_rsp) {
         p->state = PROC_DEAD;
         vmm_destroy_user_pml4(p->pml4_phys);
@@ -328,12 +376,12 @@ static pcb_t *proc_spawn_from_bootfs_argv(pcb_t *parent, uint64_t tar_phys,
     if (precreate_chan) {
         channel_precreate_sysproc(p->pid);
     }
-    tcb_t *main_t = thread_create(p, entry, user_rsp, prio);
+    tcb_t *main_t = thread_create(p, ei.start, user_rsp, prio);
     /* Pre-point FS.base at the zeroed bottom of the main stack so %fs:0 reads
      * NULL safely before __libc_start_main installs the TLS block. */
     main_t->fs_base = MAIN_STACK_TOP - MAIN_STACK_SIZE;
     printk("[proc] spawned '%s' pid=%u ppid=%u entry=%llx rsp=%llx prio=%u\n",
-           name, p->pid, p->parent_pid, (unsigned long long)entry,
+           name, p->pid, p->parent_pid, (unsigned long long)ei.start,
            (unsigned long long)user_rsp, prio);
     return p;
 }
@@ -1183,8 +1231,9 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
         return -ENOMEM;
     }
 
-    uint64_t entry = 0, brk = 0;
-    if (elf_load_user(new_pml4, image, image_size, &entry, &brk) != 0) {
+    elf_load_info_t ei;
+    if (proc_load_image(new_pml4, image, image_size, g_bootinfo.boot_tar_phys,
+                        g_bootinfo.boot_tar_size, &ei) != 0) {
         vmm_destroy_user_pml4(new_pml4);
         kfree(arg_pool);
         kfree(env_pool);
@@ -1195,8 +1244,8 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
     char new_args[PROC_ARGS_MAX];
     proc_format_comm_args(new_comm, new_args, path, argv_ptrs, argc);
 
-    uint64_t user_rsp = build_user_stack_argv(new_pml4, argv_ptrs, argc,
-                                              envp_ptrs, envc, &g_bootinfo);
+    uint64_t user_rsp = build_user_stack_argv(
+        new_pml4, argv_ptrs, argc, envp_ptrs, envc, &g_bootinfo, &ei);
     kfree(arg_pool);
     kfree(env_pool);
     if (!user_rsp) {
@@ -1234,7 +1283,7 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
 
     uint64_t old_pml4 = p->pml4_phys;
     p->pml4_phys = new_pml4;
-    p->brk = brk;
+    p->brk = ei.brk;
     p->has_execed = 1;
     p->next_mmap_va = 0;
     p->next_stack_va = 0;
@@ -1246,7 +1295,7 @@ long sys_proc_execve(trapframe_t *tf, uint64_t path_va, uint64_t argv_va,
     sched_reset_current_fpu();
 
     memset(tf, 0, sizeof(*tf));
-    arch_tf_init_user(tf, entry, 0, user_rsp, cur->iopl);
+    arch_tf_init_user(tf, ei.start, 0, user_rsp, cur->iopl);
     return 0;
 }
 
@@ -1764,6 +1813,9 @@ void proc_spawn_init(void) {
     /* Multi-core SMP concurrency (parallelism, futex, PMM/VMM/COW, IPC) test.
      */
     spawn_image(tar_phys, tar_size, "smptest", 94, 0);
+    /* Ring 3 dynamic linker (PT_INTERP /boot/ld.so, SysV auxv, DT_NEEDED over
+     * /dev/vfs with LD_LIBRARY_PATH search) test. */
+    spawn_image(tar_phys, tar_size, "dlsoctest", 100, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

@@ -409,3 +409,16 @@ and `cmake/openssl_compat/` download OpenSSL `3.0.15` during the CMake build.
 They cross-compile `libcrypto.a` and `libssl.a` and install `<openssl/*.h>` into
 the Ring 3 sysroot ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0031`).
 ```
+
+```{comp} Freestanding Ring 3 dynamic linker (/boot/ld.so)
+:id: COMP_LIBC_0031
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0032
+
+`libc/ldso/ldso.c` and `libc/ldso/start.S` implement the freestanding Ring 3
+dynamic linker. They self-relocate from `PT_DYNAMIC`, load `DT_NEEDED` libraries
+over `/dev/vfs`, resolve symbols in global scope, and enforce W^X with
+`VMProtect`. They run constructors and jump to `AT_ENTRY`
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0032`).
+```

@@ -203,6 +203,7 @@ function(microkernel_add_user_shared_library name)
         OUTPUT "${out_so}"
         COMMAND ${CMAKE_LINKER}
                 -shared
+                -soname ${boot_name}
                 -z separate-code
                 --hash-style=both
                 --build-id=none
@@ -217,6 +218,50 @@ function(microkernel_add_user_shared_library name)
         "${boot_name}=${out_so}")
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})
 endfunction()
+
+#------------------------------------------------------------------------------
+# Stage 2: freestanding Ring 3 dynamic linker (ld.so)
+#------------------------------------------------------------------------------
+set(LDSO_DIR ${CMAKE_SOURCE_DIR}/libc/ldso)
+add_library(ldso_obj OBJECT ${LDSO_DIR}/ldso.c)
+set(LDSO_CFLAGS ${USER_CFLAGS})
+list(REMOVE_ITEM LDSO_CFLAGS -fno-pic -fno-pie)
+list(APPEND LDSO_CFLAGS -fPIC -fvisibility=hidden)
+target_compile_options(ldso_obj PRIVATE ${LDSO_CFLAGS})
+target_include_directories(ldso_obj SYSTEM PRIVATE
+    ${SYSROOT_DIR}/usr/include
+    ${CLANG_RESOURCE_DIR}/include
+)
+add_dependencies(ldso_obj install_headers)
+
+set(LDSO_START_O ${CMAKE_BINARY_DIR}/ldso_start.o)
+add_custom_command(
+    OUTPUT ${LDSO_START_O}
+    COMMAND ${CMAKE_C_COMPILER} ${USER_CFLAGS}
+            -target ${MICROKERNEL_TARGET_TRIPLE}
+            -c ${LDSO_DIR}/start.S -o ${LDSO_START_O}
+    DEPENDS ${LDSO_DIR}/start.S
+    COMMENT "Stage 2: compiling ld.so entry (start.S)"
+    VERBATIM
+)
+
+set(LDSO_OUT ${CMAKE_BINARY_DIR}/ld.so)
+add_custom_command(
+    OUTPUT ${LDSO_OUT}
+    COMMAND ${CMAKE_LINKER} -shared -e _start
+            -z separate-code
+            --hash-style=both
+            --build-id=none
+            ${LDSO_START_O} $<TARGET_OBJECTS:ldso_obj>
+            -o ${LDSO_OUT}
+    DEPENDS ${LDSO_START_O} ldso_obj
+    COMMENT "Stage 2: linking Ring 3 dynamic linker ld.so"
+    VERBATIM
+)
+add_custom_target(ldso ALL DEPENDS ${LDSO_OUT})
+set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+    "ld.so=${LDSO_OUT}")
+set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ldso)
 
 add_subdirectory(servers/sysproc)
 add_subdirectory(servers/pipeserv)
@@ -255,6 +300,7 @@ add_subdirectory(tests/nettest)
 add_subdirectory(tests/ext2test)
 add_subdirectory(tests/zlibtest)
 add_subdirectory(tests/openssltest)
+add_subdirectory(tests/dlsoctest)
 add_subdirectory(tests/smptest)
 add_subdirectory(tests/stresstest)
 

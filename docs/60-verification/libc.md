@@ -412,3 +412,17 @@ The headless QEMU harness `tests/test_runner.py` runs `openssltest`
 P-256, Ed25519, X.509 signing, and a TLS 1.3 handshake over memory BIO pairs
 ({need}`SWR_LIBC_0031`).
 ```
+
+```{ver} Verify the Ring 3 dynamic linker /boot/ld.so in QEMU
+:id: VER_LIBC_0032
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0032
+
+The headless QEMU harness runs `dlsoctest`, which copies the value-2 variant
+`libmtest_alt.so` to `/tmp/libs/libmtest.so` and execs `dlsoctest_dyn` with and
+without `LD_LIBRARY_PATH=/tmp/libs`. The dynamic executable verifies
+`LD_LIBRARY_PATH` search priority over `/boot`, `R_X86_64_64`/`GLOB_DAT`/
+`JUMP_SLOT` relocations, data symbols, and `DT_INIT_ARRAY` constructors
+({need}`SWR_LIBC_0032`).
+```

@@ -21,22 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0061 — Implement kernel PT_INTERP, SysV auxv, and Ring 3 ld.so
-
-```{task} Implement kernel PT_INTERP, SysV auxv, and Ring 3 ld.so
-:id: TSK_0061
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0002, SYS_BOOT_0001, SYS_PROC_0001
-
-Extend `kernel/core/elf.c` and `kernel/core/proc.c` to load `ET_DYN` and
-`PT_INTERP` (`/boot/ld.so`) with zero new syscalls and emit SysV `auxv`
-(`AT_PHDR`, `AT_PHENT`, `AT_PHNUM`, `AT_BASE`, `AT_ENTRY`). Build freestanding
-Ring 3 `ld.so` to load `DT_NEEDED` libraries over `/dev/vfs`, apply `R_X86_64_*`
-relocations, enforce W^X, run `DT_INIT_ARRAY`, and jump to `AT_ENTRY`. Verify
-with a dynamic linker test in QEMU ({need}`SYS_BOOT_0001`,
-{need}`SYS_PROC_0001`).
-```
-
 ### TSK_0062 — Build shared libc.so and unify dlopen/dlsym with ld.so
 
 ```{task} Build shared libc.so and unify dlopen/dlsym with ld.so

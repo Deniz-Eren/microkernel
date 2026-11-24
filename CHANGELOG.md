@@ -19,6 +19,16 @@ Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- Added kernel `ET_DYN` and `PT_INTERP` executable loading with SysV `auxv`
+  entries (`AT_PHDR`, `AT_PHENT`, `AT_PHNUM`, `AT_BASE`, `AT_ENTRY`) and the
+  freestanding Ring 3 dynamic linker `/boot/ld.so`, which self-relocates, loads
+  `DT_NEEDED` libraries over `/dev/vfs` with `LD_LIBRARY_PATH` search before the
+  `/boot`, `/lib`, and `/usr/lib` defaults, applies `R_X86_64_*` relocations,
+  enforces W^X segment protections, runs `DT_INIT_ARRAY` constructors, and jumps
+  to `AT_ENTRY` (ADR_0057, TSK_0061).
+
 ### Fixed
 
 - Fixed `tests/stresstest/test_stress.c` boot-quiescence threshold from 8 to 9
