@@ -9,14 +9,14 @@
 #
 
 # Unified pre-commit gate for microkernel. Exit code is 0 only when every gate
-# passes: clang-format, docs-traceability-setup check_text.py, ASD-STE100
-# tools/check_ste.py, 4-stage build + Sphinx -W, QEMU tests, clang-tidy, and
-# CTest.
+# passes: clang-format, docs-traceability-setup check_text.py, optional
+# ste-writing-skill (tools/check_ste.py), 4-stage build + Sphinx -W, QEMU tests,
+# clang-tidy, and CTest.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
 ENV=./scripts/env.sh
-DEFAULT_TRACE_DIR="$HOME/.gemini/skills/docs-traceability-setup"
+DEFAULT_TRACE_DIR="$HOME/.agents/skills/docs-traceability-setup"
 SKILL_DIR="${DOCS_TRACEABILITY_SKILL:-$DEFAULT_TRACE_DIR}"
 CHECK_TEXT="$SKILL_DIR/scripts/check_text.py"
 
@@ -37,12 +37,19 @@ if ! python3 "$CHECK_TEXT" --root . > "$TEXT_LOG" 2>&1; then
     exit 1
 fi
 
-echo "==> ste (asd-ste100)"
-STE_LOG="$(mktemp)"
-if ! python3 tools/check_ste.py --root . > "$STE_LOG" 2>&1; then
-    echo "BUILD: FAIL (ste step; log: $STE_LOG)"
-    head -40 "$STE_LOG"
-    exit 1
+echo "==> ste (ste-writing-skill)"
+DEFAULT_STE_DIR="$HOME/.agents/skills/ste-writing-skill"
+STE_SKILL_DIR="${STE_WRITING_SKILL:-$DEFAULT_STE_DIR}"
+if [ -f "$STE_SKILL_DIR/scripts/ste_check.py" ] && \
+   [ -f "$STE_SKILL_DIR/data/dict.json" ]; then
+    STE_LOG="$(mktemp)"
+    if ! python3 tools/check_ste.py --root . > "$STE_LOG" 2>&1; then
+        echo "BUILD: FAIL (ste step; log: $STE_LOG)"
+        head -40 "$STE_LOG"
+        exit 1
+    fi
+else
+    echo "STE: SKIP (ste-writing-skill not installed at $STE_SKILL_DIR)"
 fi
 
 echo "==> build"

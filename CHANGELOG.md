@@ -42,6 +42,11 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Switched optional technical writing checks in `tools/check_ste.py`,
+  `scripts/build-agent.sh`, and `scripts/install-hooks.sh` to
+  `ste-writing-skill` (`STE_WRITING_SKILL`) with clean skip behavior when
+  absent, and simplified documentation rules across `AGENTS.md`, `README.md`,
+  `CNV_0002`, and WDRs to reference the `ste-writing-skill` skill.
 - Queued three incremental milestones in `docs/records/TASKS.md` for Ring 3
   OpenSSH Portable (`TSK_0055`: host-to-guest networking, `netserv` hardening,
   `nc`, and `ping`; `TSK_0056`: Ring 3 PTYs, `/dev/null`, `/dev/urandom`,
@@ -660,9 +665,9 @@ Changelog](https://keepachangelog.com).
   (ADR-18).
 - Unified pre-commit quality gate (`tools/check_ste.py`, updated
   `scripts/build-agent.sh`, and `scripts/install-hooks.sh`) enforcing full-repo
-  `clang-format`, `docs-traceability-setup` `check_text.py --root .`,
-  `asd-ste100` `ste_check.py`, build, QEMU tests, `clang-tidy`, and CTest before
-  every commit (ADR-17).
+  `clang-format`, `docs-traceability-setup` `check_text.py --root .`, optional
+  `ste-writing-skill`, build, QEMU tests, `clang-tidy`, and CTest before every
+  commit (ADR-17).
 - Milestone 6 (`TSK_0004`) hardware interrupt, port I/O, and scatter-gather IPC
   syscalls: `SYS_INTR_ATTACH_EVENT` (`11`), `SYS_INTR_UNMASK` (`12`),
   `SYS_IOPL_SET` (`25`, `CAP_SYS_INTR`-guarded), `SYS_MSG_READV` (`8`), and
@@ -752,10 +757,10 @@ Changelog](https://keepachangelog.com).
   (line width, greedy prose packing, and Doxygen file headers) in `AGENTS.md`,
   `WDR_0002`, and `CNV_0002`, and wrapped `AGENTS.md` to 80 columns.
 - Switched `authoring.modal_verb` in `.docs-traceability-setup.yml` from `shall`
-  to `must` for ASD-STE100 Issue 9 compliance, revised all requirements in
-  `docs/20-system/` to follow STE rules, expanded `technical_terms.txt` and
-  `allowed_phrases.txt`, and made ASD-STE100 requirements compliance explicit in
-  `AGENTS.md`, `WDR_0002`, and `CNV_0002`.
+  to `must`, revised all requirements in `docs/20-system/` using the
+  `ste-writing-skill` skill, expanded `technical_terms.txt` and
+  `allowed_phrases.txt`, and documented technical writing rules in `AGENTS.md`,
+  `WDR_0002`, and `CNV_0002`.
 - Retargeted in-code `VER_` tags in `tests/test_runner.py`,
   `tools/traceability/check_needs_audit.py`, and `tests/traceability/` from
   `VER_POWER_*` to the real `BOOT`, `MEM`, `PROC`, `IPC`, `SIG`, `LIBC`, and

@@ -27,7 +27,7 @@ skill](docs/skills/git/SKILL.md) defines each mode and its workflow.
    hand-picked file lists):
    - `clang-format` (`./scripts/formatter-agent.sh`)
    - `docs-traceability-setup` full-repo text check (`check_text.py --root .`)
-   - `asd-ste100` full-repo STE check (`python3 tools/check_ste.py --root .`)
+   - optional `ste-writing-skill` check (`python3 tools/check_ste.py --root .`)
    - 4-stage build + Sphinx `-W`
    - headless QEMU test suite
    - `clang-tidy` static analysis
@@ -118,7 +118,7 @@ skip gates, never check only a hand-picked subset of files, and never pass
 `--no-verify` to bypass `.git/hooks/pre-commit`.
 
 - [ ] `./scripts/build-agent.sh` ran on the final working tree and exited 0
-  (`FORMAT: PASS`, full-repo `check_text.py --root .`, full-repo
+  (`FORMAT: PASS`, full-repo `check_text.py --root .`, optional
   `tools/check_ste.py --root .`, 4-stage build + Sphinx `-W`, QEMU tests,
   `clang-tidy`, and all CTest targets)
 - [ ] Commit message obeys Conventional Commits with `Assisted-by:` footer
@@ -181,16 +181,20 @@ Rules that apply only to this project. Each rule links to its skill or document.
   newline, max line width) and pass the `docs-traceability-setup` skill's
   `scripts/check_text.py` (maximum line length, greedy prose packing, and
   Doxygen file headers) at all times alongside `clang-format`, `clang-tidy`,
-  `asd-ste100`, `posix-issue8-os-dev`, and CTest. Repair content rather than
-  weakening rules. See `.editorconfig`, `.docs-traceability-setup.yml`, and
+  `ste-writing-skill` (when installed), `posix-issue8-os-dev`, and CTest. Repair
+  content rather than weakening rules. See `.editorconfig`,
+  `.docs-traceability-setup.yml`, and
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0002`,
   `CNV_0003`).
-- **ASD-STE100 technical English (`asd-ste100`):** All documentation and
-  requirements in `README.md` and `docs/` (including Sphinx-Needs `{sys}`,
-  `{swr}`, and specification directives) must follow ASD-STE100 Issue 9. Always
-  use the `asd-ste100` skill to write and check requirements, use `must` (not
-  `shall`) as the modal verb (`authoring.modal_verb: must`), and keep project
-  terms in `technical_terms.txt` and `allowed_phrases.txt`. See
+- **Technical writing (`ste-writing-skill`):** Use the `ste-writing-skill` skill
+  when drafting and checking documentation and requirements in `README.md` and
+  `docs/` (including Sphinx-Needs `{sys}`, `{swr}`, and specification
+  directives). Use `must` (not `shall`) as the modal verb
+  (`authoring.modal_verb: must`), and keep project terms in
+  `technical_terms.txt` and `allowed_phrases.txt`. Never copy any content from
+  the `ste-writing-skill` skill into this repository. When `ste-writing-skill`
+  is installed on the build machine, `tools/check_ste.py` runs automatically;
+  build scripts skip it when absent. See
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0002`).
 - **Two-tier bidirectional code and POSIX traceability
   (`posix-issue8-os-dev`):** Keep Sphinx-Needs items at the contract, header, or

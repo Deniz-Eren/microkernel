@@ -37,17 +37,18 @@ transient `TSK_` or `RDM_` IDs anywhere in source code or comments. All active
 POSIX C tests `test_*.c`.
 ```
 
-### CNV_0002 — Source Text and ASD-STE100 Conventions
+### CNV_0002 — Source Text and Technical Writing Conventions
 
-```{con} Source text and ASD-STE100 conventions
+```{con} Source text and technical writing conventions
 :id: CNV_0002
 :status: active
 :traces: ADR_0001, WDR_0002, WDR_0006, WDR_0007, WDR_0008
 
 Wrap all source and doc files to the `.editorconfig` 80-column limit and pack
-prose greedily. Pass `scripts/check_text.py --root .` with zero findings. Write
-all requirements (`sys`, `swr`) and docs in ASD-STE100 Issue 9 using active
-voice and `must` (not `shall`). Keep sentences within 25 words and pass
+prose greedily. Pass `scripts/check_text.py --root .` with zero findings. Use
+the `ste-writing-skill` skill for requirements (`sys`, `swr`) and docs with
+modal verb `must` (not `shall`). Never copy content from `ste-writing-skill`
+into this repository. When `ste-writing-skill` is installed, pass
 `tools/check_ste.py`. Keep project terms in `technical_terms.txt` and
 `allowed_phrases.txt`.
 ```

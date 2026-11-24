@@ -1,13 +1,13 @@
 ##
 # @file     check_ste.py
-# @brief    Repository-wide ASD-STE100 Issue 9 gate for README.md and docs/
+# @brief    Optional repository-wide ste-writing-skill check for project docs
 #
 # @copyright
 # Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
 # SPDX-License-Identifier: MIT
 #
 
-"""Run ste_check.py across README.md and all non-immutable docs/ Markdown."""
+"""Run optional ste-writing-skill checks across README.md and docs/ Markdown."""
 
 # need:: COMP_DOCS_0001 VER_DOCS_0001
 
@@ -24,8 +24,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_STE_DIR = Path(
     os.environ.get(
-        "ASD_STE100_SKILL",
-        str(Path.home() / ".gemini/skills/asd-ste100"),
+        "STE_WRITING_SKILL",
+        str(Path.home() / ".agents/skills/ste-writing-skill"),
     )
 )
 DEFAULT_STE = DEFAULT_STE_DIR / "scripts" / "ste_check.py"
@@ -117,12 +117,13 @@ def main(argv: list[str] | None = None) -> int:
 
     root = Path(args.root).resolve()
     ste_script = Path(args.ste_script)
-    if not ste_script.is_file():
+    ste_dict = ste_script.parent.parent / "data" / "dict.json"
+    if not ste_script.is_file() or not ste_dict.is_file():
         print(
-            f"STE: FAIL (missing ste_check.py at {ste_script})",
-            file=sys.stderr,
+            "STE: SKIP (optional ste-writing-skill not installed at "
+            f"{ste_script.parent.parent})"
         )
-        return 2
+        return 0
 
     terms = root / "technical_terms.txt"
     phrases = root / "allowed_phrases.txt"

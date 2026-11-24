@@ -49,9 +49,9 @@ define the system contract inside the Sphinx-Needs traceability model (`docs/`):
   `blkdrv`, `netserv`) and POSIX libraries run in isolated Ring 3 processes.
 - **Two-tier bidirectional traceability:** Business decisions (`BDR_`),
   architecture and workflow decisions (`ADR_`, `WDR_`), and requirements
-  (`SYS_`, `SWR_`) in ASD-STE100 Issue 9 carry `:posix:` links to IEEE Std
-  1003.1-2024. Every public header carries an `ICD_` `need::` tag, every source
-  module carries a `COMP_` tag, and every test file carries a `VER_` tag.
+  (`SYS_`, `SWR_`) carry `:posix:` links to IEEE Std 1003.1-2024. Every public
+  header carries an `ICD_` `need::` tag, every source module carries a `COMP_`
+  tag, and every test file carries a `VER_` tag.
 - **Build-enforced integrity:** `config/sphinx/need_tag_check.py` and
   `tools/traceability/check_needs_audit.py` fail the Sphinx `-W` build on broken
   links or unverified requirements. They also reject untagged active
@@ -103,8 +103,9 @@ gates:
    `tests/` (`./scripts/formatter-agent.sh`).
 2. **Source text:** `check_text.py --root .` checks 80-column line limits,
    greedy prose packing, and Doxygen file headers.
-3. **Controlled English:** `tools/check_ste.py --root .` checks ASD-STE100 Issue
-   9 compliance across `README.md` and `docs/`.
+3. **Technical writing (optional):** `tools/check_ste.py --root .` runs the
+   `ste-writing-skill` skill across `README.md` and `docs/` when installed, and
+   skips cleanly when absent.
 4. **Build and docs:** Four-stage cross-build plus clean Sphinx `-W` HTML build.
 5. **Hardware testbed:** Headless QEMU serial suite (`[OK]` assertions).
 6. **Static analysis:** `clang-tidy` across all C sources and headers using
@@ -411,7 +412,7 @@ The kernel and the library use freestanding C17 with warnings as errors. Kernel
 code runs without a C runtime and maps code read-only (W^X). The kernel never
 dereferences user pointers directly. It validates page permissions and copies
 through the physical direct map (HHDM) with SMAP active. File naming, source
-text, ASD-STE100, traceability, and copyright rules live in
+text, technical writing, traceability, and copyright rules live in
 [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md).
 
 ## Status
@@ -443,7 +444,7 @@ milestones enforce `x86-64-v3` with `XSAVE`/`XRSTOR`, add `<fenv.h>` and
 - [docs/00-overview/context.md](docs/00-overview/context.md): system overview,
   directory structure, and integration points
 - [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md): file names, source
-  text, ASD-STE100, traceability, and copyright rules
+  text, technical writing, traceability, and copyright rules
 - [docs/30-architecture/adr/index.md](docs/30-architecture/adr/index.md),
   [docs/10-product/bdr/index.md](docs/10-product/bdr/index.md), and
   [docs/00-overview/wdr/index.md](docs/00-overview/wdr/index.md): architecture,

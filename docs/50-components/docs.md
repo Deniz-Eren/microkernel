@@ -11,9 +11,10 @@ bidirectional in-code tag scanner.
 
 `tools/traceability/check_needs_audit.py` loads `needs.json` and checks link
 symmetry, link rules, coverage, tags, and filenames. `tools/check_ste.py` runs
-ASD-STE100 checks across `README.md` and `docs/`. The CTest boundary gate checks
-Ring 0 modules, syscalls, and FD slots against accepted ADRs
-({need}`ICD_DOCS_0001`, {need}`ARC_DOCS_0001`).
+the optional `ste-writing-skill` skill across `README.md` and `docs/`, skipping
+cleanly when absent. The CTest boundary gate checks Ring 0 modules, syscalls,
+and FD slots against accepted ADRs ({need}`ICD_DOCS_0001`,
+{need}`ARC_DOCS_0001`).
 ```
 
 ```{comp} Bidirectional in-code tag scanner and Sphinx validation extension

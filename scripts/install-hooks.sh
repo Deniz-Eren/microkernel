@@ -18,7 +18,7 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-DEFAULT_TRACE_DIR="$HOME/.gemini/skills/docs-traceability-setup"
+DEFAULT_TRACE_DIR="$HOME/.agents/skills/docs-traceability-setup"
 SKILL_DIR="${DOCS_TRACEABILITY_SKILL:-$DEFAULT_TRACE_DIR}"
 CHECK_TEXT="$SKILL_DIR/scripts/check_text.py"
 if [ ! -f "$CHECK_TEXT" ]; then
@@ -28,7 +28,14 @@ fi
 
 ./scripts/formatter-agent.sh
 python3 "$CHECK_TEXT" --root .
-python3 tools/check_ste.py --root .
+DEFAULT_STE_DIR="$HOME/.agents/skills/ste-writing-skill"
+STE_SKILL_DIR="${STE_WRITING_SKILL:-$DEFAULT_STE_DIR}"
+if [ -f "$STE_SKILL_DIR/scripts/ste_check.py" ] && \
+   [ -f "$STE_SKILL_DIR/data/dict.json" ]; then
+    python3 tools/check_ste.py --root .
+else
+    echo "pre-commit: skipping optional STE check (ste-writing-skill absent)"
+fi
 rm -rf build/docs/doctrees
 ./scripts/env.sh ctest --test-dir build --output-on-failure
 EOF

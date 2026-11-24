@@ -102,8 +102,8 @@ flowchart TD
 ├── .clang-tidy                 <- Static analysis configuration
 ├── Containerfile               <- Podman build container image definition
 ├── CMakeLists.txt              <- Four-stage build and CTest integration
-├── allowed_phrases.txt         <- ASD-STE100 multi-word technical terms
-├── technical_terms.txt         <- ASD-STE100 technical nouns and verbs
+├── allowed_phrases.txt         <- Project multi-word technical phrases
+├── technical_terms.txt         <- Project technical nouns and verbs
 ├── kernel/                     <- Ring 0 kernel (arch, core, include, lib)
 ├── libc/                       <- Freestanding C17 / POSIX.1-2024 user library
 ├── servers/                    <- Ring 3 system servers and device drivers
@@ -196,5 +196,5 @@ flowchart TD
 - `scripts/build-agent.sh` and `scripts/install-hooks.sh`: Run formatting,
   `check_text.py --root .`, `tools/check_ste.py --root .`, build + Sphinx `-W`,
   headless QEMU tests, `clang-tidy`, and full CTest.
-- `technical_terms.txt` and `allowed_phrases.txt`: Project ASD-STE100 term lists
-  used by `tools/check_ste.py`.
+- `technical_terms.txt` and `allowed_phrases.txt`: Project term lists used by
+  optional `tools/check_ste.py` (`ste-writing-skill`).
