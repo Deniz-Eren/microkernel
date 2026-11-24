@@ -21,22 +21,22 @@ Order roadmap items by priority and link them to affected specifications through
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### RDM_0003 — Work toward POSIX.1-2024 (Issue 8) Base compatibility
+### RDM_0009 — Ring 3 dynamic linking and shared libraries
 
-```{roadmap} Work toward POSIX.1-2024 (Issue 8) Base compatibility
+```{roadmap} Ring 3 dynamic linking and shared libraries
 ---
-id: RDM_0003
+id: RDM_0009
 status: open
 traces: >
-  BDR_0003, ADR_0003, SYS_LIBC_0001, SYS_PROC_0001, SYS_SIG_0001,
-  SYS_MEM_0001, SYS_IPC_0001
+  BDR_0003, BDR_0004, ADR_0002, ADR_0054, ADR_0055, ADR_0056, SYS_BOOT_0001,
+  SYS_PROC_0001, SYS_MEM_0001, SYS_IPC_0001, SYS_LIBC_0001
 ---
 
-Work toward compatibility with interfaces from POSIX.1-2024 (IEEE Std
-1003.1-2024 / ISO/IEC/IEEE 9945:2026) across headers, `errno`, signals,
-`pthread_*`, `sem_*`, clocks/timers, `mmap`, `pipe2`/`dup3`/`ppoll`, and
-`aio_*`. Cover command shell utilities (`$'...'`, `set -o pipefail`, `read -d`)
-with automated compatibility gates ({need}`BDR_0003`, {need}`ADR_0003`).
+Add kernel `PT_INTERP` and SysV `auxv` handoff with zero new Ring 0 syscalls.
+Build a freestanding Ring 3 `/boot/ld.so` dynamic linker. Build shared
+`libc.so`, `libz.so.1`, `libcrypto.so.3`, and `libssl.so.3` into the sysroot and
+`boot.tar`. Link OpenSSH Portable and `bin/` utilities dynamically while keeping
+core boot servers static ({need}`ADR_0002`, {need}`ADR_0054`).
 ```
 
 ### RDM_0008 — Platform abstraction and future 64-bit ARM (arm64) support

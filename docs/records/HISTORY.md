@@ -20,6 +20,24 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### RDM_0003 — Work toward POSIX.1-2024 (Issue 8) Base compatibility
+
+```{roadmap} Work toward POSIX.1-2024 (Issue 8) Base compatibility
+---
+id: RDM_0003
+status: done
+traces: >
+  BDR_0003, ADR_0003, SYS_LIBC_0001, SYS_PROC_0001, SYS_SIG_0001,
+  SYS_MEM_0001, SYS_IPC_0001
+---
+
+Work toward compatibility with interfaces from POSIX.1-2024 (IEEE Std
+1003.1-2024 / ISO/IEC/IEEE 9945:2026) across headers, `errno`, signals,
+`pthread_*`, `sem_*`, clocks/timers, `mmap`, `pipe2`/`dup3`/`ppoll`, and
+`aio_*`. Cover command shell utilities (`$'...'`, `set -o pipefail`, `read -d`)
+with automated compatibility gates ({need}`BDR_0003`, {need}`ADR_0003`).
+```
+
 ### TSK_0060 — Enable OpenSSL and zlib in OpenSSH Portable
 
 ```{task} Enable OpenSSL and zlib in OpenSSH Portable

@@ -42,6 +42,12 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Archived completed `RDM_0003` (`70/70` Base headers, `1037/1037` Base
+  interfaces, `108/108` Base XCU utilities) to `docs/records/HISTORY.md`, added
+  `RDM_0009` to `docs/records/ROADMAP.md`, and queued six dynamic-linking
+  milestones (`TSK_0061`–`TSK_0066`) in `docs/records/TASKS.md` covering kernel
+  `PT_INTERP`/SysV `auxv`, Ring 3 `ld.so`, shared `libc.so`/`libz.so.1`/OpenSSL,
+  dynamically linked OpenSSH Portable, and dynamically linked `bin/` utilities.
 - Enabled Ring 3 sysroot OpenSSL `3.0.15` (`libcrypto.a`) and `zlib 1.3.1`
   (`libz.a`) in OpenSSH Portable `9.9p2` (`cmake/openssh.cmake`,
   `cmake/openssh_config.h`, `TSK_0060`), added Ed25519, ECDSA P-256, and

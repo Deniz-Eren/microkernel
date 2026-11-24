@@ -380,11 +380,11 @@ isolated Ring 3 OS services outside the kernel:
   posix.symbol_diff` and open `build/posix-symbol-diff.txt` for the live list of
   POSIX.1-2024 Base headers, functions, and XCU utilities. See also the
   [traceability matrix](docs/60-verification/traceability.md).
-- **Not available yet (planned next):** All 70 POSIX.1-2024 Base C headers and
-  all 1037 Base C interfaces are in place. Remaining XCU formatting, language,
-  encoding, and batch utilities (`split`, `csplit`, `awk`, `ed`, `bc`, `m4`,
-  `uuencode`, `at`, `crontab`, `mailx`) follow next. See
-  [docs/records/TASKS.md](docs/records/TASKS.md) and
+- **Not available yet (planned next):** All 70 POSIX.1-2024 Base C headers, all
+  1037 Base C interfaces, and all 108 Base XCU utilities are in place. Next
+  milestones add Ring 3 dynamic linking (`PT_INTERP`, `/boot/ld.so`, `libc.so`,
+  `libz.so.1`, `libcrypto.so.3`, `libssl.so.3`) for OpenSSH Portable and `bin/`
+  utilities. See [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 
 ## Source tree
