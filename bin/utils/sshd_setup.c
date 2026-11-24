@@ -1,6 +1,6 @@
 /**
  * @file     sshd_setup.c
- * @brief    Initialize /mnt/etc/ssh, Ed25519 host key, and launch /boot/sshd
+ * @brief    Initialize /mnt/etc/ssh, host keys, and launch /boot/sshd
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -81,6 +81,41 @@ static int run_cmd(const char *path, char *const argv[]) {
     return 0;
 }
 
+static int ensure_host_key(const char *type, const char *bits,
+                           const char *path) {
+    if (access(path, F_OK) == 0) {
+        return 0;
+    }
+    if (bits) {
+        char *const argv[] = {
+            (char *)"/boot/ssh-keygen",
+            (char *)"-t",
+            (char *)type,
+            (char *)"-b",
+            (char *)bits,
+            (char *)"-N",
+            (char *)"",
+            (char *)"-f",
+            (char *)path,
+            (char *)"-q",
+            NULL,
+        };
+        return run_cmd("/boot/ssh-keygen", argv);
+    }
+    char *const argv[] = {
+        (char *)"/boot/ssh-keygen",
+        (char *)"-t",
+        (char *)type,
+        (char *)"-N",
+        (char *)"",
+        (char *)"-f",
+        (char *)path,
+        (char *)"-q",
+        NULL,
+    };
+    return run_cmd("/boot/ssh-keygen", argv);
+}
+
 static int sshd_pid_alive(void) {
     int fd = open("/tmp/sshd.pid", O_RDONLY);
     if (fd < 0) {
@@ -130,22 +165,13 @@ int main(void) {
         }
     }
 
-    if (access("/mnt/etc/ssh/ssh_host_ed25519_key", F_OK) != 0) {
-        char *const keygen_argv[] = {
-            (char *)"/boot/ssh-keygen",
-            (char *)"-t",
-            (char *)"ed25519",
-            (char *)"-N",
-            (char *)"",
-            (char *)"-f",
-            (char *)"/mnt/etc/ssh/ssh_host_ed25519_key",
-            (char *)"-q",
-            NULL,
-        };
-        if (run_cmd("/boot/ssh-keygen", keygen_argv) != 0) {
-            fprintf(stderr, "sshd-setup: ssh-keygen failed\n");
-            return 1;
-        }
+    if (ensure_host_key("ed25519", NULL, "/mnt/etc/ssh/ssh_host_ed25519_key") !=
+            0 ||
+        ensure_host_key("ecdsa", "256", "/mnt/etc/ssh/ssh_host_ecdsa_key") !=
+            0 ||
+        ensure_host_key("rsa", "2048", "/mnt/etc/ssh/ssh_host_rsa_key") != 0) {
+        fprintf(stderr, "sshd-setup: ssh-keygen failed\n");
+        return 1;
     }
 
     if (access("/mnt/etc/ssh/sshd_config", F_OK) != 0) {
@@ -153,11 +179,14 @@ int main(void) {
             "Port 22\n"
             "ListenAddress 0.0.0.0\n"
             "HostKey /mnt/etc/ssh/ssh_host_ed25519_key\n"
+            "HostKey /mnt/etc/ssh/ssh_host_ecdsa_key\n"
+            "HostKey /mnt/etc/ssh/ssh_host_rsa_key\n"
             "AuthorizedKeysFile .ssh/authorized_keys "
             "/mnt/etc/ssh/authorized_keys\n"
             "PermitRootLogin yes\n"
             "PasswordAuthentication yes\n"
             "PubkeyAuthentication yes\n"
+            "Compression delayed\n"
             "UseDNS no\n"
             "PidFile /tmp/sshd.pid\n";
         if (write_file_mode("/mnt/etc/ssh/sshd_config", k_cfg, 0644u) != 0) {

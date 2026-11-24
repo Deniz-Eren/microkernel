@@ -13,6 +13,11 @@ option(MICROKERNEL_BUILD_OPENSSH
     "Download and cross-compile OpenSSH Portable into boot.tar" ON)
 
 if(MICROKERNEL_BUILD_OPENSSH)
+    if(NOT MICROKERNEL_BUILD_OPENSSL OR NOT MICROKERNEL_BUILD_ZLIB)
+        message(FATAL_ERROR
+            "MICROKERNEL_BUILD_OPENSSH requires MICROKERNEL_BUILD_OPENSSL=ON "
+            "and MICROKERNEL_BUILD_ZLIB=ON")
+    endif()
     include(FetchContent)
 
     set(MICROKERNEL_OPENSSH_VERSION "9.9p2")
@@ -311,13 +316,15 @@ if(MICROKERNEL_BUILD_OPENSSH)
     target_compile_options(openssh_compat PRIVATE ${OPENSSH_CFLAGS})
     target_include_directories(openssh_compat SYSTEM PRIVATE
         ${OPENSSH_INC_DIRS})
-    add_dependencies(openssh_compat install_headers)
+    add_dependencies(openssh_compat
+        install_headers install_zlib_headers openssl_sysroot)
 
     add_library(openssh_libssh STATIC ${OPENSSH_LIBSSH_SRCS})
     target_compile_options(openssh_libssh PRIVATE ${OPENSSH_CFLAGS})
     target_include_directories(openssh_libssh SYSTEM PRIVATE
         ${OPENSSH_INC_DIRS})
-    add_dependencies(openssh_libssh install_headers)
+    add_dependencies(openssh_libssh
+        install_headers install_zlib_headers openssl_sysroot)
 
     function(microkernel_add_openssh_executable name boot_name)
         add_executable(${name} ${ARGN})
@@ -334,8 +341,8 @@ if(MICROKERNEL_BUILD_OPENSSH)
         set_target_properties(${name} PROPERTIES LINK_DEPENDS
             ${MICROKERNEL_USER_LINKER_SCRIPT})
         target_link_libraries(${name} PRIVATE
-            openssh_libssh openssh_compat c)
-        add_dependencies(${name} c openssh_libssh openssh_compat)
+            openssh_libssh openssh_compat crypto z c)
+        add_dependencies(${name} c z crypto openssh_libssh openssh_compat)
         set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
             "${boot_name}=$<TARGET_FILE:${name}>")
         set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})

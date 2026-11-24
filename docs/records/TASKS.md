@@ -20,17 +20,3 @@ into the normative model through `:traces:`.
 :filter: docname == 'records/TASKS'
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
-
-### TSK_0060 — Enable OpenSSL and zlib in OpenSSH Portable
-
-```{task} Enable OpenSSL and zlib in OpenSSH Portable
-:id: TSK_0060
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0003, SYS_IPC_0001, SYS_LIBC_0001
-
-Update the CMake OpenSSH Portable build configuration to link against the Ring 3
-sysroot OpenSSL and `zlib` libraries. Download all third-party sources during
-the CMake build without cloning into the repository. Verify RSA, ECDSA, Ed25519,
-and compressed SSH sessions in CTest ({need}`SYS_IPC_0001`,
-{need}`SYS_LIBC_0001`).
-```

@@ -143,7 +143,7 @@ def _run_ssh_with_pty(
 class SshdEndToEndTests(unittest.TestCase):
     """Real OpenSSH ssh client -> QEMU SLIRP hostfwd -> Microkernel sshd."""
 
-    def test_sshd_pubkey_password_and_interactive_pty(self) -> None:
+    def test_sshd_rsa_ecdsa_ed25519_compressed_password_and_pty(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             tmpdir = Path(td)
             iso_path = _build_sh_iso(tmpdir)
@@ -151,27 +151,24 @@ class SshdEndToEndTests(unittest.TestCase):
             disk_path.write_bytes(b"\x00" * (4 * 1024 * 1024))
             host_port = _pick_free_port()
 
-            key_path = tmpdir / "id_ed25519"
-            kg = subprocess.run(
-                [
-                    "ssh-keygen",
-                    "-t",
-                    "ed25519",
-                    "-N",
-                    "",
-                    "-f",
-                    str(key_path),
-                    "-q",
-                ],
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(
-                kg.returncode, 0, f"ssh-keygen failed: {kg.stderr}"
-            )
-            pubkey = (tmpdir / "id_ed25519.pub").read_text(
-                encoding="utf-8"
-            ).strip()
+            def _keygen(
+                name: str, ktype: str, bits: str | None = None
+            ) -> tuple[Path, str]:
+                kp = tmpdir / name
+                cmd = ["ssh-keygen", "-t", ktype]
+                if bits is not None:
+                    cmd.extend(["-b", bits])
+                cmd.extend(["-N", "", "-f", str(kp), "-q"])
+                kg = subprocess.run(cmd, capture_output=True, text=True)
+                self.assertEqual(
+                    kg.returncode, 0, f"ssh-keygen {ktype} failed: {kg.stderr}"
+                )
+                pub = Path(f"{kp}.pub").read_text(encoding="utf-8").strip()
+                return kp, pub
+
+            ed_key, ed_pub = _keygen("id_ed25519", "ed25519")
+            ecdsa_key, ecdsa_pub = _keygen("id_ecdsa", "ecdsa", "256")
+            rsa_key, rsa_pub = _keygen("id_rsa", "rsa", "2048")
 
             qemu_cmd = [
                 "qemu-system-x86_64",
@@ -242,7 +239,7 @@ class SshdEndToEndTests(unittest.TestCase):
                     proc.stdin.flush()
                     time.sleep(0.015)
 
-            base_ssh = [
+            base_ssh_common = [
                 "ssh",
                 "-p",
                 str(host_port),
@@ -252,9 +249,8 @@ class SshdEndToEndTests(unittest.TestCase):
                 "UserKnownHostsFile=/dev/null",
                 "-o",
                 "ConnectTimeout=15",
-                "-o",
-                "LogLevel=ERROR",
             ]
+            base_ssh = base_ssh_common + ["-o", "LogLevel=ERROR"]
 
             try:
                 self.assertTrue(
@@ -270,7 +266,7 @@ class SshdEndToEndTests(unittest.TestCase):
 
                 # Install temporary client Ed25519 public key into guest.
                 install_cmd = (
-                    f"/boot/printf '%s\\n' '{pubkey}' "
+                    f"/boot/printf '%s\\n' '{ed_pub}' "
                     "> /mnt/root/.ssh/authorized_keys && "
                     "/boot/chmod 600 /mnt/root/.ssh/authorized_keys && "
                     "/boot/echo KEY''DONE\n"
@@ -282,34 +278,149 @@ class SshdEndToEndTests(unittest.TestCase):
                     f"{serial_buf.decode(errors='replace')}",
                 )
 
-                # 1. Ed25519 public-key authentication + non-interactive exec.
-                r1 = subprocess.run(
+                # 1. Ed25519 host + client key auth, exec, and install keys.
+                r_ed = subprocess.run(
                     base_ssh
                     + [
                         "-i",
-                        str(key_path),
+                        str(ed_key),
                         "-o",
                         "BatchMode=yes",
                         "-o",
                         "IdentitiesOnly=yes",
+                        "-o",
+                        "HostKeyAlgorithms=ssh-ed25519",
+                        "-o",
+                        "PubkeyAcceptedAlgorithms=ssh-ed25519",
                         "root@127.0.0.1",
-                        "/boot/uname -s && /boot/id -un",
+                        "/boot/uname -s && /boot/id -un && "
+                        "/boot/cat >> /mnt/root/.ssh/authorized_keys && "
+                        "/boot/chmod 600 /mnt/root/.ssh/authorized_keys",
+                    ],
+                    input=f"{ecdsa_pub}\n{rsa_pub}\n",
+                    capture_output=True,
+                    text=True,
+                    timeout=45.0,
+                )
+                self.assertEqual(
+                    r_ed.returncode,
+                    0,
+                    f"ssh ed25519 exec failed (rc={r_ed.returncode}):\n"
+                    f"stdout={r_ed.stdout!r}\nstderr={r_ed.stderr!r}\n"
+                    f"serial:\n{serial_buf.decode(errors='replace')}",
+                )
+                self.assertIn("Microkernel", r_ed.stdout)
+                self.assertIn("root", r_ed.stdout)
+
+                # 2. RSA host + client key auth with OpenSSL AES-128-GCM cipher.
+                r_rsa = subprocess.run(
+                    base_ssh
+                    + [
+                        "-i",
+                        str(rsa_key),
+                        "-o",
+                        "BatchMode=yes",
+                        "-o",
+                        "IdentitiesOnly=yes",
+                        "-o",
+                        "HostKeyAlgorithms=rsa-sha2-512,rsa-sha2-256",
+                        "-o",
+                        "PubkeyAcceptedAlgorithms=rsa-sha2-512,rsa-sha2-256",
+                        "-o",
+                        "Ciphers=aes128-gcm@openssh.com",
+                        "root@127.0.0.1",
+                        "/boot/echo RSA_AUTH_OK",
                     ],
                     capture_output=True,
                     text=True,
                     timeout=45.0,
                 )
                 self.assertEqual(
-                    r1.returncode,
+                    r_rsa.returncode,
                     0,
-                    f"ssh pubkey exec failed (rc={r1.returncode}):\n"
-                    f"stdout={r1.stdout!r}\nstderr={r1.stderr!r}\n"
+                    f"ssh RSA exec failed (rc={r_rsa.returncode}):\n"
+                    f"stdout={r_rsa.stdout!r}\nstderr={r_rsa.stderr!r}\n"
                     f"serial:\n{serial_buf.decode(errors='replace')}",
                 )
-                self.assertIn("Microkernel", r1.stdout)
-                self.assertIn("root", r1.stdout)
+                self.assertIn("RSA_AUTH_OK", r_rsa.stdout)
 
-                # 2. Password authentication (dev password: microkernel).
+                # 3. ECDSA P-256 host + client key auth with ECDH KEX.
+                r_ecdsa = subprocess.run(
+                    base_ssh
+                    + [
+                        "-i",
+                        str(ecdsa_key),
+                        "-o",
+                        "BatchMode=yes",
+                        "-o",
+                        "IdentitiesOnly=yes",
+                        "-o",
+                        "HostKeyAlgorithms=ecdsa-sha2-nistp256",
+                        "-o",
+                        "PubkeyAcceptedAlgorithms=ecdsa-sha2-nistp256",
+                        "-o",
+                        "KexAlgorithms=ecdh-sha2-nistp256",
+                        "root@127.0.0.1",
+                        "/boot/echo ECDSA_AUTH_OK",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=45.0,
+                )
+                self.assertEqual(
+                    r_ecdsa.returncode,
+                    0,
+                    f"ssh ECDSA exec failed (rc={r_ecdsa.returncode}):\n"
+                    f"stdout={r_ecdsa.stdout!r}\nstderr={r_ecdsa.stderr!r}\n"
+                    f"serial:\n{serial_buf.decode(errors='replace')}",
+                )
+                self.assertIn("ECDSA_AUTH_OK", r_ecdsa.stdout)
+
+                # 4. Compressed SSH session (zlib@openssh.com) with bulk echo.
+                payload = "ZLIB_COMPRESS_PAYLOAD_0123456789ABCDEF\n" * 128
+                r_zlib = subprocess.run(
+                    base_ssh_common
+                    + [
+                        "-v",
+                        "-C",
+                        "-o",
+                        "Compression=yes",
+                        "-i",
+                        str(ed_key),
+                        "-o",
+                        "BatchMode=yes",
+                        "-o",
+                        "IdentitiesOnly=yes",
+                        "root@127.0.0.1",
+                        "/boot/cat",
+                    ],
+                    input=payload,
+                    capture_output=True,
+                    text=True,
+                    timeout=45.0,
+                )
+                self.assertEqual(
+                    r_zlib.returncode,
+                    0,
+                    f"ssh compressed exec failed (rc={r_zlib.returncode}):\n"
+                    f"stdout={r_zlib.stdout!r}\nstderr={r_zlib.stderr!r}\n"
+                    f"serial:\n{serial_buf.decode(errors='replace')}",
+                )
+                self.assertGreaterEqual(
+                    r_zlib.stderr.count("compression: zlib@openssh.com"),
+                    2,
+                    f"zlib@openssh.com not negotiated both ways:\n"
+                    f"{r_zlib.stderr}",
+                )
+                self.assertIn("compress outgoing:", r_zlib.stderr)
+                self.assertIn("compress incoming:", r_zlib.stderr)
+                self.assertEqual(
+                    r_zlib.stdout,
+                    payload,
+                    f"unexpected compressed payload output:\n{r_zlib.stdout!r}",
+                )
+
+                # 5. Password authentication (dev password: microkernel).
                 rc_pw, out_pw = _run_ssh_with_pty(
                     base_ssh
                     + [
@@ -332,13 +443,13 @@ class SshdEndToEndTests(unittest.TestCase):
                 )
                 self.assertIn(b"PW_AUTH_OK", out_pw)
 
-                # 3. Interactive PTY session (-tt) checking /dev/pts/ support.
+                # 6. Interactive PTY session (-tt) checking /dev/pts/ support.
                 rc_pty, out_pty = _run_ssh_with_pty(
                     base_ssh
                     + [
                         "-tt",
                         "-i",
-                        str(key_path),
+                        str(ed_key),
                         "-o",
                         "BatchMode=yes",
                         "-o",

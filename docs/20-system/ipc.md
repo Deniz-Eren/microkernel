@@ -196,14 +196,15 @@ must supply `/dev/null`, `/dev/zero`, and ChaCha20-backed `/dev/urandom`.
 :id: SWR_IPC_0016
 :status: active
 :derives: SYS_IPC_0001
-:traces: BDR_0003, BDR_0004, ADR_0002, ADR_0052, ADR_0053, ADR_0054
+:traces: BDR_0003, BDR_0004, ADR_0002, ADR_0054, ADR_0055, ADR_0056
 
 The CMake build must download and cross-compile OpenSSH Portable `sshd`,
 `sshd-session`, and `ssh-keygen` into `boot.tar` without storing upstream source
-in git. Interactive `init=sh` boot must run `/boot/sshd-setup` to prepare
-`/mnt/etc/ssh`, an Ed25519 host key, and `/mnt/etc/passwd`. It must start
-`/boot/sshd` on TCP port 22 for Ed25519 public-key, password, and PTY sessions
-({need}`SYS_IPC_0001`).
+in git. Those binaries must link against sysroot OpenSSL and `zlib`. Interactive
+`init=sh` boot must run `/boot/sshd-setup` to prepare `/mnt/etc/ssh`, Ed25519,
+ECDSA, and RSA host keys, and `/mnt/etc/passwd`. It must start `/boot/sshd` on
+TCP port 22 for RSA, ECDSA, Ed25519, compressed (`zlib@openssh.com`), password,
+and PTY sessions ({need}`SYS_IPC_0001`).
 ```
 
 [fn-pipe2]:

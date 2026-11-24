@@ -269,8 +269,9 @@ and `libc/src/socket.c` implement `AF_UNIX` `SCM_RIGHTS` FD passing
 
 `cmake/openssh.cmake`, `cmake/openssh_config.h`, and `cmake/openssh_compat/`
 download and cross-compile OpenSSH Portable `9.9p2` (`sshd`, `sshd-session`,
-`ssh-keygen`) into `boot.tar` during the CMake build. `bin/utils/sshd_setup.c`
-initializes `/mnt/etc/ssh`, `/mnt/etc/passwd`, and the Ed25519 host key, and
-starts `/boot/sshd` on `init=sh` interactive boot ({need}`ICD_IPC_0017`,
-{need}`ICD_IPC_0018`, {need}`SWR_IPC_0016`).
+`ssh-keygen`) linked with sysroot OpenSSL `libcrypto.a` and `zlib` `libz.a` into
+`boot.tar` during the CMake build. `bin/utils/sshd_setup.c` initializes
+`/mnt/etc/ssh`, `/mnt/etc/passwd`, and Ed25519, ECDSA, and RSA host keys, and
+starts `/boot/sshd` with `Compression delayed` on `init=sh` interactive boot
+({need}`ICD_IPC_0017`, {need}`ICD_IPC_0018`, {need}`SWR_IPC_0016`).
 ```

@@ -183,6 +183,7 @@
 #define HAVE_TIME 1
 #define HAVE_TRUNCATE 1
 #define HAVE_UNSETENV 1
+#define HAVE_USLEEP 1
 #define HAVE_UTIMENSAT 1
 #define HAVE_UTIMES 1
 #define HAVE_VASPRINTF 1
@@ -211,7 +212,42 @@
 #define HAVE_DECL__GETLONG 0
 #define HAVE_DECL__GETSHORT 0
 
-/* Microkernel Ring 3 platform knobs (--without-openssl --without-zlib). */
+/* OpenSSL 3.0.15 and zlib 1.3.1 sysroot features. */
+#define WITH_OPENSSL 1
+#define WITH_ZLIB 1
+#define HAVE_LIBZ 1
+#define OPENSSL_HAS_ECC 1
+#define OPENSSL_HAS_NISTP256 1
+#define OPENSSL_HAS_NISTP384 1
+#define OPENSSL_HAS_NISTP521 1
+#define OPENSSL_HAS_ED25519 1
+#define OPENSSL_PRNG_ONLY 1
+#define HAVE_BN_IS_PRIME_EX 1
+#define HAVE_DSA_GENERATE_PARAMETERS_EX 1
+#define HAVE_EC_KEY_METHOD_NEW 1
+#define HAVE_EVP_CHACHA20 1
+#define HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV 1
+#define HAVE_EVP_CIPHER_CTX_IV 1
+#define HAVE_EVP_CIPHER_CTX_IV_NOCONST 1
+#define HAVE_EVP_DIGESTFINAL_EX 1
+#define HAVE_EVP_DIGESTINIT_EX 1
+#define HAVE_EVP_DIGESTSIGN 1
+#define HAVE_EVP_DIGESTVERIFY 1
+#define HAVE_EVP_MD_CTX_COPY_EX 1
+#define HAVE_EVP_PKEY_GET_RAW_PRIVATE_KEY 1
+#define HAVE_EVP_PKEY_GET_RAW_PUBLIC_KEY 1
+#define HAVE_EVP_SHA256 1
+#define HAVE_EVP_SHA384 1
+#define HAVE_EVP_SHA512 1
+#define HAVE_OPENSSL_INIT_CRYPTO 1
+#define HAVE_OPENSSL_VERSION 1
+#define HAVE_OPENSSL_VERSION_NUM 1
+#define HAVE_RSA_GENERATE_KEY_EX 1
+#define HAVE_RSA_GET_DEFAULT_METHOD 1
+#define HAVE_DECL_OPENSSL_IS_BORINGSSL 0
+#define HAVE_DECL_OPENSSL_NO_DSA 0
+
+/* Microkernel Ring 3 platform knobs. */
 #define BROKEN_GLOB 1
 #define DISABLE_LASTLOG 1
 #define DISABLE_LOGIN 1
@@ -265,5 +301,7 @@ struct itimerval {
 int setitimer(int which, const struct itimerval *value,
               struct itimerval *ovalue);
 #endif
+
+int usleep(unsigned int useconds);
 
 #endif /* _MICROKERNEL_OPENSSH_CONFIG_H */

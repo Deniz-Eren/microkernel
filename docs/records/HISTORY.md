@@ -20,6 +20,20 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0060 — Enable OpenSSL and zlib in OpenSSH Portable
+
+```{task} Enable OpenSSL and zlib in OpenSSH Portable
+:id: TSK_0060
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0054, ADR_0055, ADR_0056, SWR_IPC_0016
+
+Update the CMake OpenSSH Portable build configuration to link against the Ring 3
+sysroot OpenSSL and `zlib` libraries. Download all third-party sources during
+the CMake build without cloning into the repository. Verify RSA, ECDSA, Ed25519,
+and compressed SSH sessions in CTest ({need}`SWR_IPC_0016`,
+{need}`SYS_IPC_0001`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0059 — Cross-compile OpenSSL into the Ring 3 sysroot via CMake
 
 ```{task} Cross-compile OpenSSL into the Ring 3 sysroot via CMake

@@ -42,6 +42,13 @@ Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Enabled Ring 3 sysroot OpenSSL `3.0.15` (`libcrypto.a`) and `zlib 1.3.1`
+  (`libz.a`) in OpenSSH Portable `9.9p2` (`cmake/openssh.cmake`,
+  `cmake/openssh_config.h`, `TSK_0060`), added Ed25519, ECDSA P-256, and
+  RSA-2048 host key generation plus `Compression delayed` in
+  `bin/utils/sshd_setup.c`, and expanded CTest `ipc.sshd_e2e` to verify RSA
+  (`aes128-gcm@openssh.com`), ECDSA P-256 (`ecdh-sha2-nistp256`), Ed25519, and
+  `zlib@openssh.com` compressed SSH sessions.
 - Switched optional technical writing checks in `tools/check_ste.py`,
   `scripts/build-agent.sh`, and `scripts/install-hooks.sh` to
   `ste-writing-skill` (`STE_WRITING_SKILL`) with clean skip behavior when

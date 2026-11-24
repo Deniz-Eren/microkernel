@@ -182,6 +182,8 @@ and `/dev/urandom` ({need}`SWR_IPC_0015`).
 CTest `ipc.sshd_e2e` (`tests/boot/test_sshd_e2e.py`) boots Microkernel with
 `init=sh` and localhost QEMU SLIRP `hostfwd` to guest port 22. It verifies
 automatic `/boot/sshd` startup and runs the real OpenSSH `ssh` client. The test
-checks Ed25519 `authorized_keys` command execution, development password login,
-and an interactive `-tt` PTY session over `/dev/pts/` ({need}`SWR_IPC_0016`).
+checks Ed25519, RSA (`aes128-gcm@openssh.com`), and ECDSA P-256
+(`ecdh-sha2-nistp256`) public-key sessions. It also checks `zlib@openssh.com`
+compression (`-C`), password login, and an interactive `-tt` PTY session over
+`/dev/pts/` ({need}`SWR_IPC_0016`).
 ```

@@ -185,9 +185,10 @@ ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
     root@127.0.0.1
 ```
 
-To use an Ed25519 key instead of the development password, append your host
-public key (`~/.ssh/id_ed25519.pub`) to `/mnt/root/.ssh/authorized_keys` (`chmod
-600`) inside the VM. Host keys and `/mnt/etc/ssh` persist in `build/disk.img`.
+To use public-key login instead of the development password, append your
+Ed25519, ECDSA, or RSA host public key to `/mnt/root/.ssh/authorized_keys`
+(`chmod 600`) inside the VM. Host keys and `/mnt/etc/ssh` persist in
+`build/disk.img`.
 
 Press `Ctrl-A` followed by `X` to exit QEMU cleanly. If `qemu-system-x86_64` is
 installed directly on your host, you can also boot `build/microkernel-shell.iso`
@@ -295,9 +296,11 @@ terminal (`ttyserv`) with foreground `Ctrl-C` job control:
   `uuencode` and `uudecode`.
 - **Connect over TCP/IP and OpenSSH:** Run `ping` and `nc` (`-l`, `-k`, `-e`,
   `-u`) over Ring 3 `netserv` (`virtio-net`). Interactive `init=sh` boot runs
-  `/boot/sshd-setup` to prepare `/mnt/etc/ssh` and generate an Ed25519 host key
-  with `/boot/ssh-keygen`. It then launches OpenSSH Portable `/boot/sshd` on TCP
-  port 22 for Ed25519 public-key, password, and PTY logins.
+  `/boot/sshd-setup` to prepare `/mnt/etc/ssh` and generate Ed25519, ECDSA, and
+  RSA host keys with `/boot/ssh-keygen`. It then launches OpenSSH Portable
+  `/boot/sshd` (linked with sysroot OpenSSL `3.0.15` and `zlib 1.3.1`) on TCP
+  port 22 for RSA, ECDSA, Ed25519, compressed (`zlib@openssh.com`), password,
+  and PTY logins.
 - **Inspect and control processes, timing, credentials, and terminals:** View
   live processes with `ps` and check identity with `id` and `logname`. Adjust
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,
