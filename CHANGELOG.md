@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added the autonomous Hardware-in-the-Loop (HIL) testing guide and the
+  Raspberry Pi 400 USB-C HIL reference under `docs/60-verification/`, the
+  four-phase QEMU-to-HIL workflow decision (`WDR_0011`), the early USB CDC-ACM
+  console architecture decision (`ADR_0058`), roadmap item `RDM_0010`, and
+  queued tasks `TSK_0067` to `TSK_0074`.
 - Added kernel `ET_DYN` and `PT_INTERP` executable loading with SysV `auxv`
   entries (`AT_PHDR`, `AT_PHENT`, `AT_PHNUM`, `AT_BASE`, `AT_ENTRY`) and the
   freestanding Ring 3 dynamic linker `/boot/ld.so`, which self-relocates, loads

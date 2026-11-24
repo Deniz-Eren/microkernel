@@ -55,3 +55,26 @@ Keep `x86-64` as the active target while isolating architecture code under
 `virt` (`EL1`/`EL0`, `TTBR0`/`TTBR1`, GIC, Generic Timer, `svc #0`, `TPIDR_EL0`,
 and MMIO `PL011` UART) with no legacy 32-bit `x86` ({need}`ADR_0024`).
 ```
+
+### RDM_0010 — QEMU-first ARM64 bring-up and autonomous Raspberry Pi 400 HIL
+
+```{roadmap} QEMU-first ARM64 bring-up and autonomous Raspberry Pi 400 HIL
+---
+id: RDM_0010
+status: open
+traces: >
+  ADR_0024, ADR_0058, WDR_0011, SYS_BOOT_0001, SYS_MEM_0001, SYS_PROC_0001,
+  SYS_IPC_0001
+---
+
+Bring up the ARM64 (BCM2711) port in QEMU `-M raspi4b` behind a swappable
+`ConsoleBackend` with the PL011 UART as the first backend. Implement the
+platform-agnostic USB 2.0 and CDC-ACM protocol engine, the reusable Synopsys
+DWC2 slave/PIO core driver, and the BCM2711 board glue behind
+`EARLY_USB_CDC_CONSOLE` ({need}`ADR_0058`). Build the board-agnostic
+`tools/hil/` host runner with per-board configuration files. Provision the Pi
+400 once over SSH, then run the autonomous single-cable HIL loop and develop
+bare-metal drivers (VideoCore Mailbox HDMI framebuffer, PCIe root complex, and
+VL805 xHCI) through the four-phase workflow ({need}`WDR_0011`,
+{need}`ADR_0024`).
+```

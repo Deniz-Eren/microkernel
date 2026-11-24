@@ -391,6 +391,11 @@ isolated Ring 3 OS services outside the kernel:
   `libssl.so.3` and dynamically link OpenSSH Portable and `bin/` utilities. See
   [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
+- **Hardware-in-the-loop bring-up (queued):** The roadmap adds a four-phase
+  QEMU-to-HIL workflow. It brings up Raspberry Pi 400 (BCM2711) bare metal in
+  RAM over one USB-C cable. The interim console is a USB CDC-ACM device. See the
+  [HIL testing guide](docs/60-verification/hil-testing.md) and the [Raspberry Pi
+  400 reference](docs/60-verification/hil-rpi400.md).
 
 ## Source tree
 
@@ -408,8 +413,8 @@ isolated Ring 3 OS services outside the kernel:
 - `config/sphinx/`, `tools/` — Sphinx-Needs traceability model, tag scanner,
   auditor, and repository STE gate
 - `scripts/` — container, build, format, hook, and `boot.tar` helper scripts
-- `docs/` — Sphinx-Needs requirements, architecture, decisions, records, and
-  agent skills
+- `docs/` — Sphinx-Needs requirements, architecture, decisions, records, HIL
+  testing guides, and agent skills
 - `iso/` — GRUB Multiboot2 boot configuration
 - `cmake/` — Clang cross-compilation toolchain for CMake
 - `Containerfile` — reproducible Podman build and QEMU container definition
