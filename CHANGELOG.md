@@ -21,6 +21,13 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added the userland utility classification workflow decision (`WDR_0012`),
+  which classifies every new utility into native Ring 3 components
+  (`/boot/ld.so`, `libc`, `bin/`) or out-of-tree CMake ports
+  (`cmake/<pkg>.cmake`), roadmap item `RDM_0011` for post-POSIX runtime
+  utilities and third-party userland tools, and queued tasks `TSK_0075` to
+  `TSK_0078` (`ldd`/`ldconfig`, `getent` with built-in `C.UTF-8` locale support,
+  IANA `tzcode`, and `tar` via `libarchive`/`bsdtar`).
 - Added the autonomous Hardware-in-the-Loop (HIL) testing guide and the
   Raspberry Pi 400 USB-C HIL reference under `docs/60-verification/`, the
   four-phase QEMU-to-HIL workflow decision (`WDR_0011`), the early USB CDC-ACM

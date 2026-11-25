@@ -39,6 +39,25 @@ Build a freestanding Ring 3 `/boot/ld.so` dynamic linker. Build shared
 core boot servers static ({need}`ADR_0002`, {need}`ADR_0054`).
 ```
 
+### RDM_0011 — Post-POSIX runtime utilities and third-party userland tools
+
+```{roadmap} Post-POSIX runtime utilities and third-party userland tools
+---
+id: RDM_0011
+status: open
+traces: >
+  WDR_0012, BDR_0003, BDR_0004, ADR_0002, ADR_0054, SYS_LIBC_0001
+---
+
+Deliver post-POSIX runtime utilities in two tracks. Build OS-native Ring 3
+utilities in the repository: `ldd` via `/boot/ld.so`, `ldconfig` in `bin/`,
+`getent` in `bin/`, and built-in `C.UTF-8` locale support in `libc`
+({need}`WDR_0012`, {need}`BDR_0003`). Build out-of-tree CMake ports for
+third-party userland tools: `zic`, `zdump`, and `tzselect` from IANA `tzcode`,
+and `tar` via `libarchive`/`bsdtar`, fetched at build time without storing the
+upstream source in git ({need}`WDR_0012`, {need}`BDR_0004`, {need}`ADR_0054`).
+```
+
 ### RDM_0008 — Platform abstraction and future 64-bit ARM (arm64) support
 
 ```{roadmap} Platform abstraction and future 64-bit ARM (arm64) support

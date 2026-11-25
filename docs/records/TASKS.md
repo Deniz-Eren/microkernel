@@ -92,6 +92,71 @@ servers statically linked. Verify `boot.tar` size reduction and pass the full
 QEMU and CTest suites ({need}`SYS_LIBC_0001`, {need}`SYS_PROC_0001`).
 ```
 
+### TSK_0075 — Implement native ldd in /boot/ld.so and ldconfig in bin/
+
+```{task} Implement native ldd in /boot/ld.so and ldconfig in bin/
+:id: TSK_0075
+:status: open
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0002, SYS_LIBC_0001
+
+Extend `/boot/ld.so` to detect `argv[0]` ending in `ldd` (or
+`LD_TRACE_LOADED_OBJECTS=1`). Resolve `DT_NEEDED` dependencies across
+`/etc/ld.so.conf` and the standard library paths. Print `libname => /path
+(0xaddr)` without transferring control to `_start`. Install `/usr/bin/ldd` as a
+symlink to `/boot/ld.so`. Implement native `/usr/sbin/ldconfig` in `bin/`
+(dynamically linked against `libc.so`) to maintain `DT_SONAME` symlinks and exit
+cleanly for build scripts. Verify against `zlibtest`, `openssltest`, and `sshd`
+in QEMU ({need}`WDR_0012`, {need}`SYS_LIBC_0001`).
+```
+
+### TSK_0076 — Implement getent and built-in C.UTF-8 locale support
+
+```{task} Implement getent and built-in C.UTF-8 locale support
+:id: TSK_0076
+:status: open
+:traces: WDR_0012, BDR_0003, BDR_0004, SYS_LIBC_0001
+
+Implement `/usr/bin/getent` in Ring 3 `bin/` (dynamically linked against
+`libc.so`). Support `passwd`, `group`, `hosts`, `services`, and `protocols`
+lookups and enumeration via the existing `libc` NSS functions (`getpwnam`,
+`getgrnam`, `getaddrinfo`, `getservbyname`, `getprotobyname`). Use minimal
+`/etc/nsswitch.conf` defaults. Ensure `libc` (`libc.so` and `libc.a`) natively
+supports `"C"` and `"C.UTF-8"` in `setlocale()` and `nl_langinfo()` without
+requiring external binary `LC_*` files in `boot.tar`. Verify in QEMU and CTest
+({need}`WDR_0012`, {need}`SYS_LIBC_0001`).
+```
+
+### TSK_0077 — Build IANA tzcode (zic, zdump, tzselect) via CMake
+
+```{task} Build IANA tzcode (zic, zdump, tzselect) via CMake
+:id: TSK_0077
+:status: open
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0054, SYS_LIBC_0001
+
+Add `cmake/tzcode.cmake` to fetch and cross-compile public-domain IANA `tzcode`
+(`zic` and `zdump`, dynamically linked against `libc.so`). Install `tzselect`
+into the Ring 3 sysroot and `boot.tar`. Do not store upstream source in git
+({need}`WDR_0012`, {need}`BDR_0003`, {need}`BDR_0004`). Record the notice in
+`docs/THIRD-PARTY-NOTICES.md`. Verify `TZif` compilation and `zdump` inspection
+in QEMU and CTest ({need}`SYS_LIBC_0001`).
+```
+
+### TSK_0078 — Build tar (libarchive/bsdtar) via CMake and link dynamically
+
+```{task} Build tar (libarchive/bsdtar) via CMake and link dynamically
+:id: TSK_0078
+:status: open
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0054, SYS_LIBC_0001
+
+Add `cmake/tar.cmake` to fetch and cross-compile `tar` (`libarchive` `bsdtar` or
+GNU `tar`), linking dynamically against `libc.so` and `libz.so.1` with
+`--dynamic-linker=/boot/ld.so`. Do not store upstream source in git. Update
+`docs/THIRD-PARTY-NOTICES.md`. Install `/usr/bin/tar` into the Ring 3 sysroot
+and `boot.tar`. Verify `PT_INTERP` and `DT_NEEDED` via `ldd` and `llvm-readelf`.
+Test `.tar` and `.tar.gz` creation and extraction in QEMU and CTest
+({need}`WDR_0012`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0067 — Introduce ConsoleBackend and QEMU raspi4b ARM64 boot harness
 
 ```{task} Introduce ConsoleBackend and QEMU raspi4b ARM64 boot harness
