@@ -426,3 +426,20 @@ without `LD_LIBRARY_PATH=/tmp/libs`. The dynamic executable verifies
 `JUMP_SLOT` relocations, data symbols, and `DT_INIT_ARRAY` constructors
 ({need}`SWR_LIBC_0032`).
 ```
+
+```{ver} Verify the shared libc.so dynamic executable in QEMU
+:id: VER_LIBC_0033
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0033
+
+The headless QEMU harness runs `dynlibctest`, which execs `dynlibctest_dyn`, an
+`ET_DYN` PIE linked against `libc.so` with `PT_INTERP=/boot/ld.so`. The dynamic
+executable verifies `printf` and `snprintf`, `malloc`, `realloc`, `calloc`, and
+`free`. It verifies `dlopen`, `dlsym`, `dlclose`, and `dlerror` of `libdldyn.so`
+through the ld.so delegation. It verifies pthread join with mutexes and
+thread-local `errno` isolation. It verifies a `SIGUSR1` handler with `errno`
+preserved across the kernel signal frame. It verifies `fork` plus `execve`
+re-execution of the dynamic image with `waitpid` ({need}`SWR_LIBC_0033`).
+
+```

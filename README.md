@@ -358,10 +358,13 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   executables dynamically with `PT_INTERP=/boot/ld.so`: the freestanding Ring 3
   dynamic linker loads `DT_NEEDED` shared libraries over `/dev/vfs` (searching
   `LD_LIBRARY_PATH`, then `/boot`, `/lib`, and `/usr/lib`), applies `R_X86_64_*`
-  relocations, enforces W^X, and runs `DT_INIT_ARRAY` constructors. Link sysroot
-  `zlib` (`libz.a`, `<zlib.h>`) for DEFLATE and gzip compression. Link sysroot
-  OpenSSL `3.0.15` (`libcrypto.a`, `libssl.a`, `<openssl/*.h>`) for SHA-256,
-  AES-GCM, RSA, ECDSA, Ed25519, X.509, and TLS 1.3.
+  relocations, enforces W^X, and runs `DT_INIT_ARRAY` constructors. Link
+  dynamically against shared `libc.so` (soname `libc.so`, shipped in the boot
+  image): dynamic executables delegate `dlopen`, `dlsym`, `dlclose`, and
+  `dladdr` to `/boot/ld.so` through weak `ldso_*` exports. Link sysroot `zlib`
+  (`libz.a`, `<zlib.h>`) for DEFLATE and gzip compression. Link sysroot OpenSSL
+  `3.0.15` (`libcrypto.a`, `libssl.a`, `<openssl/*.h>`) for SHA-256, AES-GCM,
+  RSA, ECDSA, Ed25519, X.509, and TLS 1.3.
 
 ### For system server and driver authors
 
@@ -386,8 +389,8 @@ isolated Ring 3 OS services outside the kernel:
   [traceability matrix](docs/60-verification/traceability.md).
 - **Not available yet (planned next):** All 70 POSIX.1-2024 Base C headers, all
   1037 Base C interfaces, and all 108 Base XCU utilities are in place. Kernel
-  `PT_INTERP` loading and the Ring 3 dynamic linker `/boot/ld.so` are in place.
-  Next milestones add shared `libc.so`, `libz.so.1`, `libcrypto.so.3`, and
+  `PT_INTERP` loading, the Ring 3 dynamic linker `/boot/ld.so`, and shared
+  `libc.so` are in place. Next milestones add `libz.so.1`, `libcrypto.so.3`, and
   `libssl.so.3` and dynamically link OpenSSH Portable and `bin/` utilities. See
   [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).

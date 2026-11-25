@@ -21,6 +21,18 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Ring 3 builds a position-independent shared `libc.so` (soname `libc.so`)
+  beside static `libc.a` in the sysroot and ships it in the boot image {need::
+  SWR_LIBC_0033}.
+- New `microkernel_add_user_dynamic_executable` CMake function links ET_DYN PIE
+  executables with `PT_INTERP=/boot/ld.so` and `DT_NEEDED=libc.so` using a
+  `FILEHDR PHDRS` linker script {need:: SWR_LIBC_0033}.
+- Dynamic executables delegate `dlopen`, `dlsym`, `dlclose`, and `dladdr` to
+  `/boot/ld.so` through weak `ldso_*` exports in shared `libc.so` {need::
+  SWR_LIBC_0033}.
+- ADR_0059 records the dynamic libc conventions: image base 0, constructor split
+  between `ld.so` and `__libc_start_main`, no ELF TLS in `libc.so`, weak
+  delegation, eager binding aliases, and dlclose semantics {need:: ADR_0059}.
 - Added roadmap item `RDM_0012` for full POSIX.1-2024 utility conformance and
   queued 157 tasks (`TSK_0079` to `TSK_0235`), one per utility in
   `tests/posix/issue8-manifest.tsv`. Each task covers command-line options,

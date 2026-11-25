@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <dlfcn.h>
 #include <sys/errno.h>
 #include <sys/ipc.h>
 #include <sys/microkernel.h>
@@ -17,7 +18,7 @@
 #include <sys/vm.h>
 #include <time.h>
 
-/* need:: COMP_LIBC_0031 */
+/* need:: COMP_LIBC_0031 COMP_LIBC_0032 */
 
 #define LSO_PAGE_SIZE 4096u
 #define LSO_MAX_LOAD_SEGS 16u
@@ -27,6 +28,7 @@
 #define LSO_MAX_FILE (16u * 1024u * 1024u)
 #define LSO_ARENA_BYTES (256u * 1024u)
 #define LSO_NAME_MAX 64u
+#define LSO_ERR_MAX 128u
 
 #define EI_MAG0 0
 #define EI_MAG1 1
@@ -58,9 +60,12 @@
 #define DT_STRSZ 10
 #define DT_SYMENT 11
 #define DT_INIT 12
+#define DT_FINI 13
 #define DT_JMPREL 23
 #define DT_INIT_ARRAY 25
+#define DT_FINI_ARRAY 26
 #define DT_INIT_ARRAYSZ 27
+#define DT_FINI_ARRAYSZ 28
 #define DT_GNU_HASH 0x6FFFFEF5
 
 #define AT_NULL 0UL
@@ -157,12 +162,25 @@ typedef struct ls_obj {
     ls_init_fn_t init_fn;
     const ls_init_fn_t *init_array;
     size_t init_array_count;
+    ls_init_fn_t fini_fn;
+    const ls_init_fn_t *fini_array;
+    size_t fini_array_count;
     char name[LSO_NAME_MAX];
+    char path[LSO_NAME_MAX];
+    uintptr_t map_va;
+    size_t map_size;
+    unsigned int refs;    /* dlopen/dlclose reference count */
+    unsigned int runtime; /* 1 = loaded by ldso_dlopen, dlclose may unmap */
+    unsigned int ctors_run;
+    unsigned int finis_run;
+    struct ls_obj *deps[LSO_MAX_DEPS];
+    size_t ndeps;
     struct ls_obj *next;
 } ls_obj_t;
 
 static ls_obj_t *g_objs;
 static ls_obj_t g_main;
+static ls_obj_t g_self; /* the interpreter itself, searched last */
 static int g_vfs_conn = -1;
 static const char *g_path_dirs[LSO_MAX_PATH_DIRS];
 static size_t g_path_dir_len[LSO_MAX_PATH_DIRS];
@@ -171,12 +189,83 @@ static size_t g_path_dir_count;
 static uint8_t *g_arena;
 static size_t g_arena_off;
 
+/* Last-failure diagnostic printed over SYS_DEBUG_LOG before the process
+ * exits, so headless QEMU serial logs identify the failing load step. */
+static char g_diag[160];
+
+static size_t ldso_diag_len(void) {
+    size_t n = 0u;
+    while (g_diag[n] != '\0') {
+        n++;
+    }
+    return n;
+}
+
+static void ldso_diag_set(const char *msg, const char *detail) {
+    size_t pos = 0u;
+    const char *parts[2] = {msg, detail};
+    for (size_t i = 0u; i < 2u; i++) {
+        const char *p = parts[i];
+        if (!p) {
+            continue;
+        }
+        while (*p != '\0' && pos + 1u < sizeof(g_diag)) {
+            g_diag[pos++] = *p++;
+        }
+    }
+    g_diag[pos] = '\0';
+}
+
+static void ldso_diag_append(const char *detail) {
+    if (!detail) {
+        return;
+    }
+    size_t pos = ldso_diag_len();
+    while (*detail != '\0' && pos + 1u < sizeof(g_diag)) {
+        g_diag[pos++] = *detail++;
+    }
+    g_diag[pos] = '\0';
+}
+
 static void ldso_exit(int code) __attribute__((noreturn));
 
 static void ldso_exit(int code) {
+    if (g_diag[0] != '\0') {
+        (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)g_diag,
+                     (long)ldso_diag_len());
+    }
     __sys1(SYS_PROC_EXIT, code);
     for (;;) {
     }
+}
+
+/* Concatenate error message parts into the diagnostic buffer and mirror them
+ * into the caller buffer (used by the ldso_dlopen/ldso_dlsym/ ldso_dlclose
+ * delegation ABI so libc keeps thread-local dlerror state;
+ * see ADR_0059). Startup failures keep the diagnostic for ldso_exit. */
+static void ldso_err_parts(char *err, size_t errsz, const char *const *parts,
+                           size_t nparts) {
+    size_t pos = 0u;
+    for (size_t i = 0u; i < nparts; i++) {
+        const char *p = parts[i];
+        while (p != 0 && *p != '\0' && pos + 1u < sizeof(g_diag)) {
+            g_diag[pos++] = *p++;
+        }
+    }
+    g_diag[pos] = '\0';
+    if (!err || errsz == 0u) {
+        return;
+    }
+    pos = 0u;
+    while (g_diag[pos] != '\0' && pos + 1u < errsz) {
+        err[pos] = g_diag[pos];
+        pos++;
+    }
+    err[pos] = '\0';
+}
+
+static void ldso_err_msg(char *err, size_t errsz, const char *msg) {
+    ldso_err_parts(err, errsz, &msg, 1u);
 }
 
 static void *ldso_alloc(size_t n) {
@@ -220,6 +309,16 @@ static int ldso_strneq(const char *a, const char *b, size_t n) {
         }
     }
     return 1;
+}
+
+/* Copy name into a fixed obj field with truncation. */
+static void ldso_copy_name(char *dst, size_t dst_sz, const char *src) {
+    size_t i = 0u;
+    while (i + 1u < dst_sz && src[i] != '\0') {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = '\0';
 }
 
 static uintptr_t ldso_page_down(uintptr_t v) {
@@ -408,7 +507,9 @@ static void *ldso_lookup_in_obj(const ls_obj_t *obj, const char *name) {
     return NULL;
 }
 
-/* Global scope: the main executable first, then libraries in load order. */
+/* Global scope: the main executable first, then libraries in load order, then
+ * the interpreter itself (so libc.so weak references to the
+ * ldso_dlopen family resolve; see ADR_0059). */
 static void *ldso_lookup_global(const char *name) {
     void *p = ldso_lookup_in_obj(&g_main, name);
     if (p) {
@@ -416,6 +517,25 @@ static void *ldso_lookup_global(const char *name) {
     }
     for (ls_obj_t *o = g_objs; o; o = o->next) {
         p = ldso_lookup_in_obj(o, name);
+        if (p) {
+            return p;
+        }
+    }
+    return ldso_lookup_in_obj(&g_self, name);
+}
+
+/* POSIX dlsym handle scope: the object plus its dependency subtree. */
+static void *ldso_lookup_with_deps(const ls_obj_t *obj, const char *name,
+                                   int depth) {
+    if (!obj || depth > (int)LSO_MAX_DEPTH) {
+        return NULL;
+    }
+    void *p = ldso_lookup_in_obj(obj, name);
+    if (p) {
+        return p;
+    }
+    for (size_t i = 0u; i < obj->ndeps; i++) {
+        p = ldso_lookup_with_deps(obj->deps[i], name, depth + 1);
         if (p) {
             return p;
         }
@@ -442,6 +562,8 @@ static int ldso_apply_rela(ls_obj_t *obj, const ls_rela_t *rela, size_t count) {
         if (type == R_X86_64_64 || type == R_X86_64_GLOB_DAT ||
             type == R_X86_64_JUMP_SLOT) {
             if (!obj->symtab || sym_idx >= obj->nsyms) {
+                ldso_diag_set("ld.so: bad relocation symbol index in '",
+                              obj->name);
                 return -1;
             }
             const ls_sym_t *sym = &obj->symtab[sym_idx];
@@ -458,6 +580,10 @@ static int ldso_apply_rela(ls_obj_t *obj, const ls_rela_t *rela, size_t count) {
                     if (bind == STB_WEAK) {
                         sval = 0u;
                     } else {
+                        ldso_diag_set("ld.so: undefined symbol '", sname);
+                        ldso_diag_append("' in '");
+                        ldso_diag_append(obj->name);
+                        ldso_diag_append("'");
                         return -1;
                     }
                 } else {
@@ -471,7 +597,8 @@ static int ldso_apply_rela(ls_obj_t *obj, const ls_rela_t *rela, size_t count) {
             }
             continue;
         }
-        return -1; /* unsupported relocation type (no TLS in Ring 3 yet) */
+        ldso_diag_set("ld.so: unsupported relocation type in '", obj->name);
+        return -1; /* no TLS relocations in Ring 3 yet */
     }
     return 0;
 }
@@ -493,6 +620,9 @@ struct ls_dyn_info {
     uint64_t init_va;
     uint64_t init_array_va;
     uint64_t init_array_sz;
+    uint64_t fini_va;
+    uint64_t fini_array_va;
+    uint64_t fini_array_sz;
     uint64_t needed_offs[LSO_MAX_DEPS];
     size_t n_needed;
 };
@@ -530,11 +660,20 @@ static void ldso_parse_dynamic(const ls_dyn_t *dyn, struct ls_dyn_info *di) {
         case DT_INIT:
             di->init_va = dyn[i].d_val;
             break;
+        case DT_FINI:
+            di->fini_va = dyn[i].d_val;
+            break;
         case DT_INIT_ARRAY:
             di->init_array_va = dyn[i].d_val;
             break;
         case DT_INIT_ARRAYSZ:
             di->init_array_sz = dyn[i].d_val;
+            break;
+        case DT_FINI_ARRAY:
+            di->fini_array_va = dyn[i].d_val;
+            break;
+        case DT_FINI_ARRAYSZ:
+            di->fini_array_sz = dyn[i].d_val;
             break;
         case DT_NEEDED:
             if (di->n_needed < LSO_MAX_DEPS) {
@@ -547,11 +686,13 @@ static void ldso_parse_dynamic(const ls_dyn_t *dyn, struct ls_dyn_info *di) {
     }
 }
 
-/* Resolve a DT_NEEDED name: a '/'-containing name is a direct path;
- * otherwise search LD_LIBRARY_PATH, then the default directories. */
-static void ldso_resolve_path(const char *name, char *out, size_t out_sz) {
+/* Resolve a DT_NEEDED name: a '/'-containing name is a direct path; otherwise
+ * search LD_LIBRARY_PATH, then the default directories. The function returns 0
+ * and fills out with the existing path, or -1 when
+ * nothing matches. */
+static int ldso_resolve_path(const char *name, char *out, size_t out_sz) {
     if (out_sz == 0u) {
-        ldso_exit(LSO_EXIT_OPEN);
+        return -1;
     }
     size_t name_len = ldso_strlen(name);
     int has_slash = 0;
@@ -563,12 +704,12 @@ static void ldso_resolve_path(const char *name, char *out, size_t out_sz) {
     }
     if (has_slash) {
         if (name_len >= out_sz) {
-            ldso_exit(LSO_EXIT_OPEN);
+            return -1;
         }
         for (size_t i = 0u; i <= name_len; i++) {
             out[i] = name[i];
         }
-        return;
+        return 0;
     }
     for (size_t d = 0u; d < g_path_dir_count; d++) {
         if (g_path_dir_len[d] + 1u + name_len + 1u > out_sz) {
@@ -585,7 +726,7 @@ static void ldso_resolve_path(const char *name, char *out, size_t out_sz) {
         long fd = ldso_vfs_open(out);
         if (fd >= 0) {
             ldso_vfs_close((uint32_t)fd);
-            return;
+            return 0;
         }
     }
     static const char *const k_dirs[] = {"/boot", "/lib", "/usr/lib"};
@@ -605,13 +746,22 @@ static void ldso_resolve_path(const char *name, char *out, size_t out_sz) {
         long fd = ldso_vfs_open(out);
         if (fd >= 0) {
             ldso_vfs_close((uint32_t)fd);
-            return;
+            return 0;
         }
     }
-    ldso_exit(LSO_EXIT_OPEN);
+    return -1;
 }
 
-static void ldso_init_obj(ls_obj_t *obj) {
+/* Run constructors for obj after its whole dependency subtree is relocated:
+ * dependencies first, then the object itself (once per object). */
+static void ldso_run_ctors(ls_obj_t *obj) {
+    if (!obj || obj->ctors_run) {
+        return;
+    }
+    obj->ctors_run = 1u;
+    for (size_t i = 0u; i < obj->ndeps; i++) {
+        ldso_run_ctors(obj->deps[i]);
+    }
     if (obj->init_fn) {
         obj->init_fn();
     }
@@ -624,44 +774,84 @@ static void ldso_init_obj(ls_obj_t *obj) {
     }
 }
 
-/* Load one DT_NEEDED library over /dev/vfs, then its own dependencies
- * (depth-first, so load order runs dependencies before parents). */
-static void ldso_load_lib(const char *name, int depth) {
+/* Run destructors in the reverse order of the constructors: the object
+ * itself first, then its dependencies (once per object). */
+static void ldso_run_finis(ls_obj_t *obj) {
+    if (!obj || obj->finis_run) {
+        return;
+    }
+    obj->finis_run = 1u;
+    if (obj->fini_array) {
+        for (size_t i = obj->fini_array_count; i > 0u; i--) {
+            if (obj->fini_array[i - 1u]) {
+                obj->fini_array[i - 1u]();
+            }
+        }
+    }
+    if (obj->fini_fn) {
+        obj->fini_fn();
+    }
+    for (size_t i = 0u; i < obj->ndeps; i++) {
+        ldso_run_finis(obj->deps[i]);
+    }
+}
+
+/* Load one ELF shared object over /dev/vfs, then its own DT_NEEDED dependencies
+ * (depth-first). The function returns the new object, or NULL with a message in
+ * err when loading fails. Startup loads pass
+ * runtime = 0; ldso_dlopen passes runtime = 1 so dlclose can unmap. */
+static ls_obj_t *ldso_load_lib(const char *name, int depth, int runtime,
+                               char *err, size_t errsz) {
     if (depth > (int)LSO_MAX_DEPTH) {
-        ldso_exit(LSO_EXIT_OPEN);
+        const char *parts[] = {"dlopen: dependency depth exceeded for '", name,
+                               "'"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     for (ls_obj_t *o = g_objs; o; o = o->next) {
         if (ldso_streq(o->name, name)) {
-            return;
+            return o;
         }
     }
     if (ldso_streq(g_main.name, name)) {
-        return;
+        return &g_main;
     }
 
     char path[VFS_PATH_MAX];
-    ldso_resolve_path(name, path, sizeof(path));
+    if (ldso_resolve_path(name, path, sizeof(path)) != 0) {
+        const char *parts[] = {"dlopen: cannot find '", name, "'"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
+    }
     long fd = ldso_vfs_open(path);
     if (fd < 0) {
-        ldso_exit(LSO_EXIT_OPEN);
+        const char *parts[] = {"dlopen: open '", path, "' failed"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     long fsz = ldso_vfs_size((uint32_t)fd);
     if (fsz < (long)sizeof(ls_ehdr_t) || fsz > (long)LSO_MAX_FILE) {
         ldso_vfs_close((uint32_t)fd);
-        ldso_exit(LSO_EXIT_ELF);
+        const char *parts[] = {"dlopen: invalid ELF size for '", path, "'"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     long map_len = ldso_page_up((uintptr_t)fsz);
     long fva = VMMap(0, (size_t)map_len, VM_PROT_READ | VM_PROT_WRITE,
                      VM_MAP_PRIVATE | VM_MAP_ANON);
     if (fva < 0) {
         ldso_vfs_close((uint32_t)fd);
-        ldso_exit(LSO_EXIT_MMAP);
+        const char *parts[] = {"dlopen: mapping '", path, "' failed"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     uint8_t *fbuf = (uint8_t *)(uintptr_t)fva;
     if (ldso_vfs_read((uint32_t)fd, fbuf, (size_t)fsz) != fsz) {
         ldso_vfs_close((uint32_t)fd);
         VMUnmap((uintptr_t)fva, (size_t)map_len);
-        ldso_exit(LSO_EXIT_ELF);
+        const char *parts[] = {"dlopen: read '", path, "' failed"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     ldso_vfs_close((uint32_t)fd);
 
@@ -675,7 +865,10 @@ static void ldso_load_lib(const char *name, int depth) {
         eh->e_phoff + (uint64_t)eh->e_phnum * sizeof(ls_phdr_t) >
             (uint64_t)fsz) {
         VMUnmap((uintptr_t)fva, (size_t)map_len);
-        ldso_exit(LSO_EXIT_ELF);
+        const char *parts[] = {"dlopen: '", path,
+                               "' is not a valid x86-64 ET_DYN ELF"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
 
     const ls_phdr_t *ph = (const ls_phdr_t *)(fbuf + eh->e_phoff);
@@ -701,7 +894,10 @@ static void ldso_load_lib(const char *name, int depth) {
             ph[i].p_offset + ph[i].p_filesz > (uint64_t)fsz ||
             ((ph[i].p_flags & PF_W) && (ph[i].p_flags & PF_X))) {
             VMUnmap((uintptr_t)fva, (size_t)map_len);
-            ldso_exit(LSO_EXIT_ELF);
+            const char *parts[] = {"dlopen: invalid PT_LOAD segments in '",
+                                   path, "'"};
+            ldso_err_parts(err, errsz, parts, 3u);
+            return NULL;
         }
         uintptr_t s = ldso_page_down((uintptr_t)ph[i].p_vaddr);
         uintptr_t e = ldso_page_up((uintptr_t)(ph[i].p_vaddr + ph[i].p_memsz));
@@ -718,7 +914,9 @@ static void ldso_load_lib(const char *name, int depth) {
     }
     if (nload == 0u || max_va <= min_va || dyn_off == 0u) {
         VMUnmap((uintptr_t)fva, (size_t)map_len);
-        ldso_exit(LSO_EXIT_ELF);
+        const char *parts[] = {"dlopen: no loadable segments in '", path, "'"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
 
     size_t map_size = (size_t)(max_va - min_va);
@@ -726,7 +924,10 @@ static void ldso_load_lib(const char *name, int depth) {
                     VM_MAP_PRIVATE | VM_MAP_ANON);
     if (va < 0) {
         VMUnmap((uintptr_t)fva, (size_t)map_len);
-        ldso_exit(LSO_EXIT_MMAP);
+        const char *parts[] = {"dlopen: address space for '", path,
+                               "' exhausted"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     uint64_t bias = (uint64_t)va - min_va;
     for (uint16_t i = 0u; i < eh->e_phnum; i++) {
@@ -741,18 +942,20 @@ static void ldso_load_lib(const char *name, int depth) {
 
     ls_obj_t *obj = ldso_alloc(sizeof(*obj));
     obj->bias = bias;
-    size_t nl = 0u;
-    while (nl + 1u < sizeof(obj->name) && name[nl] != '\0') {
-        obj->name[nl] = name[nl];
-        nl++;
-    }
-    obj->name[nl] = '\0';
+    obj->map_va = (uintptr_t)va;
+    obj->map_size = map_size;
+    obj->refs = 1u;
+    obj->runtime = (runtime != 0) ? 1u : 0u;
+    ldso_copy_name(obj->name, sizeof(obj->name), name);
+    ldso_copy_name(obj->path, sizeof(obj->path), path);
 
     const ls_dyn_t *dyn = (const ls_dyn_t *)(uintptr_t)(bias + dyn_off);
     struct ls_dyn_info di = {0};
     ldso_parse_dynamic(dyn, &di);
     if (di.strtab_va == 0u || di.symtab_va == 0u) {
-        ldso_exit(LSO_EXIT_ELF);
+        const char *parts[] = {"dlopen: '", path, "' has no dynamic table"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     obj->strtab = (const char *)(uintptr_t)(bias + di.strtab_va);
     obj->strsz = di.strsz;
@@ -766,27 +969,48 @@ static void ldso_load_lib(const char *name, int depth) {
             ? (const ls_init_fn_t *)(uintptr_t)(bias + di.init_array_va)
             : NULL;
     obj->init_array_count = di.init_array_sz / sizeof(ls_init_fn_t);
+    obj->fini_fn =
+        di.fini_va ? (ls_init_fn_t)(uintptr_t)(bias + di.fini_va) : NULL;
+    obj->fini_array =
+        di.fini_array_va
+            ? (const ls_init_fn_t *)(uintptr_t)(bias + di.fini_array_va)
+            : NULL;
+    obj->fini_array_count = di.fini_array_sz / sizeof(ls_init_fn_t);
 
     obj->next = g_objs;
     g_objs = obj;
 
     for (size_t i = 0u; i < di.n_needed; i++) {
         if ((size_t)di.needed_offs[i] >= di.strsz) {
-            ldso_exit(LSO_EXIT_ELF);
+            const char *parts[] = {"dlopen: invalid DT_NEEDED offset in '",
+                                   path, "'"};
+            ldso_err_parts(err, errsz, parts, 3u);
+            return NULL;
         }
-        ldso_load_lib(obj->strtab + di.needed_offs[i], depth + 1);
+        ls_obj_t *dep = ldso_load_lib(obj->strtab + di.needed_offs[i],
+                                      depth + 1, runtime, err, errsz);
+        if (!dep) {
+            return NULL;
+        }
+        if (obj->ndeps < LSO_MAX_DEPS) {
+            obj->deps[obj->ndeps++] = dep;
+        }
     }
 
     if (di.rela_va != 0u && di.relasz > 0u &&
         ldso_apply_rela(obj, (const ls_rela_t *)(uintptr_t)(bias + di.rela_va),
                         (size_t)(di.relasz / sizeof(ls_rela_t))) != 0) {
-        ldso_exit(LSO_EXIT_RELOC);
+        const char *parts[] = {"dlopen: relocation failed for '", path, "'"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
     if (di.jmprel_va != 0u && di.pltrelsz > 0u &&
         ldso_apply_rela(obj,
                         (const ls_rela_t *)(uintptr_t)(bias + di.jmprel_va),
                         (size_t)(di.pltrelsz / sizeof(ls_rela_t))) != 0) {
-        ldso_exit(LSO_EXIT_RELOC);
+        const char *parts[] = {"dlopen: relocation failed for '", path, "'"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
     }
 
     /* Enforce final W^X segment protections before any code runs. */
@@ -803,9 +1027,13 @@ static void ldso_load_lib(const char *name, int depth) {
         }
         if (VMProtect((uintptr_t)(bias + segs[i].start), segs[i].len, prot) !=
             0) {
-            ldso_exit(LSO_EXIT_PROT);
+            const char *parts[] = {"dlopen: W^X protect failed for '", path,
+                                   "'"};
+            ldso_err_parts(err, errsz, parts, 3u);
+            return NULL;
         }
     }
+    return obj;
 }
 
 /* Locate the main executable load bias from AT_PHDR: prefer the PT_PHDR
@@ -824,6 +1052,210 @@ static uint64_t ldso_main_bias(uint64_t at_phdr, const ls_phdr_t *ph,
         return at_phdr - eh->e_phoff;
     }
     ldso_exit(LSO_EXIT_BIAS);
+}
+
+/*------------------------------------------------------------------------------
+ * dlfcn runtime delegation (called by libc.so through weak symbols). Handles
+ * are ls_obj_t pointers; errors travel back in caller-provided buffers so libc
+ * keeps its thread-local dlerror state. Loader tables are not locked: runtime
+ * loading stays a single-threaded loader operation (see ADR_0059).
+ *
+ *---------------------------------------------------------------------------*/
+
+__attribute__((visibility("default"))) void *
+ldso_dlopen(const char *file, int mode, char *err, size_t errsz) {
+    if ((mode & (RTLD_LAZY | RTLD_NOW)) == 0) {
+        ldso_err_msg(err, errsz,
+                     "dlopen: mode must specify RTLD_LAZY or RTLD_NOW");
+        return NULL;
+    }
+    if (!file) {
+        return &g_main;
+    }
+    /* Binding is always eager and every object joins the global scope, so
+     * RTLD_LAZY/RTLD_NOW and RTLD_LOCAL/RTLD_GLOBAL are accepted as
+     * aliases (documented simplification). */
+    char path[VFS_PATH_MAX];
+    if (ldso_resolve_path(file, path, sizeof(path)) != 0) {
+        const char *parts[] = {"dlopen: cannot find '", file, "'"};
+        ldso_err_parts(err, errsz, parts, 3u);
+        return NULL;
+    }
+    /* Deduplicate by DT_NEEDED-style name or resolved path and hand out an
+     * additional reference to the existing object. */
+    if (g_main.name[0] != '\0' &&
+        (ldso_streq(g_main.name, file) || ldso_streq(g_main.path, path))) {
+        g_main.refs++;
+        return &g_main;
+    }
+    for (ls_obj_t *o = g_objs; o; o = o->next) {
+        if (ldso_streq(o->name, file) ||
+            (o->path[0] != '\0' && ldso_streq(o->path, path))) {
+            o->refs++;
+            return o;
+        }
+    }
+    ls_obj_t *obj = ldso_load_lib(file, 0, 1, err, errsz);
+    if (obj) {
+        /* Run the new subtree's constructors once, dependencies first. */
+        ldso_run_ctors(obj);
+    }
+    return obj;
+}
+
+__attribute__((visibility("default"))) void *
+ldso_dlsym(void *handle, const char *name, char *err, size_t errsz) {
+    if (!name || name[0] == '\0') {
+        ldso_err_msg(err, errsz, "dlsym: empty symbol name");
+        return NULL;
+    }
+    if (handle == RTLD_DEFAULT) {
+        void *sym = ldso_lookup_global(name);
+        if (!sym) {
+            const char *parts[] = {"dlsym: symbol '", name, "' not found"};
+            ldso_err_parts(err, errsz, parts, 3u);
+        }
+        return sym;
+    }
+    if (handle == RTLD_NEXT) {
+        /* The global scope order is the main executable, then libraries in load
+         * order (the reverse of the newest-first g_objs list), then the
+         * interpreter. RTLD_NEXT searches the scope after the caller's object:
+         * the newer objects from the list head up to the caller,
+         * then the interpreter itself. */
+        uintptr_t ra = (uintptr_t)__builtin_return_address(0);
+        ls_obj_t *caller = NULL;
+        for (ls_obj_t *o = g_objs; o; o = o->next) {
+            if (o->map_size > 0u && ra >= o->map_va &&
+                ra < o->map_va + o->map_size) {
+                caller = o;
+                break;
+            }
+        }
+        void *sym = NULL;
+        for (ls_obj_t *o = g_objs; o && o != caller && !sym; o = o->next) {
+            sym = ldso_lookup_in_obj(o, name);
+        }
+        if (!sym) {
+            sym = ldso_lookup_in_obj(&g_self, name);
+        }
+        if (!sym) {
+            const char *parts[] = {"dlsym: symbol '", name,
+                                   "' not found (RTLD_NEXT)"};
+            ldso_err_parts(err, errsz, parts, 3u);
+        }
+        return sym;
+    }
+    if (handle == (void *)&g_main) {
+        void *sym = ldso_lookup_with_deps(&g_main, name, 0);
+        if (!sym) {
+            const char *parts[] = {"dlsym: symbol '", name, "' not found"};
+            ldso_err_parts(err, errsz, parts, 3u);
+        }
+        return sym;
+    }
+    for (ls_obj_t *o = g_objs; o; o = o->next) {
+        if (o == (ls_obj_t *)handle) {
+            void *sym = ldso_lookup_with_deps(o, name, 0);
+            if (!sym) {
+                const char *parts[] = {"dlsym: symbol '", name, "' not found"};
+                ldso_err_parts(err, errsz, parts, 3u);
+            }
+            return sym;
+        }
+    }
+    ldso_err_msg(err, errsz, "dlsym: invalid handle");
+    return NULL;
+}
+
+__attribute__((visibility("default"))) int ldso_dlclose(void *handle, char *err,
+                                                        size_t errsz) {
+    if (handle == (void *)&g_main) {
+        return 0;
+    }
+    ls_obj_t **pp = &g_objs;
+    while (*pp && (void *)*pp != handle) {
+        pp = &(*pp)->next;
+    }
+    if (!*pp) {
+        ldso_err_msg(err, errsz, "dlclose: invalid handle");
+        return -1;
+    }
+    ls_obj_t *obj = *pp;
+    if (obj->refs > 1u) {
+        obj->refs--;
+        return 0;
+    }
+    if (obj->refs == 0u) {
+        ldso_err_msg(err, errsz, "dlclose: invalid handle");
+        return -1;
+    }
+    if (!obj->runtime) {
+        /* Startup DT_NEEDED objects stay loaded for the process lifetime
+         * even after dlclose (the executable itself references them). */
+        return 0;
+    }
+    ldso_run_finis(obj);
+    *pp = obj->next;
+    (void)VMUnmap(obj->map_va, obj->map_size);
+    /* The ls_obj_t bookkeeping block lives in the bump arena and is
+     * intentionally not reclaimed (see ADR_0059). */
+    return 0;
+}
+
+__attribute__((visibility("default"))) int ldso_dladdr(const void *addr,
+                                                       Dl_info_t *dlip) {
+    if (!addr || !dlip) {
+        return 0;
+    }
+    uintptr_t target = (uintptr_t)addr;
+    ls_obj_t *owner = NULL;
+    if (g_main.map_size > 0u && target >= g_main.map_va &&
+        target < g_main.map_va + g_main.map_size) {
+        owner = &g_main;
+    }
+    for (ls_obj_t *o = g_objs; o && !owner; o = o->next) {
+        if (o->map_size > 0u && target >= o->map_va &&
+            target < o->map_va + o->map_size) {
+            owner = o;
+        }
+    }
+    if (!owner && g_self.map_size > 0u && target >= g_self.map_va &&
+        target < g_self.map_va + g_self.map_size) {
+        owner = &g_self;
+    }
+    if (!owner) {
+        return 0;
+    }
+    dlip->dli_fbase = (void *)(uintptr_t)owner->bias;
+    dlip->dli_fname = owner->path[0] != '\0' ? owner->path : owner->name;
+    dlip->dli_sname = NULL;
+    dlip->dli_saddr = NULL;
+    uintptr_t best_addr = 0u;
+    for (uint32_t i = 1u; owner->symtab && i < owner->nsyms; i++) {
+        const ls_sym_t *sym = &owner->symtab[i];
+        if (sym->st_shndx == SHN_UNDEF ||
+            (size_t)sym->st_name >= owner->strsz) {
+            continue;
+        }
+        unsigned bind = (unsigned)(sym->st_info >> 4);
+        if (bind != STB_GLOBAL && bind != STB_WEAK) {
+            continue;
+        }
+        uintptr_t saddr = (uintptr_t)(owner->bias + sym->st_value);
+        if (saddr > target) {
+            continue;
+        }
+        if (sym->st_size > 0u && target >= saddr + sym->st_size) {
+            continue;
+        }
+        if (!dlip->dli_sname || saddr >= best_addr) {
+            best_addr = saddr;
+            dlip->dli_sname = owner->strtab + sym->st_name;
+            dlip->dli_saddr = (void *)saddr;
+        }
+    }
+    return 1;
 }
 
 void ldso_main(long *stack) __attribute__((noreturn));
@@ -874,10 +1306,22 @@ void ldso_main(long *stack) {
     const ls_phdr_t *self_ph =
         (const ls_phdr_t *)(uintptr_t)(at_base + self_eh->e_phoff);
     uint64_t self_dyn_va = 0u;
+    uint64_t self_min_va = (uint64_t)-1;
+    uint64_t self_max_va = 0u;
     for (uint64_t i = 0u; i < self_eh->e_phnum; i++) {
         if (self_ph[i].p_type == PT_DYNAMIC) {
             self_dyn_va = self_ph[i].p_vaddr;
-            break;
+        }
+        if (self_ph[i].p_type == PT_LOAD && self_ph[i].p_memsz > 0u) {
+            uint64_t s = self_ph[i].p_vaddr & ~0xFFFULL;
+            uint64_t b = (self_ph[i].p_vaddr + self_ph[i].p_memsz + 0xFFFULL) &
+                         ~0xFFFULL;
+            if (s < self_min_va) {
+                self_min_va = s;
+            }
+            if (b > self_max_va) {
+                self_max_va = b;
+            }
         }
     }
     if (self_dyn_va == 0u) {
@@ -885,6 +1329,9 @@ void ldso_main(long *stack) {
     }
     ls_obj_t self = {0};
     self.bias = at_base;
+    self.map_va = (uintptr_t)(at_base + self_min_va);
+    self.map_size = (size_t)(self_max_va - self_min_va);
+    ldso_copy_name(self.name, sizeof(self.name), "ld.so");
     const ls_dyn_t *self_dyn =
         (const ls_dyn_t *)(uintptr_t)(at_base + self_dyn_va);
     struct ls_dyn_info sdi = {0};
@@ -907,6 +1354,36 @@ void ldso_main(long *stack) {
             ldso_exit(LSO_EXIT_RELOC);
         }
     }
+    /* Publish the interpreter in the global symbol scope so weak libc.so
+     * references to the ldso_dlopen family resolve to ld.so exports. The fields
+     * are copied individually: ld.so must not reference memcpy or
+     * another external symbol before its own relocation completes. */
+    g_self.bias = self.bias;
+    g_self.symtab = self.symtab;
+    g_self.strtab = self.strtab;
+    g_self.strsz = self.strsz;
+    g_self.nsyms = self.nsyms;
+    g_self.init_fn = self.init_fn;
+    g_self.init_array = self.init_array;
+    g_self.init_array_count = self.init_array_count;
+    g_self.fini_fn = self.fini_fn;
+    g_self.fini_array = self.fini_array;
+    g_self.fini_array_count = self.fini_array_count;
+    for (size_t i = 0u; i < sizeof(g_self.name); i++) {
+        g_self.name[i] = self.name[i];
+        g_self.path[i] = self.path[i];
+    }
+    g_self.map_va = self.map_va;
+    g_self.map_size = self.map_size;
+    g_self.refs = self.refs;
+    g_self.runtime = self.runtime;
+    g_self.ctors_run = self.ctors_run;
+    g_self.finis_run = self.finis_run;
+    for (size_t i = 0u; i < LSO_MAX_DEPS; i++) {
+        g_self.deps[i] = self.deps[i];
+    }
+    g_self.ndeps = self.ndeps;
+    g_self.next = self.next;
 
     /* Split LD_LIBRARY_PATH from the process environment. */
     for (char **v = envp; *v; v++) {
@@ -935,14 +1412,33 @@ void ldso_main(long *stack) {
     const ls_phdr_t *main_ph = (const ls_phdr_t *)(uintptr_t)at_phdr;
     g_main.bias = ldso_main_bias(at_phdr, main_ph, at_phnum);
     uint64_t main_dyn_va = 0u;
+    uint64_t main_min_va = (uint64_t)-1;
+    uint64_t main_max_va = 0u;
     for (uint64_t i = 0u; i < at_phnum; i++) {
         if (main_ph[i].p_type == PT_DYNAMIC) {
             main_dyn_va = main_ph[i].p_vaddr;
-            break;
+        }
+        if (main_ph[i].p_type == PT_LOAD && main_ph[i].p_memsz > 0u) {
+            uint64_t s = (g_main.bias + main_ph[i].p_vaddr) & ~0xFFFULL;
+            uint64_t b =
+                ldso_page_up((uintptr_t)(g_main.bias + main_ph[i].p_vaddr +
+                                         main_ph[i].p_memsz));
+            if (s < main_min_va) {
+                main_min_va = s;
+            }
+            if (b > main_max_va) {
+                main_max_va = b;
+            }
         }
     }
     if (main_dyn_va == 0u) {
         ldso_exit(LSO_EXIT_MAIN);
+    }
+    g_main.map_va = (uintptr_t)main_min_va;
+    g_main.map_size = (size_t)(main_max_va - main_min_va);
+    if (argc > 0 && argv[0]) {
+        ldso_copy_name(g_main.name, sizeof(g_main.name), argv[0]);
+        ldso_copy_name(g_main.path, sizeof(g_main.path), argv[0]);
     }
     const ls_dyn_t *main_dyn =
         (const ls_dyn_t *)(uintptr_t)(g_main.bias + main_dyn_va);
@@ -958,11 +1454,27 @@ void ldso_main(long *stack) {
         ldso_count_syms(mdi.hash_va ? g_main.bias + mdi.hash_va : 0,
                         mdi.gnu_hash_va ? g_main.bias + mdi.gnu_hash_va : 0);
 
+    /* A dynamic executable that depends on libc.so runs its DT_INIT and
+     * DT_INIT_ARRAY inside __libc_start_main after libc TLS setup, matching the
+     * static crt0 handoff. Freestanding dynamic executables get their
+     * constructors run here (see ADR_0059). */
+    int main_needs_libc = 0;
+    for (size_t i = 0u; i < mdi.n_needed; i++) {
+        if ((size_t)mdi.needed_offs[i] < mdi.strsz &&
+            ldso_streq(g_main.strtab + mdi.needed_offs[i], "libc.so")) {
+            main_needs_libc = 1;
+            break;
+        }
+    }
+
     for (size_t i = 0u; i < mdi.n_needed; i++) {
         if ((size_t)mdi.needed_offs[i] >= mdi.strsz) {
             ldso_exit(LSO_EXIT_MAIN);
         }
-        ldso_load_lib(g_main.strtab + mdi.needed_offs[i], 0);
+        if (!ldso_load_lib(g_main.strtab + mdi.needed_offs[i], 0, 0, NULL,
+                           0u)) {
+            ldso_exit(LSO_EXIT_OPEN);
+        }
     }
 
     if (mdi.rela_va != 0u && mdi.relasz > 0u &&
@@ -979,20 +1491,23 @@ void ldso_main(long *stack) {
         ldso_exit(LSO_EXIT_RELOC);
     }
 
-    /* Run constructors: libraries in dependency order, then the main
-     * executable's DT_INIT and DT_INIT_ARRAY. */
+    /* Run library constructors in dependency order. */
     for (ls_obj_t *o = g_objs; o; o = o->next) {
-        ldso_init_obj(o);
+        ldso_run_ctors(o);
     }
-    if (mdi.init_va != 0u) {
-        ((ls_init_fn_t)(uintptr_t)(g_main.bias + mdi.init_va))();
-    }
-    if (mdi.init_array_va != 0u) {
-        const ls_init_fn_t *arr =
-            (const ls_init_fn_t *)(uintptr_t)(g_main.bias + mdi.init_array_va);
-        for (size_t i = 0u; i < mdi.init_array_sz / sizeof(ls_init_fn_t); i++) {
-            if (arr[i]) {
-                arr[i]();
+    if (!main_needs_libc) {
+        if (mdi.init_va != 0u) {
+            ((ls_init_fn_t)(uintptr_t)(g_main.bias + mdi.init_va))();
+        }
+        if (mdi.init_array_va != 0u) {
+            const ls_init_fn_t *arr =
+                (const ls_init_fn_t *)(uintptr_t)(g_main.bias +
+                                                  mdi.init_array_va);
+            for (size_t i = 0u; i < mdi.init_array_sz / sizeof(ls_init_fn_t);
+                 i++) {
+                if (arr[i]) {
+                    arr[i]();
+                }
             }
         }
     }

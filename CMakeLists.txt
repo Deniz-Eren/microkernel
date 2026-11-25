@@ -136,6 +136,54 @@ add_custom_command(
 )
 add_custom_target(crt0 DEPENDS ${SYSROOT_DIR}/usr/lib/crt0.o)
 add_dependencies(c crt0)
+
+#------------------------------------------------------------------------------
+# Stage 2: shared libc.so (-fPIC) alongside static libc.a. Dynamic Ring 3
+# executables link against libc.so and load /boot/ld.so; static executables keep
+# linking libc.a. In coverage builds the instrumented libc.a objects carry the
+# profile runtime, so libc.so stays linkable with the same source-file
+# properties (cov_runtime.c provides the freestanding stubs).
+#------------------------------------------------------------------------------
+set(LIBC_SO_OUT ${CMAKE_BINARY_DIR}/libc.so)
+add_library(libcso_obj OBJECT ${LIBC_SRCS} ${MICROKERNEL_LIBC_ASM_SRCS})
+set(LIBCSO_CFLAGS ${USER_CFLAGS})
+list(REMOVE_ITEM LIBCSO_CFLAGS -fno-pic -fno-pie)
+list(APPEND LIBCSO_CFLAGS -fPIC)
+target_compile_options(libcso_obj PRIVATE ${LIBCSO_CFLAGS})
+target_include_directories(libcso_obj SYSTEM PRIVATE
+    ${SYSROOT_DIR}/usr/include
+    ${CLANG_RESOURCE_DIR}/include
+)
+add_dependencies(libcso_obj install_headers)
+
+add_custom_command(
+    OUTPUT ${LIBC_SO_OUT}
+    COMMAND ${CMAKE_LINKER} -shared -soname libc.so
+            -z separate-code
+            --hash-style=both
+            --build-id=none
+            $<TARGET_OBJECTS:libcso_obj>
+            -o ${LIBC_SO_OUT}
+    DEPENDS libcso_obj
+    COMMENT "Stage 2: linking shared libc.so"
+    VERBATIM
+    COMMAND_EXPAND_LISTS
+)
+add_custom_target(libcso ALL DEPENDS ${LIBC_SO_OUT})
+add_custom_command(
+    OUTPUT ${SYSROOT_DIR}/usr/lib/libc.so
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${LIBC_SO_OUT} ${SYSROOT_DIR}/usr/lib/libc.so
+    DEPENDS ${LIBC_SO_OUT}
+    COMMENT "Stage 2: installing libc.so into the sysroot"
+    VERBATIM
+)
+add_custom_target(libcso_install DEPENDS ${SYSROOT_DIR}/usr/lib/libc.so)
+add_dependencies(libcso libcso_install)
+set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+    "libc.so=${LIBC_SO_OUT}")
+set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS libcso)
+
 include(cmake/zlib.cmake)
 include(cmake/openssl.cmake)
 
@@ -209,13 +257,52 @@ function(microkernel_add_user_shared_library name)
                 --build-id=none
                 $<TARGET_OBJECTS:${obj_target}>
                 -o "${out_so}"
-        DEPENDS ${obj_target}
+        DEPENDS ${obj_target} $<TARGET_OBJECTS:${obj_target}>
         COMMENT "Stage 3: linking Ring 3 shared object ${boot_name}"
         VERBATIM
+        COMMAND_EXPAND_LISTS
     )
     add_custom_target(${name} ALL DEPENDS "${out_so}")
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
         "${boot_name}=${out_so}")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})
+endfunction()
+
+# Dynamic Ring 3 executables: ET_DYN PIE with PT_INTERP=/boot/ld.so linked
+# against the shared libc.so through the user-dyn.ld script. Dynamic executables
+# never carry coverage instrumentation: the profile runtime lives in static
+# libc.a only.
+function(microkernel_add_user_dynamic_executable name)
+    set(boot_name "${name}")
+    set(srcs ${ARGN})
+    list(GET srcs 0 first_arg)
+    if(first_arg STREQUAL "BOOT_NAME")
+        list(GET srcs 1 boot_name)
+        list(SUBLIST srcs 2 -1 srcs)
+    endif()
+    add_executable(${name} ${srcs})
+    set(dyn_cflags ${USER_CFLAGS})
+    list(REMOVE_ITEM dyn_cflags -fno-pic -fno-pie)
+    list(APPEND dyn_cflags -fPIC)
+    target_compile_options(${name} PRIVATE ${dyn_cflags})
+    target_include_directories(${name} SYSTEM PRIVATE
+        ${SYSROOT_DIR}/usr/include
+        ${CLANG_RESOURCE_DIR}/include
+    )
+    target_link_options(${name} PRIVATE
+        -pie
+        --dynamic-linker=/boot/ld.so
+        --export-dynamic
+        -T ${MICROKERNEL_USER_DYN_LINKER_SCRIPT}
+        --build-id=none
+        ${SYSROOT_DIR}/usr/lib/crt0.o
+    )
+    set_target_properties(${name} PROPERTIES LINK_DEPENDS
+        ${MICROKERNEL_USER_DYN_LINKER_SCRIPT})
+    target_link_libraries(${name} PRIVATE ${LIBC_SO_OUT})
+    add_dependencies(${name} libcso crt0)
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+        "${boot_name}=$<TARGET_FILE:${name}>")
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})
 endfunction()
 
@@ -254,9 +341,10 @@ add_custom_command(
             --build-id=none
             ${LDSO_START_O} $<TARGET_OBJECTS:ldso_obj>
             -o ${LDSO_OUT}
-    DEPENDS ${LDSO_START_O} ldso_obj
+    DEPENDS ${LDSO_START_O} ldso_obj $<TARGET_OBJECTS:ldso_obj>
     COMMENT "Stage 2: linking Ring 3 dynamic linker ld.so"
     VERBATIM
+    COMMAND_EXPAND_LISTS
 )
 add_custom_target(ldso ALL DEPENDS ${LDSO_OUT})
 set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
@@ -301,6 +389,7 @@ add_subdirectory(tests/ext2test)
 add_subdirectory(tests/zlibtest)
 add_subdirectory(tests/openssltest)
 add_subdirectory(tests/dlsoctest)
+add_subdirectory(tests/dynlibctest)
 add_subdirectory(tests/smptest)
 add_subdirectory(tests/stresstest)
 

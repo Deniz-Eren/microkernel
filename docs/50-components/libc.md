@@ -221,10 +221,12 @@ implement the seven POSIX.1-2024 i18n CLI utilities ({need}`ICD_LIBC_0015`,
 :satisfies: SWR_LIBC_0017
 
 `libc/src/dlfcn.c` implements `dlopen`, `dlsym`, `dlclose`, `dlerror`, and
-`dladdr` in Ring 3. It maps `ET_DYN` shared objects via `mmap`, processes
-`x86-64` relocations, and enforces W^X via `mprotect`. It also runs init/fini
-hooks and keeps per-thread `dlerror` state in `FS.base` TLS
-({need}`ICD_LIBC_0016`, {need}`SWR_LIBC_0017`).
+`dladdr` in Ring 3. In statically linked executables it maps `ET_DYN` shared
+objects via `mmap`, processes `x86-64` relocations, and enforces W^X via
+`mprotect`. It also runs init/fini hooks. In dynamically linked executables it
+delegates to `/boot/ld.so` through weak `ldso_dlopen`, `ldso_dlsym`,
+`ldso_dlclose`, and `ldso_dladdr` exports (ADR_0059). It keeps per-thread
+`dlerror` state in `FS.base` TLS ({need}`ICD_LIBC_0016`, {need}`SWR_LIBC_0017`).
 ```
 
 ```{comp} Ring 3 modular POSIX.1-2024 XCU shell
@@ -421,4 +423,19 @@ dynamic linker. They self-relocate from `PT_DYNAMIC`, load `DT_NEEDED` libraries
 over `/dev/vfs`, resolve symbols in global scope, and enforce W^X with
 `VMProtect`. They run constructors and jump to `AT_ENTRY`
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0032`).
+```
+
+```{comp} Shared libc.so and dynamic dlopen delegation
+:id: COMP_LIBC_0032
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0033
+
+The build produces a position-independent shared `libc.so` with soname `libc.so`
+beside static `libc.a`. It ships the shared library in the Ring 3 sysroot and
+boot image. It links dynamic executables against it with a `FILEHDR PHDRS`
+linker script. The weak `ldso_dlopen`, `ldso_dlsym`, `ldso_dlclose`, and
+`ldso_dladdr` exports of `/boot/ld.so` receive runtime `dlopen`, `dlsym`,
+`dlclose`, and `dladdr` calls from shared `libc.so` (ADR_0059)
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0033`).
 ```

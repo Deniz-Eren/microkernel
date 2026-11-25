@@ -23,7 +23,22 @@
 #include <unistd.h>
 #include "tls_internal.h"
 
-/* need:: COMP_LIBC_0016 */
+/* need:: COMP_LIBC_0016 COMP_LIBC_0032 */
+
+/* Runtime delegation ABI exported by /boot/ld.so (see ADR_0059). The references
+ * are weak: statically linked executables keep the built-in ET_DYN loader
+ * below, while shared libc.so resolves the symbols from the interpreter that
+ * loaded the process. Errors travel back through
+ * caller-provided buffers so dlerror stays thread-local. */
+extern void *ldso_dlopen(const char *file, int mode, char *err, size_t errsz)
+    __attribute__((weak));
+extern void *ldso_dlsym(void *handle, const char *name, char *err, size_t errsz)
+    __attribute__((weak));
+extern int ldso_dlclose(void *handle, char *err, size_t errsz)
+    __attribute__((weak));
+extern int ldso_dladdr(const void *addr, Dl_info_t *dlip) __attribute__((weak));
+
+#define DL_ERR_BUF_MAX 128u
 
 #define DL_PAGE_SIZE 4096u
 #define DL_MAX_LOAD_SEGS 16u
@@ -182,7 +197,34 @@ static pthread_mutex_t g_dl_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct dl_object *g_dl_head = NULL;
 static int g_main_sentinel = 0;
 static int g_fallback_err_pending = 0;
-static char g_fallback_err_buf[128] = {0};
+static char g_fallback_err_buf[DL_ERR_BUF_MAX] = {0};
+
+/* A fresh dlfcn call invalidates the previous error before it runs. */
+static void dlerror_reset(void) {
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (tls) {
+        tls->dlerror_pending = 0;
+    } else {
+        g_fallback_err_pending = 0;
+    }
+}
+
+static char *dlerror_buf_get(void) {
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (tls) {
+        return tls->dlerror_buf;
+    }
+    return g_fallback_err_buf;
+}
+
+static void dlerror_mark_pending(void) {
+    __pthread_tls_t *tls = __libc_tls_self();
+    if (tls) {
+        tls->dlerror_pending = 1;
+    } else {
+        g_fallback_err_pending = 1;
+    }
+}
 
 static void dl_set_error(const char *fmt, ...) {
     char tmp[128];
@@ -742,6 +784,15 @@ void *dlopen(const char *file, int mode) {
     if (!file) {
         return &g_main_sentinel;
     }
+    if (ldso_dlopen) {
+        dlerror_reset();
+        char *eb = dlerror_buf_get();
+        void *h = ldso_dlopen(file, mode, eb, DL_ERR_BUF_MAX);
+        if (!h) {
+            dlerror_mark_pending();
+        }
+        return h;
+    }
     (void)pthread_mutex_lock(&g_dl_lock);
     struct dl_object *obj = dlopen_locked(file, mode);
     (void)pthread_mutex_unlock(&g_dl_lock);
@@ -752,6 +803,19 @@ void *dlsym(void *restrict handle, const char *restrict name) {
     if (!name || name[0] == '\0') {
         dl_set_error("dlsym: empty symbol name");
         return NULL;
+    }
+    if (ldso_dlsym) {
+        dlerror_reset();
+        char *eb = dlerror_buf_get();
+        void *target = handle;
+        if (target == &g_main_sentinel) {
+            target = RTLD_DEFAULT;
+        }
+        void *sym = ldso_dlsym(target, name, eb, DL_ERR_BUF_MAX);
+        if (!sym) {
+            dlerror_mark_pending();
+        }
+        return sym;
     }
     void *ret_addr = __builtin_return_address(0);
     (void)pthread_mutex_lock(&g_dl_lock);
@@ -812,6 +876,15 @@ int dlclose(void *handle) {
     if (handle == &g_main_sentinel) {
         return 0;
     }
+    if (ldso_dlclose) {
+        dlerror_reset();
+        char *eb = dlerror_buf_get();
+        int rc = ldso_dlclose(handle, eb, DL_ERR_BUF_MAX);
+        if (rc != 0) {
+            dlerror_mark_pending();
+        }
+        return rc;
+    }
     (void)pthread_mutex_lock(&g_dl_lock);
     int rc = dlclose_locked((struct dl_object *)handle);
     (void)pthread_mutex_unlock(&g_dl_lock);
@@ -837,6 +910,11 @@ char *dlerror(void) {
 int dladdr(const void *restrict addr, Dl_info_t *restrict dlip) {
     if (!addr || !dlip) {
         return 0;
+    }
+    if (ldso_dladdr) {
+        /* POSIX defines no errors for dladdr: delegate without touching
+         * the dlerror state. */
+        return ldso_dladdr(addr, dlip);
     }
     uintptr_t target = (uintptr_t)addr;
     (void)pthread_mutex_lock(&g_dl_lock);

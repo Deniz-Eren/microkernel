@@ -168,3 +168,11 @@ SMP concurrent IPC and XSAVE/FMA isolation
 cross-subsystem stress \(sh, VFS, pipes, TTY, sockets, SHM,
 zero PMM frame, FD, SHM, pipe, VFS, and socket handle leaks
 dlsoctest PT_INTERP ld\.so, auxv, relocations, DT_INIT_ARRAY, and LD_LIBRARY_PATH search verified
+dynlibc stdio printf on shared libc\.so
+dynlibc malloc, realloc, calloc, and free
+dynlibc dlopen, dlsym, dlclose, and dlerror
+dynlibc pthread join, mutex, and TLS errno isolation
+dynlibc SIGUSR1 handler with errno preserved
+dynlibc fork, execve re-exec, and waitpid
+dynlibctest shared libc\.so stdio, malloc, pthreads, TLS errno, signals, fork/execve, and dlopen verified
+dynlibctest driver verified dynamic libc\.so handoff

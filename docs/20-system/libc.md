@@ -431,6 +431,21 @@ over `/dev/vfs` with `LD_LIBRARY_PATH` search before the `/boot`, `/lib`, and
 original stack ({need}`SYS_PROC_0001`).
 ```
 
+```{swr} Supply the shared libc.so and delegate dlfcn to ld.so
+:id: SWR_LIBC_0033
+:status: active
+:derives: SYS_LIBC_0001
+:traces: ADR_0059, BDR_0003, BDR_0004
+
+The build must produce a `-fPIC` shared `libc.so` with soname `libc.so` in the
+Ring 3 sysroot and `boot.tar` beside static `libc.a`. Dynamic executables must
+link as `ET_DYN` PIE images with `PT_INTERP=/boot/ld.so`. The linker script must
+keep the ELF header and the program header table in the first read-execute
+segment. When libc runs as `libc.so`, `dlopen`, `dlsym`, `dlclose`, and `dladdr`
+must delegate to `/boot/ld.so`. The interpreter must enforce W^X and report
+errors so `dlerror` stays thread-local ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

@@ -42,6 +42,10 @@ set(MICROKERNEL_USER_LINKER_SCRIPT
     ${CMAKE_SOURCE_DIR}/libc/arch/x86-64/user.ld
 )
 
+set(MICROKERNEL_USER_DYN_LINKER_SCRIPT
+    ${CMAKE_SOURCE_DIR}/libc/arch/x86-64/user-dyn.ld
+)
+
 set(MICROKERNEL_KERNEL_LINKER_SCRIPT
     ${CMAKE_SOURCE_DIR}/kernel/arch/x86-64/linker.ld
 )

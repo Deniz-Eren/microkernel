@@ -1816,6 +1816,9 @@ void proc_spawn_init(void) {
     /* Ring 3 dynamic linker (PT_INTERP /boot/ld.so, SysV auxv, DT_NEEDED over
      * /dev/vfs with LD_LIBRARY_PATH search) test. */
     spawn_image(tar_phys, tar_size, "dlsoctest", 100, 0);
+    /* Shared libc.so dynamic executable (PT_INTERP, dlopen, pthreads, TLS
+     * errno, signals, fork/execve) test. */
+    spawn_image(tar_phys, tar_size, "dynlibctest", 100, 0);
     /* Cross-subsystem select/pselect and leak-freedom stress test (low prio).
      */
     spawn_image(tar_phys, tar_size, "stresstest", 85, 0);

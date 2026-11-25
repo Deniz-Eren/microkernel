@@ -20,6 +20,21 @@ Entries are stored newest first without modifying their original IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0062 — Build shared libc.so and unify dlopen/dlsym with ld.so
+
+```{task} Build shared libc.so and unify dlopen/dlsym with ld.so
+:id: TSK_0062
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0003, SYS_LIBC_0001, SYS_MEM_0001
+
+Build `-fPIC` shared `libc.so` alongside static `libc.a` into the Ring 3 sysroot
+and `boot.tar`. Update `crt0.S` and `__libc_start_main` handoff, add a dynamic
+executable linker script with `FILEHDR PHDRS`, and delegate `<dlfcn.h>` runtime
+calls to `ld.so` when loaded dynamically. Verify `stdio`, `malloc`, pthreads,
+TLS `errno`, signals, `fork`/`execve`, and `dlopen` in QEMU
+({need}`SYS_LIBC_0001`, {need}`SYS_MEM_0001`).
+```
+
 ### RDM_0003 — Work toward POSIX.1-2024 (Issue 8) Base compatibility
 
 ```{roadmap} Work toward POSIX.1-2024 (Issue 8) Base compatibility
