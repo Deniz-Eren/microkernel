@@ -21,6 +21,11 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added roadmap item `RDM_0012` for full POSIX.1-2024 utility conformance and
+  queued 157 tasks (`TSK_0079` to `TSK_0235`), one per utility in
+  `tests/posix/issue8-manifest.tsv`. Each task covers command-line options,
+  operands, synopsis, stdin, stdout, stderr, input and output files, environment
+  variables, asynchronous events, and exit status.
 - Added the userland utility classification workflow decision (`WDR_0012`),
   which classifies every new utility into native Ring 3 components
   (`/boot/ld.so`, `libc`, `bin/`) or out-of-tree CMake ports

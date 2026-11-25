@@ -58,6 +58,23 @@ and `tar` via `libarchive`/`bsdtar`, fetched at build time without storing the
 upstream source in git ({need}`WDR_0012`, {need}`BDR_0004`, {need}`ADR_0054`).
 ```
 
+### RDM_0012 — Full POSIX.1-2024 utility conformance
+
+```{roadmap} Full POSIX.1-2024 utility conformance
+---
+id: RDM_0012
+status: open
+traces: >
+  BDR_0003, SYS_LIBC_0001
+---
+
+Implement and test every POSIX.1-2024 (Issue 8) utility from the
+`tests/posix/issue8-manifest.tsv` manifest. Each utility gets a task in
+`docs/records/TASKS.md`. That task covers options, operands, synopsis, stdin,
+stdout, stderr, input and output files, environment variables, asynchronous
+events, and exit status.
+```
+
 ### RDM_0008 — Platform abstraction and future 64-bit ARM (arm64) support
 
 ```{roadmap} Platform abstraction and future 64-bit ARM (arm64) support
