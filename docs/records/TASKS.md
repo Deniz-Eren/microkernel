@@ -21,20 +21,6 @@ into the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0063 — Build shared libz.so.1 via CMake and link zlibtest dynamically
-
-```{task} Build shared libz.so.1 via CMake and link zlibtest dynamically
-:id: TSK_0063
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0055, SYS_LIBC_0001
-
-Update `cmake/zlib.cmake` to build shared `libz.so.1` (with `libz.so` symlink)
-alongside `libz.a` during the CMake build without storing upstream source in
-git. Install `libz.so.1` into the Ring 3 sysroot and `boot.tar`. Link `zlibtest`
-dynamically against `libz.so.1` and `libc.so`, and verify in QEMU
-({need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0064 — Build shared libcrypto.so.3 and libssl.so.3 via CMake
 
 ```{task} Build shared libcrypto.so.3 and libssl.so.3 via CMake

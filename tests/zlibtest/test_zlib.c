@@ -1,6 +1,6 @@
 /**
  * @file     test_zlib.c
- * @brief    Ring 3 QEMU verification of cross-compiled sysroot zlib (libz.a)
+ * @brief    Ring 3 QEMU verification of sysroot zlib (libz.a, libz.so.1)
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -8,7 +8,7 @@
  *
  */
 
-/* need:: VER_LIBC_0030 */
+/* need:: VER_LIBC_0030 VER_LIBC_0034 */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -236,8 +236,8 @@ int main(void) {
     if (check_gzfile() != 0) {
         return 1;
     }
-    printf("[OK] zlib %s sysroot libz.a compress, deflate/inflate, gzip, and "
-           "crc32/adler32 verified\n",
+    printf("[OK] zlib %s sysroot libz.so.1 dynamic compress, deflate/inflate, "
+           "gzip, and crc32/adler32 verified\n",
            ver);
     return 0;
 }

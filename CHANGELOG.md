@@ -21,6 +21,12 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
+- The CMake build produces shared `libz.so.1` (soname `libz.so.1`) with a
+  `libz.so` symlink beside static `libz.a`, installs it into the Ring 3 sysroot,
+  and ships it in the boot image {need:: SWR_LIBC_0034}.
+- `zlibtest` links as an `ET_DYN` PIE against `libz.so.1` and `libc.so` with
+  `PT_INTERP=/boot/ld.so` and verifies zlib in QEMU through `/boot/ld.so`
+  {need:: SWR_LIBC_0034}.
 - Ring 3 builds a position-independent shared `libc.so` (soname `libc.so`)
   beside static `libc.a` in the sysroot and ships it in the boot image {need::
   SWR_LIBC_0033}.

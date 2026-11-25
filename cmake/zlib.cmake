@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: MIT
 #
 
-# need:: COMP_LIBC_0029
+# need:: COMP_LIBC_0029 COMP_LIBC_0033
 
 option(MICROKERNEL_BUILD_ZLIB
     "Download and cross-compile zlib into the Ring 3 sysroot" ON)
@@ -116,4 +116,61 @@ if(MICROKERNEL_BUILD_ZLIB)
     )
     target_link_libraries(z INTERFACE c)
     add_dependencies(z install_zlib_headers c)
+
+    #--------------------------------------------------------------------------
+    # Shared libz.so.1 (-fPIC) beside static libz.a. Undefined libc references
+    # stay undefined at link time and resolve at load time from libc.so through
+    # /boot/ld.so (ADR_0059); linking against libc.so records DT_NEEDED libc.so.
+    #--------------------------------------------------------------------------
+    set(ZLIB_SO_OUT ${CMAKE_BINARY_DIR}/libz.so.1)
+    add_library(z_pic OBJECT ${ZLIB_SRCS})
+    set(ZLIB_SO_CFLAGS ${ZLIB_CFLAGS})
+    list(REMOVE_ITEM ZLIB_SO_CFLAGS -fno-pic -fno-pie)
+    list(APPEND ZLIB_SO_CFLAGS -fPIC)
+    target_compile_options(z_pic PRIVATE ${ZLIB_SO_CFLAGS})
+    target_include_directories(z_pic SYSTEM PRIVATE
+        "${ZLIB_GEN}"
+        "${ZLIB_SRC}"
+        "${SYSROOT_DIR}/usr/include"
+        "${CLANG_RESOURCE_DIR}/include"
+    )
+    add_dependencies(z_pic install_zlib_headers)
+
+    add_custom_command(
+        OUTPUT ${ZLIB_SO_OUT}
+        COMMAND ${CMAKE_LINKER} -shared -soname libz.so.1
+                -z separate-code
+                --hash-style=both
+                --build-id=none
+                $<TARGET_OBJECTS:z_pic>
+                ${LIBC_SO_OUT}
+                -o ${ZLIB_SO_OUT}
+        DEPENDS z_pic libcso
+        COMMENT "Stage 2: linking shared libz.so.1"
+        VERBATIM
+        COMMAND_EXPAND_LISTS
+    )
+    add_custom_target(zlibso ALL DEPENDS ${ZLIB_SO_OUT})
+    add_custom_command(
+        OUTPUT ${SYSROOT_DIR}/usr/lib/libz.so.1
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${ZLIB_SO_OUT} ${SYSROOT_DIR}/usr/lib/libz.so.1
+        DEPENDS ${ZLIB_SO_OUT}
+        COMMENT "Stage 2: installing libz.so.1 into the sysroot"
+        VERBATIM
+    )
+    add_custom_command(
+        OUTPUT ${SYSROOT_DIR}/usr/lib/libz.so
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libz.so.1
+                ${SYSROOT_DIR}/usr/lib/libz.so
+        DEPENDS ${SYSROOT_DIR}/usr/lib/libz.so.1
+        COMMENT "Stage 2: creating the libz.so symlink"
+        VERBATIM
+    )
+    add_custom_target(zlibso_install DEPENDS
+        ${SYSROOT_DIR}/usr/lib/libz.so.1 ${SYSROOT_DIR}/usr/lib/libz.so)
+    add_dependencies(zlibso zlibso_install)
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+        "libz.so.1=${ZLIB_SO_OUT}")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS zlibso)
 endif()

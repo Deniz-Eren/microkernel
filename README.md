@@ -362,9 +362,10 @@ them in isolated Ring 3 address spaces across multiple CPU cores:
   dynamically against shared `libc.so` (soname `libc.so`, shipped in the boot
   image): dynamic executables delegate `dlopen`, `dlsym`, `dlclose`, and
   `dladdr` to `/boot/ld.so` through weak `ldso_*` exports. Link sysroot `zlib`
-  (`libz.a`, `<zlib.h>`) for DEFLATE and gzip compression. Link sysroot OpenSSL
-  `3.0.15` (`libcrypto.a`, `libssl.a`, `<openssl/*.h>`) for SHA-256, AES-GCM,
-  RSA, ECDSA, Ed25519, X.509, and TLS 1.3.
+  (`libz.a`, shared `libz.so.1` with `libz.so` symlink, `<zlib.h>`) for DEFLATE
+  and gzip compression. Link sysroot OpenSSL `3.0.15` (`libcrypto.a`,
+  `libssl.a`, `<openssl/*.h>`) for SHA-256, AES-GCM, RSA, ECDSA, Ed25519, X.509,
+  and TLS 1.3.
 
 ### For system server and driver authors
 
@@ -389,10 +390,11 @@ isolated Ring 3 OS services outside the kernel:
   [traceability matrix](docs/60-verification/traceability.md).
 - **Not available yet (planned next):** All 70 POSIX.1-2024 Base C headers, all
   1037 Base C interfaces, and all 108 Base XCU utilities are in place. Kernel
-  `PT_INTERP` loading, the Ring 3 dynamic linker `/boot/ld.so`, and shared
-  `libc.so` are in place. Next milestones add `libz.so.1`, `libcrypto.so.3`, and
-  `libssl.so.3` and dynamically link OpenSSH Portable and `bin/` utilities. See
-  [docs/records/TASKS.md](docs/records/TASKS.md) and
+  `PT_INTERP` loading, the Ring 3 dynamic linker `/boot/ld.so`, shared
+  `libc.so`, and shared `libz.so.1` are in place. Next milestones add
+  `libcrypto.so.3` and `libssl.so.3` and dynamically link OpenSSH Portable and
+  `bin/` utilities. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+  
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 - **Hardware-in-the-loop bring-up (queued):** The roadmap adds a four-phase
   QEMU-to-HIL workflow. It brings up Raspberry Pi 400 (BCM2711) bare metal in

@@ -394,9 +394,10 @@ Gate 1 (`tests/posix/test_headers.py`) verifies header compilation and hygiene
 :verifies: SWR_LIBC_0030
 
 The headless QEMU harness `tests/test_runner.py` runs `zlibtest`
-(`tests/zlibtest/test_zlib.c`) linked against sysroot `libz.a`. It verifies
-`zlibVersion`, `crc32`/`adler32` vectors, `compress2`/`uncompress`, corruption
-detection, streaming zlib and gzip `deflate`/`inflate`, and `gzopen`/
+(`tests/zlibtest/test_zlib.c`) linked against shared sysroot `libz.so.1`. It
+verifies `zlibVersion`, `crc32`/`adler32` vectors, `compress2`/`uncompress`,
+corruption detection, streaming zlib and gzip `deflate`/`inflate`, and `gzopen`/
+
 `gzwrite`/`gzread` over `/tmp` ({need}`SWR_LIBC_0030`).
 ```
 
@@ -441,5 +442,18 @@ through the ld.so delegation. It verifies pthread join with mutexes and
 thread-local `errno` isolation. It verifies a `SIGUSR1` handler with `errno`
 preserved across the kernel signal frame. It verifies `fork` plus `execve`
 re-execution of the dynamic image with `waitpid` ({need}`SWR_LIBC_0033`).
+```
 
+```{ver} Verify the shared sysroot zlib dynamic executable in QEMU
+:id: VER_LIBC_0034
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0034
+
+The headless QEMU harness runs `zlibtest` as an `ET_DYN` PIE linked against
+`libz.so.1` and `libc.so` with `PT_INTERP=/boot/ld.so`. The interpreter loads
+`libz.so.1` from the boot image and resolves its libc imports. The test verifies
+`zlibVersion`, `crc32`/`adler32` vectors, `compress2`/`uncompress`, streaming
+zlib and gzip `deflate`/`inflate`, and `gzopen`/`gzwrite`/`gzread`
+({need}`SWR_LIBC_0034`).
 ```

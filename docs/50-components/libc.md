@@ -439,3 +439,17 @@ linker script. The weak `ldso_dlopen`, `ldso_dlsym`, `ldso_dlclose`, and
 `dlclose`, and `dladdr` calls from shared `libc.so` (ADR_0059)
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0033`).
 ```
+
+```{comp} Shared sysroot zlib build (libz.so.1)
+:id: COMP_LIBC_0033
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0034
+
+`cmake/zlib.cmake` compiles the zlib sources with `-fPIC` and links shared
+`libz.so.1` with soname `libz.so.1` against `libc.so`. It installs `libz.so.1`
+and the `libz.so` symlink into the Ring 3 sysroot and ships `libz.so.1` in the
+boot image. `tests/zlibtest` links as an `ET_DYN` PIE with
+`PT_INTERP=/boot/ld.so` and `DT_NEEDED` `libz.so.1` plus `libc.so`
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0034`).
+```

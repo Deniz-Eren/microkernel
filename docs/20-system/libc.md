@@ -446,6 +446,19 @@ must delegate to `/boot/ld.so`. The interpreter must enforce W^X and report
 errors so `dlerror` stays thread-local ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply the shared sysroot zlib (libz.so.1)
+:id: SWR_LIBC_0034
+:status: active
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0055, ADR_0059
+
+The CMake build must produce a shared `libz.so.1` with soname `libz.so.1` beside
+static `libz.a`. It must install `libz.so.1` and a `libz.so` symlink in the Ring
+3 sysroot and ship `libz.so.1` in `boot.tar`. Ring 3 executables must link
+against `libz.so.1` as an `ET_DYN` `DT_NEEDED` dependency of the process
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:
