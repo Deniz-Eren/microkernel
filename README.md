@@ -395,9 +395,9 @@ isolated Ring 3 OS services external to the kernel:
 - **Planned next:** All 70 POSIX.1-2024 Base C headers, all 1037 Base C
   interfaces, and all 108 Base XCU utilities are active. Kernel `PT_INTERP`
   load, the Ring 3 dynamic linker `/boot/ld.so`, shared `libc.so`, shared
-  `libz.so.1`, and shared `libcrypto.so.3` and `libssl.so.3` are active. Next
-  milestones dynamically link OpenSSH Portable and `bin/` utilities. Refer to
-  [docs/records/TASKS.md](docs/records/TASKS.md) and
+  `libz.so.1`, and shared `libcrypto.so.3` and `libssl.so.3` are active, and
+  OpenSSH Portable links dynamically. Next milestones dynamically link `bin/`
+  utilities. Refer to [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 - **Hardware-in-the-loop startup (queued):** The roadmap adds a four-step
   QEMU-to-HIL workflow. It boots Raspberry Pi 400 (BCM2711) bare metal in RAM

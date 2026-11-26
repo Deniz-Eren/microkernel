@@ -96,6 +96,11 @@ a Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- OpenSSH Portable `sshd`, `sshd-session`, and `ssh-keygen` link as `ET_DYN` PIE
+  executables with `PT_INTERP=/boot/ld.so` and `DT_NEEDED` entries for shared
+  `libcrypto.so.3`, `libz.so.1`, and `libc.so`. The `openssh_libssh` and
+  `openssh_compat` archives compile with `-fPIC`, and `/boot/ld.so` resolves the
+  shared libraries from the boot image at load time {need:: SWR_IPC_0016}.
 - The project manually changed all 150 project documents (`README.md`,
   `AGENTS.md`, `CHANGELOG.md`, and non-immutable files in `docs/`) to obey STE
   rules and use one canonical word for each concept. It also typed all `TN:` and

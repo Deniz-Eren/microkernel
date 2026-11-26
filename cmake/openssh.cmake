@@ -51,14 +51,15 @@ if(MICROKERNEL_BUILD_OPENSSH)
         COPYONLY
     )
 
+    # OpenSSH objects link into ET_DYN PIE executables against the shared
+    # sysroot libraries, so every object compiles with -fPIC (ADR_0059).
     set(OPENSSH_CFLAGS
         -ffreestanding
         -nostdlib
         -nostdinc
         -fno-builtin
         -fno-stack-protector
-        -fno-pic
-        -fno-pie
+        -fPIC
         -fno-asynchronous-unwind-tables
         ${MICROKERNEL_USER_ARCH_CFLAGS}
         -std=gnu17
@@ -326,23 +327,29 @@ if(MICROKERNEL_BUILD_OPENSSH)
     add_dependencies(openssh_libssh
         install_headers install_zlib_headers openssl_sysroot)
 
+    # Dynamic Ring 3 executables: ET_DYN PIE with PT_INTERP=/boot/ld.so linked
+    # against the shared sysroot libraries through the user-dyn.ld script.
+    # Linking against the shared objects records DT_NEEDED libcrypto.so.3,
+    # libz.so.1, and libc.so; /boot/ld.so resolves them from boot.tar at load
+    # time (ADR_0059). Undefined libc references stay undefined at link time.
     function(microkernel_add_openssh_executable name boot_name)
         add_executable(${name} ${ARGN})
         target_compile_options(${name} PRIVATE ${OPENSSH_CFLAGS})
         target_include_directories(${name} SYSTEM PRIVATE ${OPENSSH_INC_DIRS})
         target_link_options(${name} PRIVATE
-            -static
-            --no-pie
-            -T ${MICROKERNEL_USER_LINKER_SCRIPT}
-            -z noseparate-code
+            -pie
+            --dynamic-linker=/boot/ld.so
+            -T ${MICROKERNEL_USER_DYN_LINKER_SCRIPT}
             --build-id=none
             ${SYSROOT_DIR}/usr/lib/crt0.o
         )
         set_target_properties(${name} PROPERTIES LINK_DEPENDS
-            ${MICROKERNEL_USER_LINKER_SCRIPT})
+            ${MICROKERNEL_USER_DYN_LINKER_SCRIPT})
         target_link_libraries(${name} PRIVATE
-            openssh_libssh openssh_compat crypto z c)
-        add_dependencies(${name} c z crypto openssh_libssh openssh_compat)
+            openssh_libssh openssh_compat
+            "${OPENSSL_LIBCRYPTO_SO}" "${ZLIB_SO_OUT}" "${LIBC_SO_OUT}")
+        add_dependencies(${name} libcso zlibso opensslso crt0
+            openssh_libssh openssh_compat)
         set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
             "${boot_name}=$<TARGET_FILE:${name}>")
         set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ${name})

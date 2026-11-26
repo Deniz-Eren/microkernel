@@ -21,6 +21,21 @@ initial IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0065 — Link OpenSSH Portable dynamically to shared libraries
+
+```{task} Link OpenSSH Portable dynamically to shared libraries
+:id: TSK_0065
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0054, ADR_0055, ADR_0056, SYS_IPC_0001
+
+Change `cmake/openssh.cmake` to link `sshd`, `sshd-session`, and `ssh-keygen`
+dynamically with `--dynamic-linker=/boot/ld.so`. Link those executables to
+`libcrypto.so.3`, `libz.so.1`, and `libc.so`. Examine `PT_INTERP` and
+`DT_NEEDED` headers with `llvm-readelf`. Do tests of RSA, ECDSA, Ed25519,
+compressed (`zlib@openssh.com`), password, and PTY sessions in CTest
+`ipc.sshd_e2e` ({need}`SYS_IPC_0001`).
+```
+
 ### TSK_0064 — Make shared libcrypto.so.3 and libssl.so.3 with CMake
 
 ```{task} Make shared libcrypto.so.3 and libssl.so.3 with CMake
