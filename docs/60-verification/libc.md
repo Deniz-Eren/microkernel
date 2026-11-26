@@ -429,10 +429,10 @@ gzip `deflate` and `inflate`, and `gzopen`, `gzwrite`, and `gzread` on `/tmp`
 :verifies: SWR_LIBC_0031
 
 The QEMU test harness `tests/test_runner.py` starts `openssltest`
-(`tests/openssltest/test_openssl.c`) linked to `libssl.a` and `libcrypto.a`.
-This test does a check of `RAND_bytes`, SHA-256, AES-256-GCM, RSA-2048, ECDSA
-P-256, Ed25519, X.509 certificates, and a TLS 1.3 handshake on memory BIO pairs
-({need}`SWR_LIBC_0031`).
+(`tests/openssltest/test_openssl.c`) linked to shared sysroot `libssl.so.3` and
+`libcrypto.so.3`. This test does a check of `RAND_bytes`, SHA-256, AES-256-GCM,
+RSA-2048, ECDSA P-256, Ed25519, X.509 certificates, and a TLS 1.3 handshake on
+memory BIO pairs ({need}`SWR_LIBC_0031`).
 ```
 
 ```{ver} Test of the Ring 3 dynamic linker /boot/ld.so in QEMU
@@ -477,4 +477,18 @@ from the boot image and resolves its `libc` symbols. This test does a check of
 `zlibVersion`, `crc32` and `adler32` values, `compress2`, `uncompress`, stream
 zlib and gzip `deflate` and `inflate`, `gzopen`, `gzwrite`, and `gzread`
 ({need}`SWR_LIBC_0034`).
+```
+
+```{ver} Test of the shared sysroot OpenSSL dynamic executable in QEMU
+:id: VER_LIBC_0035
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0035
+
+The QEMU test harness starts `openssltest` as an `ET_DYN` PIE linked to
+`libssl.so.3`, `libcrypto.so.3`, and `libc.so` with `PT_INTERP=/boot/ld.so`. The
+interpreter loads both shared libraries from the boot image and resolves their
+`libc` symbols. This test does a check of `RAND_bytes`, SHA-256, AES-256-GCM,
+RSA-2048, ECDSA P-256, Ed25519, X.509 certificates, and a TLS 1.3 handshake on
+memory BIO pairs ({need}`SWR_LIBC_0035`).
 ```

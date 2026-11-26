@@ -21,6 +21,21 @@ initial IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0064 — Make shared libcrypto.so.3 and libssl.so.3 with CMake
+
+```{task} Make shared libcrypto.so.3 and libssl.so.3 with CMake
+:id: TSK_0064
+:status: done
+:traces: BDR_0003, BDR_0004, ADR_0056, SYS_LIBC_0001
+
+Change `cmake/openssl_target.conf`, `cmake/build_openssl.sh`, and
+`cmake/openssl.cmake` to compile `-fPIC` shared `libcrypto.so.3` and
+`libssl.so.3`. Make the shared libraries with the static archives during the
+CMake build. Do not keep upstream source in git. Install the shared libraries
+into the sysroot and `boot.tar`. Link `openssltest` dynamically. Do a test of
+cryptography and TLS 1.3 in QEMU ({need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0063 — Make shared libz.so.1 with CMake and link zlibtest dynamically
 
 ```{task} Make shared libz.so.1 with CMake and link zlibtest dynamically

@@ -456,6 +456,20 @@ must link against `libz.so.1` as an `ET_DYN` `DT_NEEDED` dependency of the
 process ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Supply the shared sysroot OpenSSL (libcrypto.so.3 and libssl.so.3)
+:id: SWR_LIBC_0035
+:status: active
+:derives: SYS_LIBC_0001
+:traces: BDR_0003, BDR_0004, ADR_0056, ADR_0059
+
+The CMake build must make shared `libcrypto.so.3` and `libssl.so.3` with sonames
+`libcrypto.so.3` and `libssl.so.3` with static `libcrypto.a` and `libssl.a`. It
+must not keep upstream source in git. It must install both shared libraries and
+their `libcrypto.so` and `libssl.so` symbolic links in the Ring 3 sysroot and
+include them in `boot.tar`. Ring 3 executables must link against them as
+`ET_DYN` `DT_NEEDED` dependencies of the process ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

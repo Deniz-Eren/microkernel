@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: MIT
 #
 
-# need:: COMP_LIBC_0030
+# need:: COMP_LIBC_0030 COMP_LIBC_0034
 
 option(MICROKERNEL_BUILD_OPENSSL
     "Download and cross-compile OpenSSL into the Ring 3 sysroot" ON)
@@ -43,11 +43,16 @@ if(MICROKERNEL_BUILD_OPENSSL)
 
     set(OPENSSL_SRC "${openssl_SOURCE_DIR}")
     set(OPENSSL_BLD "${CMAKE_BINARY_DIR}/openssl-build")
+    set(OPENSSL_PIC_BLD "${OPENSSL_BLD}/pic")
     set(OPENSSL_TARGET_CONF "${CMAKE_SOURCE_DIR}/cmake/openssl_target.conf")
     set(OPENSSL_COMPAT_DIR "${CMAKE_SOURCE_DIR}/cmake/openssl_compat")
     set(OPENSSL_BUILD_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/build_openssl.sh")
     set(OPENSSL_LIBCRYPTO "${SYSROOT_DIR}/usr/lib/libcrypto.a")
     set(OPENSSL_LIBSSL "${SYSROOT_DIR}/usr/lib/libssl.a")
+    set(OPENSSL_LIBCRYPTO_PIC "${OPENSSL_PIC_BLD}/libcrypto.a")
+    set(OPENSSL_LIBSSL_PIC "${OPENSSL_PIC_BLD}/libssl.a")
+    set(OPENSSL_LIBCRYPTO_SO "${OPENSSL_BLD}/libcrypto.so.3")
+    set(OPENSSL_LIBSSL_SO "${OPENSSL_BLD}/libssl.so.3")
     set(OPENSSL_HDR_STAMP "${OPENSSL_BLD}/install.stamp")
 
     add_custom_command(
@@ -73,6 +78,87 @@ if(MICROKERNEL_BUILD_OPENSSL)
         DEPENDS "${OPENSSL_LIBCRYPTO}" "${OPENSSL_LIBSSL}"
                 "${OPENSSL_HDR_STAMP}"
     )
+
+    #--------------------------------------------------------------------------
+    # Shared libcrypto.so.3 and libssl.so.3 (-fPIC) beside the static archives.
+    # Undefined libc references stay undefined at link time and resolve at load
+    # time from libc.so through /boot/ld.so (ADR_0059); linking against libc.so
+    # records DT_NEEDED libc.so, and linking against libcrypto.so.3 records
+    # DT_NEEDED libcrypto.so.3 for libssl.so.3.
+    #--------------------------------------------------------------------------
+    add_custom_command(
+        OUTPUT "${OPENSSL_LIBCRYPTO_SO}"
+        COMMAND ${CMAKE_LINKER} -shared -soname libcrypto.so.3
+                -z separate-code
+                --hash-style=both
+                --build-id=none
+                --whole-archive "${OPENSSL_LIBCRYPTO_PIC}" --no-whole-archive
+                ${LIBC_SO_OUT}
+                -o "${OPENSSL_LIBCRYPTO_SO}"
+        DEPENDS "${OPENSSL_HDR_STAMP}" libcso
+        COMMENT "Stage 2: linking shared libcrypto.so.3"
+        VERBATIM
+    )
+    add_custom_command(
+        OUTPUT "${OPENSSL_LIBSSL_SO}"
+        COMMAND ${CMAKE_LINKER} -shared -soname libssl.so.3
+                -z separate-code
+                --hash-style=both
+                --build-id=none
+                --whole-archive "${OPENSSL_LIBSSL_PIC}" --no-whole-archive
+                "${OPENSSL_LIBCRYPTO_SO}" ${LIBC_SO_OUT}
+                -o "${OPENSSL_LIBSSL_SO}"
+        DEPENDS "${OPENSSL_HDR_STAMP}" "${OPENSSL_LIBCRYPTO_SO}"
+        COMMENT "Stage 2: linking shared libssl.so.3"
+        VERBATIM
+    )
+    add_custom_target(opensslso ALL
+        DEPENDS "${OPENSSL_LIBCRYPTO_SO}" "${OPENSSL_LIBSSL_SO}"
+    )
+    add_custom_command(
+        OUTPUT "${SYSROOT_DIR}/usr/lib/libcrypto.so.3"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${OPENSSL_LIBCRYPTO_SO}"
+                "${SYSROOT_DIR}/usr/lib/libcrypto.so.3"
+        DEPENDS "${OPENSSL_LIBCRYPTO_SO}"
+        COMMENT "Stage 2: installing libcrypto.so.3 into the sysroot"
+        VERBATIM
+    )
+    add_custom_command(
+        OUTPUT "${SYSROOT_DIR}/usr/lib/libcrypto.so"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libcrypto.so.3
+                "${SYSROOT_DIR}/usr/lib/libcrypto.so"
+        DEPENDS "${SYSROOT_DIR}/usr/lib/libcrypto.so.3"
+        COMMENT "Stage 2: creating the libcrypto.so symlink"
+        VERBATIM
+    )
+    add_custom_command(
+        OUTPUT "${SYSROOT_DIR}/usr/lib/libssl.so.3"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${OPENSSL_LIBSSL_SO}" "${SYSROOT_DIR}/usr/lib/libssl.so.3"
+        DEPENDS "${OPENSSL_LIBSSL_SO}"
+        COMMENT "Stage 2: installing libssl.so.3 into the sysroot"
+        VERBATIM
+    )
+    add_custom_command(
+        OUTPUT "${SYSROOT_DIR}/usr/lib/libssl.so"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libssl.so.3
+                "${SYSROOT_DIR}/usr/lib/libssl.so"
+        DEPENDS "${SYSROOT_DIR}/usr/lib/libssl.so.3"
+        COMMENT "Stage 2: creating the libssl.so symlink"
+        VERBATIM
+    )
+    add_custom_target(opensslso_install DEPENDS
+        "${SYSROOT_DIR}/usr/lib/libcrypto.so.3"
+        "${SYSROOT_DIR}/usr/lib/libcrypto.so"
+        "${SYSROOT_DIR}/usr/lib/libssl.so.3"
+        "${SYSROOT_DIR}/usr/lib/libssl.so")
+    add_dependencies(opensslso opensslso_install)
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+        "libcrypto.so.3=${OPENSSL_LIBCRYPTO_SO}")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+        "libssl.so.3=${OPENSSL_LIBSSL_SO}")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS opensslso)
 
     add_library(crypto STATIC IMPORTED GLOBAL)
     set_target_properties(crypto PROPERTIES

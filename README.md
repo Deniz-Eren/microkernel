@@ -366,8 +366,9 @@ isolated Ring 3 address spaces across more than one CPU core:
   send `dlopen`, `dlsym`, `dlclose`, and `dladdr` calls to `/boot/ld.so` through
   weak `ldso_*` exports. Link sysroot `zlib` (`libz.a`, shared `libz.so.1` with
   `libz.so` symlink, `<zlib.h>`) for DEFLATE and gzip compression. Link sysroot
-  OpenSSL `3.0.15` (`libcrypto.a`, `libssl.a`, `<openssl/*.h>`) for SHA-256,
-  AES-GCM, RSA, ECDSA, Ed25519, X.509, and TLS 1.3.
+  OpenSSL `3.0.15` (`libcrypto.a`, `libssl.a`, shared `libcrypto.so.3` and
+  `libssl.so.3` with `libcrypto.so` and `libssl.so` symlinks, `<openssl/*.h>`)
+  for SHA-256, AES-GCM, RSA, ECDSA, Ed25519, X.509, and TLS 1.3.
 
 ### For system server and driver authors
 
@@ -393,9 +394,9 @@ isolated Ring 3 OS services external to the kernel:
   also to the [traceability matrix](docs/60-verification/traceability.md).
 - **Planned next:** All 70 POSIX.1-2024 Base C headers, all 1037 Base C
   interfaces, and all 108 Base XCU utilities are active. Kernel `PT_INTERP`
-  load, the Ring 3 dynamic linker `/boot/ld.so`, shared `libc.so`, and shared
-  `libz.so.1` are active. Next milestones add `libcrypto.so.3` and `libssl.so.3`
-  and dynamically link OpenSSH Portable and `bin/` utilities. Refer to
+  load, the Ring 3 dynamic linker `/boot/ld.so`, shared `libc.so`, shared
+  `libz.so.1`, and shared `libcrypto.so.3` and `libssl.so.3` are active. Next
+  milestones dynamically link OpenSSH Portable and `bin/` utilities. Refer to
   [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/ROADMAP.md](docs/records/ROADMAP.md).
 - **Hardware-in-the-loop startup (queued):** The roadmap adds a four-step

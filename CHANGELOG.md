@@ -22,6 +22,14 @@ a Changelog](https://keepachangelog.com).
 
 ### Added
 
+- The CMake build makes shared `libcrypto.so.3` and `libssl.so.3` (sonames
+  `libcrypto.so.3` and `libssl.so.3`) with `libcrypto.so` and `libssl.so`
+  symlinks and the static archives. It installs both shared libraries into the
+  Ring 3 sysroot and puts them in the boot image {need:: SWR_LIBC_0035}.
+- `openssltest` links as an `ET_DYN` PIE executable to `libssl.so.3`,
+  `libcrypto.so.3`, and `libc.so` with `PT_INTERP=/boot/ld.so`. It does tests of
+  the `libcrypto` functions and TLS 1.3 in QEMU through `/boot/ld.so` {need::
+  SWR_LIBC_0035}.
 - The CMake build makes shared `libz.so.1` (soname `libz.so.1`) with a `libz.so`
   symlink and static `libz.a`. It installs `libz.so.1` into the Ring 3 sysroot
   and puts `libz.so.1` in the boot image {need:: SWR_LIBC_0034}.

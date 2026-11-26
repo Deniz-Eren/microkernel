@@ -1,6 +1,6 @@
 /**
  * @file     test_openssl.c
- * @brief    Ring 3 QEMU test for cross-compiled OpenSSL (libcrypto/libssl)
+ * @brief    Ring 3 QEMU test for shared sysroot libssl.so.3/libcrypto.so.3
  *
  * @copyright
  * Copyright (c) 2026 Deniz Eren <deniz.eren@outlook.com>
@@ -8,7 +8,7 @@
  *
  */
 
-/* need:: VER_LIBC_0031 */
+/* need:: VER_LIBC_0031 VER_LIBC_0035 */
 
 #include <openssl/bio.h>
 #include <openssl/crypto.h>
@@ -299,7 +299,8 @@ int main(void) {
     }
     EVP_PKEY_free(ec);
 
-    printf("[OK] OpenSSL 3.0.15 sysroot SHA-256, AES-GCM, RSA-2048, ECDSA-P256,"
-           " Ed25519, and TLS 1.3 verified\n");
+    printf("[OK] OpenSSL 3.0.15 sysroot libssl.so.3/libcrypto.so.3 dynamic "
+           "SHA-256, AES-GCM, RSA-2048, ECDSA-P256, Ed25519, and TLS 1.3 "
+           "verified\n");
     return 0;
 }

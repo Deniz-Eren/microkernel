@@ -450,3 +450,20 @@ in the boot image. `tests/zlibtest` links as an `ET_DYN` PIE with
 `PT_INTERP=/boot/ld.so` and `DT_NEEDED` `libz.so.1` and `libc.so`
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0034`).
 ```
+
+```{comp} Shared sysroot OpenSSL build (libcrypto.so.3 and libssl.so.3)
+:id: COMP_LIBC_0034
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0035
+
+`cmake/openssl_target.conf` defines the `microkernel-x86_64-pic` Configure
+target. `cmake/build_openssl.sh` compiles a second `-fPIC` archive set beside
+the static pass. `cmake/openssl.cmake` links shared `libcrypto.so.3` against
+`libc.so` and shared `libssl.so.3` against `libcrypto.so.3` and `libc.so`. It
+installs both libraries and their `libcrypto.so` and `libssl.so` symbolic links
+into the Ring 3 sysroot and includes them in the boot image. `tests/openssltest`
+links as an `ET_DYN` PIE with `PT_INTERP=/boot/ld.so` and `DT_NEEDED`
+`libssl.so.3`, `libcrypto.so.3`, and `libc.so` ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0035`).
+```
