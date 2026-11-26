@@ -1,52 +1,51 @@
 ---
 name: cmake
 description: >-
-  Configure, build, test and clean the microkernel project with CMake in the
-  build container. Use when you build the system, run the tests, add a user
-  program, or change the four-stage build.
+  Configure, compile, do tests of, and clean the microkernel project with CMake
+  in the build container. Use this skill when you compile the system, do the
+  tests, add a user executable, or change the four-step build.
 ---
 
 # CMake Build
 
-The build runs in the container (see the [dev-environment
+The build operates in the container (refer to the [dev-environment
 skill](../dev-environment/SKILL.md)). The toolchain is Clang with the target
 `x86_64-unknown-none-elf` (`cmake/clang-x86-64.cmake`,
 `cmake/arch/x86-64.cmake`, `-DMICROKERNEL_ARCH=x86-64`). The C standard is C17
-with warnings as errors. The build convention is out-of-source: all output goes
-to `build/` and `sysroot/`.
+with warnings as errors. All build output goes to `build/` and `sysroot/`.
 
 ## Commands
 
 | Command | Task |
-|---|---|
-| `./scripts/env.sh configure` | configure `build/` (Ninja, toolchain) |
-| `./scripts/env.sh build` | incremental build of all targets |
-| `./scripts/env.sh test` | run the QEMU test harness |
-| `./scripts/env.sh coverage` | build `build-cov/` and emit HTML/LCOV coverage |
-| `./scripts/env.sh clean` | remove `build/`, `build-cov/`, and `sysroot/` |
+| --- | --- |
+| `./scripts/env.sh configure` | Configure `build/` (Ninja, toolchain) |
+| `./scripts/env.sh build` | Incremental build of all targets |
+| `./scripts/env.sh test` | Start the QEMU test harness |
+| `./scripts/env.sh coverage` | Make `build-cov/` and write HTML/LCOV coverage |
+| `./scripts/env.sh clean` | Remove `build/`, `build-cov/`, and `sysroot/` |
 
-For each phase of work, run `scripts/build-agent.sh`. It builds, tests, and
-lints, and it prints only the summary and the failures.
+For each step of work, start `scripts/build-agent.sh`. This script compiles,
+does tests, and does static analysis, and it writes only the summary and errors.
 
-## The four stages
+## The four steps
 
-Each stage gives its output to the next stage:
+Each step gives its output to the next step:
 
-1. **Headers.** The public headers from `libc/include/` and the Clang
-   freestanding headers go into `sysroot/usr/include`.
-2. **C library.** `libc` compiles to `sysroot/usr/lib/libc.a`. `crt0.S` becomes
-   `sysroot/usr/lib/crt0.o`.
-3. **User programs.** Each program links static with libc against the sysroot.
-   `scripts/mk_boot_tar.py` packs the programs into `build/boot.tar` (ustar).
-   The programs come from `servers/` and `tests/`.
-4. **Kernel and ISO.** The kernel links at `0xFFFFFFFF80000000` with
+1. **Headers.** CMake puts copies of the public headers from `libc/include/` and
+   the Clang freestanding headers into `sysroot/usr/include`.
+2. **C library.** Clang compiles `libc` into `sysroot/usr/lib/libc.a` and
+   compiles `crt0.S` into `sysroot/usr/lib/crt0.o`.
+3. **User executables.** Each executable links statically with `libc` and
+   `sysroot`. `scripts/mk_boot_tar.py` puts the executables from `servers/` and
+   `tests/` into `build/boot.tar` (ustar).
+4. **Kernel and ISO.** The linker links the kernel at `0xFFFFFFFF80000000` with
    `kernel/arch/x86-64/linker.ld`. `grub-mkrescue` makes `build/microkernel.iso`
    with `iso/boot/grub/grub.cfg`.
 
 ## Test harness
 
-`tests/test_runner.py` boots the ISO headless in QEMU, reads the serial output,
-and asserts an ordered list of regex patterns. Exit code 0 means all patterns
+`tests/test_runner.py` boots the ISO in QEMU with no display, reads serial
+output, and does a check of regex patterns. Exit code 0 shows that all patterns
 matched before the timeout:
 
 ```bash
@@ -56,47 +55,46 @@ matched before the timeout:
     --expect 'signal handler entered'
 ```
 
-- Give each milestone expectation with one `--expect` option.
+- Give each milestone pattern with one `--expect` option.
 - A kernel panic or a missing pattern gives exit code 1.
-- A milestone is complete only when its test gives exit code 0 (see
+- A milestone is completed only when its test gives exit code 0 (refer to
   [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md), `CNV_0006`).
-- For harness details and failure diagnosis, see
+- For harness information and error diagnosis, refer to
   [docs/60-verification/qemu-harness.md](../../60-verification/qemu-harness.md)
   and the [qemu-debug skill](../qemu-debug/SKILL.md).
 
-## Add a user program
+## Add a user executable
 
-1. Make `tests/<name>/main.c` and `tests/<name>/CMakeLists.txt` (copy the
-   pattern of `tests/sigtest/`).
+1. Make `tests/<name>/main.c` and `tests/<name>/CMakeLists.txt` based on
+   `tests/sigtest/`.
 2. In `CMakeLists.txt` at the root, add `add_subdirectory(tests/<name>)`. The
-   `microkernel_add_user_executable` function adds the program to `boot.tar`
+   `microkernel_add_user_executable` function adds the executable to `boot.tar`
    automatically.
-3. Add the copyright header to each new file (see
+3. Add the copyright header to each new file (refer to
    [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md), `CNV_0003`).
-4. Run the build agent.
+4. Start the build agent.
 
 ## Static analysis
 
-The configure step exports `build/compile_commands.json`. The linter needs it:
+The configure step exports `build/compile_commands.json`, which the linter uses:
 
 ```bash
 ./scripts/env.sh bash -c "run-clang-tidy -p build -quiet <files...>"
 ```
 
-See the [clang-tidy skill](../clang-tidy/SKILL.md) for the checks and the
+Refer to the [clang-tidy skill](../clang-tidy/SKILL.md) for the checks and
 suppression rules.
 
-## Documentation and traceability
+## Documents and traceability
 
-The build also makes the Sphinx traceability documentation in `build/docs/html`
-and runs its CTest checks (unit tests, HTML build, needs export, model audit).
-Configure the container build with `-DDOCS_AUTO_INSTALL=ON` once, so the docs
-venv is created:
+The build also makes the Sphinx traceability documents in `build/docs/html` and
+starts its CTest checks (unit tests, HTML build, `needs.json` output, and model
+check). Configure the container build with `-DDOCS_AUTO_INSTALL=ON` one time to
+make the documents virtual environment:
 
 ```bash
 ./scripts/env.sh configure -DDOCS_AUTO_INSTALL=ON
 ./scripts/env.sh ctest --test-dir build -L docs --output-on-failure
 ```
 
-The authoring rules and the model layout are in
-[docs/README.md](../../README.md).
+The rules and model layout are in [docs/README.md](../../README.md).

@@ -151,7 +151,7 @@ class TagScanTests(unittest.TestCase):
                 repo_url="",
             )
             self.assertIn("[TASKS](records/TASKS.md)", rewritten)
-            self.assertIn("[index](#traceability-documentation)", rewritten)
+            self.assertIn("[index](#traceability-documents)", rewritten)
             self.assertIn("`AGENTS.md`", rewritten)
             self.assertIn("(`docs/skills/cmake/SKILL.md`)", rewritten)
             self.assertIn('A["[keep](docs/records/TASKS.md)"]', rewritten)

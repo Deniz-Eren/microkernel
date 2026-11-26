@@ -1,7 +1,7 @@
 # Interfaces — IPC
 
-Domain `IPC`: synchronous message passing, scatter-gather IPC, interrupt events,
-and name-service contracts.
+The `IPC` domain includes synchronous message passing, scatter-gather IPC,
+interrupt events, and name-service interfaces.
 
 ```{icd} Channel IPC, scatter-gather MsgV, and name-service protocol
 :id: ICD_IPC_0001
@@ -22,7 +22,7 @@ protocol ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0001`, {need}`SWR_IPC_0002`,
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0006, SWR_IPC_0010
 
-`libc/include/sys/intr.h` and `kernel/include/kernel/intr.h` specify
+`libc/include/sys/intr.h` and `kernel/include/kernel/intr.h` give
 `CAP_SYS_INTR`, `PULSE_CODE_IRQ`, `AttachIntrEvent`, `IntrUnmask`, `IOPLSet`,
 `VMMapMMIO`, `DMAAlloc`, `PCIConfigRead32`/`PCIConfigWrite32`, and Ring 3 port
 I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
@@ -34,7 +34,7 @@ I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0004
 
-`libc/include/sys/fd.h` defines `SYS_FD_OP` descriptor operations,
+`libc/include/sys/fd.h` gives `SYS_FD_OP` descriptor operations,
 `PULSE_CODE_FD_CLOSE`, and the `/dev/pipe` Ring 3 IPC message structures
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0004`).
 ```
@@ -46,9 +46,9 @@ I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0004
 
-`libc/include/fcntl.h` declares `O_CLOEXEC`, `O_NONBLOCK`, `FD_CLOEXEC`,
-`F_DUPFD`, `F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`, and
-`fcntl` with no `<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`,
+`libc/include/fcntl.h` gives `O_CLOEXEC`, `O_NONBLOCK`, `FD_CLOEXEC`, `F_DUPFD`,
+`F_DUPFD_CLOEXEC`, `F_GETFD`, `F_SETFD`, `F_GETFL`, `F_SETFL`, and `fcntl`. It
+does not include `<sys/microkernel.h>` ({need}`ARC_IPC_0001`,
 {need}`SWR_IPC_0004`).
 ```
 
@@ -59,9 +59,9 @@ I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0004
 
-`libc/include/poll.h` declares `nfds_t`, `struct pollfd`, `POLLIN`, `POLLOUT`,
-`POLLHUP`, `POLLERR`, `POLLNVAL`, `poll`, and `ppoll` with no
-`<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0004`).
+`libc/include/poll.h` gives `nfds_t`, `struct pollfd`, `POLLIN`, `POLLOUT`,
+`POLLHUP`, `POLLERR`, `POLLNVAL`, `poll`, and `ppoll`. It does not include
+`<sys/microkernel.h>` ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0004`).
 ```
 
 ```{icd} POSIX.1-2024 <aio.h> public interface
@@ -71,9 +71,9 @@ I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0005
 
-`libc/include/aio.h` declares `struct aiocb`, `AIO_*`, `LIO_*`, `aio_read`,
+`libc/include/aio.h` gives `struct aiocb`, `AIO_*`, `LIO_*`, `aio_read`,
 `aio_write`, `aio_fsync`, `aio_error`, `aio_return`, `aio_cancel`,
-`aio_suspend`, and `lio_listio` with no `<sys/microkernel.h>` leakage
+`aio_suspend`, and `lio_listio`. It does not include `<sys/microkernel.h>`
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0005`).
 ```
 
@@ -83,8 +83,8 @@ I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0007
 
-`libc/include/sys/vfs.h` defines `VFS_OP_*`, `vfs_stat_t`, `vfs_req_t`, and
-`vfs_rep_t` message structures within `IPC_MSG_MAX` for Ring 3 `/dev/vfs` IPC
+`libc/include/sys/vfs.h` gives `VFS_OP_*`, `vfs_stat_t`, `vfs_req_t`, and
+`vfs_rep_t` message structures in `IPC_MSG_MAX` for Ring 3 `/dev/vfs` IPC
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
 ```
 
@@ -95,9 +95,10 @@ I/O helpers ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0006`, {need}`SWR_IPC_0010`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0007
 
-`libc/include/sys/stat.h` declares `struct stat`, `S_IF*`, `S_IS*`, permission
-bits, `stat`, `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, and `umask` with
-no `<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
+`libc/include/sys/stat.h` gives `struct stat`, `S_IF*`, `S_IS*`, permission
+bits, `stat`, `fstat`, `lstat`, `fstatat`, `mkdir`, `mkdirat`, and `umask`. It
+does not include `<sys/microkernel.h>` ({need}`ARC_IPC_0001`,
+{need}`SWR_IPC_0007`).
 ```
 
 ```{icd} POSIX.1-2024 <dirent.h> public interface
@@ -107,9 +108,9 @@ no `<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0007
 
-`libc/include/dirent.h` declares `DIR`, `struct dirent`, `opendir`, `fdopendir`,
-`readdir`, `rewinddir`, `closedir`, and `dirfd` with no `<sys/microkernel.h>`
-leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
+`libc/include/dirent.h` gives `DIR`, `struct dirent`, `opendir`, `fdopendir`,
+`readdir`, `rewinddir`, `closedir`, and `dirfd`. It does not include
+`<sys/microkernel.h>` ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
 ```
 
 ```{icd} Ring 3 /dev/tty IPC protocol
@@ -118,9 +119,9 @@ leakage ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0007`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0008
 
-`libc/include/sys/tty.h` defines `TTY_OP_*`, `tty_req_t`, and `tty_rep_t`
-message structures within `IPC_MSG_MAX` for Ring 3 `/dev/tty` IPC
-({need}`ARC_IPC_0001`, {need}`SWR_IPC_0008`).
+`libc/include/sys/tty.h` gives `TTY_OP_*`, `tty_req_t`, and `tty_rep_t` message
+structures in `IPC_MSG_MAX` for Ring 3 `/dev/tty` IPC ({need}`ARC_IPC_0001`,
+{need}`SWR_IPC_0008`).
 ```
 
 ```{icd} POSIX.1-2024 <termios.h> public interface
@@ -130,10 +131,10 @@ message structures within `IPC_MSG_MAX` for Ring 3 `/dev/tty` IPC
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0008
 
-`libc/include/termios.h` declares `struct termios`, `c_cc[]` indices, mode and
-baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
-`tcsendbreak`, and `cf*speed` with no `<sys/microkernel.h>` leakage
-({need}`ARC_IPC_0001`, {need}`SWR_IPC_0008`).
+`libc/include/termios.h` gives `struct termios`, `c_cc[]` indices, mode and baud
+macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`, `tcsendbreak`,
+and `cf*speed`. It does not include `<sys/microkernel.h>` ({need}`ARC_IPC_0001`,
+{need}`SWR_IPC_0008`).
 ```
 
 ```{icd} Ring 3 /dev/sock IPC protocol
@@ -142,8 +143,8 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0009
 
-`libc/include/sys/sock.h` defines `SOCK_OP_*`, `sock_req_t`, `sock_rep_t`, and
-`sock_poll_*` structures within `IPC_MSG_MAX` for Ring 3 `/dev/sock` IPC
+`libc/include/sys/sock.h` gives `SOCK_OP_*`, `sock_req_t`, `sock_rep_t`, and
+`sock_poll_*` structures in `IPC_MSG_MAX` for Ring 3 `/dev/sock` IPC
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0009`).
 ```
 
@@ -154,12 +155,12 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0009
 
-`libc/include/sys/socket.h` and `libc/include/sys/un.h` declare `socklen_t`,
+`libc/include/sys/socket.h` and `libc/include/sys/un.h` give `socklen_t`,
 `sa_family_t`, `struct sockaddr`, `struct sockaddr_un`, `SOCK_CLOEXEC`, and
-`SOCK_NONBLOCK`. They declare `socket`, `socketpair`, `bind`, `listen`,
-`accept`, `accept4`, `connect`, `send`, `recv`, `sendto`, `recvfrom`,
-`shutdown`, and option helpers with no `<sys/microkernel.h>` leakage
-({need}`ARC_IPC_0001`, {need}`SWR_IPC_0009`).
+`SOCK_NONBLOCK`. They give `socket`, `socketpair`, `bind`, `listen`, `accept`,
+`accept4`, `connect`, `send`, `recv`, `sendto`, `recvfrom`, `shutdown`, and
+option helpers, and do not include `<sys/microkernel.h>` ({need}`ARC_IPC_0001`,
+{need}`SWR_IPC_0009`).
 ```
 
 ```{icd} POSIX.1-2024 <sys/select.h> public interface
@@ -169,9 +170,9 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 :refines: ARC_IPC_0001
 :satisfies: SWR_DOCS_0004
 
-`libc/include/sys/select.h` declares `struct timeval`, `fd_set`, `FD_SETSIZE`,
-`FD_CLR`, `FD_ISSET`, `FD_SET`, `FD_ZERO`, `select`, and `pselect` with no
-`<sys/microkernel.h>` leakage ({need}`ARC_IPC_0001`, {need}`SWR_DOCS_0004`).
+`libc/include/sys/select.h` gives `struct timeval`, `fd_set`, `FD_SETSIZE`,
+`FD_CLR`, `FD_ISSET`, `FD_SET`, `FD_ZERO`, `select`, and `pselect`. It does not
+include `<sys/microkernel.h>` ({need}`ARC_IPC_0001`, {need}`SWR_DOCS_0004`).
 ```
 
 ```{icd} Ring 3 block device IPC protocol (/dev/blk)
@@ -180,7 +181,7 @@ baud macros, `tcgetattr`, `tcsetattr`, `tcflush`, `tcdrain`, `tcflow`,
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0010
 
-`libc/include/sys/blk.h` defines `BLK_SECTOR_SIZE` (`512`), `BLK_MAX_SECTORS`,
+`libc/include/sys/blk.h` gives `BLK_SECTOR_SIZE` (`512`), `BLK_MAX_SECTORS`,
 `BLK_OP_INFO`, `BLK_OP_READ`, `BLK_OP_WRITE`, `blk_req_t`, and `blk_rep_t` for
 Ring 3 `/dev/blk` IPC ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0010`).
 ```
@@ -192,10 +193,10 @@ Ring 3 `/dev/blk` IPC ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0010`).
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0012
 
-`libc/include/sys/vfs.h` adds `VFS_OP_CHMOD` through `VFS_OP_STATVFS` and
+`libc/include/sys/vfs.h` gives `VFS_OP_CHMOD` through `VFS_OP_STATVFS` and
 `vfs_statvfs_t`. `libc/include/sys/statvfs.h`, `sys/stat.h`, `unistd.h`,
-`dirent.h`, `stdio.h`, and `stdlib.h` declare strict Base permissions, links,
-FIFOs, positional I/O, `posix_getdents`, `statvfs`, and temp-file APIs
+`dirent.h`, `stdio.h`, and `stdlib.h` give POSIX.1-2024 Base permissions, links,
+FIFOs, offset I/O, `posix_getdents`, `statvfs`, and temporary file APIs
 ({need}`ARC_IPC_0001`, {need}`SWR_IPC_0012`).
 ```
 
@@ -205,7 +206,7 @@ FIFOs, positional I/O, `posix_getdents`, `statvfs`, and temp-file APIs
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0013
 
-`libc/include/sys/net.h` defines `NET_OP_INFO`, `NET_OP_ARP_RESOLVE`,
+`libc/include/sys/net.h` gives `NET_OP_INFO`, `NET_OP_ARP_RESOLVE`,
 `NET_OP_PING`, `NET_OP_SOCK_*`, `NET_OP_STATS`, `net_addr_t`, `net_info_t`,
 `net_req_t`, and `net_rep_t` for Ring 3 `/dev/net` IPC ({need}`ARC_IPC_0001`,
 {need}`SWR_IPC_0013`).
@@ -217,8 +218,8 @@ FIFOs, positional I/O, `posix_getdents`, `statvfs`, and temp-file APIs
 :refines: ARC_IPC_0001
 :satisfies: SWR_IPC_0015
 
-`libc/include/sys/ioctl.h` declares `ioctl` and request codes `TIOCGWINSZ`,
+`libc/include/sys/ioctl.h` gives `ioctl` and commands `TIOCGWINSZ`,
 `TIOCSWINSZ`, `TIOCSCTTY`, `TIOCNOTTY`, `TIOCGPGRP`, `TIOCSPGRP`, `FIONREAD`,
-and `FIONBIO` over Ring 3 `ttyserv` and `fcntl` ({need}`ARC_IPC_0001`,
+and `FIONBIO` through Ring 3 `ttyserv` and `fcntl` ({need}`ARC_IPC_0001`,
 {need}`SWR_IPC_0015`).
 ```

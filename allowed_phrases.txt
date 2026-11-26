@@ -1,67 +1,67 @@
-# allowed_phrases.txt — multi-word technical terms for the Microkernel project
-# documents (README.md, docs/).
+# allowed_phrases.txt — multi-word technical phrases for the Microkernel
+# project documents (README.md, AGENTS.md, CHANGELOG.md, and docs/).
 # Format: one phrase on each line. Everything after '#' is a comment.
 
+# --- operating system and memory phrases -----------------------------------
+page table
 page tables
 user space
-kernel space
 container image
 source file
-object file
-header file
 test harness
-boot loader
-file system
 device driver
-system call
 context switch
-page fault
 exit code
+exit status
 signal frame
-user program
+signal handler
+signal delivery
 user process
-memory allocator
-priority level
 priority levels
-run queue
 ready queues
 serial line
+serial output
+serial port
 operating system
+address space
 address spaces
 physical memory
 virtual memory
-page tables
-page table
-higher half
 boot archive
-boot info
+boot image
+boot disk
+boot sequence
+load bias
 name registry
 message passing
 priority inheritance
 signal mask
-signal masks
-signal delivery
-error code
 error codes
-error number
-error numbers
-cancellation point
 cancellation points
 feature macro
 feature macros
-option group
 option groups
 memory mapping
-memory locking
 shared memory
-message queue
 message queues
 call graph
 test suite
 test suites
-compatibility gate
 compatibility gates
+scatter-gather
+job control
+host key
+public key
+environment parameter
+environment parameters
+source tree
+build system
+
+# --- standards, legal, and proper names ------------------------------------
 registered trademark
 Institute of Electrical and Electronic Engineers
+Conventional Commits
+Semantic Versioning
+Creative Commons
+Raw Profile v8
 black-box
-qemu-system-x86_64

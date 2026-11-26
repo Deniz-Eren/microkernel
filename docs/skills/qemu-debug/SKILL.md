@@ -1,26 +1,27 @@
 ---
 name: qemu-debug
 description: >-
-  Diagnose headless QEMU test failures, kernel exceptions, SMP deadlocks, and
-  hung Ring 3 tests using serial logs, the QEMU monitor, and LLVM symbol tools.
-  Use when a QEMU test fails, panics, or times out.
+  Find the cause of QEMU test errors, kernel faults, SMP deadlocks, and stalled
+  Ring 3 tests. Use serial output, the QEMU monitor, and LLVM symbol tools. Use
+  this skill when a QEMU test stops with an error, panics, or times out.
 ---
 
-# QEMU Debugging
+# QEMU Debug
 
-Use this runbook when `./scripts/build-agent.sh` or `./scripts/env.sh test`
-fails in the QEMU test step. For harness architecture details, see
+Use this procedure when `./scripts/build-agent.sh` or `./scripts/env.sh test`
+stops with an error in the QEMU test step. For harness architecture information,
+refer to
 [docs/60-verification/qemu-harness.md](../../60-verification/qemu-harness.md).
 
-## 1. Inspect the serial log first
+## 1. Examine the serial output first
 
-`./scripts/build-agent.sh` prints the path to `$TEST_LOG` on failure. Check that
-log before changing any code:
+`./scripts/build-agent.sh` writes the path to `$TEST_LOG` on error. Examine that
+output file before you change code:
 
-1. Search for `!!! kernel exception`, `PANIC:`, and `[FAIL]` lines.
-2. Check the `missing expectations:` list printed by `tests/test_runner.py`.
-3. Compare spawned processes against zombie processes to see which PIDs stayed
-   alive:
+1. Find `!!! kernel exception`, `PANIC:`, and `[FAIL]` lines.
+2. Examine the `missing expectations:` lines that `tests/test_runner.py` writes.
+3. Compare started processes with zombie processes to find which PIDs stayed
+   active:
 
 ```bash
 python3 - "$TEST_LOG" << 'PY'
@@ -38,15 +39,15 @@ for p in sorted(spawned):
 PY
 ```
 
-Notice if timer-dependent tests (`alarm`, `nanosleep`, `ppoll`) and hardware
-driver tests (`blktest`, `rtcdrv`) all stall together. In this kernel, CPU 0
-(BSP) runs `time_tick()` and receives all IOAPIC IRQs. A combined timer and IRQ
-stall usually means CPU 0 is stuck with interrupts off (`IF=0`) or spinning on a
-kernel lock.
+Timer-dependent tests (`alarm`, `nanosleep`, `ppoll`) and hardware driver tests
+(`blktest`, `rtcdrv`) can stall together. In this kernel, CPU 0 (BSP) operates
+`time_tick()` and receives all IOAPIC IRQs. A combined timer and IRQ stall
+usually shows that CPU 0 is stopped with interrupts off (`IF=0`) or in a kernel
+spinlock wait.
 
 ## 2. Reproduce with a short timeout
 
-Run a fast incremental build and a short QEMU timeout inside the container:
+Start an incremental build and a short QEMU timeout in the container:
 
 ```bash
 ./scripts/env.sh build && \
@@ -55,8 +56,8 @@ Run a fast incremental build and a short QEMU timeout inside the container:
 
 ## 3. Capture live CPU state with the QEMU monitor
 
-When QEMU hangs with no panic output, boot the ISO with a Unix monitor socket
-and query both CPUs without editing kernel code:
+If QEMU hangs with no panic output, boot the ISO with a Unix monitor socket and
+query the two CPUs without kernel code changes:
 
 ```bash
 ./scripts/env.sh bash -c '
@@ -104,21 +105,21 @@ tail -20 /tmp/qserial.log
 '
 ```
 
-Inspect these register fields on each CPU:
+Examine these register fields on each CPU:
 
-- **`RIP`:** Current instruction pointer (`0xFFFFFFFF80...` is Ring 0 kernel
+- **`RIP`:** Active instruction pointer (`0xFFFFFFFF80...` is Ring 0 kernel
   code, and low canonical addresses are Ring 3 user code).
 - **`RFL` (`RFLAGS`):** Bit 9 (`0x200`) is the interrupt flag (`IF`). `IF=0`
-  with `HLT=0` in Ring 0 indicates a spinlock wait, lock deadlock, or infinite
-  kernel loop. `HLT=1` indicates an idle CPU.
-- **`CR3` and `FS`:** Address space and TLS base of the running thread.
+  with `HLT=0` in Ring 0 shows a spinlock wait, lock deadlock, or infinite
+  kernel loop. `HLT=1` shows a CPU that is not active.
+- **`CR3` and `FS`:** Address space and TLS base of the active thread.
 - **`RDI`, `RSI`, `RAX`, `RCX`, `RDX`:** Function arguments and ticket spinlock
   counters (`next` and `serving`).
 
-## 4. Symbolize addresses against `build/kernel.elf`
+## 4. Map addresses to `build/kernel.elf`
 
-Map any hung `RIP` or exception address back to functions, disassembly, and
-global lock or table symbols:
+Map a stalled `RIP` or fault address to functions, disassembly, and global lock
+or table symbols:
 
 ```bash
 ./scripts/env.sh bash -c '
@@ -130,21 +131,21 @@ llvm-nm -n build/kernel.elf | \
 '
 ```
 
-Check lock acquisition order against `ADR_0027` (`g_proc_lock` -> `g_ipc_lock`
--> `g_sched_lock`, and `g_proc_lock` -> `g_futex_lock` -> `g_sched_lock`). Look
-for self-loops in linked lists (`RAX == RCX == RSI`) or ticket spinlock waiters
-(`pause` loop reading `serving`).
+Compare the lock acquisition sequence with `ADR_0027` (`g_proc_lock` ->
+`g_ipc_lock` -> `g_sched_lock`, and `g_proc_lock` -> `g_futex_lock` ->
+`g_sched_lock`). Examine the disassembly for self-loops in kernel chains (`RAX
+== RCX == RSI`) or ticket spinlock waiters (`pause` loop that reads `serving`).
 
-## 5. Isolate SMP races with temporary invariant traps
+## 5. Isolate SMP races with temporary rule traps
 
-If the monitor shows corrupted kernel state created earlier in the run:
+If the monitor shows corrupt kernel state from a previous step:
 
-1. Add a narrow `printk` guard at the invariant boundary (for example, checking
-   for duplicate ready-queue entries or unexpected state transitions) and print
-   `pid`, `tid`, `state`, and `__builtin_return_address(0)`.
-2. Build and run a short `timeout 12 qemu-system-x86_64 ...` capture piped to
-   `grep -E '\[BUG\]|\[FAIL\]'`.
-3. Symbolize the printed return address with `llvm-addr2line -e
+1. Add a narrow `printk` check at the rule boundary (for example, duplicate
+   entries in the ready queues or incorrect state changes). Write `pid`, `tid`,
+   `state`, and `__builtin_return_address(0)`.
+2. Compile the kernel and start a short `timeout 12 qemu-system-x86_64 ...`
+   capture piped to `grep -E '\[BUG\]|\[FAIL\]'`.
+3. Map the output caller address to source lines with `llvm-addr2line -e
    build/kernel.elf`.
-4. Fix the root cause and remove every temporary `printk` line before running
-   `./scripts/formatter-agent.sh --fix` and `./scripts/build-agent.sh`.
+4. Repair the root cause and remove all temporary `printk` lines before you
+   start `./scripts/formatter-agent.sh --fix` and `./scripts/build-agent.sh`.

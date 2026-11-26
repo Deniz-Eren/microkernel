@@ -1,286 +1,243 @@
-# technical_terms.txt — technical nouns (TN) and technical verbs (TV) for
-# the Microkernel project documents (README.md, docs/).
-# Format: one term on each line. Everything after '#' is a comment.
+# technical_terms.txt — typed technical nouns (TN) and technical verbs (TV)
+# for the Microkernel project documents (README.md, AGENTS.md, CHANGELOG.md,
+# and docs/). Format: TN: <term> or TV: <term> (<irregular forms>) # category.
 
 # --- operating system concepts (TN category 19 — computer science) --------
-kernel
-microkernel
-scheduler
-scheduling
-thread
-process
-signal
-page
-frame
-stack
-heap
-syscall
-channel
-message
-pulse
-queue
-buffer
-loader
-linker
-server
-client
-console
-milestone
-commit
-repository
-script
-header
-binary
-archive
-memory
-emulator
-timer
-interrupt
-register
-namespace
-trampoline
-handler
-connection
-payload
-exit code
-address space
-page table
-context switch
-page fault
-ready queue
-signal handler
-exit status
-source tree
-build system
-test runner
-serial output
-serial port
-virtual address
-physical address
-memory map
-boot module
-boot process
-user stack
-kernel stack
-thread state
-priority level
-run level
-user
-library
-registry
-harness
-pattern
-command
-timeout
-panic
-shell
-directory
-compiler
-defect
-inheritance
-receiver
-worker
-parent
-child
-lookup
-protocol
-serial
-ring
-bitmap
-path
-manager
-wrapper
-slice
-environment
-configuration
-definition
-creation
-
-# --- proper names and product names ---------------------------------------
-Microkernel
-QEMU
-Podman
-GRUB
-CMake
-Clang
-LLVM
-Debian
-Linux
-POSIX
-ELF
-GDT
-IDT
-TSS
-MSR
-LAPIC
-APIC
-ACPI
-RSDP
-SMEP
-SMAP
-PML4
-HHDM
-sysproc
-ipcserv
-ipccli
-sigtest
-libc
-crt0
-auxv
-ustar
-multiboot
-
-# --- software engineering nouns (TN category 19 and related) --------------
-build
-program
-application
-call
-service
-stage
-priority
-port
-option
-state
-event
-failure
-host
-driver
-architecture
-runtime
-subsystem
-toolchain
-helper
-policy
-design
-W^X
-Multiboot2
-Containerfile
-TN: requirement  # category 19 — software specification item
-TN: domain       # category 19 — traceability subsystem scope
-TN: software     # category 19 — computer science
-TN: hardware     # category 19 — computer science
-TN: document     # category 19 — engineering artifact
-TN: file         # category 19 — OS and software file
-TN: module       # category 19 — boot or software module
-TN: executable   # category 19 — ELF program binary
-TN: interface    # category 19 — API or ABI contract
-TN: specification # category 19 — engineering specification
-TN: platform     # category 19 — target CPU and machine
-TN: table        # category 19 — CPU or page table
-TN: permission   # category 19 — memory page permission
-TN: allocator    # category 19 — memory allocator
-TN: metadata     # category 19 — structured boot/file data
-TN: context      # category 19 — CPU execution state
-TN: trapframe    # category 19 — saved interrupt/syscall frame
-TN: mask         # category 19 — signal bitmask
-TN: descriptor   # category 19 — file descriptor
-TN: pipe         # category 19 — POSIX pipe
-TN: macro        # category 19 — C preprocessor macro
-TN: symbol       # category 19 — linker/header symbol
-TN: lock         # category 19 — synchronization primitive
-TN: mutex        # category 19 — POSIX mutual exclusion lock
-TN: semaphore    # category 19 — POSIX semaphore
-TN: barrier      # category 19 — POSIX thread barrier
-TN: spinlock     # category 19 — busy-wait lock
-TN: rwlock       # category 19 — reader-writer lock
-TN: clock        # category 19 — POSIX clock source
-TN: cancellation # category 19 — POSIX thread cancellation
-TN: stream       # category 19 — C standard I/O stream
-TN: manifest     # category 19 — POSIX Issue 8 symbol manifest
-TN: traceability # category 19 — requirements traceability
-TN: coverage     # category 19 — verification coverage
-TN: audit        # category 19 — automated model check
-TN: gate         # category 19 — CI verification gate
-TN: tag          # category 19 — in-code traceability marker
-TN: link         # category 19 — Sphinx-Needs relation
-TN: warning      # category 19 — compiler or Sphinx warning
-TN: extension    # category 19 — Sphinx extension
-TN: scanner      # category 19 — source tag scanner
-TN: auditor      # category 19 — needs.json checker
-TN: model        # category 19 — traceability model
-TN: prefix       # category 19 — need ID prefix
-TN: suite        # category 19 — test or API suite
-TN: trampoline   # category 19 — signal return stub
-TN: console      # category 19 — serial console
-TN: endpoint     # category 19 — IPC target endpoint
-TN: guard        # category 19 — header macro guard
-TN: freestanding # category 19 — C freestanding environment
-TN: synchronous  # category 19 — blocking IPC mode
-TN: asynchronous # category 19 — non-blocking signal/IO mode
-TN: preemptive   # category 19 — timer-driven scheduling
-TN: virtual      # category 19 — virtual memory
-TN: physical     # category 19 — physical RAM
-TN: thread-local # category 19 — per-thread storage
+TN: kernel            # category 19 — OS kernel
+TN: microkernel       # category 19 — minimal Ring 0 kernel
+TN: scheduler         # category 19 — thread scheduler
+TN: scheduling        # category 19 — preemptive CPU scheduling
+TN: thread            # category 19 — execution thread
+TN: process           # category 19 — OS process
+TN: signal            # category 19 — POSIX signal
+TN: page              # category 19 — virtual memory page
+TN: frame             # category 19 — physical 4 KiB RAM frame
+TN: stack             # category 19 — call stack
+TN: heap              # category 19 — dynamic memory heap
+TN: syscall           # category 19 — Ring 3 to Ring 0 call
+TN: channel           # category 19 — IPC receive endpoint
+TN: message           # category 19 — IPC message
+TN: pulse             # category 19 — asynchronous IPC pulse
+TN: queue             # category 19 — FIFO queue
+TN: buffer            # category 19 — memory buffer
+TN: loader            # category 19 — ELF program loader
+TN: linker            # category 19 — ELF linker
+TN: server            # category 19 — Ring 3 system server
+TN: client            # category 19 — IPC client process
+TN: console           # category 19 — serial console
+TN: milestone         # category 19 — project milestone
+TN: commit            # category 19 — git commit
+TN: repository        # category 19 — git repository
+TN: script            # category 19 — shell or Python script
+TN: header            # category 19 — C header file
+TN: binary            # category 19 — binary data format
+TN: archive           # category 19 — ustar or tar archive
+TN: memory            # category 19 — system RAM
+TN: emulator          # category 19 — machine emulator
+TN: timer             # category 19 — hardware or POSIX timer
+TN: interrupt         # category 19 — hardware interrupt
+TN: register          # category 19 — CPU register
+TN: namespace         # category 19 — identifier namespace
+TN: trampoline        # category 19 — signal return stub
+TN: handler           # category 19 — signal or interrupt handler
+TN: payload           # category 19 — message payload
+TN: user              # category 19 — system user
+TN: library           # category 19 — C library
+TN: registry          # category 19 — service name registry
+TN: harness           # category 19 — automated test harness
+TN: pattern           # category 19 — match pattern
+TN: command           # category 19 — shell or CLI command
+TN: timeout           # category 19 — wait timeout
+TN: panic             # category 19 — kernel panic
+TN: shell             # category 19 — POSIX command shell
+TN: directory         # category 19 — filesystem directory
+TN: compiler          # category 19 — C cross-compiler
+TN: defect            # category 7  — software defect
+TN: inheritance       # category 19 — priority inheritance
+TN: receiver          # category 19 — IPC receiver
+TN: worker            # category 19 — worker thread
+TN: parent            # category 19 — parent process
+TN: child             # category 19 — child process
+TN: lookup            # category 19 — name or symbol lookup
+TN: protocol          # category 19 — IPC or network protocol
+TN: serial            # category 19 — serial port or console
+TN: ring              # category 19 — x86 privilege level
+TN: bitmap            # category 19 — allocation bitmap
+TN: path              # category 19 — filesystem path
+TN: manager           # category 19 — resource manager
+TN: wrapper           # category 19 — syscall or CLI wrapper
+TN: slice             # category 19 — scheduler time slice
+TN: environment       # category 19 — execution environment
+TN: configuration     # category 19 — system configuration
+TN: build             # category 19 — CMake build artifact or process
+TN: program           # category 19 — ELF program header
+TN: call              # category 19 — function or syscall invocation
+TN: service           # category 19 — OS service
+TN: priority          # category 19 — scheduler priority
+TN: port              # category 19 — I/O or TCP/UDP port
+TN: option            # category 19 — CLI flag or POSIX option group
+TN: state             # category 19 — CPU or thread hardware state
+TN: host              # category 19 — build or HIL host machine
+TN: driver            # category 19 — Ring 3 device driver
+TN: architecture      # category 19 — CPU or software architecture
+TN: runtime           # category 19 — execution runtime
+TN: subsystem         # category 19 — OS subsystem
+TN: toolchain         # category 19 — compiler toolchain
+TN: helper            # category 19 — helper executable or function
+TN: requirement       # category 15 — specification requirement
+TN: domain            # category 19 — traceability subsystem scope
+TN: software          # category 19 — computer software
+TN: hardware          # category 19 — physical hardware
+TN: document          # category 15 — project document
+TN: file              # category 19 — OS or source file
+TN: module            # category 19 — boot or source module
+TN: executable        # category 19 — ELF executable
+TN: specification     # category 15 — engineering specification
+TN: platform          # category 19 — target CPU and machine
+TN: table             # category 19 — CPU or page table
+TN: permission        # category 19 — memory or file permission
+TN: allocator         # category 19 — memory allocator
+TN: metadata          # category 19 — structured boot or file data
+TN: context           # category 19 — CPU execution context
+TN: trapframe         # category 19 — saved interrupt or syscall frame
+TN: mask              # category 19 — signal bitmask
+TN: descriptor        # category 19 — file descriptor
+TN: pipe              # category 19 — POSIX pipe
+TN: macro             # category 19 — C preprocessor macro
+TN: mutex             # category 19 — POSIX mutual exclusion lock
+TN: semaphore         # category 19 — POSIX semaphore
+TN: barrier           # category 19 — POSIX thread barrier
+TN: spinlock          # category 19 — busy-wait spinlock
+TN: rwlock            # category 19 — reader-writer lock
+TN: clock             # category 19 — POSIX clock source
+TN: cancellation      # category 19 — POSIX thread cancellation
+TN: stream            # category 19 — C standard I/O stream
+TN: manifest          # category 19 — POSIX Issue 8 symbol manifest
+TN: traceability      # category 19 — requirements traceability
+TN: coverage          # category 19 — verification coverage
+TN: audit             # category 19 — automated model audit
+TN: gate              # category 19 — automated check gate
+TN: warning           # category 19 — compiler or Sphinx warning
+TN: scanner           # category 19 — source marker scanner
+TN: auditor           # category 19 — needs.json checker
+TN: model             # category 19 — traceability model
+TN: prefix            # category 19 — need ID prefix
+TN: suite             # category 19 — test suite
+TN: endpoint          # category 19 — IPC target endpoint
+TN: guard             # category 19 — header macro guard
+TN: freestanding      # category 19 — C freestanding environment
+TN: synchronous       # category 19 — blocking IPC mode
+TN: asynchronous      # category 19 — non-blocking signal or I/O mode
+TN: preemptive        # category 19 — timer-driven scheduling
+TN: virtual           # category 19 — virtual memory
+TN: physical          # category 19 — physical RAM
+TN: thread-local      # category 19 — per-thread storage
 TN: async-signal-safe # category 19 — POSIX XSH 2.4.3 property
-TN: read-only    # category 19 — non-writable page permission
-TN: higher-half  # category 19 — x86-64 kernel VA layout
-TN: user-space   # category 19 — Ring 3 execution space
-TN: Ring         # category 19 — x86 privilege level
-TN: Sphinx       # proper name
-TN: Sphinx-Needs # proper name
-TN: MyST         # proper name
-TN: PIT          # proper name (Programmable Interval Timer)
-TN: ABI          # proper name
-TN: API          # proper name
-TN: RAM          # proper name
-TN: AIO          # proper name (POSIX Asynchronous I/O)
-TN: XBD          # proper name (POSIX Base Definitions)
-TN: XSH          # proper name (POSIX System Interfaces)
-TN: XCU          # proper name (POSIX Shell and Utilities)
-TN: Base         # proper name (POSIX.1-2024 Base profile)
-TN: Issue        # proper name (POSIX Issue 8)
-TN: x86-64       # proper name
-TN: x86-64-v3    # proper name (x86-64 AVX2/FMA microarchitecture level)
-TN: arm64        # proper name (64-bit ARM architecture)
-TN: HAL          # proper name (Hardware Abstraction Layer)
-TN: AVX          # proper name (Advanced Vector Extensions)
-TN: AVX2         # proper name (Advanced Vector Extensions 2)
-TN: AVX-512      # proper name (512-bit Advanced Vector Extensions)
-TN: FMA          # proper name (Fused Multiply-Add instruction set)
-TN: XSAVE        # proper name (x86-64 extended state save instruction)
-TN: XRSTOR       # proper name (x86-64 extended state restore instruction)
-TN: CPUID        # proper name (x86-64 CPU feature identification instruction)
-TN: SIMD         # proper name (Single Instruction, Multiple Data)
-TN: XCR0         # proper name (Extended Control Register 0)
-TN: MXCSR        # proper name (SSE/AVX floating-point control/status register)
-TN: LCOV         # proper name (coverage interchange format)
-TN: HTML         # proper name
-TN: base64       # category 19 — ASCII binary encoding format
-TN: C17          # proper name
-TN: C11          # proper name
-TN: trademark    # category 19 — legal attribution notice
-TN: compatibility # category 19 — standard interface alignment
-TN: certification # category 19 — formal compliance assessment
-TN: Inc          # proper name suffix (IEEE corporate designation)
+TN: read-only         # category 19 — non-writable page permission
+TN: higher-half       # category 19 — x86-64 kernel VA layout
+TN: user-space        # category 19 — Ring 3 execution space
+TN: utility           # category 19 — POSIX XCU command utility
+TN: filesystem        # category 19 — OS filesystem
+TN: bootloader        # category 19 — OS bootloader
+TN: socket            # category 19 — POSIX network or local socket
+TN: symlink           # category 19 — symbolic link
+TN: sysroot           # category 19 — cross-compilation sysroot tree
+TN: operand           # category 19 — CLI utility operand
+TN: synopsis          # category 15 — POSIX utility synopsis
+TN: parameter         # category 19 — function or environment parameter
+TN: status            # category 19 — exit or item status
+TN: marker            # category 19 — in-code need:: marker
+TN: rule              # category 15 — project or standard rule
+TN: convention        # category 15 — engineering convention
+TN: directive         # category 15 — Sphinx-Needs directive
+TN: frontmatter       # category 19 — YAML metadata block
+TN: skill             # category 19 — AI agent skill file
+TN: workflow          # category 19 — engineering workflow
+TN: roadmap           # category 15 — project roadmap
+TN: changelog         # category 15 — project change log
+TN: verification      # category 15 — verification activity or item
+TN: branch            # category 19 — git branch
+TN: key               # category 19 — cryptographic or TSD key
+TN: job               # category 19 — POSIX shell job control
+TN: power             # category 7  — electrical supply power
+TN: idle              # category 19 — idle scheduler thread
+TN: board             # category 19 — target hardware board
+TN: firmware          # category 19 — board boot firmware
+TN: controller        # category 19 — hardware or PTY controller
+TN: peripheral        # category 19 — USB or board peripheral
+TN: hub               # category 19 — USB hub
+TN: backend           # category 19 — pluggable module backend
+TN: framebuffer       # category 19 — display framebuffer
+TN: allowlist         # category 19 — Ring 0 boundary allowlist
+TN: locale            # category 19 — POSIX locale
+TN: relocation        # category 19 — ELF relocation
+TN: segment           # category 19 — ELF load segment
+TN: offset            # category 19 — byte offset
+TN: flag              # category 19 — bit flag or CLI option
+TN: byte              # category 19 — 8-bit data unit
+TN: virtqueue         # category 19 — virtio ring queue
+TN: loopback          # category 19 — loopback network interface
+TN: condvar           # category 19 — POSIX condition variable
+TN: soname            # category 19 — ELF shared library name
+TN: refcount          # category 19 — object reference count
+TN: regex             # category 19 — POSIX regular expression
+TN: scalar            # category 19 — non-vector CPU register mode
+TN: deadlock          # category 19 — concurrency deadlock
+TN: trademark         # category 21 — legal attribution notice
+TN: compatibility     # category 19 — standard interface alignment
+TN: certification     # category 21 — formal compliance assessment
+
+# --- proper names and product names (TN category 11 / 19) -----------------
+TN: QEMU              # category 19 — machine emulator
+TN: Podman            # category 19 — container runtime
+TN: GRUB              # category 19 — bootloader
+TN: CMake             # category 19 — build generator
+TN: Clang             # category 19 — C compiler
+TN: Debian            # category 19 — Linux distribution
+TN: Linux             # category 19 — OS kernel
+TN: POSIX             # category 15 — IEEE Std 1003.1-2024
+TN: SMAP              # category 19 — Supervisor Mode Access Prevention
+TN: libc              # category 19 — freestanding C library
+TN: auxv              # category 19 — SysV auxiliary vector
+TN: ustar             # category 19 — POSIX tar archive format
+TN: Sphinx            # category 19 — documentation builder
+TN: Sphinx-Needs      # category 19 — traceability extension
+TN: Mermaid           # category 19 — diagram syntax
+TN: Doxygen           # category 19 — code documentation format
+TN: OpenSSL           # category 19 — cryptography and TLS library
+TN: OpenSSH           # category 19 — SSH server and tools
+TN: zlib              # category 19 — compression library
+TN: tar               # category 19 — archive utility
+TN: tzcode            # category 19 — IANA time-zone tools
+TN: PIT               # category 19 — Programmable Interval Timer
+TN: RAM               # category 19 — Random Access Memory
+TN: AIO               # category 19 — POSIX Asynchronous I/O
+TN: XBD               # category 15 — POSIX Base Definitions
+TN: XSH               # category 15 — POSIX System Interfaces
+TN: XCU               # category 15 — POSIX Shell and Utilities
+TN: Base              # category 15 — POSIX.1-2024 Base profile
+TN: Issue             # category 15 — POSIX Issue 8
+TN: AVX               # category 19 — Advanced Vector Extensions
+TN: Inc               # category 11 — IEEE corporate designation
 
 # --- technical verbs (TV category 2c — system operations) -----------------
-boot
-run
-map
-allocate
-spawn
-wake
-block
-yield
-deliver
-schedule
-preempt
-dispatch
-load
-match
-enter
-TV: compile      # category 2c — compiler operation
-TV: parse        # category 2c — syntax/data parsing
-TV: initialize   # category 2c — system startup
-TV: register     # category 2c — record handler or service
-TV: resolve      # category 2c — look up name or symbol
-TV: validate     # category 2c — verify contract rules
-TV: scan         # category 2c — inspect source files
-TV: unmap        # category 2c — remove page mapping
-TV: boost        # category 2c — elevate thread priority
-TV: interrupt    # category 2c — preempt or break wait
-TV: push         # category 2c — write frame onto stack
-TV: reap         # category 2c — collect exited child status
-TV: attach       # category 2c — connect IPC endpoint
-TV: detach       # category 2c — disconnect IPC endpoint
-TV: export       # category 2c — write needs.json output
+TV: boot              # category 2c — start OS boot sequence
+TV: compile           # category 2c — compile C or assembly code
+TV: link              # category 2c — link ELF objects or libraries
+TV: parse             # category 2c — parse structured data
+TV: initialize        # category 2c — initialize hardware or subsystem
+TV: map               # category 2c — map virtual memory pages
+TV: unmap             # category 2c — remove virtual page mapping
+TV: allocate          # category 2c — allocate memory frames or heap
+TV: wake              # category 2c — wake a blocked thread
+TV: block             # category 2c — block thread on IPC or lock
+TV: preempt           # category 2c — preempt a thread
+TV: dispatch          # category 2c — dispatch syscall or message
+TV: load              # category 2c — load ELF image into memory
+TV: reap              # category 2c — collect exited child status
+TV: export            # category 2c — export symbols or JSON output
+TV: mount             # category 2c — mount a filesystem
+TV: communicate       # category 2c — exchange IPC or network data
+TV: download          # category 2c — fetch upstream archive at build time
+TV: relocate          # category 2c — apply ELF relocations
+TV: poll              # category 2c — poll descriptors or hardware

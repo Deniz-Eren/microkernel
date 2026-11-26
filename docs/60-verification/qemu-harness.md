@@ -1,16 +1,15 @@
 # QEMU Test Harness and Verification Architecture
 
-This document explains how headless QEMU testing boots Microkernel, runs Ring 3
-test suites, verifies serial telemetry, and isolates failures. For hands-on
-debugging commands, see the `qemu-debug` skill
-(`docs/skills/qemu-debug/SKILL.md`).
+This document shows how QEMU tests boot Microkernel, start Ring 3 test suites,
+do checks of serial output, and isolate errors. For debug commands, refer to the
+`qemu-debug` skill (`docs/skills/qemu-debug/SKILL.md`).
 
 ## Testbed Architecture
 
-`scripts/env.sh test` runs `tests/test_runner.py` inside the `microkernel-dev`
-Podman container. The harness boots `build/microkernel.iso` under TCG software
-emulation with no host KVM requirement, streams `COM1` serial output, and checks
-every regex in `scripts/qemu-expects.txt`.
+`scripts/env.sh test` starts `tests/test_runner.py` in the `microkernel-dev`
+Podman container. The harness boots `build/microkernel.iso` with TCG software
+emulation and no host KVM dependency. It reads `COM1` serial output and does a
+check of each regex in `scripts/qemu-expects.txt`.
 
 ```mermaid
 flowchart TD
@@ -20,8 +19,8 @@ flowchart TD
     ISO["build/microkernel.iso (GRUB Multiboot2 + kernel.elf + boot.tar)"]
     BLK["build/test-blk.img (2 MiB virtio-blk-pci disk)"]
     RING0["Ring 0 kernel (ACPI, LAPIC, IOAPIC, SMP, proc_spawn_init)"]
-    RING3["Ring 3 servers and test binaries (COM1 serial output)"]
-    EXPECT["Regex matching against scripts/qemu-expects.txt"]
+    RING3["Ring 3 servers and test executables (COM1 serial output)"]
+    EXPECT["Regex checks on scripts/qemu-expects.txt"]
     COV["Optional LLVM coverage decoder (--cov-out --wait-cov)"]
 
     ENV --> RUNNER
@@ -35,76 +34,76 @@ flowchart TD
     RUNNER --> COV
 ```
 
-## Machine Profile and Boot Modes
+## Machine Configuration and Boot Modes
 
-`tests/test_runner.py` defines the default `x86-64` profile (`-machine q35`, `-m
-256M`, `-smp 2`, `-cpu max`, `-display none`, `-no-reboot`, `-no-shutdown`,
-`-monitor none`, `-serial stdio`). When `--blk-img` is not `none`, the harness
-creates a 2 MiB raw image at `build/test-blk.img` if absent. It then attaches
-that image as a modern `virtio-blk-pci` device (`disable-legacy=on`).
+`tests/test_runner.py` sets the default `x86-64` configuration (`-machine q35`,
+`-m 256M`, `-smp 2`, `-cpu max`, `-display none`, `-no-reboot`, `-no-shutdown`,
+`-monitor none`, `-serial stdio`). When `--blk-img` is not `none` and
+`build/test-blk.img` is missing, the harness makes a 2 MiB raw image. It then
+attaches that image as a modern `virtio-blk-pci` device (`disable-legacy=on`).
 
-The project supports three QEMU boot modes:
+The project has three QEMU boot modes:
 
-- **Automated tests (`./scripts/env.sh test`):** Boots `build/microkernel.iso`
-  with an empty command line. `proc_spawn_init()` starts all Ring 3 servers and
-  test binaries.
-- **Interactive shell (`./scripts/env.sh run`):** Boots
+- **Automatic tests (`./scripts/env.sh test`):** This mode boots
+  `build/microkernel.iso` with an empty command line. `proc_spawn_init()` starts
+  all Ring 3 servers and test executables.
+- **Interactive shell (`./scripts/env.sh run`):** This mode boots
   `build/microkernel-shell.iso` with `init=sh`. The kernel starts core servers
-  plus `/boot/sh` on `-serial mon:stdio`.
-- **Coverage run (`./scripts/env.sh coverage`):** Boots
+  and `/boot/sh` on `-serial mon:stdio`.
+- **Coverage mode (`./scripts/env.sh coverage`):** This mode boots
   `build-cov/microkernel.iso` with `--cov-out` and `--wait-cov`. The harness
-  decodes base64 `.profraw` frames until `@@COV_COMPLETE@@`.
+  parses base64 `.profraw` frames until `@@COV_COMPLETE@@`.
 
 ## Server and Test Priority Scheduling
 
-In automated test mode, `proc_spawn_init()` in `kernel/core/proc.c` loads every
-Ring 3 server and test binary from `boot.tar` into isolated address spaces. Core
-servers run at higher priorities (`sysproc` at 110, `ttyserv` at 105, `blkdrv`
-at 102) so name registration, serial output, and block I/O stay responsive. Most
-integration tests run at priority 100 in parallel across both CPUs. Storage,
-SMP, job-control, and leak-freedom stress tests run at lower priorities (`98`
-down to `85`) so they execute after high-priority bursts settle.
+In automatic test mode, `proc_spawn_init()` in `kernel/core/proc.c` loads each
+Ring 3 server and test executable from `boot.tar` into isolated address spaces.
+Core servers operate at higher priorities (`sysproc` at 110, `ttyserv` at 105,
+`blkdrv` at 102) to keep name lookup, serial output, and block I/O responsive.
+Most integration tests operate at priority 100 in parallel across the two CPUs.
+Storage, SMP, process-group, and resource-check load tests operate at lower
+priorities (`98` down to `85`) to start after high-priority tests stop.
 
-## Expectation Matching and Exit Status
+## Pattern Checks and Exit Status
 
 `tests/test_runner.py` loads each non-comment line from `--expect` and
-`--expect-file` (default `scripts/qemu-expects.txt`) as a compiled regular
-expression. Because tests execute concurrently on two SMP cores, lines arrive in
-non-deterministic interleaving across processes. The reader thread checks each
-incoming serial line against all unmatched patterns independently and tracks a
-rolling 200-line tail buffer.
+`--expect-file` (default `scripts/qemu-expects.txt`) as a regular expression.
+Because tests operate at the same time on two SMP cores, lines come in
+non-deterministic sequences across processes. The reader thread does a check of
+each serial line against all unmatched patterns independently and keeps a
+200-line tail buffer.
 
-- **Pass (exit code 0):** Every pattern matches before `--timeout` expires (and
-  `@@COV_COMPLETE@@` arrives when `--wait-cov` is active). The harness sends
-  `SIGTERM` to QEMU and prints `PASS`.
-- **Early exit (exit code 1):** QEMU exits before all patterns match. The
-  harness prints the exit code, missing expectations, and the last 60 serial
-  lines.
-- **Timeout (exit code 1):** The deadline expires while patterns remain
-  unmatched. The harness prints `FAIL (timeout after Ns)`, the missing
-  expectations list, and the last 60 serial lines.
+- **`PASS` (exit code 0):** Each pattern matches before `--timeout` expires (and
+  `@@COV_COMPLETE@@` comes when `--wait-cov` is active). The harness sends
+  `SIGTERM` to QEMU and writes `PASS`.
+- **Exit before the end (exit code 1):** QEMU exits before all patterns match.
+  The harness writes the exit code, the missing pattern items, and the last 60
+  serial lines.
+- **Timeout (exit code 1):** The timeout expires while unmatched patterns stay.
+  The harness writes `FAIL (timeout after Ns)`, the missing pattern items, and
+  the last 60 serial lines.
 
-## Failure Triage Model
+## Error Diagnosis Model
 
-Use these symptoms to select the first diagnostic step:
+These symptoms show the first diagnostic step:
 
-- **`!!! kernel exception` or `PANIC:`:** Indicates a Ring 0 fault, invalid
-  pointer, or broken invariant. Symbolize `rip` against `build/kernel.elf` with
-  `llvm-addr2line`.
-- **`[FAIL]` line from a Ring 3 test:** Indicates a user-space assertion or
-  syscall contract mismatch. Inspect the failing test source and the related
-  `libc` or kernel syscall.
-- **Timeout after high-priority tests exit:** Indicates a stalled low-priority
-  test or a missing regex in `scripts/qemu-expects.txt`. Compare spawned PIDs
-  against zombie PIDs in the serial log.
-- **Timeout while timer, `alarm`, or IRQ tests stall:** Indicates CPU 0 (BSP) is
-  stuck with `IF=0` or spinning on a kernel lock. Attach a QEMU monitor socket
-  and inspect `info registers` on CPU 0 and CPU 1.
+- **`!!! kernel exception` or `PANIC:`:** This output shows a Ring 0 fault, an
+  incorrect pointer, or a broken rule. `llvm-addr2line` maps `rip` to source
+  lines in `build/kernel.elf`.
+- **`[FAIL]` line from a Ring 3 test:** This output shows a user-space assertion
+  error or a syscall interface mismatch. The test source and the related `libc`
+  or kernel syscall show the cause.
+- **Timeout after high-priority tests exit:** This output shows a stalled
+  low-priority test or a missing regex in `scripts/qemu-expects.txt`. The serial
+  output compares started PIDs with zombie PIDs.
+- **Timeout while timer, `alarm`, or IRQ tests stall:** This output shows that
+  CPU 0 (BSP) is stopped with `IF=0` or in a kernel spinlock wait. A QEMU
+  monitor socket shows `info registers` on CPU 0 and CPU 1.
 
-## Debugging Workflow
+## Debug Workflow
 
-When a failure cannot be explained from the serial log alone, use the
-`qemu-debug` skill (`docs/skills/qemu-debug/SKILL.md`). It documents how to
-inspect live CPU registers over a QEMU Unix monitor socket. It also shows how to
-symbolize kernel addresses and ticket spinlocks against `build/kernel.elf` and
-apply temporary invariant traps safely.
+When the serial output alone does not show the cause of an error, the
+`qemu-debug` skill (`docs/skills/qemu-debug/SKILL.md`) gives the full debug
+procedure. That skill shows how to examine live CPU registers through a QEMU
+Unix monitor socket. It also shows how to map kernel addresses and ticket
+spinlocks to `build/kernel.elf` and add temporary rule traps safely.

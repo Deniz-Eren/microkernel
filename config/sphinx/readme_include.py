@@ -118,7 +118,7 @@ def rewrite_readme_for_docs(
         ):
             posix_rel = rel_to_docs.as_posix()
             if posix_rel == "index.md" and not frag:
-                return f"[{label}](#traceability-documentation)"
+                return f"[{label}](#traceability-documents)"
             suffix = f"#{frag}" if frag else ""
             return f"[{label}]({posix_rel}{suffix})"
 

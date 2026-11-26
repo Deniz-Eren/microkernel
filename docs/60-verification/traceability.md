@@ -1,16 +1,16 @@
 # Traceability Coverage
 
-This page presents calculated traceability views generated directly from the
-Sphinx-Needs model.
+Sphinx-Needs calculates the traceability tables on this page directly from the
+traceability model.
 
-## POSIX.1-2024 Progress Matrix
+## POSIX.1-2024 Status Matrix
 
-All requirements tagged with a `:posix:` Issue 8 manifest reference appear below
-with their implementing design items and verification coverage. This matrix
-tracks ongoing work toward POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE
-9945:2026) compatibility and does not claim official certification. POSIX® is a
-registered trademark of the Institute of Electrical and Electronic Engineers,
-Inc.
+The table that follows shows all requirements that have a `:posix:` Issue 8
+manifest entry, with their related design items and verification coverage. This
+matrix records status for the objective of compatibility with interfaces from
+POSIX.1-2024 (IEEE Std 1003.1-2024 / ISO/IEC/IEEE 9945:2026). This project does
+not state that it has official certification. POSIX® is a registered trademark
+of the Institute of Electrical and Electronic Engineers, Inc.
 
 ```{needtable} POSIX.1-2024 progress matrix
 ---
@@ -29,10 +29,10 @@ columns: >
 :columns: id; title; status; derives_back; verifies_back as "Verified by"
 ```
 
-## Unverified Requirements
+## Requirements Without Verification
 
-Active requirements without a verification item (excluding `informational`
-items) appear below. This table must be empty.
+The table that follows shows active requirements that have no verification item.
+It does not include `informational` items. This table must be empty.
 
 ```{needtable} Unverified requirements
 :types: sys, swr
@@ -41,10 +41,10 @@ items) appear below. This table must be empty.
 :columns: id; title; status
 ```
 
-## Orphan Verification Items
+## Verification Items Without Requirements
 
-Active verification items without a `verifies` link appear below. This table
-must be empty.
+The table that follows shows active verification items that have no `verifies`
+link. This table must be empty.
 
 ```{needtable} Orphan verification items
 :types: ver
@@ -53,10 +53,10 @@ must be empty.
 :columns: id; title; status
 ```
 
-## Floating Design Items
+## Design Items Without Requirements
 
-Active architecture, interface, and component items without `satisfies` or
-`refines` links appear below. This table must be empty.
+The table that follows shows active architecture, interface, and component items
+that have no `satisfies` or `refines` link. This table must be empty.
 
 ```{needtable} Floating design items
 :types: arc, icd, comp

@@ -1,8 +1,8 @@
 # Verification
 
-This layer defines verification items (`ver`), generated traceability coverage
-reports, the in-code traceability index, and the hardware-in-the-loop (HIL)
-testing guides.
+This layer contains the verification items (`ver`), the traceability coverage
+reports, the code traceability table, and the hardware-in-the-loop (HIL) test
+documents.
 
 ```{toctree}
 :maxdepth: 1

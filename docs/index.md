@@ -1,21 +1,22 @@
 <!-- include-root-readme -->
 
-## Traceability Documentation
+## Traceability Documents
 
-This documentation defines the traceable engineering model of `microkernel` from
-business decisions through verification and records.
+These documents give the traceable model of `microkernel` from business
+decisions through verification and project records.
 
 - [Overview](00-overview/index.md): System context, glossary, and workflow
   decision records.
-- [Product](10-product/index.md): Product vision and business decision records.
+- [Vision and Scope](10-product/index.md): System vision and business decision
+  records.
 - [System Requirements](20-system/index.md): Black-box system and software
   requirements.
-- [Architecture](30-architecture/index.md): Structural decomposition and
+- [Architecture](30-architecture/index.md): Structural architecture and
   architecture decision records.
 - [Interfaces](40-interfaces/index.md): Interface Control Documents (ICDs).
 - [Components](50-components/index.md): White-box component specifications.
 - [Verification](60-verification/index.md): Verification items, traceability
-  coverage tables, and code trace.
+  coverage tables, and code-to-doc links.
 - [Records](records/index.md): Conventions, tasks, roadmap, and history.
 
 ```{toctree}

@@ -1,34 +1,34 @@
 # AI Agent Governance
 
 This file has the highest authority for AI agents in **microkernel**. Skill
-files in [docs/skills/](docs/skills/) hold full procedures. This file links to
-them and does not repeat their content.
+files in [docs/skills/](docs/skills/) keep full procedures. This file connects
+to them and does not write their content again.
 
 ---
 
 ## Commit Mode
 
-`operations.commit_mode` in `.agent-scaffolding.yml` is the single source of
-truth for commit mode and commit signatures. Read the mode from there. The [git
-skill](docs/skills/git/SKILL.md) defines each mode and its workflow.
+`operations.commit_mode` in `.agent-scaffolding.yml` is the one source of truth
+for commit mode and commit signatures. Read the mode from that file. The [git
+skill](docs/skills/git/SKILL.md) gives each mode and its workflow.
 
 ---
 
-## Predict -> Act -> Verify
+## Plan -> Do -> Check
 
-1. **Predict:** examine the task, plan the steps, confirm Ring 0 vs. Ring 3
-   placement under `CNV_0007` (keeping filesystems, paths, drivers, and named
-   objects in Ring 3), and find possible failures before you act.
-2. **Act:** do the planned steps. Stage any newly created files (`git add -N`)
-   before running verification so `tag_scan.py` includes them.
-3. **Verify (mandatory hard gate):** run `./scripts/build-agent.sh` and confirm
-   it prints `BUILD: PASS` with exit code `0`. This single command enforces
-   every required gate across the entire repository (never substitute partial or
-   hand-picked file lists):
+1. **Plan:** Examine the task and plan the steps. Make sure that Ring 0 and Ring
+   3 placement obeys `CNV_0007` (keep filesystems, paths, drivers, and named
+   objects in Ring 3). Find possible errors before you start.
+2. **Do:** Do the planned steps. Add new files to the git index (`git add -N`)
+   before you start checks so that `tag_scan.py` includes them.
+3. **Check (mandatory check):** Start `./scripts/build-agent.sh` and make sure
+   that it writes `BUILD: PASS` with exit code `0`. This one command does all
+   mandatory checks across the full repository (do not examine a subset of
+   files):
    - `clang-format` (`./scripts/formatter-agent.sh`)
    - `docs-traceability-setup` full-repo text check (`check_text.py --root .`)
-   - optional `ste-writing-skill` check (`python3 tools/check_ste.py --root .`)
-   - 4-stage build + Sphinx `-W`
+   - optional STE check (`python3 tools/check_ste.py --root .`)
+   - four-step build with Sphinx `-W`
    - headless QEMU test suite
    - `clang-tidy` static analysis
    - full CTest suite (`posix.headers`, `posix.symbol_diff`,
@@ -36,51 +36,51 @@ skill](docs/skills/git/SKILL.md) defines each mode and its workflow.
      `arch.microkernel_boundary`, `traceability.unit`, `docs.html`,
      `docs.needs`, `docs.audit`)
 
-If verification fails, go back to Act, repair every failure, and re-run
-`./scripts/build-agent.sh` until it prints `BUILD: PASS`. Never run `git commit`
-before `./scripts/build-agent.sh` passes on the final working tree. Also keep
-the local git `pre-commit` hook installed via `./scripts/install-hooks.sh`
-(never pass `--no-verify`).
+If a check stops with an error, go back to Do, repair each error, and start
+`./scripts/build-agent.sh` again until it writes `BUILD: PASS`. Do not start
+`git commit` before `./scripts/build-agent.sh` succeeds on the last source tree.
+Also keep the local git `pre-commit` script installed through
+`./scripts/install-hooks.sh`. Do not use `--no-verify`.
 
 ---
 
-## Failure Modes
+## Error Modes
 
-| Failure | Step | If it continues |
+| Error | Step | If it continues |
 | --- | --- | --- |
-| Build fails | Fix root cause and rebuild | After 3 tries, ask human |
-| Test fails | Fix failure source and retest | After 3 tries, ask human |
-| Config rejected | Drop 1 option, test, log ADR | Empty config, log risk |
-| Tool missing | Note in tool skill, log ADR | None |
-| Git conflict | Stop, pull, resolve, retry | Ask human |
-| Near token limit | Summarize and link files | None |
+| Build stops | Repair root cause and build again | After 3 tries, tell human |
+| Test stops | Repair error and do test again | After 3 tries, tell human |
+| Config rejected | Remove 1 option, do test, add ADR | Empty config, add risk |
+| Tool missing | Record in tool skill, record ADR | None |
+| Git clash | Stop, pull, repair, try again | Tell human |
+| Near token limit | Give summary and link files | None |
 
 ---
 
-## Boundaries for CLI Commands
+## Limits for CLI Commands
 
 | Command | Permitted | Approval |
 | --- | --- | --- |
 | Read files and `--version` checks | Yes | No |
-| Run build, test, format, and lint scripts | Yes | No |
-| Commit | See `commit_mode` in `.agent-scaffolding.yml` | No |
-| Install project deps in dev container | Yes | No |
+| Start build, test, format, and lint scripts | Yes | No |
+| Make a commit | Refer to `commit_mode` in `.agent-scaffolding.yml` | No |
+| Install project dependencies in dev container | Yes | No |
 | Install system packages | No | Yes |
 | Erase project files | No | Yes |
 | Change IMMUTABLE documents | No | Not permitted |
 | Push to a remote | No | Yes |
 
-**Build Agent First:** delegate build, test, and format runs to the subagents in
-[docs/agents/](docs/agents/). If the platform has no subagents, run the scripts.
-Report only the summary line and failures.
+**Build Agent First:** Give build, test, and format tasks to the subagents in
+[docs/agents/](docs/agents/). If the platform has no subagents, start the
+scripts directly. Write only the summary line and errors.
 
 ---
 
 ## Token and Context Management
 
 - Load a skill only when necessary for the task.
-- Link to skill files and documents. Do not copy their content.
-- Give a summary of earlier context. Do not repeat it.
+- Connect to skill files and documents. Do not make a copy of their content.
+- Give a summary of previous context. Do not write it again.
 - Read connected files in one batch.
 - Write `~` or `$HOME`. Do not write an absolute home path.
 
@@ -90,7 +90,7 @@ Report only the summary line and failures.
 
 Read identity from `.agent-scaffolding.yml` (`identity.git_author_name`,
 `identity.git_author_email`). The value `current_user` uses the environment git
-config (`git config user.name`, `git config user.email`). Pass the identity
+config (`git config user.name`, `git config user.email`). Give the identity
 inline for each commit and do not change git config:
 
 ```bash
@@ -98,7 +98,7 @@ git -c user.name="<name>" -c user.email="<email>" commit -F <message-file>
 ```
 
 Each commit message obeys Conventional Commits with an empty line and an
-`Assisted-by:` footer naming the agent and model of the **current session**:
+`Assisted-by:` footer that names the agent and model of the **active session**:
 
 ```text
 <type>[scope]: <description>
@@ -106,133 +106,132 @@ Each commit message obeys Conventional Commits with an empty line and an
 Assisted-by: <AgentName>:<Model> [+ <Tool> ...]
 ```
 
-For the full procedure, see the [git skill](docs/skills/git/SKILL.md).
+For the full procedure, refer to the [git skill](docs/skills/git/SKILL.md).
 
 ---
 
 ## Pre-Commit Checklist
 
-Before every `git commit`, you MUST run `./scripts/build-agent.sh` on the final
-working tree (with new files `git add -N`'d) and confirm `BUILD: PASS`. Never
-skip gates, never check only a hand-picked subset of files, and never pass
-`--no-verify` to bypass `.git/hooks/pre-commit`.
+Before each `git commit`, you MUST start `./scripts/build-agent.sh` on the last
+source tree (with new files added through `git add -N`) and make sure that it
+writes `BUILD: PASS`. Do not skip checks, do not examine a subset of files, and
+do not use `--no-verify` to bypass `.git/hooks/pre-commit`.
 
-- [ ] `./scripts/build-agent.sh` ran on the final working tree and exited 0
-  (`FORMAT: PASS`, full-repo `check_text.py --root .`, optional
-  `tools/check_ste.py --root .`, 4-stage build + Sphinx `-W`, QEMU tests,
+- [ ] `./scripts/build-agent.sh` operated on the last source tree and gave exit
+  code 0 (`FORMAT: PASS`, full-repo `check_text.py --root .`, optional
+  `tools/check_ste.py --root .`, four-step build with Sphinx `-W`, QEMU tests,
   `clang-tidy`, and all CTest targets)
 - [ ] Commit message obeys Conventional Commits with `Assisted-by:` footer
-- [ ] All new or changed interfaces, components, and test files carry valid
-  `need::` tags (`ICD_`, `COMP_`, `VER_`)
-- [ ] `README.md` user-space support breakdown is updated whenever user-space
-  headers, functions, syscalls, or Ring 3 services change
-- [ ] `docs/records/TASKS.md` and `docs/records/HISTORY.md` updated (move
-  completed `TSK_` items verbatim to `HISTORY.md` with `:status: done`)
+- [ ] All new or changed interfaces, components, and test files have correct
+  `need::` markers (`ICD_`, `COMP_`, `VER_`)
+- [ ] `README.md` user-space function summary changed when user-space headers,
+  functions, syscalls, or Ring 3 services changed
+- [ ] `docs/records/TASKS.md` and `docs/records/HISTORY.md` changed (completed
+  `TSK_` items moved verbatim to `HISTORY.md` with `:status: done`)
 - [ ] `CHANGELOG.md` has an entry in `## [Unreleased]`
 - [ ] `docs/30-architecture/adr/`, `docs/10-product/bdr/`, or
   `docs/00-overview/wdr/` has a decision record (`ADR_`, `BDR_`, or `WDR_`) for
   each new decision
-- [ ] `docs/THIRD-PARTY-NOTICES.md` attributes each new third-party component
+- [ ] `docs/THIRD-PARTY-NOTICES.md` records each new third-party component
 - [ ] All new and changed source files have the copyright header
-- [ ] Microkernel boundary preserved (`CNV_0007`): no Ring 3 policy, path
-  storage, device driver, or named-object registry added to `kernel/`; any new
-  `SYS_*` syscall or `kernel/core/*.c` module is justified in an accepted `ADR_`
-  and registered in `tests/arch/microkernel_allowlist.json`
-  (`arch.microkernel_boundary` passes)
-- [ ] New or changed `POSIX` wording uses goal-oriented `POSIX.1-2024` phrasing
-  with no compliance claims, no `POSIX` product names, and original text only
-- [ ] No IMMUTABLE document was changed
+- [ ] Microkernel boundary stayed strict (`CNV_0007`): no Ring 3 rule, path
+  storage, device driver, or named-object registry added to `kernel/`. Each new
+  `SYS_*` syscall or `kernel/core/*.c` module has an accepted `ADR_` and an
+  entry in `tests/arch/microkernel_allowlist.json` (`arch.microkernel_boundary`
+  succeeds)
+- [ ] New or changed `POSIX` text uses goal-oriented `POSIX.1-2024` text with no
+  compliance claims, no `POSIX` component names, and new text only
+- [ ] No IMMUTABLE document changed
 
-For update procedures, see
+For change procedures, refer to
 [state-management](docs/skills/state-management/SKILL.md).
 
 ---
 
 ## Rules for This Project
 
-Rules that apply only to this project. Each rule links to its skill or document.
+Rules that apply only to this project. Each rule connects to its skill or
+document.
 
-- **Minimal Ring 0 microkernel architecture (`CNV_0007`, equal priority with
-  POSIX.1-2024):** Upholding the microkernel boundary is mandatory and must
-  never be traded away for implementation convenience.
-  - **Allowed in Ring 0 (`kernel/`):** only mechanisms that require CPU
-    privilege or direct hardware and address-space control: 256-level SMP
+- **Small Ring 0 microkernel architecture (`CNV_0007`, equal priority with
+  POSIX.1-2024):** The microkernel boundary is mandatory. Do not break it for
+  convenience.
+  - **Permitted in Ring 0 (`kernel/`):** Only mechanisms where CPU privilege or
+    hardware and address-space control is necessary. These are 256-level SMP
     scheduling and IPIs, synchronous and scatter-gather IPC, threads and
-    `FS.base` TLS, futexes, signals, clocks and timers, PMM/VMM (`W^X`, COW,
-    `SHM`), `CAP_SYS_INTR` IRQ/MMIO/DMA/PCI routing, minimal FD slot dispatch,
-    and `syscall`/`sysret`.
-  - **Forbidden in Ring 0 (must live in Ring 3 `libc/` or `servers/`):**
-    filesystems, pathname parsing or path storage, named object registries (such
-    as named semaphores or service tables), device drivers, pipe/socket/network
-    protocols, and high-level POSIX abstractions composable over `SYS_SHM_OP`,
-    `MAP_SHARED`, `SYS_FUTEX`, and IPC channels.
-  - **Hard gate on Ring 0 expansion:** before adding any `SYS_*` syscall, new
-    `kernel/core/*.c` file, or new field on `struct __k_fd_entry`, prove the
-    feature cannot be built in Ring 3, record an accepted `ADR_`, and update
-    `tests/arch/microkernel_allowlist.json` (enforced by CTest
-    `arch.microkernel_boundary`). Keep C code concise and consistent with
-    existing modules (minimal comments). See
+    `FS.base` TLS, futexes, signals, clocks, and timers. They also include
+    PMM/VMM (`W^X`, COW, `SHM`), `CAP_SYS_INTR` IRQ, MMIO, DMA, and PCI control,
+    small FD slot dispatch, and `syscall`/`sysret`.
+  - **Not permitted in Ring 0 (must stay in Ring 3 `libc/` or `servers/`):**
+    Filesystems, pathname parse code, path storage, and named object registries
+    (for example named semaphores or service tables). Device drivers,
+    pipe/socket and network protocols, and high-level POSIX interfaces built on
+    `SYS_SHM_OP`, `MAP_SHARED`, `SYS_FUTEX`, and IPC channels also stay in Ring
+    3.
+  - **Hard check on Ring 0 growth:** Before you add a `SYS_*` syscall, new
+    `kernel/core/*.c` file, or new field on `struct __k_fd_entry`, prove that
+    Ring 3 cannot do the function. Record an accepted `ADR_` and change
+    `tests/arch/microkernel_allowlist.json` (`arch.microkernel_boundary`
+    examines this file). Keep C code short so that it agrees with active modules
+    (small number of comments). Refer to
     [ADR_0002](docs/30-architecture/adr/ADR_0002.md),
     [ADR_0031](docs/30-architecture/adr/ADR_0031.md),
     [WDR_0010](docs/00-overview/wdr/WDR_0010.md), and
     [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0007`).
-- **Source-text and `.editorconfig` compliance (`docs-traceability-setup`):**
-  All new and changed files must obey `.editorconfig` (UTF-8, LF, trailing
-  newline, max line width) and pass the `docs-traceability-setup` skill's
-  `scripts/check_text.py` (maximum line length, greedy prose packing, and
-  Doxygen file headers) at all times alongside `clang-format`, `clang-tidy`,
-  `ste-writing-skill` (when installed), `posix-issue8-os-dev`, and CTest. Repair
-  content rather than weakening rules. See `.editorconfig`,
-  `.docs-traceability-setup.yml`, and
+- **Source-text and `.editorconfig` rules (`docs-traceability-setup`):** All new
+  and changed files must obey `.editorconfig` (UTF-8, LF, last newline, max line
+  width). They must also succeed on `scripts/check_text.py` (maximum line
+  length, greedy prose layout, and Doxygen file headers) with `clang-format`,
+  `clang-tidy`, `ste-writing-skill` (when installed), `posix-issue8-os-dev`, and
+  CTest. Repair content as an alternative to weak rules. Refer to
+  `.editorconfig`, `.docs-traceability-setup.yml`, and
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0002`,
   `CNV_0003`).
-- **Technical writing (`ste-writing-skill`):** Use the `ste-writing-skill` skill
-  when drafting and checking documentation and requirements in `README.md` and
-  `docs/` (including Sphinx-Needs `{sys}`, `{swr}`, and specification
-  directives). Use `must` (not `shall`) as the modal verb
-  (`authoring.modal_verb: must`), and keep project terms in
-  `technical_terms.txt` and `allowed_phrases.txt`. Never copy any content from
-  the `ste-writing-skill` skill into this repository. When `ste-writing-skill`
-  is installed on the build machine, `tools/check_ste.py` runs automatically;
-  build scripts skip it when absent. See
+- **Technical text (`ste-writing-skill`):** Use `ste-writing-skill` (STE) when
+  you write and examine documents and requirements in `README.md` and `docs/`
+  (with Sphinx-Needs `{sys}`, `{swr}`, and specification directives). Use `must`
+  (not `shall`) as the modal verb (`authoring.modal_verb: must`). Keep project
+  terms in `technical_terms.txt` and `allowed_phrases.txt`. Do not make a copy
+  of content from `ste-writing-skill` into this repository. When
+  `ste-writing-skill` is installed on the build host, `tools/check_ste.py`
+  operates automatically. Build scripts skip it when missing. Refer to
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0002`).
 - **Two-tier bidirectional code and POSIX traceability
-  (`posix-issue8-os-dev`):** Keep Sphinx-Needs items at the contract, header, or
-  subsystem level with `:posix:` references; tag headers with `ICD_`,
-  implementations with `COMP_`, and tests (`test_*`) with `VER_`; never create
-  per-function Markdown boilerplate. See
+  (`posix-issue8-os-dev`):** Keep Sphinx-Needs items at the interface, header,
+  or subsystem level with `:posix:` links. Tag headers with `ICD_`, source
+  modules with `COMP_`, and tests (`test_*`) with `VER_`. Do not make
+  one-for-each-function Markdown boilerplate. Refer to
   [WDR_0002](docs/00-overview/wdr/WDR_0002.md),
   [ADR_0003](docs/30-architecture/adr/ADR_0003.md), and
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0001`,
   `CNV_0004`).
-- **POSIX wording, originality, and trademark rules:** Frame standard support as
-  ongoing work toward `POSIX.1-2024` (`IEEE Std 1003.1-2024` / `ISO/IEC/IEEE
-  9945:2026`) using goal-oriented phrasing (for example, "working toward
-  POSIX.1-2024 compatibility" or "targets interfaces from IEEE Std
-  1003.1-2024"). Pin references to the 2024 edition unless documenting legacy
-  rejection or compatibility. Never claim completion or certification (avoid
-  "POSIX certified", "POSIX conformant", "POSIX compliant", or "implements
-  POSIX"), never put `POSIX` in OS, project, binary, or component names, and
-  never copy verbatim text from copyrighted IEEE or Open Group specifications.
-  Keep the notice `POSIX® is a registered trademark of the Institute of
-  Electrical and Electronic Engineers, Inc.` in public-facing docs. See
-  [BDR_0003](docs/10-product/bdr/BDR_0003.md) and
+- **POSIX text, originality, and trademark rules:** Frame standard work as an
+  active goal for `POSIX.1-2024` (`IEEE Std 1003.1-2024` / `ISO/IEC/IEEE
+  9945:2026`). Use goal-oriented text (for example, "targets compatibility with
+  interfaces from POSIX.1-2024" or "targets interfaces from IEEE Std
+  1003.1-2024"). Pin links to the 2024 edition unless you record older edition
+  removal or compatibility. Do not claim full compliance or certification (do
+  not write "POSIX certified", "POSIX conformant", "POSIX compliant", or
+  "implements POSIX"). Do not put `POSIX` in OS, project, executable, or
+  component names. Do not make copies of verbatim text from copyrighted IEEE or
+  Open Group specifications. Keep the notice `POSIX® is a registered trademark
+  of the Institute of Electrical and Electronic Engineers, Inc.` in public
+  documents. Refer to [BDR_0003](docs/10-product/bdr/BDR_0003.md) and
   [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
-- **Keep `README.md` user-space support current:** Whenever you add, change, or
-  remove public headers, `libc` functions, syscalls, or Ring 3 system services,
-  you must update the user-space functionality breakdown and use-case summary in
-  [README.md](README.md) in the same commit so application developers always see
-  accurate current capabilities.
-- **Mermaid diagrams for concepts and architecture:** When documenting a
+- **Keep `README.md` user-space status accurate:** When you change public
+  headers, `libc` functions, syscalls, or Ring 3 services, you must change the
+  user-space function summary in [README.md](README.md) in the same commit.
+  Software authors will then always see accurate functions.
+- **Mermaid diagrams for concepts and architecture:** When you document a
   subsystem, architecture, protocol, or workflow, add a focused Mermaid diagram
-  where it helps illustrate the system or concept—keep diagrams purposeful and
-  avoid unnecessary clutter. Prefer vertical orientation (`flowchart TD`,
-  `direction TB`) over wide horizontal layouts so diagrams stay readable, and
-  avoid volatile test or item counts inside diagrams.
-- **Milestone discipline:** Make one milestone at a time and commit after each
-  complete milestone. A milestone is complete only when its test gives exit code
-  0. See [docs/records/TASKS.md](docs/records/TASKS.md) and
+  where it helps show the system or concept. Keep diagrams purposeful and
+  prevent clutter. Prefer vertical layout (`flowchart TD`, `direction TB`) to
+  wide horizontal layouts so that diagrams stay easy to read. Do not put
+  temporary test or item counts in diagrams.
+- **Milestone discipline:** Complete one milestone at a time and make a commit
+  after each completed milestone. A milestone is completed only when its test
+  gives exit code 0. Refer to [docs/records/TASKS.md](docs/records/TASKS.md) and
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0006`).
-- **Freestanding C17:** The kernel and C library are freestanding C17 with
-  warnings as errors. The kernel runs with no C runtime. See
+- **Freestanding C17:** The kernel and C library use freestanding C17 with
+  warnings as errors. The kernel operates with no C runtime. Refer to
   [docs/skills/cmake/SKILL.md](docs/skills/cmake/SKILL.md).

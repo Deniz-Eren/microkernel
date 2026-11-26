@@ -1,7 +1,7 @@
 # Interfaces — PROC
 
-Domain `PROC`: system call ABI, native thread/process wrappers, and POSIX.1-2024
-`<sys/wait.h>`.
+The `PROC` domain includes the syscall ABI, native thread and process wrappers,
+and POSIX.1-2024 `<sys/wait.h>`.
 
 ```{icd} System V AMD64 syscall ABI
 :id: ICD_PROC_0001
@@ -9,12 +9,12 @@ Domain `PROC`: system call ABI, native thread/process wrappers, and POSIX.1-2024
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0002, SWR_PROC_0004
 
-`libc/include/sys/microkernel.h` specifies system call numbers (`0`..`48`) and
-the `RAX`/`RDI`/`RSI`/`RDX`/`R10`/`R8`/`R9` register convention
+`libc/include/sys/microkernel.h` gives syscall numbers (`0`..`48`) and the
+`RAX`/`RDI`/`RSI`/`RDX`/`R10`/`R8`/`R9` register convention
 ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0002`, {need}`SWR_PROC_0004`).
 ```
 
-```{icd} Ring 3 thread management interface
+```{icd} Ring 3 thread control interface
 :id: ICD_PROC_0002
 :status: active
 :refines: ARC_PROC_0001
@@ -32,7 +32,7 @@ the `RAX`/`RDI`/`RSI`/`RDX`/`R10`/`R8`/`R9` register convention
 :satisfies: SWR_PROC_0007
 
 `libc/include/sys/proc.h` gives `PROC_WAIT_NOHANG`, `ProcCreate`, and `ProcWait`
-wrappers to spawn bootfs children and read exit status ({need}`ARC_PROC_0001`,
+wrappers to start `bootfs` children and read exit status ({need}`ARC_PROC_0001`,
 {need}`SWR_PROC_0007`).
 ```
 
@@ -43,9 +43,9 @@ wrappers to spawn bootfs children and read exit status ({need}`ARC_PROC_0001`,
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0007
 
-`libc/include/sys/wait.h` declares `WNOHANG`, `WUNTRACED`, `WIFEXITED`,
+`libc/include/sys/wait.h` gives `WNOHANG`, `WUNTRACED`, `WIFEXITED`,
 `WEXITSTATUS`, `WIFSIGNALED`, `WTERMSIG`, `WIFSTOPPED`, `WSTOPSIG`, `wait`, and
-`waitpid` with no `<sys/microkernel.h>` leakage ({need}`ARC_PROC_0001`,
+`waitpid`. It does not include `<sys/microkernel.h>` ({need}`ARC_PROC_0001`,
 {need}`SWR_PROC_0007`).
 ```
 
@@ -56,10 +56,10 @@ wrappers to spawn bootfs children and read exit status ({need}`ARC_PROC_0001`,
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0006
 
-`libc/include/time.h` declares `CLOCK_REALTIME`, `CLOCK_MONOTONIC`,
+`libc/include/time.h` gives `CLOCK_REALTIME`, `CLOCK_MONOTONIC`,
 `TIMER_ABSTIME`, `clock_getres`, `clock_gettime`, `clock_settime`,
-`clock_nanosleep`, `nanosleep`, and `timer_*` with no `<sys/microkernel.h>`
-leakage ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0006`).
+`clock_nanosleep`, `nanosleep`, and `timer_*`. It does not include
+`<sys/microkernel.h>` ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0006`).
 ```
 
 ```{icd} POSIX.1-2024 <pthread.h> public interface
@@ -69,9 +69,9 @@ leakage ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0006`).
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0005
 
-`libc/include/pthread.h` declares `pthread_create`, `pthread_join`, mutexes,
+`libc/include/pthread.h` gives `pthread_create`, `pthread_join`, mutexes,
 `pthread_cond_*`, `pthread_cond_clockwait`, barriers, spinlocks, rwlocks, and
-TSD keys with no `<sys/microkernel.h>` leakage ({need}`ARC_PROC_0001`,
+TSD keys. It does not include `<sys/microkernel.h>` ({need}`ARC_PROC_0001`,
 {need}`SWR_PROC_0005`).
 ```
 
@@ -82,34 +82,34 @@ TSD keys with no `<sys/microkernel.h>` leakage ({need}`ARC_PROC_0001`,
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0005
 
-`libc/include/semaphore.h` declares `sem_t`, `sem_init`, `sem_destroy`,
-`sem_wait`, `sem_trywait`, `sem_timedwait`, `sem_clockwait`, `sem_post`, and
-`sem_getvalue` with no `<sys/microkernel.h>` leakage ({need}`ARC_PROC_0001`,
+`libc/include/semaphore.h` gives `sem_t`, `sem_init`, `sem_destroy`, `sem_wait`,
+`sem_trywait`, `sem_timedwait`, `sem_clockwait`, `sem_post`, and `sem_getvalue`.
+It does not include `<sys/microkernel.h>` ({need}`ARC_PROC_0001`,
 {need}`SWR_PROC_0005`).
 ```
 
-```{icd} POSIX.1-2024 process groups, sessions, and TTY job-control ABI
+```{icd} POSIX.1-2024 process groups, sessions, and TTY signal control ABI
 :id: ICD_PROC_0008
 :status: active
 :posix: XSH/setpgid (BASE), XSH/tcsetpgrp (BASE), XBD/termios.h (BASE)
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0008
 
-`libc/include/unistd.h` declares `setpgid`, `getpgid`, `getpgrp`, `setsid`,
+`libc/include/unistd.h` gives `setpgid`, `getpgid`, `getpgrp`, `setsid`,
 `getsid`, `tcgetpgrp`, and `tcsetpgrp`. `SYS_PROC_PGID`, `SYS_KILL`, and
-`TTY_OP_GETPGRP`/`TTY_OP_SETPGRP` specify the kernel and `ttyserv` job-control
+`TTY_OP_GETPGRP`/`TTY_OP_SETPGRP` give the kernel and `ttyserv` process-group
 ABI ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0008`).
 ```
 
-```{icd} Process snapshot ABI, sysconf, and TTY window-size interface
+```{icd} Process table ABI, sysconf, and TTY window-dimension interface
 :id: ICD_PROC_0009
 :status: active
 :posix: XSH/sysconf (BASE), XSH/tcgetwinsize (BASE), XCU/ps (BASE)
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0010
 
-`libc/include/sys/proc.h` defines `struct __k_proc_info` and `ProcList()` over
-`FD_OP_PROC_LIST`. `<unistd.h>`, `<stdio.h>`, and `<termios.h>` declare Base
+`libc/include/sys/proc.h` gives `struct __k_proc_info` and `ProcList()` through
+`FD_OP_PROC_LIST`. `<unistd.h>`, `<stdio.h>`, and `<termios.h>` give Base
 `sysconf`, `confstr`, `pathconf`, `fpathconf`, `gethostname`, `ctermid`,
 `ttyname`, `ttyname_r`, `struct winsize`, `tcgetsid`, `tcgetwinsize`, and
 `tcsetwinsize` ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0010`).
@@ -122,9 +122,9 @@ ABI ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0008`).
 :refines: ARC_PROC_0001
 :satisfies: SWR_PROC_0011
 
-`<pwd.h>`, `<grp.h>`, `<sys/resource.h>`, and `<unistd.h>` declare Base
-`getpw*`, `getgr*`, `getrlimit`/`setrlimit`, `getuid`/`setuid`/`geteuid`/
-`seteuid`, `getgid`/`setgid`/`getegid`/`setegid`, `getgroups`, and `getlogin*`.
-`SYS_PROC_CRED`, `SYS_PROC_RLIMIT`, and `ProcGetNice`/`ProcSetNice` define the
+`<pwd.h>`, `<grp.h>`, `<sys/resource.h>`, and `<unistd.h>` give Base `getpw*`,
+`getgr*`, `getrlimit`/`setrlimit`, `getuid`/`setuid`/`geteuid`/`seteuid`,
+`getgid`/`setgid`/`getegid`/`setegid`, `getgroups`, and `getlogin*`.
+`SYS_PROC_CRED`, `SYS_PROC_RLIMIT`, and `ProcGetNice`/`ProcSetNice` give the
 kernel ABI ({need}`ARC_PROC_0001`, {need}`SWR_PROC_0011`).
 ```

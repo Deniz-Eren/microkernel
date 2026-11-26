@@ -1,7 +1,7 @@
 # Project Records
 
-This section collects active conventions (`con`), active planning items (`task`,
-`roadmap`), and archived completed or cancelled records.
+This section collects active conventions (`con`), active plan items (`task`,
+`roadmap`), and archived completed or canceled records.
 
 ```{toctree}
 :maxdepth: 1

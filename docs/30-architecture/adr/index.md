@@ -1,7 +1,7 @@
 # Architecture Decision Records (ADR)
 
-This index lists all architecture decision records capturing significant
-structural and tooling choices.
+This index shows all architecture decision records for important design and tool
+decisions.
 
 ```{toctree}
 :maxdepth: 1

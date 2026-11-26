@@ -1,15 +1,15 @@
-# Raspberry Pi 400 Bring-Up and USB-C HIL Reference
+# Raspberry Pi 400 Initial Port and USB-C HIL Document
 
-This reference applies the general [HIL testing guide](hil-testing.md) to the
-Raspberry Pi 400 (BCM2711). After one-time provisioning, the Pi 400 runs
-strictly bare metal in RAM. The SD slot stays permanently empty. No OS or
-utility runs on the target. The only physical attachment is one USB-C cable
-through a powered hub.
+This document uses the general [HIL test document](hil-testing.md) for the
+Raspberry Pi 400 (BCM2711). After one-time configuration, the Pi 400 operates
+bare metal in RAM only. The SD slot stays empty. No OS or utility operates on
+the target. One USB-C cable through a powered hub is the only physical
+connection.
 
-## Target profile and boot chain
+## Target hardware and boot chain
 
-The BCM2711 provides four Cortex-A72 cores, the GIC-400 interrupt controller,
-ARM generic timers, and the Synopsys DWC2 USB 2.0 OTG controller at MMIO base
+The BCM2711 has four Cortex-A72 cores, the GIC-400 interrupt controller, ARM
+generic timers, and the Synopsys DWC2 USB 2.0 OTG controller at MMIO base
 `0xFE980000`. The boot chain for the HIL loop is:
 
 ```mermaid
@@ -23,73 +23,76 @@ flowchart TD
     IMG --> CDC
 ```
 
-The firmware stage `start4.elf` configures the DWC2 peripheral PHY from the
-harvested device tree overlay before it jumps to the kernel image.
+The firmware module `start4.elf` configures the DWC2 peripheral PHY from the
+copied device tree overlay before it jumps to the kernel image.
 
 ## Physical topology
 
-One data-capable USB-C cable connects the Pi 400 USB-C port to the Ubuntu host
-through a `uhubctl`-compatible powered USB hub. The hub supplies stable 5 V
-power, software power cycling, and USB 2.0 OTG data. No GPIO jumper wires, no
-debug UART, and no HDMI cable are used for bring-up feedback.
+One data USB-C cable connects the Pi 400 USB-C port to the Ubuntu host through a
+`uhubctl`-compatible powered USB hub. The hub gives a stable 5 V supply,
+software supply cycles, and USB 2.0 OTG data. This setup uses no GPIO jumper
+cables, no debug UART, and no HDMI cable for console output.
 
-## Phase 2: one-time provisioning
+## Step 2: One-time configuration
 
-Perform these steps over SSH while the Pi 400 still runs its stock OS from the
-flash disk. After step 4, neither SSH nor the flash disk is ever used again.
+Do these steps through SSH while the Pi 400 operates its stock OS from the flash
+disk. After step 4, do not use SSH or the flash disk again.
 
-1. **Verify `uhubctl` power switching.** From the Ubuntu host, confirm that
-   `uhubctl` cuts and restores 5 V power on the hub port that feeds the target.
-2. **Configure the SPI EEPROM boot order.** Run `rpi-eeprom-config` on the Pi
-   400 and set `BOOT_ORDER=0xf31`. The boot ROM tries the SD card first and
-   enters USB-C `RPIBOOT` device mode immediately when the slot is empty.
-3. **Harvest firmware and device tree blobs to the host.** Copy `start4.elf`,
-   `fixup4.dat`, `bcm2711-rpi-400.dtb`, and `overlays/dwc2.dtbo` from the boot
-   partition onto the Ubuntu host. The HIL loop later streams them back into RAM
-   so `start4.elf` can configure the DWC2 peripheral PHY.
-4. **Handoff.** Execute `sudo poweroff` and physically remove the flash disk.
-   The target is now bare-metal only.
+1. **Do a check of `uhubctl` 5 V supply control.** From the Ubuntu host, make
+   sure that `uhubctl` disconnects and reconnects the 5 V supply on the target
+   hub port.
+2. **Set the SPI EEPROM boot sequence.** Start `rpi-eeprom-config` on the Pi 400
+   and set `BOOT_ORDER=0xf31`. When the SD slot is empty, the boot ROM enters
+   USB-C `RPIBOOT` device mode immediately.
+3. **Make a copy of firmware and device tree blobs to the host.** Put copies of
+   `start4.elf`, `fixup4.dat`, `bcm2711-rpi-400.dtb`, and `overlays/dwc2.dtbo`
+   from the boot partition on the Ubuntu host. The HIL loop subsequently loads
+   these files back into RAM to let `start4.elf` configure the DWC2 peripheral
+   PHY.
+4. **Stop the stock OS and remove the flash disk.** Do `sudo poweroff` and
+   remove the flash disk physically. The target then operates bare metal only.
 
-## Phase 3: autonomous HIL loop
+## Step 3: Automatic HIL loop
 
-Each iteration of the host loop performs:
+Each cycle of the host loop does these steps:
 
-1. **Power cycle:** cut and restore hub port power with `uhubctl`. This recovers
-   the target from any hang.
-2. **Package:** build `boot.img` with `microkernel8.img`, a `config.txt` with
-   `arm_64bit=1`, `boot_ramdisk=1`, and `dtoverlay=dwc2,dr_mode=peripheral`,
-   plus the harvested `start4.elf`, `fixup4.dat`, and device tree blobs.
-3. **Deploy:** stream the package into target RAM with `sudo rpiboot -d
-   <boot_dir>`.
+1. **Supply cycle:** `uhubctl` disconnects and reconnects the hub port 5 V
+   supply to start the target again after a hang.
+2. **Package:** The runner makes `boot.img` with `microkernel8.img`, a
+   `config.txt` (`arm_64bit=1`, `boot_ramdisk=1`,
+   `dtoverlay=dwc2,dr_mode=peripheral`), and the copied `start4.elf`,
+   `fixup4.dat`, and device tree blobs.
+3. **Deploy:** `sudo rpiboot -d <boot_dir>` loads the package into target RAM.
 
 The kernel starts at `0x80000` with the DWC2 controller in peripheral mode and
-begins USB enumeration toward the host.
+starts USB enumeration to the host.
 
-## Progressive feedback milestones
+## Step-by-step feedback milestones
 
-Validate the BCM2711 DWC2 MMIO glue (`0xFE980000`) through four host-side
-milestones. Each milestone proves one layer of the console stack without a debug
-UART or display.
+Four host-side milestones do checks of the BCM2711 DWC2 MMIO code
+(`0xFE980000`). Each milestone does a test of one layer of the console stack
+without a debug UART or display.
 
-1. **PHY and reset handshake (`dmesg`).** Clearing `DCTL.SftDiscon` pulls the
-   `D+` line high. The host log then reports `new high-speed USB device`, which
-   confirms `USBRST`, the High-Speed chirp negotiation, and `ENUMDONE`.
-2. **Raw `EP0` control trace (`usbmon`).** The host capture file under
-   `/sys/kernel/debug/usb/usbmon/` records exact `SETUP` packets and the `DIEP0`
-   responses. This diagnoses descriptor, stall, or FIFO problems.
-3. **Checkpoint breadcrumbs (`lsusb -v`).** The kernel packs early boot
+1. **PHY and `USBRST` handshake (`dmesg`):** When the kernel sets
+   `DCTL.SftDiscon` to 0, it pulls the `D+` line high. The host kernel output
+   then shows `new high-speed USB device`, which shows `USBRST`, High-Speed
+   chirp negotiation, and `ENUMDONE`.
+2. **Raw `EP0` control capture (`usbmon`):** The host capture file in
+   `/sys/kernel/debug/usb/usbmon/` records accurate `SETUP` packets and the
+   `DIEP0` responses to find descriptor, stall, or FIFO problems.
+3. **Checkpoint breadcrumbs (`lsusb -v`):** The kernel puts initial boot
    checkpoints and `GINTSTS` or error codes into `bcdDevice` and the ASCII
-   string descriptors (`iProduct`, `iSerialNumber`). The host reads them with
-   `lsusb -d <vid>:<pid> -v` at any time, even before the console runs.
-4. **Bidirectional serial console (`/dev/ttyACM0`).** After `SET_CONFIGURATION`
+   string descriptors (`iProduct`, `iSerialNumber`). The host reads these values
+   with `lsusb -d <vid>:<pid> -v` at all times, before the console operates.
+4. **Bidirectional serial console (`/dev/ttyACM0`):** After `SET_CONFIGURATION`
    succeeds, the CDC communication interface (`0x02`) and data interface
-   (`0x0A`) activate. The Linux `cdc_acm` host driver then creates
-   `/dev/ttyACM0` for live kernel logs and test commands.
+   (`0x0A`) activate. The Linux `cdc_acm` host driver then makes `/dev/ttyACM0`
+   for live kernel output and test commands.
 
-## Phase 4: hands-free driver development
+## Step 4: Automatic driver development
 
-With `/dev/ttyACM0` live and `uhubctl` power-cycle recovery in place, the agent
-autonomously develops and tests the native Pi 400 drivers on bare metal. The
+With `/dev/ttyACM0` and `uhubctl` 5 V supply cycle recovery active, the agent
+writes and does tests of native Pi 400 drivers on bare metal automatically. The
 planned driver work includes the VideoCore Mailbox HDMI framebuffer, the PCIe
-root complex, and the VL805 xHCI host controller. The xHCI controller serves the
-built-in keyboard and the rear USB-A ports.
+root complex, and the VL805 xHCI host controller. The xHCI controller controls
+the built-in keyboard and the rear USB-A ports.

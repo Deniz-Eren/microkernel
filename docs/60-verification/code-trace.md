@@ -1,7 +1,7 @@
 # Code Traceability
 
-This table lists every in-code `need::` traceability tag discovered across the
-repository together with its source file and line number.
+This table shows each `need::` traceability marker that the scanner finds in the
+repository, with its source file and line number.
 
 ```{need-code-trace}
 ```

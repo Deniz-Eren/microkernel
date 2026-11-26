@@ -1,7 +1,7 @@
 # Workflow Decision Records (WDR)
 
-This index lists all workflow decision records governing engineering processes
-and quality gates.
+This index shows all workflow decision records that control project procedures
+and quality checks.
 
 ```{toctree}
 :maxdepth: 1

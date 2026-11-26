@@ -1,7 +1,7 @@
 # Interfaces
 
-This layer defines Interface Control Documents (`icd`) specifying contracts
-between subsystems and components.
+This layer gives Interface Control Documents (`icd`) for the interfaces between
+subsystems and components. Each domain has one document.
 
 ```{toctree}
 :maxdepth: 1

@@ -1,7 +1,7 @@
 # Components
 
-This layer defines white-box component specifications (`comp`) including
-internal behavior and state machines.
+This layer gives internal component specifications (`comp`) with internal
+operations and state changes. Each domain has one document.
 
 ```{toctree}
 :maxdepth: 1

@@ -1,6 +1,6 @@
 # Architecture
 
-This layer defines structural decomposition (`arc`) and architecture decision
+This layer gives the architecture items (`arc`) and the architecture decision
 records (`adr`).
 
 ```{toctree}
@@ -11,7 +11,7 @@ records (`adr`).
 adr/index
 ```
 
-```{needtable} All architecture elements
+```{needtable} All architecture items
 :types: arc
 :columns: id; title; status; satisfies; refines_back as "Refined by"
 ```

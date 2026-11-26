@@ -1,7 +1,7 @@
 ---
 name: state-management
 description: >-
-  Procedures to update the traceable state documents of the project:
+  Procedures to change the traceable state documents of the project:
   docs/records/TASKS.md, docs/records/ROADMAP.md, docs/records/HISTORY.md,
   decision records (ADR_, BDR_, WDR_), CHANGELOG.md, and
   docs/THIRD-PARTY-NOTICES.md. Use this skill before each commit, when you
@@ -10,41 +10,42 @@ description: >-
 
 # State Management
 
-All traceable state documents live in the Sphinx-Needs model under `docs/`.
-Legal third-party attributions live in `docs/THIRD-PARTY-NOTICES.md`, and
-release notes live in `CHANGELOG.md`. Never reuse or rename an assigned ID.
-Write dates in ISO format (`YYYY-MM-DD`).
+All traceable state documents are in the Sphinx-Needs model in `docs/`. Legal
+third-party attributions are in `docs/THIRD-PARTY-NOTICES.md`, and release
+summaries are in `CHANGELOG.md`. Do not use an assigned ID again or change its
+name. Write dates in ISO format (`YYYY-MM-DD`).
 
 ## Tasks, Roadmap, and History (`docs/records/`)
 
-- **Add a task:** Append a `{task}` directive with the next `TSK_NNNN` ID,
-  `:status: open`, and `:traces:` links in
-  [docs/records/TASKS.md](../../records/TASKS.md).
-- **Add a roadmap item:** Append a `{roadmap}` directive with the next
-  `RDM_NNNN` ID in [docs/records/ROADMAP.md](../../records/ROADMAP.md).
+- **Add a task:** Add a `{task}` directive to the end of
+  [docs/records/TASKS.md](../../records/TASKS.md) with the next `TSK_NNNN` ID,
+  `:status: open`, and `:traces:` links.
+- **Add a roadmap item:** Add a `{roadmap}` directive to the end of
+  [docs/records/ROADMAP.md](../../records/ROADMAP.md) with the next `RDM_NNNN`
+  ID.
 - **Complete or cancel an item:** Move the `{task}` or `{roadmap}` directive
-  verbatim to the top of [docs/records/HISTORY.md](../../records/HISTORY.md) and
-  set `:status: done` (or `cancelled`). Normative items must never link to
+  unchanged to the top of [docs/records/HISTORY.md](../../records/HISTORY.md)
+  and set `:status: done` (or `cancelled`). Normative items must not connect to
   `TSK_` or `RDM_` IDs.
 
 ## Decision Records (`ADR_`, `BDR_`, `WDR_`)
 
-Add a numbered decision file whenever you make, change, or supersede an
-important architectural, product, or workflow decision (including tool configs
-and deviations from conventions):
+Add a numbered decision file when you make, change, or supersede an important
+architecture, project, or workflow decision (with tool configurations and
+deviations from conventions):
 
 - **Architecture decisions:** `docs/30-architecture/adr/ADR_NNNN.md` (`{adr}`)
-- **Business decisions:** `docs/10-product/bdr/BDR_NNNN.md` (`{bdr}`, must carry
+- **Business decisions:** `docs/10-product/bdr/BDR_NNNN.md` (`{bdr}`, must have
   `:drives:` or `:governs:`)
-- **Workflow and tooling decisions:** `docs/00-overview/wdr/WDR_NNNN.md`
-  (`{wdr}`, typically carries `:governs: ARC_DOCS_0001`)
+- **Workflow and tool decisions:** `docs/00-overview/wdr/WDR_NNNN.md` (`{wdr}`,
+  usually has `:governs: ARC_DOCS_0001`)
 
-1. Find the highest sequential 4-digit ID in the target folder and add 1.
-2. Create `<PREFIX>_NNNN.md` with sections `## Context`, `## Decision`, `##
-   Rejected alternatives`, and `## Consequences` inside the directive.
-3. To supersede an old decision, set the old file to `:status: superseded` and
-   add `:supersedes: <OLD_ID>` on the new decision.
-4. Indexes (`index.md`) use `:glob:`, so Sphinx includes new files
+1. Find the highest sequential 4-digit ID in the target directory and add 1.
+2. Make `<PREFIX>_NNNN.md` with sections `## Context`, `## Decision`, `##
+   Rejected alternatives`, and `## Results` in the directive.
+3. To supersede a previous decision, set the previous file to `:status:
+   superseded` and add `:supersedes: <OLD_ID>` on the new decision.
+4. Index files (`index.md`) use `:glob:`, which lets Sphinx include new files
    automatically.
 
 ## CHANGELOG.md
@@ -61,15 +62,15 @@ The [keepachangelog skill](../keepachangelog/SKILL.md) gives the procedure for
 
 ## Before each commit
 
-1. Update [docs/records/TASKS.md](../../records/TASKS.md) and move completed
+1. Change [docs/records/TASKS.md](../../records/TASKS.md) and move completed
    items to [docs/records/HISTORY.md](../../records/HISTORY.md).
-2. Add a `CHANGELOG.md` entry in `## [Unreleased]` for an important change (see
-   the [keepachangelog skill](../keepachangelog/SKILL.md)).
-3. Add an `ADR_`, `BDR_`, or `WDR_` file if you made a new decision.
-4. Update [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md) if a
-   standing engineering convention changed.
-5. Add a notice in [docs/THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md)
-   if you added a third-party component.
-6. Confirm all new and changed source files carry the required Doxygen and MIT
-   copyright headers (see
+2. Add a `CHANGELOG.md` entry in `## [Unreleased]` for an important change
+   (refer to the [keepachangelog skill](../keepachangelog/SKILL.md)).
+3. If you made a new decision, add an `ADR_`, `BDR_`, or `WDR_` file.
+4. If an active project convention changed, change
+   [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md).
+5. If you added a third-party component, add a notice in
+   [docs/THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md).
+6. Make sure that all new and changed source files have the necessary Doxygen
+   and MIT copyright headers (refer to
    [docs/records/CONVENTIONS.md](../../records/CONVENTIONS.md), `CNV_0003`).

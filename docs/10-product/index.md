@@ -1,6 +1,6 @@
-# Product
+# Vision and Scope
 
-This section defines the product vision and business decision records for
+This section gives the system vision and business decision records for
 `microkernel`.
 
 ```{toctree}

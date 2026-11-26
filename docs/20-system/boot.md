@@ -1,14 +1,14 @@
 # System and Software Requirements — BOOT
 
-Domain `BOOT`: hardware startup, Multiboot2 higher-half entry, boot archive
-load, and PID 1 initialization.
+The `BOOT` domain includes hardware start, Multiboot2 higher-half entry,
+`boot.tar` archive access, and the start of PID 1.
 
 ```{sys} Boot 64-bit kernel and start PID 1
 :id: SYS_BOOT_0001
 :status: active
 
 The system must boot the 64-bit kernel in the higher half. It must initialize
-core CPU tables and timers, and start PID 1 (`sysproc`) in Ring 3.
+the primary CPU tables and timers, and start PID 1 (`sysproc`) in Ring 3.
 ```
 
 ```{swr} Initialize x86-64 platform tables and timer
@@ -16,31 +16,32 @@ core CPU tables and timers, and start PID 1 (`sysproc`) in Ring 3.
 :status: active
 :derives: SYS_BOOT_0001
 
-The boot subsystem must parse the Multiboot2 information block. It must
-initialize the serial console, GDT, IDT, TSS, and PIT-calibrated LAPIC timer
-({need}`SYS_BOOT_0001`).
+The `BOOT` subsystem must parse the Multiboot2 information block. It must
+initialize the serial console, GDT, IDT, and TSS, and calibrate the LAPIC timer
+with the PIT ({need}`SYS_BOOT_0001`).
 ```
 
-```{swr} Load boot archive ELF programs and give boot info
+```{swr} Load ELF executables from boot archive and give boot info
 :id: SWR_BOOT_0002
 :status: active
 :derives: SYS_BOOT_0001
 
-The boot subsystem must load user ELF executables from the `ustar` `boot.tar`
+The `BOOT` subsystem must load user ELF executables from the `ustar` `boot.tar`
 module with page permissions. It must map a read-only `boot_info_t` page for PID
 1 through `AT_MICROKERNEL_BOOTINFO` ({need}`SYS_BOOT_0001`).
 ```
 
-```{swr} Discover IOAPIC and serial resources via ACPI MADT and SPCR
+```{swr} Find IOAPIC and serial resources through ACPI MADT and SPCR
 :id: SWR_BOOT_0003
 :status: active
 :derives: SYS_BOOT_0001
 :traces: ADR_0003, ADR_0022
 
-The system must parse ACPI `MADT` IOAPIC bases and Interrupt Source Overrides
-(ISOs) and `SPCR` when present (falling back to COM1). Ring 3 drivers
-(`ttyserv`, `rtcdrv`) must accept discovered `argv` port and IRQ arguments and
-own user `OPOST` TX with early boot fallback ({need}`SYS_BOOT_0001`).
+The system must parse ACPI `MADT` IOAPIC addresses, Interrupt Source Overrides
+(ISOs), and `SPCR` when available, and use COM1 as an alternative. Ring 3
+drivers (`ttyserv`, `rtcdrv`) must accept port and IRQ `argv` values and control
+user `OPOST` TX, with an initial console path as an alternative
+({need}`SYS_BOOT_0001`).
 ```
 
 ```{swr} Isolate x86-64 platform code behind arch/x86-64 HAL boundaries
@@ -50,20 +51,22 @@ own user `OPOST` TX with early boot fallback ({need}`SYS_BOOT_0001`).
 :traces: ADR_0024
 
 The build system, kernel, `libc`, and hardware drivers must isolate `x86-64`
-code under `x86-64` folders selected by `-DMICROKERNEL_ARCH=x86-64`. Core
-kernel, `libc`, and Ring 3 servers must call portable HAL interfaces so future
-`arm64` support plugs in cleanly ({need}`SYS_BOOT_0001`).
+code in `x86-64` directories that `-DMICROKERNEL_ARCH=x86-64` selects. The
+kernel, `libc`, and Ring 3 servers must use standard HAL interfaces. As a
+result, new `arm64` code can connect without changes to general code
+({need}`SYS_BOOT_0001`).
 ```
 
-```{swr} Require x86-64-v3 at boot, switch XSAVE state, and detect AVX-512
+```{swr} Examine x86-64-v3 CPU flags, change XSAVE state, and find AVX-512
 :id: SWR_BOOT_0005
 :status: active
 :derives: SYS_BOOT_0001
 :traces: ADR_0024, ADR_0026
 
-On `x86-64`, early boot must verify `x86-64-v3` (`XSAVE`, `AVX`, `AVX2`, `FMA`,
-`BMI1`, `BMI2`) via `CPUID` and halt with an error on legacy CPUs. The kernel
-must enable `CR4.OSXSAVE` and `XCR0` (with optional `AVX-512` when present) and
-switch extended state with `XSAVE`/`XRSTOR`. Ring 3 must build with
-`-march=x86-64-v3` while Ring 0 stays scalar ({need}`SYS_BOOT_0001`).
+On `x86-64`, the initial boot process must do a check of `x86-64-v3` (`XSAVE`,
+`AVX`, `AVX2`, `FMA`, `BMI1`, `BMI2`) with `CPUID` and stop with an error on
+older CPUs. The kernel must set `CR4.OSXSAVE` and `XCR0`, include optional
+`AVX-512` when available, and change extended CPU state with `XSAVE` and
+`XRSTOR`. Ring 3 must compile with `-march=x86-64-v3`, but Ring 0 must not use
+SIMD instructions ({need}`SYS_BOOT_0001`).
 ```

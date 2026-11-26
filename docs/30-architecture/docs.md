@@ -1,34 +1,34 @@
 # Architecture — DOCS
 
-Domain `DOCS`: Structural architecture elements for docs-as-code traceability.
+Domain `DOCS`: Architecture items for document traceability.
 
-```{arc} Sphinx-Needs traceability build and checker subsystem
+```{arc} Sphinx-Needs traceability build and check subsystem
 :id: ARC_DOCS_0001
 :status: active
 :satisfies: SYS_DOCS_0001
 :traces: ADR_0001
 
-The documentation subsystem integrates Sphinx, MyST-Parser, Sphinx-Needs, and
-the code-tag checker into CMake and CTest. It also runs the standalone
-`needs.json` auditor ({need}`SYS_DOCS_0001`).
+The document subsystem connects Sphinx, MyST-Parser, Sphinx-Needs, and the code
+marker check tool to CMake and CTest. It also does the standalone `needs.json`
+check ({need}`SYS_DOCS_0001`).
 ```
 
-## Bidirectional Traceability and Four-Gate Compatibility Model
+## Traceability and Four-Check Compatibility Model
 
-Every normative item links down from product decisions to source files and tests
-without per-function boilerplate (`WDR_0002`). Sphinx `-W` and CTest run both
-traceability checks and POSIX.1-2024 compatibility checks on every commit.
+Each active item connects from business decisions to source files and tests
+without Markdown text for each function (`WDR_0002`). Sphinx `-W` and CTest do
+traceability checks and POSIX.1-2024 compatibility checks on each commit.
 
 ```mermaid
 flowchart TD
     BDR["BDR_ (Business Decisions)"]
-    DEC["ADR_ / WDR_ (Architecture & Workflow Decisions)"]
+    DEC["ADR_ and WDR_ (Architecture and Workflow Decisions)"]
     SYS["SYS_ (System Requirements)"]
-    SWR["SWR_ (Software Requirements + :posix: Issue 8 Refs)"]
+    SWR["SWR_ (Software Requirements and :posix: Issue 8)"]
     ARC["ARC_ (Domain Architecture)"]
-    ICD["ICD_ (Public Headers via need::)"]
-    COMP["COMP_ (C Sources via need::)"]
-    VER["VER_ (test_* Files via need::)"]
+    ICD["ICD_ (Public Headers with need::)"]
+    COMP["COMP_ (C Source Files with need::)"]
+    VER["VER_ (test_* Files with need::)"]
 
     GATES["CTest: posix.headers, symbol_diff, async_safe, cancel, docs.audit"]
 
@@ -40,7 +40,7 @@ flowchart TD
     ARC --> COMP
     ICD --> COMP
     SWR --> VER
-    ICD -.->|"need:: tag scan"| GATES
-    COMP -.->|"need:: tag scan"| GATES
-    VER -.->|"QEMU + CTest"| GATES
+    ICD -.->|"need:: marker check"| GATES
+    COMP -.->|"need:: marker check"| GATES
+    VER -.->|"QEMU and CTest"| GATES
 ```

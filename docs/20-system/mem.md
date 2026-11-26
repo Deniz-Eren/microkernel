@@ -1,18 +1,18 @@
 # System and Software Requirements — MEM
 
-Domain `MEM`: physical memory allocator, virtual memory, W^X policy, safe user
-memory copy, and POSIX.1-2024 memory mapping.
+The `MEM` domain includes the physical memory allocator, virtual memory, the W^X
+rule, safe user memory copy, and POSIX.1-2024 memory mapping.
 
 ```{sys} Isolate kernel and user memory with W^X protection
 :id: SYS_MEM_0001
 :status: active
 
-The system must manage physical memory and virtual memory in isolated address
-spaces. It must obey the W^X policy and examine page permissions before each
-user memory copy.
+The system must control physical memory and virtual memory in isolated address
+spaces. It must obey the W^X rule and examine page permissions before each user
+memory copy.
 ```
 
-```{swr} Manage physical frames and kernel heap
+```{swr} Control physical frames and kernel heap
 :id: SWR_MEM_0001
 :status: active
 :derives: SYS_MEM_0001
@@ -22,36 +22,36 @@ must allocate kernel heap memory for kernel data structures
 ({need}`SYS_MEM_0001`).
 ```
 
-```{swr} Use four-level page tables and W^X policy
+```{swr} Use 4-level page tables and W^X rule
 :id: SWR_MEM_0002
 :status: active
 :derives: SYS_MEM_0001
 
-The virtual memory manager must keep four-level x86-64 PML4 page tables for each
+The virtual memory manager must keep 4-level `x86-64` PML4 page tables for each
 process. It must map each page as writable or executable, not the two together
 ({need}`SYS_MEM_0001`).
 ```
 
-```{swr} Copy user memory with SMAP-safe permission checks
+```{swr} Make a copy of user memory with SMAP-safe permission checks
 :id: SWR_MEM_0003
 :status: active
 :derives: SYS_MEM_0001
 
-The kernel must copy data between kernel buffers and user address spaces through
-the HHDM. It must examine page mappings and write permissions with SMAP active
-({need}`SYS_MEM_0001`).
+The kernel must make a copy of data between kernel buffers and user address
+spaces through the HHDM. It must examine page table entries and write
+permissions with SMAP active ({need}`SYS_MEM_0001`).
 ```
 
-```{swr} Supply POSIX.1-2024 Base memory mapping interfaces
+```{swr} Give POSIX.1-2024 Base memory mapping interfaces
 :id: SWR_MEM_0004
 :status: active
 :posix: XBD/sys/mman.h (BASE), XSH/mmap (BASE)
 :derives: SYS_MEM_0001
 :traces: BDR_0003, ADR_0003
 
-`<sys/mman.h>` ([sys/mman.h][hdr-mman]) must declare mandatory Issue 8 Base
+`<sys/mman.h>` ([sys/mman.h][hdr-mman]) must give mandatory Issue 8 Base
 functions `mmap` ([mmap][fn-mmap]), `mprotect`, `msync`, and `munmap`. These
-functions must use `VMMap`, `VMUnmap`, and `VMCloneCow` and obey the W^X policy
+functions must use `VMMap`, `VMUnmap`, and `VMCloneCow` and obey the W^X rule
 ({need}`SYS_MEM_0001`).
 ```
 
@@ -68,16 +68,16 @@ functions must use `VMMap`, `VMUnmap`, and `VMCloneCow` and obey the W^X policy
 `<unistd.h>` ({need}`SYS_MEM_0001`).
 ```
 
-```{swr} Supply mmap-backed thread-safe malloc, free, and realloc heap
+```{swr} Give thread-safe malloc, free, and realloc heap on mmap
 :id: SWR_MEM_0006
 :status: active
 :posix: XSH/malloc (BASE), XSH/free (BASE), XSH/realloc (BASE)
 :derives: SYS_MEM_0001
 :traces: BDR_0003, ADR_0003, ADR_0015
 
-The user-space heap in `<stdlib.h>` must allocate pages through `mmap`, reclaim
-blocks through `free` and `munmap`, and synchronize concurrent threads safely
-({need}`SYS_MEM_0001`).
+The user-space heap in `<stdlib.h>` must allocate pages through `mmap`, release
+blocks through `free` and `munmap`, and lock access for concurrent threads
+safely ({need}`SYS_MEM_0001`).
 ```
 
 [hdr-mman]:

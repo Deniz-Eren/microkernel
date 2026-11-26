@@ -1,7 +1,7 @@
 # Business Decision Records (BDR)
 
-This index lists all business decision records that drive system requirements
-and govern architecture choices.
+This index shows all business decision records that set system requirements and
+control architecture alternatives.
 
 ```{toctree}
 :maxdepth: 1
