@@ -233,7 +233,7 @@ complex, and the VL805 xHCI host controller ({need}`ADR_0058`, {need}`WDR_0011`,
 
 ### TSK_0079 — Add `.` and do tests (POSIX.1-2024)
 
-```{task} Add `.` and do tests (POSIX.1-2024)
+```{task} Add . and do tests (POSIX.1-2024)
 :id: TSK_0079
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -249,7 +249,7 @@ the exit status for each condition.
 
 ### TSK_0080 — Add `:` and do tests (POSIX.1-2024)
 
-```{task} Add `:` and do tests (POSIX.1-2024)
+```{task} Add : and do tests (POSIX.1-2024)
 :id: TSK_0080
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -265,7 +265,7 @@ the exit status for each condition.
 
 ### TSK_0081 — Add `admin` and do tests (POSIX.1-2024)
 
-```{task} Add `admin` and do tests (POSIX.1-2024)
+```{task} Add admin and do tests (POSIX.1-2024)
 :id: TSK_0081
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -282,7 +282,7 @@ group, put it behind the feature macro.
 
 ### TSK_0082 — Add `alias` and do tests (POSIX.1-2024)
 
-```{task} Add `alias` and do tests (POSIX.1-2024)
+```{task} Add alias and do tests (POSIX.1-2024)
 :id: TSK_0082
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -298,7 +298,7 @@ the exit status for each condition.
 
 ### TSK_0083 — Add `ar` and do tests (POSIX.1-2024)
 
-```{task} Add `ar` and do tests (POSIX.1-2024)
+```{task} Add ar and do tests (POSIX.1-2024)
 :id: TSK_0083
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -315,7 +315,7 @@ group, put it behind the feature macro.
 
 ### TSK_0084 — Add `asa` and do tests (POSIX.1-2024)
 
-```{task} Add `asa` and do tests (POSIX.1-2024)
+```{task} Add asa and do tests (POSIX.1-2024)
 :id: TSK_0084
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -332,7 +332,7 @@ group, put it behind the feature macro.
 
 ### TSK_0085 — Add `at` and do tests (POSIX.1-2024)
 
-```{task} Add `at` and do tests (POSIX.1-2024)
+```{task} Add at and do tests (POSIX.1-2024)
 :id: TSK_0085
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -348,7 +348,7 @@ the exit status for each condition.
 
 ### TSK_0086 — Add `awk` and do tests (POSIX.1-2024)
 
-```{task} Add `awk` and do tests (POSIX.1-2024)
+```{task} Add awk and do tests (POSIX.1-2024)
 :id: TSK_0086
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -364,7 +364,7 @@ the exit status for each condition.
 
 ### TSK_0087 — Add `basename` and do tests (POSIX.1-2024)
 
-```{task} Add `basename` and do tests (POSIX.1-2024)
+```{task} Add basename and do tests (POSIX.1-2024)
 :id: TSK_0087
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -380,7 +380,7 @@ the exit status for each condition.
 
 ### TSK_0088 — Add `batch` and do tests (POSIX.1-2024)
 
-```{task} Add `batch` and do tests (POSIX.1-2024)
+```{task} Add batch and do tests (POSIX.1-2024)
 :id: TSK_0088
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -396,7 +396,7 @@ the exit status for each condition.
 
 ### TSK_0089 — Add `bc` and do tests (POSIX.1-2024)
 
-```{task} Add `bc` and do tests (POSIX.1-2024)
+```{task} Add bc and do tests (POSIX.1-2024)
 :id: TSK_0089
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -412,7 +412,7 @@ the exit status for each condition.
 
 ### TSK_0090 — Add `bg` and do tests (POSIX.1-2024)
 
-```{task} Add `bg` and do tests (POSIX.1-2024)
+```{task} Add bg and do tests (POSIX.1-2024)
 :id: TSK_0090
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -429,7 +429,7 @@ group, put it behind the feature macro.
 
 ### TSK_0091 — Add `c17` and do tests (POSIX.1-2024)
 
-```{task} Add `c17` and do tests (POSIX.1-2024)
+```{task} Add c17 and do tests (POSIX.1-2024)
 :id: TSK_0091
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -446,7 +446,7 @@ group, put it behind the feature macro.
 
 ### TSK_0092 — Add `cal` and do tests (POSIX.1-2024)
 
-```{task} Add `cal` and do tests (POSIX.1-2024)
+```{task} Add cal and do tests (POSIX.1-2024)
 :id: TSK_0092
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -463,7 +463,7 @@ group, put it behind the feature macro.
 
 ### TSK_0093 — Add `cat` and do tests (POSIX.1-2024)
 
-```{task} Add `cat` and do tests (POSIX.1-2024)
+```{task} Add cat and do tests (POSIX.1-2024)
 :id: TSK_0093
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -479,7 +479,7 @@ the exit status for each condition.
 
 ### TSK_0094 — Add `cd` and do tests (POSIX.1-2024)
 
-```{task} Add `cd` and do tests (POSIX.1-2024)
+```{task} Add cd and do tests (POSIX.1-2024)
 :id: TSK_0094
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -495,7 +495,7 @@ the exit status for each condition.
 
 ### TSK_0095 — Add `cflow` and do tests (POSIX.1-2024)
 
-```{task} Add `cflow` and do tests (POSIX.1-2024)
+```{task} Add cflow and do tests (POSIX.1-2024)
 :id: TSK_0095
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -512,7 +512,7 @@ group, put it behind the feature macro.
 
 ### TSK_0096 — Add `chgrp` and do tests (POSIX.1-2024)
 
-```{task} Add `chgrp` and do tests (POSIX.1-2024)
+```{task} Add chgrp and do tests (POSIX.1-2024)
 :id: TSK_0096
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -528,7 +528,7 @@ the exit status for each condition.
 
 ### TSK_0097 — Add `chmod` and do tests (POSIX.1-2024)
 
-```{task} Add `chmod` and do tests (POSIX.1-2024)
+```{task} Add chmod and do tests (POSIX.1-2024)
 :id: TSK_0097
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -544,7 +544,7 @@ the exit status for each condition.
 
 ### TSK_0098 — Add `chown` and do tests (POSIX.1-2024)
 
-```{task} Add `chown` and do tests (POSIX.1-2024)
+```{task} Add chown and do tests (POSIX.1-2024)
 :id: TSK_0098
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -560,7 +560,7 @@ the exit status for each condition.
 
 ### TSK_0099 — Add `cksum` and do tests (POSIX.1-2024)
 
-```{task} Add `cksum` and do tests (POSIX.1-2024)
+```{task} Add cksum and do tests (POSIX.1-2024)
 :id: TSK_0099
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -576,7 +576,7 @@ the exit status for each condition.
 
 ### TSK_0100 — Add `cmp` and do tests (POSIX.1-2024)
 
-```{task} Add `cmp` and do tests (POSIX.1-2024)
+```{task} Add cmp and do tests (POSIX.1-2024)
 :id: TSK_0100
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -592,7 +592,7 @@ the exit status for each condition.
 
 ### TSK_0101 — Add `comm` and do tests (POSIX.1-2024)
 
-```{task} Add `comm` and do tests (POSIX.1-2024)
+```{task} Add comm and do tests (POSIX.1-2024)
 :id: TSK_0101
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -608,7 +608,7 @@ the exit status for each condition.
 
 ### TSK_0102 — Add `command` and do tests (POSIX.1-2024)
 
-```{task} Add `command` and do tests (POSIX.1-2024)
+```{task} Add command and do tests (POSIX.1-2024)
 :id: TSK_0102
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -624,7 +624,7 @@ the exit status for each condition.
 
 ### TSK_0103 — Add `compress` and do tests (POSIX.1-2024)
 
-```{task} Add `compress` and do tests (POSIX.1-2024)
+```{task} Add compress and do tests (POSIX.1-2024)
 :id: TSK_0103
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -641,7 +641,7 @@ group, put it behind the feature macro.
 
 ### TSK_0104 — Add `cp` and do tests (POSIX.1-2024)
 
-```{task} Add `cp` and do tests (POSIX.1-2024)
+```{task} Add cp and do tests (POSIX.1-2024)
 :id: TSK_0104
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -657,7 +657,7 @@ the exit status for each condition.
 
 ### TSK_0105 — Add `crontab` and do tests (POSIX.1-2024)
 
-```{task} Add `crontab` and do tests (POSIX.1-2024)
+```{task} Add crontab and do tests (POSIX.1-2024)
 :id: TSK_0105
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -673,7 +673,7 @@ the exit status for each condition.
 
 ### TSK_0106 — Add `csplit` and do tests (POSIX.1-2024)
 
-```{task} Add `csplit` and do tests (POSIX.1-2024)
+```{task} Add csplit and do tests (POSIX.1-2024)
 :id: TSK_0106
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -689,7 +689,7 @@ the exit status for each condition.
 
 ### TSK_0107 — Add `ctags` and do tests (POSIX.1-2024)
 
-```{task} Add `ctags` and do tests (POSIX.1-2024)
+```{task} Add ctags and do tests (POSIX.1-2024)
 :id: TSK_0107
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -706,7 +706,7 @@ group, put it behind the feature macro.
 
 ### TSK_0108 — Add `cut` and do tests (POSIX.1-2024)
 
-```{task} Add `cut` and do tests (POSIX.1-2024)
+```{task} Add cut and do tests (POSIX.1-2024)
 :id: TSK_0108
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -722,7 +722,7 @@ the exit status for each condition.
 
 ### TSK_0109 — Add `cxref` and do tests (POSIX.1-2024)
 
-```{task} Add `cxref` and do tests (POSIX.1-2024)
+```{task} Add cxref and do tests (POSIX.1-2024)
 :id: TSK_0109
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -739,7 +739,7 @@ group, put it behind the feature macro.
 
 ### TSK_0110 — Add `date` and do tests (POSIX.1-2024)
 
-```{task} Add `date` and do tests (POSIX.1-2024)
+```{task} Add date and do tests (POSIX.1-2024)
 :id: TSK_0110
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -756,7 +756,7 @@ group, put it behind the feature macro.
 
 ### TSK_0111 — Add `dd` and do tests (POSIX.1-2024)
 
-```{task} Add `dd` and do tests (POSIX.1-2024)
+```{task} Add dd and do tests (POSIX.1-2024)
 :id: TSK_0111
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -772,7 +772,7 @@ the exit status for each condition.
 
 ### TSK_0112 — Add `delta` and do tests (POSIX.1-2024)
 
-```{task} Add `delta` and do tests (POSIX.1-2024)
+```{task} Add delta and do tests (POSIX.1-2024)
 :id: TSK_0112
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -789,7 +789,7 @@ group, put it behind the feature macro.
 
 ### TSK_0113 — Add `df` and do tests (POSIX.1-2024)
 
-```{task} Add `df` and do tests (POSIX.1-2024)
+```{task} Add df and do tests (POSIX.1-2024)
 :id: TSK_0113
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -805,7 +805,7 @@ the exit status for each condition.
 
 ### TSK_0114 — Add `diff` and do tests (POSIX.1-2024)
 
-```{task} Add `diff` and do tests (POSIX.1-2024)
+```{task} Add diff and do tests (POSIX.1-2024)
 :id: TSK_0114
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -821,7 +821,7 @@ the exit status for each condition.
 
 ### TSK_0115 — Add `dirname` and do tests (POSIX.1-2024)
 
-```{task} Add `dirname` and do tests (POSIX.1-2024)
+```{task} Add dirname and do tests (POSIX.1-2024)
 :id: TSK_0115
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -837,7 +837,7 @@ the exit status for each condition.
 
 ### TSK_0116 — Add `du` and do tests (POSIX.1-2024)
 
-```{task} Add `du` and do tests (POSIX.1-2024)
+```{task} Add du and do tests (POSIX.1-2024)
 :id: TSK_0116
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -853,7 +853,7 @@ the exit status for each condition.
 
 ### TSK_0117 — Add `echo` and do tests (POSIX.1-2024)
 
-```{task} Add `echo` and do tests (POSIX.1-2024)
+```{task} Add echo and do tests (POSIX.1-2024)
 :id: TSK_0117
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -869,7 +869,7 @@ the exit status for each condition.
 
 ### TSK_0118 — Add `ed` and do tests (POSIX.1-2024)
 
-```{task} Add `ed` and do tests (POSIX.1-2024)
+```{task} Add ed and do tests (POSIX.1-2024)
 :id: TSK_0118
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -885,7 +885,7 @@ the exit status for each condition.
 
 ### TSK_0119 — Add `env` and do tests (POSIX.1-2024)
 
-```{task} Add `env` and do tests (POSIX.1-2024)
+```{task} Add env and do tests (POSIX.1-2024)
 :id: TSK_0119
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -901,7 +901,7 @@ the exit status for each condition.
 
 ### TSK_0120 — Add `ex` and do tests (POSIX.1-2024)
 
-```{task} Add `ex` and do tests (POSIX.1-2024)
+```{task} Add ex and do tests (POSIX.1-2024)
 :id: TSK_0120
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -918,7 +918,7 @@ group, put it behind the feature macro.
 
 ### TSK_0121 — Add `expand` and do tests (POSIX.1-2024)
 
-```{task} Add `expand` and do tests (POSIX.1-2024)
+```{task} Add expand and do tests (POSIX.1-2024)
 :id: TSK_0121
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -934,7 +934,7 @@ the exit status for each condition.
 
 ### TSK_0122 — Add `expr` and do tests (POSIX.1-2024)
 
-```{task} Add `expr` and do tests (POSIX.1-2024)
+```{task} Add expr and do tests (POSIX.1-2024)
 :id: TSK_0122
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -950,7 +950,7 @@ the exit status for each condition.
 
 ### TSK_0123 — Add `false` and do tests (POSIX.1-2024)
 
-```{task} Add `false` and do tests (POSIX.1-2024)
+```{task} Add false and do tests (POSIX.1-2024)
 :id: TSK_0123
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -966,7 +966,7 @@ the exit status for each condition.
 
 ### TSK_0124 — Add `fc` and do tests (POSIX.1-2024)
 
-```{task} Add `fc` and do tests (POSIX.1-2024)
+```{task} Add fc and do tests (POSIX.1-2024)
 :id: TSK_0124
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -983,7 +983,7 @@ group, put it behind the feature macro.
 
 ### TSK_0125 — Add `fg` and do tests (POSIX.1-2024)
 
-```{task} Add `fg` and do tests (POSIX.1-2024)
+```{task} Add fg and do tests (POSIX.1-2024)
 :id: TSK_0125
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1000,7 +1000,7 @@ group, put it behind the feature macro.
 
 ### TSK_0126 — Add `file` and do tests (POSIX.1-2024)
 
-```{task} Add `file` and do tests (POSIX.1-2024)
+```{task} Add file and do tests (POSIX.1-2024)
 :id: TSK_0126
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1016,7 +1016,7 @@ the exit status for each condition.
 
 ### TSK_0127 — Add `find` and do tests (POSIX.1-2024)
 
-```{task} Add `find` and do tests (POSIX.1-2024)
+```{task} Add find and do tests (POSIX.1-2024)
 :id: TSK_0127
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1032,7 +1032,7 @@ the exit status for each condition.
 
 ### TSK_0128 — Add `fold` and do tests (POSIX.1-2024)
 
-```{task} Add `fold` and do tests (POSIX.1-2024)
+```{task} Add fold and do tests (POSIX.1-2024)
 :id: TSK_0128
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1048,7 +1048,7 @@ the exit status for each condition.
 
 ### TSK_0129 — Add `fuser` and do tests (POSIX.1-2024)
 
-```{task} Add `fuser` and do tests (POSIX.1-2024)
+```{task} Add fuser and do tests (POSIX.1-2024)
 :id: TSK_0129
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1065,7 +1065,7 @@ group, put it behind the feature macro.
 
 ### TSK_0130 — Add `gencat` and do tests (POSIX.1-2024)
 
-```{task} Add `gencat` and do tests (POSIX.1-2024)
+```{task} Add gencat and do tests (POSIX.1-2024)
 :id: TSK_0130
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1081,7 +1081,7 @@ the exit status for each condition.
 
 ### TSK_0131 — Add `get` and do tests (POSIX.1-2024)
 
-```{task} Add `get` and do tests (POSIX.1-2024)
+```{task} Add get and do tests (POSIX.1-2024)
 :id: TSK_0131
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1098,7 +1098,7 @@ group, put it behind the feature macro.
 
 ### TSK_0132 — Add `getconf` and do tests (POSIX.1-2024)
 
-```{task} Add `getconf` and do tests (POSIX.1-2024)
+```{task} Add getconf and do tests (POSIX.1-2024)
 :id: TSK_0132
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1114,7 +1114,7 @@ the exit status for each condition.
 
 ### TSK_0133 — Add `getopts` and do tests (POSIX.1-2024)
 
-```{task} Add `getopts` and do tests (POSIX.1-2024)
+```{task} Add getopts and do tests (POSIX.1-2024)
 :id: TSK_0133
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1130,7 +1130,7 @@ the exit status for each condition.
 
 ### TSK_0134 — Add `gettext` and do tests (POSIX.1-2024)
 
-```{task} Add `gettext` and do tests (POSIX.1-2024)
+```{task} Add gettext and do tests (POSIX.1-2024)
 :id: TSK_0134
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1146,7 +1146,7 @@ the exit status for each condition.
 
 ### TSK_0135 — Add `grep` and do tests (POSIX.1-2024)
 
-```{task} Add `grep` and do tests (POSIX.1-2024)
+```{task} Add grep and do tests (POSIX.1-2024)
 :id: TSK_0135
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1162,7 +1162,7 @@ the exit status for each condition.
 
 ### TSK_0136 — Add `hash` and do tests (POSIX.1-2024)
 
-```{task} Add `hash` and do tests (POSIX.1-2024)
+```{task} Add hash and do tests (POSIX.1-2024)
 :id: TSK_0136
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1178,7 +1178,7 @@ the exit status for each condition.
 
 ### TSK_0137 — Add `head` and do tests (POSIX.1-2024)
 
-```{task} Add `head` and do tests (POSIX.1-2024)
+```{task} Add head and do tests (POSIX.1-2024)
 :id: TSK_0137
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1194,7 +1194,7 @@ the exit status for each condition.
 
 ### TSK_0138 — Add `iconv` and do tests (POSIX.1-2024)
 
-```{task} Add `iconv` and do tests (POSIX.1-2024)
+```{task} Add iconv and do tests (POSIX.1-2024)
 :id: TSK_0138
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1210,7 +1210,7 @@ the exit status for each condition.
 
 ### TSK_0139 — Add `id` and do tests (POSIX.1-2024)
 
-```{task} Add `id` and do tests (POSIX.1-2024)
+```{task} Add id and do tests (POSIX.1-2024)
 :id: TSK_0139
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1226,7 +1226,7 @@ the exit status for each condition.
 
 ### TSK_0140 — Add `ipcrm` and do tests (POSIX.1-2024)
 
-```{task} Add `ipcrm` and do tests (POSIX.1-2024)
+```{task} Add ipcrm and do tests (POSIX.1-2024)
 :id: TSK_0140
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1243,7 +1243,7 @@ group, put it behind the feature macro.
 
 ### TSK_0141 — Add `ipcs` and do tests (POSIX.1-2024)
 
-```{task} Add `ipcs` and do tests (POSIX.1-2024)
+```{task} Add ipcs and do tests (POSIX.1-2024)
 :id: TSK_0141
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1260,7 +1260,7 @@ group, put it behind the feature macro.
 
 ### TSK_0142 — Add `jobs` and do tests (POSIX.1-2024)
 
-```{task} Add `jobs` and do tests (POSIX.1-2024)
+```{task} Add jobs and do tests (POSIX.1-2024)
 :id: TSK_0142
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1277,7 +1277,7 @@ group, put it behind the feature macro.
 
 ### TSK_0143 — Add `join` and do tests (POSIX.1-2024)
 
-```{task} Add `join` and do tests (POSIX.1-2024)
+```{task} Add join and do tests (POSIX.1-2024)
 :id: TSK_0143
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1293,7 +1293,7 @@ the exit status for each condition.
 
 ### TSK_0144 — Add `kill` and do tests (POSIX.1-2024)
 
-```{task} Add `kill` and do tests (POSIX.1-2024)
+```{task} Add kill and do tests (POSIX.1-2024)
 :id: TSK_0144
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1310,7 +1310,7 @@ group, put it behind the feature macro.
 
 ### TSK_0145 — Add `lex` and do tests (POSIX.1-2024)
 
-```{task} Add `lex` and do tests (POSIX.1-2024)
+```{task} Add lex and do tests (POSIX.1-2024)
 :id: TSK_0145
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1327,7 +1327,7 @@ group, put it behind the feature macro.
 
 ### TSK_0146 — Add `link` and do tests (POSIX.1-2024)
 
-```{task} Add `link` and do tests (POSIX.1-2024)
+```{task} Add link and do tests (POSIX.1-2024)
 :id: TSK_0146
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1344,7 +1344,7 @@ group, put it behind the feature macro.
 
 ### TSK_0147 — Add `ln` and do tests (POSIX.1-2024)
 
-```{task} Add `ln` and do tests (POSIX.1-2024)
+```{task} Add ln and do tests (POSIX.1-2024)
 :id: TSK_0147
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1360,7 +1360,7 @@ the exit status for each condition.
 
 ### TSK_0148 — Add `locale` and do tests (POSIX.1-2024)
 
-```{task} Add `locale` and do tests (POSIX.1-2024)
+```{task} Add locale and do tests (POSIX.1-2024)
 :id: TSK_0148
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1376,7 +1376,7 @@ the exit status for each condition.
 
 ### TSK_0149 — Add `localedef` and do tests (POSIX.1-2024)
 
-```{task} Add `localedef` and do tests (POSIX.1-2024)
+```{task} Add localedef and do tests (POSIX.1-2024)
 :id: TSK_0149
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1392,7 +1392,7 @@ the exit status for each condition.
 
 ### TSK_0150 — Add `logger` and do tests (POSIX.1-2024)
 
-```{task} Add `logger` and do tests (POSIX.1-2024)
+```{task} Add logger and do tests (POSIX.1-2024)
 :id: TSK_0150
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1408,7 +1408,7 @@ the exit status for each condition.
 
 ### TSK_0151 — Add `logname` and do tests (POSIX.1-2024)
 
-```{task} Add `logname` and do tests (POSIX.1-2024)
+```{task} Add logname and do tests (POSIX.1-2024)
 :id: TSK_0151
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1424,7 +1424,7 @@ the exit status for each condition.
 
 ### TSK_0152 — Add `lp` and do tests (POSIX.1-2024)
 
-```{task} Add `lp` and do tests (POSIX.1-2024)
+```{task} Add lp and do tests (POSIX.1-2024)
 :id: TSK_0152
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1440,7 +1440,7 @@ the exit status for each condition.
 
 ### TSK_0153 — Add `ls` and do tests (POSIX.1-2024)
 
-```{task} Add `ls` and do tests (POSIX.1-2024)
+```{task} Add ls and do tests (POSIX.1-2024)
 :id: TSK_0153
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1456,7 +1456,7 @@ the exit status for each condition.
 
 ### TSK_0154 — Add `m4` and do tests (POSIX.1-2024)
 
-```{task} Add `m4` and do tests (POSIX.1-2024)
+```{task} Add m4 and do tests (POSIX.1-2024)
 :id: TSK_0154
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1472,7 +1472,7 @@ the exit status for each condition.
 
 ### TSK_0155 — Add `mailx` and do tests (POSIX.1-2024)
 
-```{task} Add `mailx` and do tests (POSIX.1-2024)
+```{task} Add mailx and do tests (POSIX.1-2024)
 :id: TSK_0155
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1488,7 +1488,7 @@ the exit status for each condition.
 
 ### TSK_0156 — Add `make` and do tests (POSIX.1-2024)
 
-```{task} Add `make` and do tests (POSIX.1-2024)
+```{task} Add make and do tests (POSIX.1-2024)
 :id: TSK_0156
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1505,7 +1505,7 @@ group, put it behind the feature macro.
 
 ### TSK_0157 — Add `man` and do tests (POSIX.1-2024)
 
-```{task} Add `man` and do tests (POSIX.1-2024)
+```{task} Add man and do tests (POSIX.1-2024)
 :id: TSK_0157
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1522,7 +1522,7 @@ group, put it behind the feature macro.
 
 ### TSK_0158 — Add `mesg` and do tests (POSIX.1-2024)
 
-```{task} Add `mesg` and do tests (POSIX.1-2024)
+```{task} Add mesg and do tests (POSIX.1-2024)
 :id: TSK_0158
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1538,7 +1538,7 @@ the exit status for each condition.
 
 ### TSK_0159 — Add `mkdir` and do tests (POSIX.1-2024)
 
-```{task} Add `mkdir` and do tests (POSIX.1-2024)
+```{task} Add mkdir and do tests (POSIX.1-2024)
 :id: TSK_0159
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1554,7 +1554,7 @@ the exit status for each condition.
 
 ### TSK_0160 — Add `mkfifo` and do tests (POSIX.1-2024)
 
-```{task} Add `mkfifo` and do tests (POSIX.1-2024)
+```{task} Add mkfifo and do tests (POSIX.1-2024)
 :id: TSK_0160
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1570,7 +1570,7 @@ the exit status for each condition.
 
 ### TSK_0161 — Add `more` and do tests (POSIX.1-2024)
 
-```{task} Add `more` and do tests (POSIX.1-2024)
+```{task} Add more and do tests (POSIX.1-2024)
 :id: TSK_0161
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1587,7 +1587,7 @@ group, put it behind the feature macro.
 
 ### TSK_0162 — Add `msgfmt` and do tests (POSIX.1-2024)
 
-```{task} Add `msgfmt` and do tests (POSIX.1-2024)
+```{task} Add msgfmt and do tests (POSIX.1-2024)
 :id: TSK_0162
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1603,7 +1603,7 @@ the exit status for each condition.
 
 ### TSK_0163 — Add `mv` and do tests (POSIX.1-2024)
 
-```{task} Add `mv` and do tests (POSIX.1-2024)
+```{task} Add mv and do tests (POSIX.1-2024)
 :id: TSK_0163
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1619,7 +1619,7 @@ the exit status for each condition.
 
 ### TSK_0164 — Add `newgrp` and do tests (POSIX.1-2024)
 
-```{task} Add `newgrp` and do tests (POSIX.1-2024)
+```{task} Add newgrp and do tests (POSIX.1-2024)
 :id: TSK_0164
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1635,7 +1635,7 @@ the exit status for each condition.
 
 ### TSK_0165 — Add `ngettext` and do tests (POSIX.1-2024)
 
-```{task} Add `ngettext` and do tests (POSIX.1-2024)
+```{task} Add ngettext and do tests (POSIX.1-2024)
 :id: TSK_0165
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1651,7 +1651,7 @@ the exit status for each condition.
 
 ### TSK_0166 — Add `nice` and do tests (POSIX.1-2024)
 
-```{task} Add `nice` and do tests (POSIX.1-2024)
+```{task} Add nice and do tests (POSIX.1-2024)
 :id: TSK_0166
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1667,7 +1667,7 @@ the exit status for each condition.
 
 ### TSK_0167 — Add `nl` and do tests (POSIX.1-2024)
 
-```{task} Add `nl` and do tests (POSIX.1-2024)
+```{task} Add nl and do tests (POSIX.1-2024)
 :id: TSK_0167
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1684,7 +1684,7 @@ group, put it behind the feature macro.
 
 ### TSK_0168 — Add `nm` and do tests (POSIX.1-2024)
 
-```{task} Add `nm` and do tests (POSIX.1-2024)
+```{task} Add nm and do tests (POSIX.1-2024)
 :id: TSK_0168
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1701,7 +1701,7 @@ group, put it behind the feature macro.
 
 ### TSK_0169 — Add `nohup` and do tests (POSIX.1-2024)
 
-```{task} Add `nohup` and do tests (POSIX.1-2024)
+```{task} Add nohup and do tests (POSIX.1-2024)
 :id: TSK_0169
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1717,7 +1717,7 @@ the exit status for each condition.
 
 ### TSK_0170 — Add `od` and do tests (POSIX.1-2024)
 
-```{task} Add `od` and do tests (POSIX.1-2024)
+```{task} Add od and do tests (POSIX.1-2024)
 :id: TSK_0170
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1734,7 +1734,7 @@ group, put it behind the feature macro.
 
 ### TSK_0171 — Add `paste` and do tests (POSIX.1-2024)
 
-```{task} Add `paste` and do tests (POSIX.1-2024)
+```{task} Add paste and do tests (POSIX.1-2024)
 :id: TSK_0171
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1750,7 +1750,7 @@ the exit status for each condition.
 
 ### TSK_0172 — Add `patch` and do tests (POSIX.1-2024)
 
-```{task} Add `patch` and do tests (POSIX.1-2024)
+```{task} Add patch and do tests (POSIX.1-2024)
 :id: TSK_0172
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1766,7 +1766,7 @@ the exit status for each condition.
 
 ### TSK_0173 — Add `pathchk` and do tests (POSIX.1-2024)
 
-```{task} Add `pathchk` and do tests (POSIX.1-2024)
+```{task} Add pathchk and do tests (POSIX.1-2024)
 :id: TSK_0173
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1782,7 +1782,7 @@ the exit status for each condition.
 
 ### TSK_0174 — Add `pax` and do tests (POSIX.1-2024)
 
-```{task} Add `pax` and do tests (POSIX.1-2024)
+```{task} Add pax and do tests (POSIX.1-2024)
 :id: TSK_0174
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1798,7 +1798,7 @@ the exit status for each condition.
 
 ### TSK_0175 — Add `pr` and do tests (POSIX.1-2024)
 
-```{task} Add `pr` and do tests (POSIX.1-2024)
+```{task} Add pr and do tests (POSIX.1-2024)
 :id: TSK_0175
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1814,7 +1814,7 @@ the exit status for each condition.
 
 ### TSK_0176 — Add `printf` and do tests (POSIX.1-2024)
 
-```{task} Add `printf` and do tests (POSIX.1-2024)
+```{task} Add printf and do tests (POSIX.1-2024)
 :id: TSK_0176
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1830,7 +1830,7 @@ the exit status for each condition.
 
 ### TSK_0177 — Add `prs` and do tests (POSIX.1-2024)
 
-```{task} Add `prs` and do tests (POSIX.1-2024)
+```{task} Add prs and do tests (POSIX.1-2024)
 :id: TSK_0177
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1847,7 +1847,7 @@ group, put it behind the feature macro.
 
 ### TSK_0178 — Add `ps` and do tests (POSIX.1-2024)
 
-```{task} Add `ps` and do tests (POSIX.1-2024)
+```{task} Add ps and do tests (POSIX.1-2024)
 :id: TSK_0178
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1863,7 +1863,7 @@ the exit status for each condition.
 
 ### TSK_0179 — Add `pwd` and do tests (POSIX.1-2024)
 
-```{task} Add `pwd` and do tests (POSIX.1-2024)
+```{task} Add pwd and do tests (POSIX.1-2024)
 :id: TSK_0179
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1879,7 +1879,7 @@ the exit status for each condition.
 
 ### TSK_0180 — Add `read` and do tests (POSIX.1-2024)
 
-```{task} Add `read` and do tests (POSIX.1-2024)
+```{task} Add read and do tests (POSIX.1-2024)
 :id: TSK_0180
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1895,7 +1895,7 @@ the exit status for each condition.
 
 ### TSK_0181 — Add `readlink` and do tests (POSIX.1-2024)
 
-```{task} Add `readlink` and do tests (POSIX.1-2024)
+```{task} Add readlink and do tests (POSIX.1-2024)
 :id: TSK_0181
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1911,7 +1911,7 @@ the exit status for each condition.
 
 ### TSK_0182 — Add `realpath` and do tests (POSIX.1-2024)
 
-```{task} Add `realpath` and do tests (POSIX.1-2024)
+```{task} Add realpath and do tests (POSIX.1-2024)
 :id: TSK_0182
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1927,7 +1927,7 @@ the exit status for each condition.
 
 ### TSK_0183 — Add `renice` and do tests (POSIX.1-2024)
 
-```{task} Add `renice` and do tests (POSIX.1-2024)
+```{task} Add renice and do tests (POSIX.1-2024)
 :id: TSK_0183
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1943,7 +1943,7 @@ the exit status for each condition.
 
 ### TSK_0184 — Add `rm` and do tests (POSIX.1-2024)
 
-```{task} Add `rm` and do tests (POSIX.1-2024)
+```{task} Add rm and do tests (POSIX.1-2024)
 :id: TSK_0184
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1959,7 +1959,7 @@ the exit status for each condition.
 
 ### TSK_0185 — Add `rmdel` and do tests (POSIX.1-2024)
 
-```{task} Add `rmdel` and do tests (POSIX.1-2024)
+```{task} Add rmdel and do tests (POSIX.1-2024)
 :id: TSK_0185
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1976,7 +1976,7 @@ group, put it behind the feature macro.
 
 ### TSK_0186 — Add `rmdir` and do tests (POSIX.1-2024)
 
-```{task} Add `rmdir` and do tests (POSIX.1-2024)
+```{task} Add rmdir and do tests (POSIX.1-2024)
 :id: TSK_0186
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -1992,7 +1992,7 @@ the exit status for each condition.
 
 ### TSK_0187 — Add `sact` and do tests (POSIX.1-2024)
 
-```{task} Add `sact` and do tests (POSIX.1-2024)
+```{task} Add sact and do tests (POSIX.1-2024)
 :id: TSK_0187
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2009,7 +2009,7 @@ group, put it behind the feature macro.
 
 ### TSK_0188 — Add `sccs` and do tests (POSIX.1-2024)
 
-```{task} Add `sccs` and do tests (POSIX.1-2024)
+```{task} Add sccs and do tests (POSIX.1-2024)
 :id: TSK_0188
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2026,7 +2026,7 @@ group, put it behind the feature macro.
 
 ### TSK_0189 — Add `sed` and do tests (POSIX.1-2024)
 
-```{task} Add `sed` and do tests (POSIX.1-2024)
+```{task} Add sed and do tests (POSIX.1-2024)
 :id: TSK_0189
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2042,7 +2042,7 @@ the exit status for each condition.
 
 ### TSK_0190 — Add `sh` and do tests (POSIX.1-2024)
 
-```{task} Add `sh` and do tests (POSIX.1-2024)
+```{task} Add sh and do tests (POSIX.1-2024)
 :id: TSK_0190
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2058,7 +2058,7 @@ the exit status for each condition.
 
 ### TSK_0191 — Add `sleep` and do tests (POSIX.1-2024)
 
-```{task} Add `sleep` and do tests (POSIX.1-2024)
+```{task} Add sleep and do tests (POSIX.1-2024)
 :id: TSK_0191
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2074,7 +2074,7 @@ the exit status for each condition.
 
 ### TSK_0192 — Add `sort` and do tests (POSIX.1-2024)
 
-```{task} Add `sort` and do tests (POSIX.1-2024)
+```{task} Add sort and do tests (POSIX.1-2024)
 :id: TSK_0192
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2090,7 +2090,7 @@ the exit status for each condition.
 
 ### TSK_0193 — Add `split` and do tests (POSIX.1-2024)
 
-```{task} Add `split` and do tests (POSIX.1-2024)
+```{task} Add split and do tests (POSIX.1-2024)
 :id: TSK_0193
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2106,7 +2106,7 @@ the exit status for each condition.
 
 ### TSK_0194 — Add `strings` and do tests (POSIX.1-2024)
 
-```{task} Add `strings` and do tests (POSIX.1-2024)
+```{task} Add strings and do tests (POSIX.1-2024)
 :id: TSK_0194
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2122,7 +2122,7 @@ the exit status for each condition.
 
 ### TSK_0195 — Add `strip` and do tests (POSIX.1-2024)
 
-```{task} Add `strip` and do tests (POSIX.1-2024)
+```{task} Add strip and do tests (POSIX.1-2024)
 :id: TSK_0195
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2139,7 +2139,7 @@ group, put it behind the feature macro.
 
 ### TSK_0196 — Add `stty` and do tests (POSIX.1-2024)
 
-```{task} Add `stty` and do tests (POSIX.1-2024)
+```{task} Add stty and do tests (POSIX.1-2024)
 :id: TSK_0196
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2155,7 +2155,7 @@ the exit status for each condition.
 
 ### TSK_0197 — Add `tabs` and do tests (POSIX.1-2024)
 
-```{task} Add `tabs` and do tests (POSIX.1-2024)
+```{task} Add tabs and do tests (POSIX.1-2024)
 :id: TSK_0197
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2171,7 +2171,7 @@ the exit status for each condition.
 
 ### TSK_0198 — Add `tail` and do tests (POSIX.1-2024)
 
-```{task} Add `tail` and do tests (POSIX.1-2024)
+```{task} Add tail and do tests (POSIX.1-2024)
 :id: TSK_0198
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2187,7 +2187,7 @@ the exit status for each condition.
 
 ### TSK_0199 — Add `talk` and do tests (POSIX.1-2024)
 
-```{task} Add `talk` and do tests (POSIX.1-2024)
+```{task} Add talk and do tests (POSIX.1-2024)
 :id: TSK_0199
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2204,7 +2204,7 @@ group, put it behind the feature macro.
 
 ### TSK_0200 — Add `tee` and do tests (POSIX.1-2024)
 
-```{task} Add `tee` and do tests (POSIX.1-2024)
+```{task} Add tee and do tests (POSIX.1-2024)
 :id: TSK_0200
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2220,7 +2220,7 @@ the exit status for each condition.
 
 ### TSK_0201 — Add `test` and do tests (POSIX.1-2024)
 
-```{task} Add `test` and do tests (POSIX.1-2024)
+```{task} Add test and do tests (POSIX.1-2024)
 :id: TSK_0201
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2236,7 +2236,7 @@ the exit status for each condition.
 
 ### TSK_0202 — Add `time` and do tests (POSIX.1-2024)
 
-```{task} Add `time` and do tests (POSIX.1-2024)
+```{task} Add time and do tests (POSIX.1-2024)
 :id: TSK_0202
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2252,7 +2252,7 @@ the exit status for each condition.
 
 ### TSK_0203 — Add `timeout` and do tests (POSIX.1-2024)
 
-```{task} Add `timeout` and do tests (POSIX.1-2024)
+```{task} Add timeout and do tests (POSIX.1-2024)
 :id: TSK_0203
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2268,7 +2268,7 @@ the exit status for each condition.
 
 ### TSK_0204 — Add `touch` and do tests (POSIX.1-2024)
 
-```{task} Add `touch` and do tests (POSIX.1-2024)
+```{task} Add touch and do tests (POSIX.1-2024)
 :id: TSK_0204
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2284,7 +2284,7 @@ the exit status for each condition.
 
 ### TSK_0205 — Add `tput` and do tests (POSIX.1-2024)
 
-```{task} Add `tput` and do tests (POSIX.1-2024)
+```{task} Add tput and do tests (POSIX.1-2024)
 :id: TSK_0205
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2300,7 +2300,7 @@ the exit status for each condition.
 
 ### TSK_0206 — Add `tr` and do tests (POSIX.1-2024)
 
-```{task} Add `tr` and do tests (POSIX.1-2024)
+```{task} Add tr and do tests (POSIX.1-2024)
 :id: TSK_0206
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2316,7 +2316,7 @@ the exit status for each condition.
 
 ### TSK_0207 — Add `true` and do tests (POSIX.1-2024)
 
-```{task} Add `true` and do tests (POSIX.1-2024)
+```{task} Add true and do tests (POSIX.1-2024)
 :id: TSK_0207
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2332,7 +2332,7 @@ the exit status for each condition.
 
 ### TSK_0208 — Add `tsort` and do tests (POSIX.1-2024)
 
-```{task} Add `tsort` and do tests (POSIX.1-2024)
+```{task} Add tsort and do tests (POSIX.1-2024)
 :id: TSK_0208
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2348,7 +2348,7 @@ the exit status for each condition.
 
 ### TSK_0209 — Add `tty` and do tests (POSIX.1-2024)
 
-```{task} Add `tty` and do tests (POSIX.1-2024)
+```{task} Add tty and do tests (POSIX.1-2024)
 :id: TSK_0209
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2364,7 +2364,7 @@ the exit status for each condition.
 
 ### TSK_0210 — Add `type` and do tests (POSIX.1-2024)
 
-```{task} Add `type` and do tests (POSIX.1-2024)
+```{task} Add type and do tests (POSIX.1-2024)
 :id: TSK_0210
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2381,7 +2381,7 @@ group, put it behind the feature macro.
 
 ### TSK_0211 — Add `ulimit` and do tests (POSIX.1-2024)
 
-```{task} Add `ulimit` and do tests (POSIX.1-2024)
+```{task} Add ulimit and do tests (POSIX.1-2024)
 :id: TSK_0211
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2397,7 +2397,7 @@ the exit status for each condition.
 
 ### TSK_0212 — Add `umask` and do tests (POSIX.1-2024)
 
-```{task} Add `umask` and do tests (POSIX.1-2024)
+```{task} Add umask and do tests (POSIX.1-2024)
 :id: TSK_0212
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2413,7 +2413,7 @@ the exit status for each condition.
 
 ### TSK_0213 — Add `unalias` and do tests (POSIX.1-2024)
 
-```{task} Add `unalias` and do tests (POSIX.1-2024)
+```{task} Add unalias and do tests (POSIX.1-2024)
 :id: TSK_0213
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2429,7 +2429,7 @@ the exit status for each condition.
 
 ### TSK_0214 — Add `uname` and do tests (POSIX.1-2024)
 
-```{task} Add `uname` and do tests (POSIX.1-2024)
+```{task} Add uname and do tests (POSIX.1-2024)
 :id: TSK_0214
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2445,7 +2445,7 @@ the exit status for each condition.
 
 ### TSK_0215 — Add `uncompress` and do tests (POSIX.1-2024)
 
-```{task} Add `uncompress` and do tests (POSIX.1-2024)
+```{task} Add uncompress and do tests (POSIX.1-2024)
 :id: TSK_0215
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2462,7 +2462,7 @@ group, put it behind the feature macro.
 
 ### TSK_0216 — Add `unexpand` and do tests (POSIX.1-2024)
 
-```{task} Add `unexpand` and do tests (POSIX.1-2024)
+```{task} Add unexpand and do tests (POSIX.1-2024)
 :id: TSK_0216
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2478,7 +2478,7 @@ the exit status for each condition.
 
 ### TSK_0217 — Add `unget` and do tests (POSIX.1-2024)
 
-```{task} Add `unget` and do tests (POSIX.1-2024)
+```{task} Add unget and do tests (POSIX.1-2024)
 :id: TSK_0217
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2495,7 +2495,7 @@ group, put it behind the feature macro.
 
 ### TSK_0218 — Add `uniq` and do tests (POSIX.1-2024)
 
-```{task} Add `uniq` and do tests (POSIX.1-2024)
+```{task} Add uniq and do tests (POSIX.1-2024)
 :id: TSK_0218
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2511,7 +2511,7 @@ the exit status for each condition.
 
 ### TSK_0219 — Add `unlink` and do tests (POSIX.1-2024)
 
-```{task} Add `unlink` and do tests (POSIX.1-2024)
+```{task} Add unlink and do tests (POSIX.1-2024)
 :id: TSK_0219
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2528,7 +2528,7 @@ group, put it behind the feature macro.
 
 ### TSK_0220 — Add `uucp` and do tests (POSIX.1-2024)
 
-```{task} Add `uucp` and do tests (POSIX.1-2024)
+```{task} Add uucp and do tests (POSIX.1-2024)
 :id: TSK_0220
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2545,7 +2545,7 @@ group, put it behind the feature macro.
 
 ### TSK_0221 — Add `uudecode` and do tests (POSIX.1-2024)
 
-```{task} Add `uudecode` and do tests (POSIX.1-2024)
+```{task} Add uudecode and do tests (POSIX.1-2024)
 :id: TSK_0221
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2561,7 +2561,7 @@ the exit status for each condition.
 
 ### TSK_0222 — Add `uuencode` and do tests (POSIX.1-2024)
 
-```{task} Add `uuencode` and do tests (POSIX.1-2024)
+```{task} Add uuencode and do tests (POSIX.1-2024)
 :id: TSK_0222
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2577,7 +2577,7 @@ the exit status for each condition.
 
 ### TSK_0223 — Add `uustat` and do tests (POSIX.1-2024)
 
-```{task} Add `uustat` and do tests (POSIX.1-2024)
+```{task} Add uustat and do tests (POSIX.1-2024)
 :id: TSK_0223
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2594,7 +2594,7 @@ group, put it behind the feature macro.
 
 ### TSK_0224 — Add `uux` and do tests (POSIX.1-2024)
 
-```{task} Add `uux` and do tests (POSIX.1-2024)
+```{task} Add uux and do tests (POSIX.1-2024)
 :id: TSK_0224
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2611,7 +2611,7 @@ group, put it behind the feature macro.
 
 ### TSK_0225 — Add `val` and do tests (POSIX.1-2024)
 
-```{task} Add `val` and do tests (POSIX.1-2024)
+```{task} Add val and do tests (POSIX.1-2024)
 :id: TSK_0225
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2628,7 +2628,7 @@ group, put it behind the feature macro.
 
 ### TSK_0226 — Add `vi` and do tests (POSIX.1-2024)
 
-```{task} Add `vi` and do tests (POSIX.1-2024)
+```{task} Add vi and do tests (POSIX.1-2024)
 :id: TSK_0226
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2645,7 +2645,7 @@ group, put it behind the feature macro.
 
 ### TSK_0227 — Add `wait` and do tests (POSIX.1-2024)
 
-```{task} Add `wait` and do tests (POSIX.1-2024)
+```{task} Add wait and do tests (POSIX.1-2024)
 :id: TSK_0227
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2661,7 +2661,7 @@ the exit status for each condition.
 
 ### TSK_0228 — Add `wc` and do tests (POSIX.1-2024)
 
-```{task} Add `wc` and do tests (POSIX.1-2024)
+```{task} Add wc and do tests (POSIX.1-2024)
 :id: TSK_0228
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2677,7 +2677,7 @@ the exit status for each condition.
 
 ### TSK_0229 — Add `what` and do tests (POSIX.1-2024)
 
-```{task} Add `what` and do tests (POSIX.1-2024)
+```{task} Add what and do tests (POSIX.1-2024)
 :id: TSK_0229
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2694,7 +2694,7 @@ group, put it behind the feature macro.
 
 ### TSK_0230 — Add `who` and do tests (POSIX.1-2024)
 
-```{task} Add `who` and do tests (POSIX.1-2024)
+```{task} Add who and do tests (POSIX.1-2024)
 :id: TSK_0230
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2711,7 +2711,7 @@ group, put it behind the feature macro.
 
 ### TSK_0231 — Add `write` and do tests (POSIX.1-2024)
 
-```{task} Add `write` and do tests (POSIX.1-2024)
+```{task} Add write and do tests (POSIX.1-2024)
 :id: TSK_0231
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2727,7 +2727,7 @@ the exit status for each condition.
 
 ### TSK_0232 — Add `xargs` and do tests (POSIX.1-2024)
 
-```{task} Add `xargs` and do tests (POSIX.1-2024)
+```{task} Add xargs and do tests (POSIX.1-2024)
 :id: TSK_0232
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2743,7 +2743,7 @@ the exit status for each condition.
 
 ### TSK_0233 — Add `xgettext` and do tests (POSIX.1-2024)
 
-```{task} Add `xgettext` and do tests (POSIX.1-2024)
+```{task} Add xgettext and do tests (POSIX.1-2024)
 :id: TSK_0233
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2760,7 +2760,7 @@ group, put it behind the feature macro.
 
 ### TSK_0234 — Add `yacc` and do tests (POSIX.1-2024)
 
-```{task} Add `yacc` and do tests (POSIX.1-2024)
+```{task} Add yacc and do tests (POSIX.1-2024)
 :id: TSK_0234
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012
@@ -2777,7 +2777,7 @@ group, put it behind the feature macro.
 
 ### TSK_0235 — Add `zcat` and do tests (POSIX.1-2024)
 
-```{task} Add `zcat` and do tests (POSIX.1-2024)
+```{task} Add zcat and do tests (POSIX.1-2024)
 :id: TSK_0235
 :status: open
 :traces: BDR_0003, SYS_LIBC_0001, RDM_0012

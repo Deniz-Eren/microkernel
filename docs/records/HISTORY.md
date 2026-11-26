@@ -173,7 +173,7 @@ Change `servers/ttyserv/` to add Ring 3 PTYs (`/dev/ptmx`, `/dev/pts/N`) and
 
 ### TSK_0055 — Add host-to-guest network, netserv changes, `nc`, and `ping`
 
-```{task} Add host-to-guest network, netserv changes, `nc`, and `ping`
+```{task} Add host-to-guest network, netserv changes, nc, and ping
 :id: TSK_0055
 :status: done
 :traces: BDR_0003, BDR_0004, ADR_0003, ADR_0042, ADR_0052, SWR_IPC_0014

@@ -194,7 +194,13 @@ document.
   terms in `technical_terms.txt` and `allowed_phrases.txt`. Do not make a copy
   of content from `ste-writing-skill` into this repository. When
   `ste-writing-skill` is installed on the build host, `tools/check_ste.py`
-  operates automatically. Build scripts skip it when missing. Refer to
+  operates automatically. Build scripts skip it when missing. When
+  `ste-writing-skill` is available, do a deep manual STE check of each changed
+  document. Do not trust the script result alone. Examine sentence length,
+  active voice, approved words, and simple tenses against the skill rules. When
+  `ste-writing-skill` is not available, skip the manual check without a failure.
+  Keep the English of all documents aligned to the style and simplicity of the
+  existing text. Refer to
   [docs/records/CONVENTIONS.md](docs/records/CONVENTIONS.md) (`CNV_0002`).
 - **Two-tier bidirectional code and POSIX traceability
   (`posix-issue8-os-dev`):** Keep Sphinx-Needs items at the interface, header,
