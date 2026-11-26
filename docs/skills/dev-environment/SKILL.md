@@ -31,12 +31,22 @@ container.
 | Command | Task |
 | --- | --- |
 | `./scripts/env.sh configure [args]` | Configure `build/` in the container |
-| `./scripts/env.sh build [args]` | Incremental build in the container |
+| `./scripts/env.sh build [args]` | Incremental build of all targets |
+| `./scripts/env.sh build-code [args]` | Fast C and ISO build (skips Sphinx) |
 | `./scripts/env.sh test [args]` | Start QEMU ([cmake](../cmake/SKILL.md)) |
+| `./scripts/env.sh next-ids` | Write next free traceability IDs |
+| `./scripts/env.sh task TSK_NNNN` | Write one task from `TASKS.md` |
+| `./scripts/env.sh check-text` | Start `check_text.py --root .` |
+| `./scripts/env.sh check-ste` | Start `tools/check_ste.py --root .` |
 | `./scripts/env.sh clean` | Remove `build/` and `sysroot/` |
-| `./scripts/env.sh shell` | Interactive shell in the container |
+| `./scripts/env.sh shell` | Interactive shell (no arguments) |
 | `./scripts/enter-dev.sh` | Same as `env.sh shell` |
 | `./scripts/env.sh <cmd...>` | Start a specified command in the container |
+
+Give commands directly to `./scripts/env.sh <cmd...>` (for example
+`./scripts/env.sh llvm-readelf -d build/ld.so`). Do not give commands to
+`./scripts/env.sh shell`, and do not give host `/tmp/...` paths to container
+commands (Podman mounts only the repository root at `/workspace`).
 
 For build, test, and lint procedures, start `scripts/build-agent.sh` (refer to
 the [cmake skill](../cmake/SKILL.md)).

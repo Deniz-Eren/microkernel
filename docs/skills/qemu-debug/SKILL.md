@@ -15,6 +15,12 @@ refer to
 
 ## 1. Examine the serial output first
 
+`tests/test_runner.py` stops immediately when `!!! kernel exception`, `!!!
+system halted`, or `PANIC:` shows on serial. On each error or timeout, it writes
+`nonzero exits`, `still alive` PIDs, `[FAIL]` lines, and `llvm-addr2line` output
+or Ring 3 offset hints. Use `--fail-on-fail` during debug tests to stop
+immediately on the first `[FAIL]` line.
+
 `./scripts/build-agent.sh` writes the path to `$TEST_LOG` on error. Examine that
 output file before you change code:
 
@@ -116,7 +122,7 @@ Examine these register fields on each CPU:
 - **`RDI`, `RSI`, `RAX`, `RCX`, `RDX`:** Function arguments and ticket spinlock
   counters (`next` and `serving`).
 
-## 4. Map addresses to `build/kernel.elf`
+## 4. Map addresses to `build/kernel.elf` or Ring 3 ELFs
 
 Map a stalled `RIP` or fault address to functions, disassembly, and global lock
 or table symbols:
@@ -130,6 +136,12 @@ llvm-nm -n build/kernel.elf | \
     grep -E "g_ipc_lock|g_channels|g_proc_lock|g_sched_lock"
 '
 ```
+
+For a Ring 3 fault (`RIP < 0x800000000000`), subtract `ELF_DYN_BASE`
+(`0x400000`) for a primary executable or `ELF_INTERP_BASE` (`0x18000000`) for
+`/boot/ld.so`. Then start `./scripts/env.sh llvm-addr2line -e build/<elf> -f -i
+0x<offset>`. In freestanding `/boot/ld.so`, write temporary debug lines with
+`SYS_DEBUG_LOG` so serial output shows when a test connects `fd 1` to a pipe.
 
 Compare the lock acquisition sequence with `ADR_0027` (`g_proc_lock` ->
 `g_ipc_lock` -> `g_sched_lock`, and `g_proc_lock` -> `g_futex_lock` ->

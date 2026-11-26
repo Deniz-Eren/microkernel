@@ -20,6 +20,7 @@ with warnings as errors. All build output goes to `build/` and `sysroot/`.
 | --- | --- |
 | `./scripts/env.sh configure` | Configure `build/` (Ninja, toolchain) |
 | `./scripts/env.sh build` | Incremental build of all targets |
+| `./scripts/env.sh build-code` | Fast C and ISO build (skips Sphinx docs) |
 | `./scripts/env.sh test` | Start the QEMU test harness |
 | `./scripts/env.sh coverage` | Make `build-cov/` and write HTML/LCOV coverage |
 | `./scripts/env.sh clean` | Remove `build/`, `build-cov/`, and `sysroot/` |

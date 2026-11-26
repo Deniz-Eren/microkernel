@@ -6,6 +6,44 @@ to them and does not write their content again.
 
 ---
 
+## Fast Commands and Mandatory Rules
+
+Obey these rules on each task before you examine files or start commands:
+
+- **Relative paths only:** Always use relative paths from the repository root
+  (for example `libc/ldso/ldso.c`, `.agents/skills/git/SKILL.md`). Do not write
+  `/home/...` paths in tool calls or commands.
+- **Read the codebase map first:** Read
+  [docs/00-overview/codebase-map.md](docs/00-overview/codebase-map.md) for build
+  paths, `boot.tar` and VFS rules, FD startup, syscall headers, and virtual
+  memory constants.
+- **Keep context small:** Use `read` with `offset` and `limit` as an alternative
+  to `bash` `cat` or `sed`. To examine one task without all of
+  `docs/records/TASKS.md`, start `./scripts/env.sh task TSK_NNNN`.
+- **Container commands:** Start toolchain and LLVM commands with
+  `./scripts/env.sh <cmd...>` (for example `./scripts/env.sh llvm-readelf -d
+  build/ld.so`). Do not give commands to `./scripts/env.sh shell`. Do not give
+  host `/tmp/...` paths to container commands. Do not use `nohup ... &` with
+  `sleep`. Do not write custom Python ELF parsers.
+- **Fast iteration and pre-commit checks:** Use `./scripts/env.sh build-code`
+  for fast C and ISO builds that skip Sphinx docs. Use
+  `./scripts/formatter-agent.sh --fix` for C format (do not wrap C lines by
+  hand). Start `./scripts/env.sh next-ids` to find the next traceability IDs.
+  Start `./scripts/build-agent.sh` before each commit.
+- **Debug procedure (no loops):** On a QEMU error, timeout, or incorrect output:
+  (1) read [docs/skills/qemu-debug/SKILL.md](docs/skills/qemu-debug/SKILL.md),
+  (2) use `llvm-addr2line` as an alternative to manual `objdump` offsets, (3)
+  for freestanding `ld.so` debug lines use `SYS_DEBUG_LOG` (writes to serial
+  when `fd 1` is a pipe), and (4) after two failed hypotheses, stop and read
+  your new helper functions line by line.
+- **STE and traceability defaults:** Keep descriptive sentences under 25 words,
+  procedural sentences under 20 words, and paragraphs under 6 sentences. Use
+  `must` (not `shall`), active voice, no semicolons, and no contractions. Add
+  one `SWR_` and one `VER_` for each task unless the task changes two or more
+  subsystems.
+
+---
+
 ## Commit Mode
 
 `operations.commit_mode` in `.agent-scaffolding.yml` is the one source of truth

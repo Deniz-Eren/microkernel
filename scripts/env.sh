@@ -10,7 +10,8 @@
 
 # Microkernel Podman environment wrapper.
 #
-# Usage: ./scripts/env.sh <configure|build|test|run|coverage|clean|shell|cmd...>
+# Usage: ./scripts/env.sh <configure|build|build-code|test|run|coverage|clean|
+#                          next-ids|task|check-text|check-ste|shell|cmd...>
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -57,8 +58,24 @@ case "${1:-shell}" in
         ensure_image
         crun cmake --build build "$@"
         ;;
+    build-code)
+        shift
+        ensure_image
+        crun cmake --build build --target iso "$@"
+        ;;
     test)
         shift
+        for _arg in "$@"; do
+            case "$_arg" in
+                /tmp/*|/var/*|/home/*)
+                    echo "[env.sh] error: host path '$_arg' is not" \
+                        "mounted in the container." >&2
+                    echo "[env.sh] hint: use a relative path inside the" \
+                        "repo (e.g. build/...), mounted at /workspace." >&2
+                    exit 2
+                    ;;
+            esac
+        done
         ensure_image
         crun python3 tests/test_runner.py --arch "$ARCH" "$@"
         ;;
@@ -147,7 +164,88 @@ EOF
     clean)
         rm -rf "$ROOT/build" "$ROOT/build-cov" "$ROOT/sysroot"
         ;;
+    next-ids)
+        python3 - "$ROOT" << 'PY'
+import re, sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / "docs"
+pats = [
+    ("SWR", re.compile(r":id:\s+(SWR_[A-Z]+)_(\d{4})\b")),
+    ("COMP", re.compile(r":id:\s+(COMP_[A-Z]+)_(\d{4})\b")),
+    ("VER", re.compile(r":id:\s+(VER_[A-Z]+)_(\d{4})\b")),
+    ("ICD", re.compile(r":id:\s+(ICD_[A-Z]+)_(\d{4})\b")),
+    ("ADR", re.compile(r":id:\s+(ADR)_(\d{4})\b")),
+    ("BDR", re.compile(r":id:\s+(BDR)_(\d{4})\b")),
+    ("WDR", re.compile(r":id:\s+(WDR)_(\d{4})\b")),
+    ("TSK", re.compile(r":id:\s+(TSK)_(\d{4})\b")),
+    ("RDM", re.compile(r":id:\s+(RDM)_(\d{4})\b")),
+]
+high: dict[str, int] = {}
+for p in root.rglob("*.md"):
+    txt = p.read_text(encoding="utf-8", errors="ignore")
+    for _, rx in pats:
+        for m in rx.finditer(txt):
+            key, num = m.group(1), int(m.group(2))
+            if num > high.get(key, 0):
+                high[key] = num
+for key in sorted(high):
+    print(f"{key}_{high[key] + 1:04d} (last: {key}_{high[key]:04d})")
+PY
+        ;;
+    task)
+        shift
+        if [ "$#" -lt 1 ]; then
+            echo "[env.sh] usage: ./scripts/env.sh task TSK_NNNN" >&2
+            exit 2
+        fi
+        python3 - "$ROOT/docs/records/TASKS.md" "$1" << 'PY'
+import re, sys
+from pathlib import Path
+
+lines = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+tid = sys.argv[2]
+start = None
+for idx, line in enumerate(lines):
+    if re.match(rf"^###\s+{re.escape(tid)}\b", line):
+        start = idx
+        break
+if start is None:
+    print(f"Task {tid} not found in docs/records/TASKS.md", file=sys.stderr)
+    sys.exit(1)
+end = len(lines)
+for idx in range(start + 1, len(lines)):
+    if lines[idx].startswith("### "):
+        end = idx
+        break
+for idx in range(start, end):
+    print(f"{idx + 1}: {lines[idx]}")
+PY
+        ;;
+    check-text)
+        shift
+        DEFAULT_TRACE_DIR="$HOME/.agents/skills/docs-traceability-setup"
+        SKILL_DIR="${DOCS_TRACEABILITY_SKILL:-$DEFAULT_TRACE_DIR}"
+        CHECK_TEXT="$SKILL_DIR/scripts/check_text.py"
+        if [ ! -f "$CHECK_TEXT" ]; then
+            echo "[env.sh] missing check_text.py at $CHECK_TEXT" >&2
+            exit 1
+        fi
+        exec python3 "$CHECK_TEXT" --root "$ROOT" "$@"
+        ;;
+    check-ste)
+        shift
+        exec python3 "$ROOT/tools/check_ste.py" --root "$ROOT" "$@"
+        ;;
     shell)
+        shift
+        if [ "$#" -gt 0 ]; then
+            echo "[env.sh] error: 'env.sh shell' opens an interactive" \
+                "shell and takes no arguments." >&2
+            echo "[env.sh] hint: omit 'shell' to run a command:" \
+                "./scripts/env.sh <cmd...>" >&2
+            exit 2
+        fi
         ensure_image
         crun_tty bash
         ;;

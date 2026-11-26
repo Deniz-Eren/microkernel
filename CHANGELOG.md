@@ -22,6 +22,12 @@ a Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added agent workflow guards and fast-stop QEMU diagnostics (`WDR_0013`).
+  `tests/test_runner.py` now stops immediately on kernel faults and halts with
+  process and `llvm-addr2line` diagnostics. `scripts/env.sh` adds `build-code`,
+  `next-ids`, `task`, `check-text`, and `check-ste` commands with argument
+  guards. `docs/00-overview/codebase-map.md` and `AGENTS.md` add compact layout
+  and command references.
 - The project added the terminal runtime design for full-screen editors and
   multiplexers (`ADR_0060`), roadmap item `RDM_0013`, and tasks `TSK_0236` to
   `TSK_0243` for Vim, tmux, and Neovim over SSH and nested PTYs. It covers

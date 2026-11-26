@@ -8,6 +8,7 @@ decision records for `microkernel`.
 :glob:
 
 context
+codebase-map
 glossary
 wdr/index
 ```

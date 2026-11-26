@@ -38,6 +38,7 @@ import argparse
 from pathlib import Path
 import re
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -47,6 +48,17 @@ import time
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "tools" / "coverage"))
 from generate_report import CoverageStreamDecoder  # noqa: E402
+
+_FATAL_PATTERNS = (
+    re.compile(r"!!! kernel exception"),
+    re.compile(r"!!! system halted"),
+    re.compile(r"\bPANIC:"),
+)
+_SPAWN_RE = re.compile(r"spawned '([^']+)' pid=(\d+)")
+_ZOMBIE_RE = re.compile(r"pid (\d+) became zombie \(exit (-?\d+)\)")
+_RIP_RE = re.compile(r"\brip=([0-9a-fA-F]+)\b")
+_CR2_RE = re.compile(r"cr2\(fault addr\)=([0-9a-fA-F]+)")
+_FAIL_LINE_RE = re.compile(r"\[FAIL\]")
 
 
 ARCH_QEMU_PROFILES = {
@@ -100,14 +112,93 @@ def build_cmd(args):
 
 
 def _load_expect_file(path: str) -> list[str]:
+    p = Path(path)
+    if not p.is_file():
+        print(
+            f"[test_runner] error: expect file not found: {path}\n"
+            "  Note: inside the container, use a path inside the repository "
+            "(mounted at /workspace), not host /tmp.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
     loaded = []
-    with open(path, "r", encoding="utf-8") as fh:
+    with p.open("r", encoding="utf-8") as fh:
         for raw in fh:
             line = raw.strip()
             if not line or line.startswith("#"):
                 continue
             loaded.append(line)
     return loaded
+
+
+def _print_crash_diagnostics(
+    iso_path: str,
+    spawned: dict[int, str],
+    zombies: dict[int, str],
+    fail_lines: list[str],
+    crash_rips: list[str],
+    crash_cr2s: list[str],
+) -> None:
+    alive = [
+        f"pid={pid} {spawned[pid]}"
+        for pid in sorted(spawned)
+        if pid not in zombies
+    ]
+    nonzero = [
+        f"pid={pid} {spawned[pid]} exit={zombies[pid]}"
+        for pid in sorted(spawned)
+        if pid in zombies and zombies[pid] != "0"
+    ]
+    if nonzero:
+        print("[test_runner] nonzero exits: " + ", ".join(nonzero[:20]))
+    if alive:
+        print("[test_runner] still alive: " + ", ".join(alive[:20]))
+    if fail_lines:
+        print("[test_runner] [FAIL] lines observed:")
+        for fl in fail_lines[:20]:
+            print("    " + fl.rstrip())
+    if crash_rips:
+        rip_hex = crash_rips[-1]
+        rip_val = int(rip_hex, 16)
+        cr2_msg = f" cr2=0x{crash_cr2s[-1]}" if crash_cr2s else ""
+        print(f"[test_runner] crash address: rip=0x{rip_hex}{cr2_msg}")
+        if rip_val >= 0xFFFFFFFF80000000:
+            kernel_elf = Path(iso_path).resolve().parent / "kernel.elf"
+            addr2line = shutil.which("llvm-addr2line")
+            if addr2line and kernel_elf.is_file():
+                res = subprocess.run(
+                    [
+                        addr2line,
+                        "-e",
+                        str(kernel_elf),
+                        "-f",
+                        "-i",
+                        f"0x{rip_hex}",
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+                if res.returncode == 0 and res.stdout.strip():
+                    print("[test_runner] llvm-addr2line (kernel.elf):")
+                    for ln in res.stdout.strip().splitlines():
+                        print("    " + ln)
+        else:
+            if rip_val >= 0x18000000:
+                off = rip_val - 0x18000000
+                print(
+                    "[test_runner] Ring 3 interpreter fault hint: "
+                    f"rip-0x18000000=0x{off:x} -> "
+                    f"./scripts/env.sh llvm-addr2line -e build/ld.so -f -i "
+                    f"0x{off:x}"
+                )
+            elif rip_val >= 0x400000:
+                off = rip_val - 0x400000
+                print(
+                    "[test_runner] Ring 3 ET_DYN fault hint: "
+                    f"rip-0x400000=0x{off:x} -> "
+                    "./scripts/env.sh llvm-addr2line -e build/<elf> -f -i "
+                    f"0x{off:x}"
+                )
 
 
 def main() -> int:
@@ -120,6 +211,16 @@ def main() -> int:
     ap.add_argument("--cov-out", default=None)
     ap.add_argument("--wait-cov", action="store_true")
     ap.add_argument("--extra-qemu-arg", action="append", default=[])
+    ap.add_argument(
+        "--no-fail-fast",
+        action="store_true",
+        help="Do not abort early on kernel exception, halt, or PANIC lines.",
+    )
+    ap.add_argument(
+        "--fail-on-fail",
+        action="store_true",
+        help="Abort early when any Ring 3 [FAIL] line appears on serial.",
+    )
     ap.add_argument(
         "--blk-img",
         default=str(_ROOT / "build" / "test-blk.img"),
@@ -151,7 +252,16 @@ def main() -> int:
 
     matched = [False] * len(patterns)
     success = threading.Event()
+    fatal_event = threading.Event()
+    halt_seen = threading.Event()
+    fatal_info: dict[str, object] = {"reason": None, "at": 0.0}
+    spawned: dict[int, str] = {}
+    zombies: dict[int, str] = {}
+    fail_lines: list[str] = []
+    crash_rips: list[str] = []
+    crash_cr2s: list[str] = []
     tail = []
+    start_ts = time.time()
 
     def reader():
         try:
@@ -164,26 +274,74 @@ def main() -> int:
                 sys.stdout.flush()
                 tail.append(line)
                 del tail[:-200]
+                m_sp = _SPAWN_RE.search(line)
+                if m_sp:
+                    spawned[int(m_sp.group(2))] = m_sp.group(1)
+                m_zm = _ZOMBIE_RE.search(line)
+                if m_zm:
+                    zombies[int(m_zm.group(1))] = m_zm.group(2)
+                m_rip = _RIP_RE.search(line)
+                if m_rip:
+                    crash_rips.append(m_rip.group(1))
+                m_cr2 = _CR2_RE.search(line)
+                if m_cr2:
+                    crash_cr2s.append(m_cr2.group(1))
+                if _FAIL_LINE_RE.search(line):
+                    fail_lines.append(line)
+                line_expected = False
                 for i, pat in enumerate(patterns):
-                    if not matched[i] and pat.search(line):
-                        matched[i] = True
+                    if pat.search(line):
+                        line_expected = True
+                        if not matched[i]:
+                            matched[i] = True
                 if all(matched) and (
                     not args.wait_cov
                     or (decoder is not None and decoder.complete)
                 ):
                     success.set()
+                    continue
+                if not args.no_fail_fast and not line_expected:
+                    for fpat in _FATAL_PATTERNS:
+                        if fpat.search(line):
+                            if fatal_info["reason"] is None:
+                                fatal_info["reason"] = line.strip()
+                                fatal_info["at"] = time.time()
+                                fatal_event.set()
+                            if "system halted" in line:
+                                halt_seen.set()
+                            break
+                    if (
+                        args.fail_on_fail
+                        and _FAIL_LINE_RE.search(line)
+                        and fatal_info["reason"] is None
+                    ):
+                        fatal_info["reason"] = line.strip()
+                        fatal_info["at"] = time.time()
+                        fatal_event.set()
+                        halt_seen.set()
         except (ValueError, OSError):
             pass
 
     t = threading.Thread(target=reader, daemon=True)
     t.start()
 
-    deadline = time.time() + args.timeout
+    deadline = start_ts + args.timeout
     result = None
     while time.time() < deadline:
         if success.is_set():
             result = "PASS"
             break
+        if fatal_event.is_set():
+            # Allow a brief window for register dump lines to flush after '!!!
+            # kernel exception' before terminating QEMU.
+            elapsed_fatal = time.time() - float(fatal_info["at"])
+            if halt_seen.is_set() or elapsed_fatal >= 0.5:
+                elapsed = time.time() - start_ts
+                result = (
+                    f"FAIL (fatal serial output after {elapsed:.1f}s: "
+                    f"{fatal_info['reason']})"
+                )
+                break
         if proc.poll() is not None:
             result = "FAIL (qemu exited early, rc=%s)" % proc.returncode
             break
@@ -192,7 +350,7 @@ def main() -> int:
     if result is None:
         result = "FAIL (timeout after %.0fs)" % args.timeout
 
-    if success.is_set():
+    if proc.poll() is None:
         proc.send_signal(signal.SIGTERM)
         try:
             proc.wait(timeout=5)
@@ -218,6 +376,9 @@ def main() -> int:
     print(f"[test_runner] missing expectations: {missing}")
     if args.wait_cov and (decoder is None or not decoder.complete):
         print("[test_runner] missing @@COV_COMPLETE@@ coverage marker")
+    _print_crash_diagnostics(
+        args.iso, spawned, zombies, fail_lines, crash_rips, crash_cr2s
+    )
     print("[test_runner] --- last serial output ---")
     for line in tail[-60:]:
         sys.stdout.write("    " + line)
