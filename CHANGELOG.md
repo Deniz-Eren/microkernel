@@ -22,6 +22,11 @@ a Changelog](https://keepachangelog.com).
 
 ### Added
 
+- The project added the terminal runtime design for full-screen editors and
+  multiplexers (`ADR_0060`), roadmap item `RDM_0013`, and tasks `TSK_0236` to
+  `TSK_0243` for Vim, tmux, and Neovim over SSH and nested PTYs. It covers
+  ttyserv line-discipline hardening, `fsync`, `wcwidth`, `wcswidth`, and a
+  `terminfo` database.
 - The CMake build makes shared `libcrypto.so.3` and `libssl.so.3` (sonames
   `libcrypto.so.3` and `libssl.so.3`) with `libcrypto.so` and `libssl.so`
   symlinks and the static archives. It installs both shared libraries into the

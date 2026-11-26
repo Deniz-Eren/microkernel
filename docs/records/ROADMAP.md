@@ -76,6 +76,24 @@ Add and do tests for all POSIX.1-2024 (Issue 8) utilities from the
 asynchronous signals, and exit status.
 ```
 
+### RDM_0013 — Full-screen editors and terminal multiplexers
+
+```{roadmap} Full-screen editors and terminal multiplexers
+---
+id: RDM_0013
+status: open
+traces: >
+  WDR_0012, BDR_0003, BDR_0004, ADR_0002, ADR_0054, ADR_0060, SYS_LIBC_0001,
+  SYS_IPC_0001
+---
+
+Bring up Vim, tmux, and Neovim in Ring 3 over the existing PTY and socket
+services. Harden the ttyserv line discipline and add `fsync`, `wcwidth`,
+`wcswidth`, and a `terminfo` database first. Build Vim through ncurses, then
+tmux, then Neovim with PUC Lua 5.1. Verify each tool over SSH and nested PTYs
+({need}`WDR_0012`, {need}`ADR_0060`).
+```
+
 ### RDM_0008 — Platform abstraction and future 64-bit ARM (arm64) target
 
 ```{roadmap} Platform abstraction and future 64-bit ARM (arm64) target

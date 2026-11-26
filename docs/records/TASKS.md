@@ -2777,3 +2777,109 @@ the exit status for each condition. Because this utility is in the XSI option
 group, put it behind the feature macro.
 ```
 
+### TSK_0236 — Harden the ttyserv line discipline for raw-mode timing
+
+```{task} Harden the ttyserv line discipline for raw-mode timing
+:id: TSK_0236
+:status: open
+:traces: ADR_0060, BDR_0003, SYS_IPC_0001
+
+Enforce `VTIME` in raw-mode reads in ttyserv so a standalone `Esc` returns
+within the configured timeout. Implement `IXON`, `IXOFF`, and `OXTABS` in the
+byte path. Verify `ISIG`, `OPOST`, `ICRNL`, and `ONLCR` in raw and cbreak modes.
+Add a CTest case that reads a bare `Esc` in raw mode. Then read an escape
+sequence and check the returned byte counts.
+```
+
+### TSK_0237 — Add fsync to libc and verify ext2 flush on fsync
+
+```{task} Add fsync to libc and verify ext2 flush on fsync
+:id: TSK_0237
+:status: open
+:traces: ADR_0060, BDR_0003, SYS_LIBC_0001
+
+Add `fsync` to `libc/src/vfs.c` and map it to the ext2 flush path. Verify that a
+`write` to an ext2 file followed by `fsync` commits the data block and metadata
+to disk. Add a CTest case that writes, syncs, and reads back the data after a
+forced remount.
+```
+
+### TSK_0238 — Add wcwidth and wcswidth to libc for UTF-8 width
+
+```{task} Add wcwidth and wcswidth to libc for UTF-8 width
+:id: TSK_0238
+:status: open
+:traces: ADR_0060, BDR_0003, SYS_LIBC_0001
+
+Add `wcwidth` and `wcswidth` to `libc` for UTF-8 width. Use a width table for
+ASCII, box-drawing, and wide CJK glyphs. Return 0 for control and zero-width
+characters. Add a CTest case that measures a box-drawing line and a CJK string.
+```
+
+### TSK_0239 — Ship a terminfo database and propagate $TERM over SSH
+
+```{task} Ship a terminfo database and propagate $TERM over SSH
+:id: TSK_0239
+:status: open
+:traces: ADR_0060, BDR_0003, ADR_0054, SYS_LIBC_0001
+
+Add a `terminfo` database to the sysroot. Include `xterm`, `xterm-256color`,
+`tmux-256color`, and `screen-256color`. Put the database at
+`/usr/share/terminfo`. Verify that OpenSSH passes the client `$TERM` into the
+session. Add a CTest case that opens a PTY and reads the active `TERM`.
+```
+
+### TSK_0240 — Build ncurses and Vim with CMake
+
+```{task} Build ncurses and Vim with CMake
+:id: TSK_0240
+:status: open
+:traces: WDR_0012, ADR_0060, BDR_0003, BDR_0004, ADR_0054, SYS_LIBC_0001
+
+Add `cmake/ncurses.cmake` and `cmake/vim.cmake` to build `ncurses` and Vim for
+Ring 3. Link Vim to `libc.so` and `libncurses` with
+`--dynamic-linker=/boot/ld.so`. Install `/usr/bin/vim` and the `ncurses` library
+into the sysroot and `boot.tar`. Do not keep upstream source in git. Record the
+notices in `docs/THIRD-PARTY-NOTICES.md`.
+```
+
+### TSK_0241 — Build tmux with CMake and test PTY attach and detach
+
+```{task} Build tmux with CMake and test PTY attach and detach
+:id: TSK_0241
+:status: open
+:traces: WDR_0012, ADR_0060, BDR_0003, BDR_0004, ADR_0054, SYS_IPC_0001
+
+Add `cmake/tmux.cmake` to download and build tmux for Ring 3. Link tmux to
+`libc.so` and `libncurses` with `--dynamic-linker=/boot/ld.so`. Install
+`/usr/bin/tmux` into the sysroot and `boot.tar`. Test attach and detach by
+passing a PTY slave file descriptor over `SCM_RIGHTS`. Verify that the pane
+stays alive after the master closes.
+```
+
+### TSK_0242 — Build Neovim with CMake and PUC Lua 5.1
+
+```{task} Build Neovim with CMake and PUC Lua 5.1
+:id: TSK_0242
+:status: open
+:traces: WDR_0012, ADR_0060, BDR_0003, BDR_0004, ADR_0054, SYS_LIBC_0001
+
+Add `cmake/neovim.cmake` to download and build Neovim with PUC Lua 5.1 for Ring
+3. Build `libuv` and `liblua` as CMake ports and link Neovim to them. Install
+`/usr/bin/neovim` into the sysroot and `boot.tar`. Do not use LuaJIT because the
+kernel rejects `WRITE|EXEC` pages. Record the notices in
+`docs/THIRD-PARTY-NOTICES.md`.
+```
+
+### TSK_0243 — Verify Vim, tmux, and Neovim over SSH and nested PTYs
+
+```{task} Verify Vim, tmux, and Neovim over SSH and nested PTYs
+:id: TSK_0243
+:status: open
+:traces: WDR_0012, ADR_0060, BDR_0003, BDR_0004, SYS_IPC_0001
+
+Run Vim, tmux, and Neovim in QEMU over SSH and a nested PTY. Check that SIGWINCH
+delivers when the window size changes and that SIGHUP fires when the PTY master
+closes. Verify that a tmux pane stays alive after detach. Add a CTest case that
+starts a tmux session and reads the pane output.
+```
