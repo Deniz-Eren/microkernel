@@ -21,20 +21,6 @@ connects to the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0066 — Link Ring 3 bin/ shell and utilities dynamically to libc.so
-
-```{task} Link Ring 3 bin/ shell and utilities dynamically to libc.so
-:id: TSK_0066
-:status: open
-:traces: BDR_0003, BDR_0004, ADR_0002, SYS_LIBC_0001, SYS_PROC_0001
-
-Change `bin/` (`sh`, XCU utilities, `nc`, `ping`, `sshd-setup`) to dynamic
-executables linked to `ld.so` and `libc.so`. Keep primary Ring 3 boot servers
-statically linked. Make sure that the `boot.tar` byte count decreases. Do the
-full QEMU and CTest suites. Make sure that all tests complete without errors
-({need}`SYS_LIBC_0001`, {need}`SYS_PROC_0001`).
-```
-
 ### TSK_0075 — Add native ldd in /boot/ld.so and ldconfig in bin/
 
 ```{task} Add native ldd in /boot/ld.so and ldconfig in bin/

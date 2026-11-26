@@ -915,7 +915,7 @@ static int test_split_format_inspect_utils(void) {
         "/boot/rm /tmp/f_sh.txt /tmp/f_txt.txt /tmp/pr1.txt /tmp/pr2.txt",
         NULL, 0, out, sizeof(out), &len);
     if (rc != 0 ||
-        strstr(out, "/boot/echo: ELF 64-bit LSB executable, x86-64\n") ==
+        strstr(out, "/boot/echo: ELF 64-bit LSB shared object, x86-64\n") ==
             NULL ||
         strstr(out, "/tmp: directory\n") == NULL ||
         strstr(out, "/tmp/f_sh.txt: POSIX shell script text\n") == NULL ||

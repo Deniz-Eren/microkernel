@@ -101,6 +101,11 @@ a Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- All `bin/` executables (`sh`, the XCU utilities, `nc`, `ping`, and
+  `sshd-setup`) link as `ET_DYN` PIE executables with `PT_INTERP=/boot/ld.so`
+  and `DT_NEEDED=libc.so`. The primary Ring 3 boot servers stay statically
+  linked, and `boot.tar` decreases from 52530688 to 24249352 bytes {need::
+  SWR_LIBC_0033}.
 - OpenSSH Portable `sshd`, `sshd-session`, and `ssh-keygen` link as `ET_DYN` PIE
   executables with `PT_INTERP=/boot/ld.so` and `DT_NEEDED` entries for shared
   `libcrypto.so.3`, `libz.so.1`, and `libc.so`. The `openssh_libssh` and
