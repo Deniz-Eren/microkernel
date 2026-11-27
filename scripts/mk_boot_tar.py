@@ -16,6 +16,7 @@ Usage:
 The kernel locates entries by exact file name.
 """
 import argparse
+import os
 import sys
 
 
@@ -51,25 +52,45 @@ def main() -> int:
     args = ap.parse_args()
 
     out = bytearray()
+    count = 0
+
+    def add_file(tar_name: str, file_path: str) -> None:
+        nonlocal count
+        with open(file_path, "rb") as f:
+            data = f.read()
+        out.extend(ustar_header(tar_name, len(data)))
+        out.extend(data)
+        if len(data) % 512:
+            out.extend(bytes(512 - len(data) % 512))
+        count += 1
+
     for entry in args.entries:
         name, _, path = entry.partition("=")
         try:
-            with open(path, "rb") as f:
-                data = f.read()
+            if os.path.isdir(path):
+                prefix = name.strip("/")
+                for dirpath, dirnames, filenames in os.walk(path):
+                    dirnames.sort()
+                    filenames.sort()
+                    for fn in filenames:
+                        full = os.path.join(dirpath, fn)
+                        if not os.path.isfile(full):
+                            continue
+                        rel = os.path.relpath(full, path).replace(os.sep, "/")
+                        tar_name = f"{prefix}/{rel}" if prefix else rel
+                        add_file(tar_name, full)
+            else:
+                add_file(name, path)
         except OSError as e:
             print(f"mk_boot_tar: cannot read {path}: {e}", file=sys.stderr)
             return 1
-        out += ustar_header(name, len(data))
-        out += data
-        if len(data) % 512:
-            out += bytes(512 - len(data) % 512)
 
     out += bytes(1024)  # end-of-archive marker
     with open(args.output, "wb") as f:
         f.write(out)
     print(
         f"mk_boot_tar: wrote {args.output} "
-        f"({len(out)} bytes, {len(args.entries)} entries)"
+        f"({len(out)} bytes, {count} entries)"
     )
     return 0
 

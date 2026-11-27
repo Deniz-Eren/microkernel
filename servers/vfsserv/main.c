@@ -271,6 +271,26 @@ static uint64_t parse_octal(const char *s, size_t n) {
     return v;
 }
 
+static vfs_node_t *ensure_dir(vfs_node_t *parent, const char *name) {
+    if (!parent || !S_ISDIR(parent->mode) || !name || name[0] == '\0') {
+        return NULL;
+    }
+    int idx = dir_find_idx(parent, name);
+    if (idx >= 0 && parent->children != NULL) {
+        vfs_node_t *existing = parent->children[(size_t)idx].node;
+        return (existing && S_ISDIR(existing->mode)) ? existing : NULL;
+    }
+    vfs_node_t *d = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, parent);
+    if (!d) {
+        return NULL;
+    }
+    if (dir_add_child(parent, name, d) != 0) {
+        node_destroy(d);
+        return NULL;
+    }
+    return d;
+}
+
 static void populate_bootfs(vfs_node_t *boot_dir) {
     const unsigned long *auxv = (const unsigned long *)__auxv;
     if (!auxv) {
@@ -328,6 +348,38 @@ static void populate_bootfs(vfs_node_t *boot_dir) {
                 fn->ro_data = base + data_off;
                 if (dir_add_child(boot_dir, leaf, fn) != 0) {
                     node_destroy(fn);
+                }
+            }
+        } else if (leaf[0] != '\0') {
+            vfs_node_t *dir = g_root;
+            const char *p = leaf;
+            while (*p == '/') {
+                p++;
+            }
+            const char *slash = strchr(p, '/');
+            while (slash != NULL && dir != NULL) {
+                size_t clen = (size_t)(slash - p);
+                if (clen > 0u && clen < VFS_NAME_MAX) {
+                    char comp[VFS_NAME_MAX];
+                    memcpy(comp, p, clen);
+                    comp[clen] = '\0';
+                    dir = ensure_dir(dir, comp);
+                }
+                p = slash + 1;
+                while (*p == '/') {
+                    p++;
+                }
+                slash = strchr(p, '/');
+            }
+            if (dir != NULL && *p != '\0') {
+                vfs_node_t *fn =
+                    node_new(VFS_DEV_BOOTFS, S_IFREG | 0644u, 1u, dir);
+                if (fn) {
+                    fn->size = (size_t)sz;
+                    fn->ro_data = base + data_off;
+                    if (dir_add_child(dir, p, fn) != 0) {
+                        node_destroy(fn);
+                    }
                 }
             }
         }
@@ -2164,52 +2216,20 @@ int main(void) {
             node_destroy(nss_conf);
         }
     }
-    /* /usr/bin, /usr/sbin, and /usr/share/zoneinfo symlinks into bootfs. */
-    vfs_node_t *usr_dir = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, g_root);
-    if (usr_dir && dir_add_child(g_root, "usr", usr_dir) != 0) {
-        node_destroy(usr_dir);
-        usr_dir = NULL;
-    }
-    vfs_node_t *usr_bin = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_dir);
+    /* /usr/bin and /usr/sbin symlinks into bootfs; /usr/share/zoneinfo is
+     * populated directly from boot.tar by populate_bootfs(). */
+    vfs_node_t *usr_dir = ensure_dir(g_root, "usr");
+    vfs_node_t *usr_bin = ensure_dir(usr_dir, "bin");
     if (usr_bin) {
-        if (dir_add_child(usr_dir, "bin", usr_bin) != 0) {
-            node_destroy(usr_bin);
-        } else {
-            add_static_symlink(usr_bin, "ldd", "/boot/ld.so");
-            add_static_symlink(usr_bin, "getent", "/boot/getent");
-            add_static_symlink(usr_bin, "zdump", "/boot/zdump");
-            add_static_symlink(usr_bin, "tzselect", "/boot/tzselect");
-        }
+        add_static_symlink(usr_bin, "ldd", "/boot/ld.so");
+        add_static_symlink(usr_bin, "getent", "/boot/getent");
+        add_static_symlink(usr_bin, "zdump", "/boot/zdump");
+        add_static_symlink(usr_bin, "tzselect", "/boot/tzselect");
     }
-    vfs_node_t *usr_sbin =
-        node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_dir);
+    vfs_node_t *usr_sbin = ensure_dir(usr_dir, "sbin");
     if (usr_sbin) {
-        if (dir_add_child(usr_dir, "sbin", usr_sbin) != 0) {
-            node_destroy(usr_sbin);
-        } else {
-            add_static_symlink(usr_sbin, "ldconfig", "/boot/ldconfig");
-            add_static_symlink(usr_sbin, "zic", "/boot/zic");
-        }
-    }
-    vfs_node_t *usr_share =
-        node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_dir);
-    if (usr_share) {
-        if (dir_add_child(usr_dir, "share", usr_share) != 0) {
-            node_destroy(usr_share);
-        } else {
-            vfs_node_t *zoneinfo =
-                node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_share);
-            if (zoneinfo) {
-                if (dir_add_child(usr_share, "zoneinfo", zoneinfo) != 0) {
-                    node_destroy(zoneinfo);
-                } else {
-                    add_static_symlink(zoneinfo, "iso3166.tab",
-                                       "/boot/iso3166.tab");
-                    add_static_symlink(zoneinfo, "zone1970.tab",
-                                       "/boot/zone1970.tab");
-                }
-            }
-        }
+        add_static_symlink(usr_sbin, "ldconfig", "/boot/ldconfig");
+        add_static_symlink(usr_sbin, "zic", "/boot/zic");
     }
     mount_ext2_on_mnt();
 

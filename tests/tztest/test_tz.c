@@ -50,13 +50,37 @@ int main(void) {
 
     (void)system("/bin/rm -rf " ZONE_DIR);
 
-    /* Verify standard symlinks and tzselect tables installed by vfsserv. */
+    /* Verify standard symlinks and pre-populated /usr/share/zoneinfo files. */
     if (access("/usr/sbin/zic", R_OK) != 0 ||
         access("/usr/bin/zdump", R_OK) != 0 ||
         access("/usr/bin/tzselect", R_OK) != 0 ||
         access("/usr/share/zoneinfo/iso3166.tab", R_OK) != 0 ||
-        access("/usr/share/zoneinfo/zone1970.tab", R_OK) != 0) {
-        printf("[FAIL] tztest missing tzcode symlinks or zoneinfo tables\n");
+        access("/usr/share/zoneinfo/zone1970.tab", R_OK) != 0 ||
+        check_tzif_magic("/usr/share/zoneinfo/Australia/Sydney") != 0 ||
+        check_tzif_magic("/usr/share/zoneinfo/America/New_York") != 0 ||
+        check_tzif_magic("/usr/share/zoneinfo/UTC") != 0) {
+        printf("[FAIL] tztest missing tzcode symlinks or zoneinfo files\n");
+        return 1;
+    }
+
+    /* Verify zdump works out of the box against /usr/share/zoneinfo. */
+    if (capture("/usr/bin/zdump -v -c 2024,2026 Australia/Sydney", buf,
+                sizeof(buf)) != 0 ||
+        strstr(buf, "AEDT") == NULL || strstr(buf, "gmtoff=39600") == NULL ||
+        strstr(buf, "AEST") == NULL || strstr(buf, "gmtoff=36000") == NULL) {
+        printf("[FAIL] tztest zdump Australia/Sydney got '%s'\n", buf);
+        return 1;
+    }
+    if (capture("/usr/bin/zdump -v -c 2024,2026 America/New_York", buf,
+                sizeof(buf)) != 0 ||
+        strstr(buf, "EDT") == NULL || strstr(buf, "gmtoff=-14400") == NULL ||
+        strstr(buf, "EST") == NULL || strstr(buf, "gmtoff=-18000") == NULL) {
+        printf("[FAIL] tztest zdump America/New_York got '%s'\n", buf);
+        return 1;
+    }
+    if (capture("/usr/bin/zdump -v -c 2024,2026 UTC", buf, sizeof(buf)) != 0 ||
+        strstr(buf, "UTC") == NULL || strstr(buf, "gmtoff=0") == NULL) {
+        printf("[FAIL] tztest zdump UTC got '%s'\n", buf);
         return 1;
     }
 

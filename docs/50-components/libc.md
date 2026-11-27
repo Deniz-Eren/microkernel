@@ -515,6 +515,6 @@ status 0 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0037`).
 `cmake/tzcode.cmake` downloads public-domain IANA `tzcode` and `tzdata` `2025b`
 during the CMake build. It compiles `zic` and `zdump` with `-DALL_STATE` as
 `ET_DYN` PIE executables linked to `libc.so`. It generates `tzselect` for
-`/bin/sh`, installs `tzdata` files into `/usr/share/zoneinfo`, and packs them
-into `boot.tar` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0039`).
+`/bin/sh`, compiles slim `TZif` zoneinfo files into `/usr/share/zoneinfo`, and
+packs them into `boot.tar` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0039`).
 ```

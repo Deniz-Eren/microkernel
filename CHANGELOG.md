@@ -49,11 +49,11 @@ a Changelog](https://keepachangelog.com).
 
 - Added `cmake/tzcode.cmake` to download and cross-compile public-domain IANA
   `tzcode` and `tzdata` `2025b` for Ring 3 (`zic` and `zdump` linked dynamically
-  to `libc.so` with `-DALL_STATE`, generated `/bin/sh` `tzselect`, and `tzdata`
-  source/table files in `/usr/share/zoneinfo` and `boot.tar`), with QEMU
-  verification of real IANA `TZif` compilation and DST transitions in
-  `tests/tztest` and CTest packaging checks in `libc.tzcode` {need::
-  SWR_LIBC_0039}.
+  to `libc.so` with `-DALL_STATE`, generated `/bin/sh` `tzselect`, and compiled
+  slim `TZif` files plus tables in `/usr/share/zoneinfo` and `boot.tar`), with
+  QEMU verification of pre-populated zoneinfo, Ring 3 `zic` compilation, DST
+  transitions in `tests/tztest`, and CTest packaging checks in `libc.tzcode`
+  {need:: SWR_LIBC_0039}.
 - Added native `/usr/bin/getent` in `bin/utils/getent.c` (linked dynamically to
   `libc.so`) for `passwd`, `group`, `hosts`, `services`, and `protocols` lookups
   and full table enumeration, `/usr/bin/getent` symlink and `/etc/nsswitch.conf`

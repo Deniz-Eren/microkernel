@@ -178,31 +178,46 @@ if(MICROKERNEL_BUILD_TZCODE)
         "tzselect=${TZSELECT_OUT}")
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS tzcode_tzselect)
 
-    # Install real IANA tzdata source and table files into sysroot and boot.tar
-    # for TZif compilation, zdump verification, and tzselect lookups.
-    set(TZDATA_INSTALL_FILES
-        etcetera
-        australasia
-        iso3166.tab
-        zone1970.tab
+    # Pre-compile real IANA tzdata2025b slim TZif files and tables into
+    # sysroot/usr/share/zoneinfo and pack them into boot.tar so zdump and
+    # tzselect work immediately on boot, plus pack etcetera and australasia
+    # sources into /boot for Ring 3 zic compilation tests.
+    set(TZDATA_ZONE_SOURCES
+        "${TZDATA_SRC}/etcetera"
+        "${TZDATA_SRC}/africa"
+        "${TZDATA_SRC}/antarctica"
+        "${TZDATA_SRC}/asia"
+        "${TZDATA_SRC}/australasia"
+        "${TZDATA_SRC}/europe"
+        "${TZDATA_SRC}/northamerica"
+        "${TZDATA_SRC}/southamerica"
+        "${TZDATA_SRC}/backward"
     )
-    set(TZDATA_SYSROOT_OUTS "")
-    foreach(tzf IN LISTS TZDATA_INSTALL_FILES)
-        set(dst "${SYSROOT_DIR}/usr/share/zoneinfo/${tzf}")
-        add_custom_command(
-            OUTPUT "${dst}"
-            COMMAND ${CMAKE_COMMAND} -E make_directory
-                    "${SYSROOT_DIR}/usr/share/zoneinfo"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${TZDATA_SRC}/${tzf}" "${dst}"
-            DEPENDS "${TZDATA_SRC}/${tzf}"
-            COMMENT "Stage 2: installing tzdata ${tzf} into sysroot"
-            VERBATIM
-        )
-        list(APPEND TZDATA_SYSROOT_OUTS "${dst}")
-        set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
-            "${tzf}=${dst}")
-    endforeach()
-    add_custom_target(tzcode_tzdata ALL DEPENDS ${TZDATA_SYSROOT_OUTS})
+    set(TZDATA_ZONEINFO_DIR "${SYSROOT_DIR}/usr/share/zoneinfo")
+    set(TZDATA_STAMP "${TZCODE_GEN}/zoneinfo.stamp")
+    add_custom_command(
+        OUTPUT "${TZDATA_STAMP}"
+        COMMAND ${CMAKE_COMMAND} -E remove_directory "${TZDATA_ZONEINFO_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${TZDATA_ZONEINFO_DIR}"
+        COMMAND /usr/sbin/zic -b slim -d "${TZDATA_ZONEINFO_DIR}"
+                ${TZDATA_ZONE_SOURCES}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${TZDATA_SRC}/iso3166.tab"
+                "${TZDATA_ZONEINFO_DIR}/iso3166.tab"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${TZDATA_SRC}/zone1970.tab"
+                "${TZDATA_ZONEINFO_DIR}/zone1970.tab"
+        COMMAND ${CMAKE_COMMAND} -E touch "${TZDATA_STAMP}"
+        DEPENDS ${TZDATA_ZONE_SOURCES}
+                "${TZDATA_SRC}/iso3166.tab"
+                "${TZDATA_SRC}/zone1970.tab"
+        COMMENT "Stage 2: compiling IANA tzdata into sysroot/usr/share/zoneinfo"
+        VERBATIM
+    )
+    add_custom_target(tzcode_tzdata ALL DEPENDS "${TZDATA_STAMP}")
+    set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+        "usr/share/zoneinfo=${TZDATA_ZONEINFO_DIR}"
+        "etcetera=${TZDATA_SRC}/etcetera"
+        "australasia=${TZDATA_SRC}/australasia")
     set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS tzcode_tzdata)
 endif()

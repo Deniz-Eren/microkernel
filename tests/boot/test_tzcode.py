@@ -50,24 +50,37 @@ class TzcodePackagingTests(unittest.TestCase):
         self.assertIn("TZDIR='/usr/share/zoneinfo'", script)
         self.assertIn("TZVERSION='2025b'", script)
 
-        for name in ("etcetera", "australasia", "iso3166.tab", "zone1970.tab"):
+        for name in (
+            "Australia/Sydney",
+            "America/New_York",
+            "Europe/London",
+            "UTC",
+        ):
+            zp = _SYSROOT / "usr" / "share" / "zoneinfo" / name
+            self.assertTrue(zp.is_file(), f"missing sysroot TZif {name}")
+            self.assertEqual(zp.read_bytes()[:4], b"TZif")
+        for name in ("iso3166.tab", "zone1970.tab"):
             self.assertTrue(
                 (_SYSROOT / "usr" / "share" / "zoneinfo" / name).is_file(),
-                f"missing sysroot zoneinfo file {name}",
+                f"missing sysroot zoneinfo table {name}",
             )
 
     def test_boot_tar_entries(self) -> None:
         self.assertTrue(_BOOT_TAR.is_file(), f"missing {_BOOT_TAR}")
         with tarfile.open(_BOOT_TAR, "r") as tf:
-            members = {Path(m.name).name for m in tf.getmembers() if m.isfile()}
+            members = {m.name for m in tf.getmembers() if m.isfile()}
         expected = {
             "zic",
             "zdump",
             "tzselect",
             "etcetera",
             "australasia",
-            "iso3166.tab",
-            "zone1970.tab",
+            "usr/share/zoneinfo/Australia/Sydney",
+            "usr/share/zoneinfo/America/New_York",
+            "usr/share/zoneinfo/Europe/London",
+            "usr/share/zoneinfo/UTC",
+            "usr/share/zoneinfo/iso3166.tab",
+            "usr/share/zoneinfo/zone1970.tab",
         }
         missing = sorted(expected - members)
         self.assertEqual(missing, [], f"missing from boot.tar: {missing}")
