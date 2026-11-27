@@ -16,10 +16,11 @@ refer to
 ## 1. Examine the serial output first
 
 `tests/test_runner.py` stops immediately when `!!! kernel exception`, `!!!
-system halted`, or `PANIC:` shows on serial. On each error or timeout, it writes
-`nonzero exits`, `still alive` PIDs, `[FAIL]` lines, and `llvm-addr2line` output
-or Ring 3 offset hints. Use `--fail-on-fail` during debug tests to stop
-immediately on the first `[FAIL]` line.
+system halted`, or `PANIC:` shows on serial, or when all non-server boot tests
+exit with missing expectations. On each error or timeout, it writes `nonzero
+exits`, `still alive` PIDs, `[FAIL]` lines, and `llvm-addr2line` output or Ring
+3 offset hints. Use `./scripts/env.sh test-fast '<regex>'` (sets
+`--fail-on-fail`) during debug tests to stop on the first `[FAIL]` line.
 
 `./scripts/build-agent.sh` writes the path to `$TEST_LOG` on error. Examine that
 output file before you change code:

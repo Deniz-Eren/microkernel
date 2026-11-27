@@ -34,10 +34,12 @@ container.
 | `./scripts/env.sh build [args]` | Incremental build of all targets |
 | `./scripts/env.sh build-code [args]` | Fast C and ISO build (skips Sphinx) |
 | `./scripts/env.sh test [args]` | Start QEMU ([cmake](../cmake/SKILL.md)) |
+| `./scripts/env.sh test-fast '<re>'` | Fast QEMU test (`--fail-on-fail`) |
 | `./scripts/env.sh next-ids` | Write next free traceability IDs |
 | `./scripts/env.sh task TSK_NNNN` | Write one task from `TASKS.md` |
 | `./scripts/env.sh check-text` | Start `check_text.py --root .` |
 | `./scripts/env.sh check-ste` | Start `tools/check_ste.py --root .` |
+| `./scripts/env.sh check-fast` | Fast format, text, STE, and unit checks |
 | `./scripts/env.sh clean` | Remove `build/` and `sysroot/` |
 | `./scripts/env.sh shell` | Interactive shell (no arguments) |
 | `./scripts/enter-dev.sh` | Same as `env.sh shell` |

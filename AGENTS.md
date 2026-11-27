@@ -18,7 +18,8 @@ Obey these rules on each task before you examine files or start commands:
   paths, `boot.tar` and VFS rules, FD startup, syscall headers, and virtual
   memory constants.
 - **Keep context small:** Use `read` with `offset` and `limit` as an alternative
-  to `bash` `cat` or `sed`. To examine one task without all of
+  to `bash` `cat` or `sed`. Do not read full large files (`ldso.c`, `proc.c`,
+  `servers/vfsserv/main.c`) in one call. To examine one task without all of
   `docs/records/TASKS.md`, start `./scripts/env.sh task TSK_NNNN`.
 - **Container commands:** Start toolchain and LLVM commands with
   `./scripts/env.sh <cmd...>` (for example `./scripts/env.sh llvm-readelf -d
@@ -26,10 +27,12 @@ Obey these rules on each task before you examine files or start commands:
   host `/tmp/...` paths to container commands. Do not use `nohup ... &` with
   `sleep`. Do not write custom Python ELF parsers.
 - **Fast iteration and pre-commit checks:** Use `./scripts/env.sh build-code`
-  for fast C and ISO builds that skip Sphinx docs. Use
+  for fast C and ISO builds (skips Sphinx docs), `./scripts/env.sh test-fast
+  '<regex>'` for fast QEMU debug tests (`--fail-on-fail`), and `./scripts/env.sh
+  check-fast` for fast format, text, STE, and symbol checks. Use
   `./scripts/formatter-agent.sh --fix` for C format (do not wrap C lines by
-  hand). Start `./scripts/env.sh next-ids` to find the next traceability IDs.
-  Start `./scripts/build-agent.sh` before each commit.
+  hand). Start `./scripts/env.sh next-ids` for traceability IDs. Start
+  `./scripts/build-agent.sh` before each commit.
 - **Debug procedure (no loops):** On a QEMU error, timeout, or incorrect output:
   (1) read [docs/skills/qemu-debug/SKILL.md](docs/skills/qemu-debug/SKILL.md),
   (2) use `llvm-addr2line` as an alternative to manual `objdump` offsets, (3)

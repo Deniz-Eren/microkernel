@@ -29,9 +29,10 @@ a Changelog](https://keepachangelog.com).
   to `libc.so` to keep `DT_SONAME` symlinks, verified with `zlibtest`,
   `openssltest`, and `sshd` in QEMU `lddtest` {need:: SWR_LIBC_0037}.
 - Added agent workflow guards and fast-stop QEMU diagnostics (`WDR_0013`).
-  `tests/test_runner.py` now stops immediately on kernel faults and halts with
-  process and `llvm-addr2line` diagnostics. `scripts/env.sh` adds `build-code`,
-  `next-ids`, `task`, `check-text`, and `check-ste` commands with argument
+  `tests/test_runner.py` now stops immediately on kernel faults, halts, and
+  completed boot suites with missing patterns, with process and `llvm-addr2line`
+  diagnostics. `scripts/env.sh` adds `build-code`, `test-fast`, `next-ids`,
+  `task`, `check-text`, `check-ste`, and `check-fast` commands with argument
   guards. `docs/00-overview/codebase-map.md` and `AGENTS.md` add compact layout
   and command references.
 - The project added the terminal runtime design for full-screen editors and

@@ -76,8 +76,9 @@ each serial line against all unmatched patterns independently and keeps a
 - **`PASS` (exit code 0):** Each pattern matches before `--timeout` expires (and
   `@@COV_COMPLETE@@` comes when `--wait-cov` is active). The harness sends
   `SIGTERM` to QEMU and writes `PASS`.
-- **Kernel fault or halt (exit code 1):** When `!!! kernel exception`, `!!!
-  system halted`, or `PANIC:` shows unexpectedly (unless `--no-fail-fast` is
+- **Kernel fault, halt, or idle suite (exit code 1):** When `!!! kernel
+  exception`, `!!! system halted`, or `PANIC:` shows unexpectedly, or all
+  non-server boot tests exit with missing patterns (unless `--no-fail-fast` is
   set), the harness stops QEMU immediately. It writes the missing patterns,
   active and nonzero-exit PIDs, `[FAIL]` lines, and `llvm-addr2line`
   diagnostics.

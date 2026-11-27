@@ -10,8 +10,9 @@
 
 # Microkernel Podman environment wrapper.
 #
-# Usage: ./scripts/env.sh <configure|build|build-code|test|run|coverage|clean|
-#                          next-ids|task|check-text|check-ste|shell|cmd...>
+# Usage: ./scripts/env.sh <configure|build|build-code|test|test-fast|run|
+#                          coverage|clean|next-ids|task|check-text|check-ste|
+#                          check-fast|shell|cmd...>
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -78,6 +79,19 @@ case "${1:-shell}" in
         done
         ensure_image
         crun python3 tests/test_runner.py --arch "$ARCH" "$@"
+        ;;
+    test-fast)
+        shift
+        if [ "$#" -lt 1 ]; then
+            echo "[env.sh] usage: ./scripts/env.sh test-fast" \
+                "'<expect-regex>' [extra test_runner args...]" >&2
+            exit 2
+        fi
+        PAT="$1"
+        shift
+        ensure_image
+        crun python3 tests/test_runner.py --arch "$ARCH" \
+            --timeout 45 --fail-on-fail --expect "$PAT" "$@"
         ;;
     run)
         shift
@@ -236,6 +250,18 @@ PY
     check-ste)
         shift
         exec python3 "$ROOT/tools/check_ste.py" --root "$ROOT" "$@"
+        ;;
+    check-fast)
+        shift
+        "$ROOT/scripts/formatter-agent.sh"
+        "$ROOT/scripts/env.sh" check-text
+        "$ROOT/scripts/env.sh" check-ste
+        if [ -d "$ROOT/build" ]; then
+            FAST_RE='^(posix\.symbol_diff|arch\.microkernel_boundary'
+            FAST_RE="${FAST_RE}|traceability\\.unit)$"
+            ensure_image
+            crun ctest --test-dir build --output-on-failure -R "$FAST_RE"
+        fi
         ;;
     shell)
         shift

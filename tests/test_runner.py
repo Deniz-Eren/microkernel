@@ -60,6 +60,20 @@ _ZOMBIE_RE = re.compile(r"pid (\d+) became zombie \(exit (-?\d+)\)")
 _RIP_RE = re.compile(r"\brip=([0-9a-fA-F]+)\b")
 _CR2_RE = re.compile(r"cr2\(fault addr\)=([0-9a-fA-F]+)")
 _FAIL_LINE_RE = re.compile(r"\[FAIL\]")
+_CORE_SERVERS = frozenset(
+    {
+        "sysproc",
+        "ttyserv",
+        "pipeserv",
+        "sockserv",
+        "vfsserv",
+        "ipcserv",
+        "rtcdrv",
+        "blkdrv",
+        "netserv",
+        "sh",
+    }
+)
 
 
 ARCH_QEMU_PROFILES = {
@@ -263,10 +277,12 @@ def main() -> int:
     crash_cr2s: list[str] = []
     tail = []
     start_ts = time.time()
+    last_activity = [start_ts]
 
     def reader():
         try:
             for line in proc.stdout:
+                last_activity[0] = time.time()
                 if decoder is not None and decoder.feed_line(line):
                     if all(matched) and (not args.wait_cov or decoder.complete):
                         success.set()
@@ -345,6 +361,24 @@ def main() -> int:
                 break
         if proc.poll() is not None:
             result = "FAIL (qemu exited early, rc=%s)" % proc.returncode
+            break
+        if (
+            not args.no_fail_fast
+            and not args.wait_cov
+            and len(spawned) >= 15
+            and "stresstest" in spawned.values()
+            and time.time() - last_activity[0] >= 2.0
+            and all(
+                pid in zombies
+                for pid, name in spawned.items()
+                if name not in _CORE_SERVERS
+            )
+        ):
+            elapsed = time.time() - start_ts
+            result = (
+                f"FAIL (all boot tests exited after {elapsed:.1f}s with "
+                "missing expectations)"
+            )
             break
         time.sleep(0.05)
 

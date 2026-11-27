@@ -34,8 +34,9 @@ those entries through two separate paths:
   names in `boot.tar`. `proc_spawn_init()` in `kernel/core/proc.c` starts all
   Ring 3 servers and test executables during automatic QEMU tests.
 - **Ring 3 VFS tree:** `servers/vfsserv/main.c` puts `boot.tar` entries in
-  `/boot`, makes `/tmp`, `/dev`, and `/mnt`, and adds `/bin` as a symlink to
-  `/boot`.
+  `/boot`, makes `/tmp`, `/dev`, `/mnt`, `/etc/ld.so.conf`, `/usr/bin/ldd`
+  (symlink to `/boot/ld.so`), `/usr/sbin/ldconfig` (symlink to
+  `/boot/ldconfig`), and adds `/bin` as a symlink to `/boot`.
 
 ```mermaid
 flowchart TD
@@ -72,7 +73,12 @@ flowchart TD
 - `ELF_DYN_BASE` (`0x400000`) is the load bias for `ET_DYN` primary executables
   (defined in `kernel/include/kernel/elf.h`).
 - `ELF_INTERP_BASE` (`0x18000000`) is the load bias for `/boot/ld.so` when it
-  loads as `PT_INTERP`.
+  loads as `PT_INTERP`. When `/boot/ld.so` starts directly as a primary binary
+  (for example `/boot/ldd`), `AT_BASE` is `0` and `ld.so` calculates its own
+  bias from `AT_PHDR`.
+- `build/libc.so` has undefined `GLOBAL` symbols `main` and
+  `__sigreturn_trampoline` (given by `crt0.o` in the primary binary). Trace
+  modes without a loaded primary binary must skip relocation (`g_trace_only`).
 - `USER_MMAP_BASE` (`0x20000000`) is the start address for `VMMap` anonymous
   allocations (defined in `kernel/core/vmm.c`).
 - `vmm_handle_page_fault()` in `kernel/core/vmm.c` handles only copy-on-write
