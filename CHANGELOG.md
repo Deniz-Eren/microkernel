@@ -22,6 +22,11 @@ a Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- Updated `./scripts/env.sh test-fast` to anchor expectation patterns to `[OK]`
+  lines automatically so test names cannot false-match `[proc] spawned` boot
+  messages, and documented Ring 3 `MAIN_STACK_TOP`/`MAIN_STACK_SIZE` (64 KiB)
+  overflow diagnostics and third-party port conventions in
+  `docs/00-overview/codebase-map.md`.
 - Updated `AGENTS.md` and `docs/00-overview/codebase-map.md` with notes on
   `./scripts/env.sh run` TTY requirements, immutable `issue8-manifest.tsv`
   handling for non-POSIX `bin/` utilities, `vfsserv` `ro_data` files, and

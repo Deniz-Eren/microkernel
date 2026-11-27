@@ -33,16 +33,17 @@ those entries through two separate paths:
   `kernel/core/proc.c` removes `/boot/` or `/bin/` prefixes and finds exact leaf
   names in `boot.tar`. `proc_spawn_init()` in `kernel/core/proc.c` starts all
   Ring 3 servers and test executables during automatic QEMU tests.
-- **Ring 3 VFS tree:** `servers/vfsserv/main.c` puts `boot.tar` entries in
-  `/boot`, makes `/tmp`, `/dev`, `/mnt`, `/etc/ld.so.conf`,
-  `/etc/nsswitch.conf`, `/usr/bin/ldd`, `/usr/bin/getent`, and
-  `/usr/sbin/ldconfig`, and adds `/bin` as a symlink to `/boot`. Set `ro_data`
-  (not `data`) on static read-only tmpfs files in `vfsserv`. `libc` `execve()`
-  resolves symlinked binaries with `readlink()` on `-ENOENT`.
+- **Ring 3 VFS tree:** `servers/vfsserv/main.c` mounts flat `boot.tar` entries
+  in `/boot` and hierarchical entries (such as `usr/share/zoneinfo/...`) from
+  `/`. It makes `/tmp`, `/dev`, `/mnt`, `/etc/ld.so.conf`, `/etc/nsswitch.conf`,
+  `/usr/bin/{ldd,getent,zdump,tzselect}`, `/usr/sbin/{ldconfig,zic}`, and `/bin`
+  as a symlink to `/boot`. Set `ro_data` (not `data`) on static read-only tmpfs
+  files in `vfsserv`. `libc` `execve()` resolves symlinked binaries with
+  `readlink()` on `-ENOENT`.
 
 ```mermaid
 flowchart TD
-    TAR["build/boot.tar (flat leaf names)"]
+    TAR["build/boot.tar (flat leaf names + usr/share/zoneinfo tree)"]
     KEXEC["kernel/core/proc.c (find_bootfs_image strips /boot/ and /bin/)"]
     VFS["servers/vfsserv/main.c (/boot, /tmp, /dev, /mnt, /bin -> /boot)"]
     SCHED["kernel/core/sched.c (pre-opens fd 0, 1, 2 as FD_KIND_CONSOLE)"]
@@ -85,6 +86,11 @@ flowchart TD
   modes without a loaded primary binary must skip relocation (`g_trace_only`).
 - `USER_MMAP_BASE` (`0x20000000`) is the start address for `VMMap` anonymous
   allocations (defined in `kernel/core/vmm.c`).
+- `MAIN_STACK_TOP` (`0x700000000000`) and `MAIN_STACK_SIZE` (`64 KiB`,
+  `0x6fffffff0000..0x700000000000`) define the Ring 3 main stack in
+  `kernel/core/proc.c`. A page fault with `cr2` just below `0x6fffffff0000` is a
+  main stack overflow. For third-party ports, use upstream heap-allocation flags
+  (such as `-DALL_STATE` in `tzcode`) as an alternative to Ring 0 stack changes.
 - `vmm_handle_page_fault()` in `kernel/core/vmm.c` handles only copy-on-write
   writes on present pages (`(err & 0x7) == 0x7`). Other Ring 3 page faults write
   `!!! kernel exception` and stop the virtual machine.
@@ -110,10 +116,13 @@ When you add a native Ring 3 utility in `bin/` or a new QEMU test in `tests/`:
    `proc_spawn_init()` in `kernel/core/proc.c`. Capture child `stdout` through
    pipes, files, or PTYs inside the Ring 3 test. Add its `[OK]` verdict regex to
    `scripts/qemu-expects.txt` and its `VER_` ID to `tests/test_runner.py`. Use
-   `./scripts/env.sh test-fast` for non-interactive QEMU debugging because
-   `./scripts/env.sh run` needs an interactive TTY.
-4. Start `./scripts/env.sh next-ids` to get the next `SWR_`, `COMP_`, and `VER_`
+   `./scripts/env.sh test-fast` for non-interactive QEMU debugging (it anchors
+   patterns to `[OK]` lines). `./scripts/env.sh run` needs an interactive TTY.
+4. For third-party CMake ports, compile through `FetchContent` and `build-code`
+   as an alternative to manual shell compiles. Run upstream script substitutions
+   (such as `tzselect.ksh`) during the build.
+5. Start `./scripts/env.sh next-ids` to get the next `SWR_`, `COMP_`, and `VER_`
    IDs before you edit `docs/20-system/`, `docs/50-components/`, and
    `docs/60-verification/`.
-5. Start `./scripts/formatter-agent.sh --fix` and `./scripts/build-agent.sh`
+6. Start `./scripts/formatter-agent.sh --fix` and `./scripts/build-agent.sh`
    before you commit.

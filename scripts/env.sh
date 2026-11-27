@@ -89,6 +89,13 @@ case "${1:-shell}" in
         fi
         PAT="$1"
         shift
+        case "$PAT" in
+            *'\[OK\]'*|*'[OK]'*)
+                ;;
+            *)
+                PAT="\\[OK\\].*${PAT}"
+                ;;
+        esac
         ensure_image
         crun python3 tests/test_runner.py --arch "$ARCH" \
             --timeout 45 --fail-on-fail --expect "$PAT" "$@"
