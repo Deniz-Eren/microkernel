@@ -2112,6 +2112,81 @@ int main(void) {
             node_destroy(bin_link);
         }
     }
+    /* /etc/ld.so.conf gives /boot/ld.so and /usr/sbin/ldconfig their
+     * library search directories. */
+    vfs_node_t *etc_dir = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, g_root);
+    if (etc_dir && dir_add_child(g_root, "etc", etc_dir) != 0) {
+        node_destroy(etc_dir);
+        etc_dir = NULL;
+    }
+    static const char k_so_conf[] = "/boot\n/lib\n/usr/lib\n";
+    size_t conf_cap = sizeof(k_so_conf);
+    vfs_node_t *so_conf = node_new(VFS_DEV_TMPFS, S_IFREG | 0644u, 1u, etc_dir);
+    if (so_conf) {
+        so_conf->data = (uint8_t *)malloc(conf_cap);
+        if (so_conf->data) {
+            memcpy(so_conf->data, k_so_conf, conf_cap);
+            so_conf->size = conf_cap - 1u;
+            so_conf->cap = conf_cap;
+            if (dir_add_child(etc_dir, "ld.so.conf", so_conf) != 0) {
+                node_destroy(so_conf);
+            }
+        } else {
+            node_destroy(so_conf);
+        }
+    }
+    /* /usr/bin/ldd and /usr/sbin/ldconfig point at the bootfs binaries. */
+    vfs_node_t *usr_dir = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, g_root);
+    if (usr_dir && dir_add_child(g_root, "usr", usr_dir) != 0) {
+        node_destroy(usr_dir);
+        usr_dir = NULL;
+    }
+    vfs_node_t *usr_bin = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_dir);
+    if (usr_bin) {
+        if (dir_add_child(usr_dir, "bin", usr_bin) != 0) {
+            node_destroy(usr_bin);
+        } else {
+            vfs_node_t *ldd_link =
+                node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, usr_bin);
+            if (ldd_link) {
+                ldd_link->data = (uint8_t *)malloc(12u);
+                if (ldd_link->data) {
+                    memcpy(ldd_link->data, "/boot/ld.so", 12u);
+                    ldd_link->size = 11u;
+                    ldd_link->cap = 12u;
+                    if (dir_add_child(usr_bin, "ldd", ldd_link) != 0) {
+                        node_destroy(ldd_link);
+                    }
+                } else {
+                    node_destroy(ldd_link);
+                }
+            }
+        }
+    }
+    vfs_node_t *usr_sbin =
+        node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_dir);
+    if (usr_sbin) {
+        if (dir_add_child(usr_dir, "sbin", usr_sbin) != 0) {
+            node_destroy(usr_sbin);
+        } else {
+            vfs_node_t *ldconfig_link =
+                node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, usr_sbin);
+            if (ldconfig_link) {
+                ldconfig_link->data = (uint8_t *)malloc(15u);
+                if (ldconfig_link->data) {
+                    memcpy(ldconfig_link->data, "/boot/ldconfig", 15u);
+                    ldconfig_link->size = 14u;
+                    ldconfig_link->cap = 15u;
+                    if (dir_add_child(usr_sbin, "ldconfig", ldconfig_link) !=
+                        0) {
+                        node_destroy(ldconfig_link);
+                    }
+                } else {
+                    node_destroy(ldconfig_link);
+                }
+            }
+        }
+    }
     mount_ext2_on_mnt();
 
     int chanid = (int)CreateChannel();

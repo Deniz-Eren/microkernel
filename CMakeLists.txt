@@ -349,6 +349,10 @@ add_custom_command(
 add_custom_target(ldso ALL DEPENDS ${LDSO_OUT})
 set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
     "ld.so=${LDSO_OUT}")
+# /usr/bin/ldd is the ld.so image itself; the bootfs entry "ldd" carries the
+# same file so execve("ldd") and execve("/boot/ldd") run the ldd trace mode.
+set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_MODULES
+    "ldd=${LDSO_OUT}")
 set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS ldso)
 
 add_subdirectory(servers/sysproc)
@@ -390,6 +394,7 @@ add_subdirectory(tests/zlibtest)
 add_subdirectory(tests/openssltest)
 add_subdirectory(tests/dlsoctest)
 add_subdirectory(tests/dynlibctest)
+add_subdirectory(tests/lddtest)
 add_subdirectory(tests/smptest)
 add_subdirectory(tests/stresstest)
 

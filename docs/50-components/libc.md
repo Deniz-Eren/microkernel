@@ -467,3 +467,27 @@ links as an `ET_DYN` PIE with `PT_INTERP=/boot/ld.so` and `DT_NEEDED`
 `libssl.so.3`, `libcrypto.so.3`, and `libc.so` ({need}`ARC_LIBC_0001`,
 {need}`SWR_LIBC_0035`).
 ```
+
+```{comp} ldd trace mode of the /boot/ld.so dynamic linker
+:id: COMP_LIBC_0035
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0036
+
+`libc/ldso/ldso.c` gives the ldd trace mode. When `argv[0]` ends in `ldd` or
+`LD_TRACE_LOADED_OBJECTS=1` is set, the loader reads `/etc/ld.so.conf`, maps
+`DT_NEEDED` libraries, writes `libname => /path (0xaddr)`, and exits without
+jumping to `AT_ENTRY` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0036`).
+```
+
+```{comp} Native /usr/sbin/ldconfig for DT_SONAME symlinks
+:id: COMP_LIBC_0036
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0037
+
+`bin/utils/ldconfig.c` gives native `/usr/sbin/ldconfig` linked to `libc.so`. It
+reads `/etc/ld.so.conf` and optional directory arguments, reads `DT_SONAME` from
+shared libraries, makes missing `<dir>/<soname>` symbolic links, and exits with
+status 0 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0037`).
+```

@@ -359,16 +359,19 @@ isolated Ring 3 address spaces across more than one CPU core:
   `<uchar.h>`.
 - **Dynamic ELF loader and sysroot libraries:** Link executables dynamically
   with `PT_INTERP=/boot/ld.so`. The freestanding Ring 3 dynamic linker reads
-  `DT_NEEDED` shared libraries from `/dev/vfs` (in `LD_LIBRARY_PATH`, then
-  `/boot`, `/lib`, and `/usr/lib`), applies `R_X86_64_*` relocations, obeys W^X,
-  and starts `DT_INIT_ARRAY` constructors. Link dynamically against shared
-  `libc.so` (soname `libc.so`, included in the boot image). Dynamic executables
-  send `dlopen`, `dlsym`, `dlclose`, and `dladdr` calls to `/boot/ld.so` through
-  weak `ldso_*` exports. Link sysroot `zlib` (`libz.a`, shared `libz.so.1` with
-  `libz.so` symlink, `<zlib.h>`) for DEFLATE and gzip compression. Link sysroot
-  OpenSSL `3.0.15` (`libcrypto.a`, `libssl.a`, shared `libcrypto.so.3` and
-  `libssl.so.3` with `libcrypto.so` and `libssl.so` symlinks, `<openssl/*.h>`)
-  for SHA-256, AES-GCM, RSA, ECDSA, Ed25519, X.509, and TLS 1.3.
+  `DT_NEEDED` shared libraries from `/dev/vfs` (in `LD_LIBRARY_PATH`,
+  `/etc/ld.so.conf`, then `/boot`, `/lib`, and `/usr/lib`), applies `R_X86_64_*`
+  relocations, obeys W^X, and starts `DT_INIT_ARRAY` constructors. Use
+  `/usr/bin/ldd` (symlink to `/boot/ld.so`) or `LD_TRACE_LOADED_OBJECTS=1` to
+  trace dependencies, and `/usr/sbin/ldconfig` to keep `DT_SONAME` symlinks.
+  Link dynamically against shared `libc.so` (soname `libc.so`, included in the
+  boot image). Dynamic executables send `dlopen`, `dlsym`, `dlclose`, and
+  `dladdr` calls to `/boot/ld.so` through weak `ldso_*` exports. Link sysroot
+  `zlib` (`libz.a`, shared `libz.so.1` with `libz.so` symlink, `<zlib.h>`) for
+  DEFLATE and gzip compression. Link sysroot OpenSSL `3.0.15` (`libcrypto.a`,
+  `libssl.a`, shared `libcrypto.so.3` and `libssl.so.3` with `libcrypto.so` and
+  `libssl.so` symlinks, `<openssl/*.h>`) for SHA-256, AES-GCM, RSA, ECDSA,
+  Ed25519, X.509, and TLS 1.3.
 
 ### For system server and driver authors
 

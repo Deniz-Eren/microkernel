@@ -470,6 +470,31 @@ include them in `boot.tar`. Ring 3 executables must link against them as
 `ET_DYN` `DT_NEEDED` dependencies of the process ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Give the ldd trace mode of /boot/ld.so
+:id: SWR_LIBC_0036
+:status: active
+:derives: SYS_LIBC_0001
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0059
+
+`/boot/ld.so` must operate in ldd trace mode when `argv[0]` ends in `ldd` or the
+environment sets `LD_TRACE_LOADED_OBJECTS=1`. It must find `DT_NEEDED` libraries
+across `/etc/ld.so.conf` and the `/boot`, `/lib`, and `/usr/lib` defaults. It
+must map each library, write `libname => /path (0xaddr)`, and exit without
+giving control to `AT_ENTRY` ({need}`SYS_LIBC_0001`).
+```
+
+```{swr} Give native /usr/sbin/ldconfig for DT_SONAME symlinks
+:id: SWR_LIBC_0037
+:status: active
+:derives: SYS_LIBC_0001
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0059
+
+The build must give native `/usr/sbin/ldconfig` linked dynamically to `libc.so`.
+It must read `/etc/ld.so.conf` and the `/boot`, `/lib`, and `/usr/lib` defaults,
+read `DT_SONAME` from each shared library, and make missing `<dir>/<soname>`
+symbolic links. It must exit with status 0 ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

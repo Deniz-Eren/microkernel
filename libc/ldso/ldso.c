@@ -18,7 +18,7 @@
 #include <sys/vm.h>
 #include <time.h>
 
-/* need:: COMP_LIBC_0031 COMP_LIBC_0032 */
+/* need:: COMP_LIBC_0031 COMP_LIBC_0032 COMP_LIBC_0035 */
 
 #define LSO_PAGE_SIZE 4096u
 #define LSO_MAX_LOAD_SEGS 16u
@@ -543,6 +543,15 @@ static void *ldso_lookup_with_deps(const ls_obj_t *obj, const char *name,
     return NULL;
 }
 
+static int ldso_ends_with(const char *s, const char *suffix) {
+    size_t sl = ldso_strlen(s);
+    size_t pl = ldso_strlen(suffix);
+    if (sl < pl) {
+        return 0;
+    }
+    return ldso_strneq(s + sl - pl, suffix, pl);
+}
+
 /*------------------------------------------------------------------------------
  * Relocation.
  *---------------------------------------------------------------------------*/
@@ -796,6 +805,20 @@ static void ldso_run_finis(ls_obj_t *obj) {
     }
 }
 
+static int g_trace_only;
+
+/* Unlink obj from g_objs when a load fails partway through. */
+static void ldso_unlink_obj(const ls_obj_t *obj) {
+    ls_obj_t **pp = &g_objs;
+    while (*pp) {
+        if (*pp == obj) {
+            *pp = obj->next;
+            return;
+        }
+        pp = &(*pp)->next;
+    }
+}
+
 /* Load one ELF shared object over /dev/vfs, then its own DT_NEEDED dependencies
  * (depth-first). The function returns the new object, or NULL with a message in
  * err when loading fails. Startup loads pass
@@ -990,6 +1013,7 @@ static ls_obj_t *ldso_load_lib(const char *name, int depth, int runtime,
         ls_obj_t *dep = ldso_load_lib(obj->strtab + di.needed_offs[i],
                                       depth + 1, runtime, err, errsz);
         if (!dep) {
+            ldso_unlink_obj(obj);
             return NULL;
         }
         if (obj->ndeps < LSO_MAX_DEPS) {
@@ -997,9 +1021,14 @@ static ls_obj_t *ldso_load_lib(const char *name, int depth, int runtime,
         }
     }
 
+    if (g_trace_only) {
+        return obj;
+    }
+
     if (di.rela_va != 0u && di.relasz > 0u &&
         ldso_apply_rela(obj, (const ls_rela_t *)(uintptr_t)(bias + di.rela_va),
                         (size_t)(di.relasz / sizeof(ls_rela_t))) != 0) {
+        ldso_unlink_obj(obj);
         const char *parts[] = {"dlopen: relocation failed for '", path, "'"};
         ldso_err_parts(err, errsz, parts, 3u);
         return NULL;
@@ -1008,6 +1037,7 @@ static ls_obj_t *ldso_load_lib(const char *name, int depth, int runtime,
         ldso_apply_rela(obj,
                         (const ls_rela_t *)(uintptr_t)(bias + di.jmprel_va),
                         (size_t)(di.pltrelsz / sizeof(ls_rela_t))) != 0) {
+        ldso_unlink_obj(obj);
         const char *parts[] = {"dlopen: relocation failed for '", path, "'"};
         ldso_err_parts(err, errsz, parts, 3u);
         return NULL;
@@ -1027,6 +1057,7 @@ static ls_obj_t *ldso_load_lib(const char *name, int depth, int runtime,
         }
         if (VMProtect((uintptr_t)(bias + segs[i].start), segs[i].len, prot) !=
             0) {
+            ldso_unlink_obj(obj);
             const char *parts[] = {"dlopen: W^X protect failed for '", path,
                                    "'"};
             ldso_err_parts(err, errsz, parts, 3u);
@@ -1034,6 +1065,269 @@ static ls_obj_t *ldso_load_lib(const char *name, int depth, int runtime,
         }
     }
     return obj;
+}
+
+/* ldd trace mode: the loader runs when argv[0] ends in "ldd" or the environment
+ * sets LD_TRACE_LOADED_OBJECTS=1. It maps the target's DT_NEEDED dependencies
+ * (transitively), reports "name => path (0xaddr)" for each library, and exits
+ * without handing control to AT_ENTRY. */
+
+#define LSO_TRACE_PRINTED_MAX 32u
+
+static ls_obj_t *g_trace_printed[LSO_TRACE_PRINTED_MAX];
+static size_t g_trace_printed_count;
+
+static void ldso_fmt_hex(char *buf, uint64_t v) {
+    static const char hex[] = "0123456789abcdef";
+    buf[0] = '0';
+    buf[1] = 'x';
+    for (int i = 15; i >= 0; i--) {
+        buf[2 + i] = hex[v & 0xFu];
+        v >>= 4;
+    }
+    buf[18] = '\0';
+}
+
+static void ldso_trace_line(const char *name, const char *path, uint64_t addr) {
+    char addr_hex[19];
+    char buf[128];
+    ldso_fmt_hex(addr_hex, addr);
+    const char *parts[6] = {name, " => ", path, " (", addr_hex, ")\n"};
+    size_t pos = 0u;
+    for (size_t i = 0u; i < 6u; i++) {
+        const char *p = parts[i];
+        while (*p != '\0' && pos + 1u < sizeof(buf)) {
+            buf[pos++] = *p++;
+        }
+    }
+    buf[pos] = '\0';
+    (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)buf, (long)ldso_strlen(buf));
+}
+
+static void ldso_trace_notfound(const char *name) {
+    char buf[128];
+    const char *parts[3] = {name, " => not found\n", ""};
+    size_t pos = 0u;
+    for (size_t i = 0u; i < 3u; i++) {
+        const char *p = parts[i];
+        while (*p != '\0' && pos + 1u < sizeof(buf)) {
+            buf[pos++] = *p++;
+        }
+    }
+    buf[pos] = '\0';
+    (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)buf, (long)ldso_strlen(buf));
+}
+
+static void ldso_trace_print(ls_obj_t *obj) {
+    for (size_t i = 0u; i < g_trace_printed_count; i++) {
+        if (g_trace_printed[i] == obj) {
+            return;
+        }
+    }
+    if (g_trace_printed_count < LSO_TRACE_PRINTED_MAX) {
+        g_trace_printed[g_trace_printed_count++] = obj;
+    }
+    ldso_trace_line(obj->name, obj->path, obj->bias);
+    for (size_t i = 0u; i < obj->ndeps; i++) {
+        ldso_trace_print(obj->deps[i]);
+    }
+}
+
+/* Read /etc/ld.so.conf and append each listed directory to the search path
+ * (before the built-in default directories). A missing or unreadable file
+ * leaves the search paths unchanged. */
+static void ldso_load_so_conf(void) {
+    long fd = ldso_vfs_open("/etc/ld.so.conf");
+    if (fd < 0) {
+        return;
+    }
+    long fsz = ldso_vfs_size((uint32_t)fd);
+    if (fsz < 0 || fsz > 4096u) {
+        ldso_vfs_close((uint32_t)fd);
+        return;
+    }
+    uint8_t *buf = ldso_alloc((size_t)fsz + 1u);
+    if (ldso_vfs_read((uint32_t)fd, buf, (size_t)fsz) != fsz) {
+        ldso_vfs_close((uint32_t)fd);
+        return;
+    }
+    ldso_vfs_close((uint32_t)fd);
+    buf[fsz] = '\0';
+    char *line = (char *)buf;
+    while (*line != '\0' && g_path_dir_count < LSO_MAX_PATH_DIRS) {
+        while (*line == ' ' || *line == '\t') {
+            line++;
+        }
+        const char *start = line;
+        while (*line != '\0' && *line != '\n' && *line != '\r') {
+            line++;
+        }
+        size_t len = (size_t)(line - start);
+        while (len > 0u &&
+               (start[len - 1u] == ' ' || start[len - 1u] == '\t')) {
+            len--;
+        }
+        if (len > 0u && start[0] != '#' && len < LSO_NAME_MAX) {
+            int dup = 0;
+            for (size_t i = 0u; i < g_path_dir_count; i++) {
+                if (g_path_dir_len[i] == len &&
+                    ldso_strneq(g_path_dirs[i], start, len)) {
+                    dup = 1;
+                    break;
+                }
+            }
+            if (!dup) {
+                g_path_dirs[g_path_dir_count] = (char *)start;
+                g_path_dir_len[g_path_dir_count] = len;
+                g_path_dir_count++;
+            }
+        }
+        while (*line == '\r' || *line == '\n') {
+            line++;
+        }
+    }
+}
+
+/* Convert a virtual address inside an ELF file image to a file offset using
+ * its PT_LOAD program headers. Return 1 on success, 0 if not mapped. */
+static int ldso_vaddr_to_off(const ls_phdr_t *ph, uint16_t phnum, uint64_t va,
+                             uint64_t fsz, uint64_t *off_out) {
+    for (uint16_t i = 0u; i < phnum; i++) {
+        if (ph[i].p_type != PT_LOAD || ph[i].p_filesz == 0u) {
+            continue;
+        }
+        if (va >= ph[i].p_vaddr && va < ph[i].p_vaddr + ph[i].p_filesz) {
+            uint64_t off = ph[i].p_offset + (va - ph[i].p_vaddr);
+            if (off < fsz) {
+                *off_out = off;
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+static void ldso_trace_needed(const struct ls_dyn_info *di, const char *strtab,
+                              const char *target) __attribute__((noreturn));
+
+static void ldso_trace_needed(const struct ls_dyn_info *di, const char *strtab,
+                              const char *target) {
+    char err[LSO_ERR_MAX];
+    g_trace_only = 1;
+    int missing = 0;
+    for (size_t i = 0u; i < di->n_needed; i++) {
+        if ((size_t)di->needed_offs[i] >= di->strsz) {
+            const char *parts[] = {"ldd: invalid DT_NEEDED offset in '", target,
+                                   "'"};
+            ldso_err_parts(err, sizeof(err), parts, 3u);
+            ldso_exit(1);
+        }
+        const char *name = strtab + di->needed_offs[i];
+        ls_obj_t *obj = ldso_load_lib(name, 0, 0, err, sizeof(err));
+        if (!obj) {
+            ldso_trace_notfound(name);
+            missing = 1;
+            continue;
+        }
+        ldso_trace_print(obj);
+    }
+    ldso_exit(missing ? 1 : 0);
+}
+
+static void ldso_trace(const char *target) __attribute__((noreturn));
+
+static void ldso_trace(const char *target) {
+    char err[LSO_ERR_MAX];
+    long fd = ldso_vfs_open(target);
+    if (fd < 0) {
+        const char *parts[] = {"ldd: open '", target, "' failed"};
+        ldso_err_parts(err, sizeof(err), parts, 3u);
+        ldso_exit(1);
+    }
+    long fsz = ldso_vfs_size((uint32_t)fd);
+    if (fsz < (long)sizeof(ls_ehdr_t) || fsz > (long)LSO_MAX_FILE) {
+        ldso_vfs_close((uint32_t)fd);
+        const char *parts[] = {"ldd: invalid ELF size for '", target, "'"};
+        ldso_err_parts(err, sizeof(err), parts, 3u);
+        ldso_exit(1);
+    }
+    long map_len = ldso_page_up((uintptr_t)fsz);
+    long fva = VMMap(0, (size_t)map_len, VM_PROT_READ | VM_PROT_WRITE,
+                     VM_MAP_PRIVATE | VM_MAP_ANON);
+    if (fva < 0) {
+        ldso_vfs_close((uint32_t)fd);
+        const char *parts[] = {"ldd: mapping '", target, "' failed"};
+        ldso_err_parts(err, sizeof(err), parts, 3u);
+        ldso_exit(1);
+    }
+    uint8_t *fbuf = (uint8_t *)(uintptr_t)fva;
+    if (ldso_vfs_read((uint32_t)fd, fbuf, (size_t)fsz) != fsz) {
+        ldso_vfs_close((uint32_t)fd);
+        VMUnmap((uintptr_t)fva, (size_t)map_len);
+        const char *parts[] = {"ldd: read '", target, "' failed"};
+        ldso_err_parts(err, sizeof(err), parts, 3u);
+        ldso_exit(1);
+    }
+    ldso_vfs_close((uint32_t)fd);
+
+    const ls_ehdr_t *eh = (const ls_ehdr_t *)fbuf;
+    if (eh->e_ident[EI_MAG0] != 0x7Fu || eh->e_ident[EI_MAG1] != 'E' ||
+        eh->e_ident[EI_MAG2] != 'L' || eh->e_ident[EI_MAG3] != 'F' ||
+        eh->e_ident[EI_CLASS] != ELFCLASS64 ||
+        eh->e_ident[EI_DATA] != ELFDATA2LSB ||
+        eh->e_phoff + (uint64_t)eh->e_phnum * sizeof(ls_phdr_t) >
+            (uint64_t)fsz) {
+        VMUnmap((uintptr_t)fva, (size_t)map_len);
+        const char *parts[] = {"ldd: '", target, "' is not a valid ELF"};
+        ldso_err_parts(err, sizeof(err), parts, 3u);
+        ldso_exit(1);
+    }
+    const ls_phdr_t *ph = (const ls_phdr_t *)(fbuf + eh->e_phoff);
+    uint64_t dyn_off = 0u;
+    for (uint16_t i = 0u; i < eh->e_phnum; i++) {
+        if (ph[i].p_type == PT_DYNAMIC) {
+            dyn_off = ph[i].p_offset;
+        }
+    }
+    if (dyn_off == 0u || dyn_off + sizeof(ls_dyn_t) > (uint64_t)fsz) {
+        VMUnmap((uintptr_t)fva, (size_t)map_len);
+        ldso_exit(0);
+    }
+    const ls_dyn_t *dyn = (const ls_dyn_t *)(uintptr_t)(fbuf + dyn_off);
+    struct ls_dyn_info di = {0};
+    ldso_parse_dynamic(dyn, &di);
+    uint64_t strtab_off = 0u;
+    if (di.strtab_va == 0u || di.strsz == 0u ||
+        !ldso_vaddr_to_off(ph, eh->e_phnum, di.strtab_va, (uint64_t)fsz,
+                           &strtab_off) ||
+        strtab_off + di.strsz > (uint64_t)fsz) {
+        VMUnmap((uintptr_t)fva, (size_t)map_len);
+        const char *parts[] = {"ldd: '", target, "' has no dynamic table"};
+        ldso_err_parts(err, sizeof(err), parts, 3u);
+        ldso_exit(1);
+    }
+    const char *strtab = (const char *)(uintptr_t)(fbuf + strtab_off);
+    g_trace_only = 1;
+    int missing = 0;
+    for (size_t i = 0u; i < di.n_needed; i++) {
+        if ((size_t)di.needed_offs[i] >= di.strsz) {
+            VMUnmap((uintptr_t)fva, (size_t)map_len);
+            const char *parts[] = {"ldd: invalid DT_NEEDED offset in '", target,
+                                   "'"};
+            ldso_err_parts(err, sizeof(err), parts, 3u);
+            ldso_exit(1);
+        }
+        const char *name = strtab + di.needed_offs[i];
+        ls_obj_t *obj = ldso_load_lib(name, 0, 0, err, sizeof(err));
+        if (!obj) {
+            ldso_trace_notfound(name);
+            missing = 1;
+            continue;
+        }
+        ldso_trace_print(obj);
+    }
+    VMUnmap((uintptr_t)fva, (size_t)map_len);
+    ldso_exit(missing ? 1 : 0);
 }
 
 /* Locate the main executable load bias from AT_PHDR: prefer the PT_PHDR
@@ -1296,19 +1590,31 @@ void ldso_main(long *stack) {
             break;
         }
     }
-    if (at_base == 0u || at_entry == 0u || at_phdr == 0u ||
-        at_phent != sizeof(ls_phdr_t) || at_phnum == 0u) {
+    if (at_entry == 0u || at_phdr == 0u || at_phent != sizeof(ls_phdr_t) ||
+        at_phnum == 0u) {
         ldso_exit(LSO_EXIT_AUXV);
     }
 
-    /* Self-relocate from the interpreter's own program headers. */
-    const ls_ehdr_t *self_eh = (const ls_ehdr_t *)(uintptr_t)at_base;
-    const ls_phdr_t *self_ph =
-        (const ls_phdr_t *)(uintptr_t)(at_base + self_eh->e_phoff);
+    /* Self-relocate from ld.so's own program headers. As the interpreter the
+     * self base is at_base. When ld.so is the main executable (no interpreter
+     * was loaded, so at_base == 0, which only happens in ldd mode) the self
+     * base is the main executable's base. */
+    int self_is_main = (at_base == 0u);
+    uint64_t self_base = at_base;
+    const ls_phdr_t *self_ph = NULL;
+    const ls_ehdr_t *self_eh = NULL;
+    if (self_is_main) {
+        self_ph = (const ls_phdr_t *)(uintptr_t)at_phdr;
+        self_base = ldso_main_bias(at_phdr, self_ph, at_phnum);
+    } else {
+        self_eh = (const ls_ehdr_t *)(uintptr_t)at_base;
+        self_ph = (const ls_phdr_t *)(uintptr_t)(at_base + self_eh->e_phoff);
+    }
+    uint64_t self_phnum = self_is_main ? at_phnum : self_eh->e_phnum;
     uint64_t self_dyn_va = 0u;
     uint64_t self_min_va = (uint64_t)-1;
     uint64_t self_max_va = 0u;
-    for (uint64_t i = 0u; i < self_eh->e_phnum; i++) {
+    for (uint64_t i = 0u; i < self_phnum; i++) {
         if (self_ph[i].p_type == PT_DYNAMIC) {
             self_dyn_va = self_ph[i].p_vaddr;
         }
@@ -1328,28 +1634,29 @@ void ldso_main(long *stack) {
         ldso_exit(LSO_EXIT_AUXV);
     }
     ls_obj_t self = {0};
-    self.bias = at_base;
-    self.map_va = (uintptr_t)(at_base + self_min_va);
+    self.bias = self_base;
+    self.map_va = (uintptr_t)(self_base + self_min_va);
     self.map_size = (size_t)(self_max_va - self_min_va);
     ldso_copy_name(self.name, sizeof(self.name), "ld.so");
     const ls_dyn_t *self_dyn =
-        (const ls_dyn_t *)(uintptr_t)(at_base + self_dyn_va);
+        (const ls_dyn_t *)(uintptr_t)(self_base + self_dyn_va);
     struct ls_dyn_info sdi = {0};
     ldso_parse_dynamic(self_dyn, &sdi);
     if (sdi.strtab_va != 0u && sdi.symtab_va != 0u) {
-        self.strtab = (const char *)(uintptr_t)(at_base + sdi.strtab_va);
+        self.strtab = (const char *)(uintptr_t)(self_base + sdi.strtab_va);
         self.strsz = sdi.strsz;
-        self.symtab = (const ls_sym_t *)(uintptr_t)(at_base + sdi.symtab_va);
+        self.symtab = (const ls_sym_t *)(uintptr_t)(self_base + sdi.symtab_va);
         self.nsyms =
-            ldso_count_syms(sdi.hash_va ? at_base + sdi.hash_va : 0,
-                            sdi.gnu_hash_va ? at_base + sdi.gnu_hash_va : 0);
+            ldso_count_syms(sdi.hash_va ? self_base + sdi.hash_va : 0,
+                            sdi.gnu_hash_va ? self_base + sdi.gnu_hash_va : 0);
         if (ldso_apply_rela(
-                &self, (const ls_rela_t *)(uintptr_t)(at_base + sdi.rela_va),
+                &self, (const ls_rela_t *)(uintptr_t)(self_base + sdi.rela_va),
                 (size_t)(sdi.relasz / sizeof(ls_rela_t))) != 0) {
             ldso_exit(LSO_EXIT_RELOC);
         }
         if (ldso_apply_rela(
-                &self, (const ls_rela_t *)(uintptr_t)(at_base + sdi.jmprel_va),
+                &self,
+                (const ls_rela_t *)(uintptr_t)(self_base + sdi.jmprel_va),
                 (size_t)(sdi.pltrelsz / sizeof(ls_rela_t))) != 0) {
             ldso_exit(LSO_EXIT_RELOC);
         }
@@ -1407,8 +1714,32 @@ void ldso_main(long *stack) {
         }
     }
 
-    /* Parse the main executable and load its DT_NEEDED libraries. */
+    /* Connect to the VFS and load the /etc/ld.so.conf search directories. */
     ldso_vfs_connect();
+    ldso_load_so_conf();
+
+    /* Direct ldd invocation (ld.so executed as the main binary): trace the
+     * target ELF path in argv[1] and exit without running any code. */
+    int trace = self_is_main;
+    if (!trace && argv && argv[0] && ldso_ends_with(argv[0], "ldd")) {
+        trace = 1;
+    }
+    if (!trace) {
+        for (char **v = envp; *v; v++) {
+            if (ldso_strneq(*v, "LD_TRACE_LOADED_OBJECTS=1", 25u) &&
+                (*v)[25] == '\0') {
+                trace = 1;
+                break;
+            }
+        }
+    }
+    if (self_is_main) {
+        const char *target =
+            (argc > 1 && argv && argv[1] && argv[1][0] != '\0') ? argv[1] : "";
+        ldso_trace(target);
+    }
+
+    /* Parse the main executable and load its DT_NEEDED libraries. */
     const ls_phdr_t *main_ph = (const ls_phdr_t *)(uintptr_t)at_phdr;
     g_main.bias = ldso_main_bias(at_phdr, main_ph, at_phnum);
     uint64_t main_dyn_va = 0u;
@@ -1453,6 +1784,11 @@ void ldso_main(long *stack) {
     g_main.nsyms =
         ldso_count_syms(mdi.hash_va ? g_main.bias + mdi.hash_va : 0,
                         mdi.gnu_hash_va ? g_main.bias + mdi.gnu_hash_va : 0);
+
+    if (trace) {
+        ldso_trace_needed(&mdi, g_main.strtab,
+                          (argc > 0 && argv[0]) ? argv[0] : "main");
+    }
 
     /* A dynamic executable that depends on libc.so runs its DT_INIT and
      * DT_INIT_ARRAY inside __libc_start_main after libc TLS setup, matching the

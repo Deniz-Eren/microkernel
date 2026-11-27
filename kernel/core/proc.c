@@ -1810,6 +1810,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "zlibtest", 95, 0);
     /* Ring 3 sysroot OpenSSL (libcrypto/libssl) crypto and TLS 1.3 test. */
     spawn_image(tar_phys, tar_size, "openssltest", 95, 0);
+    /* /boot/ld.so ldd trace mode and /usr/sbin/ldconfig symlink test. */
+    spawn_image(tar_phys, tar_size, "lddtest", 95, 0);
     /* Multi-core SMP concurrency (parallelism, futex, PMM/VMM/COW, IPC) test.
      */
     spawn_image(tar_phys, tar_size, "smptest", 94, 0);

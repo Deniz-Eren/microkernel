@@ -99,7 +99,8 @@ keeps `aio_error`, `aio_return`, and `aio_suspend` async-signal-safe
 
 `servers/vfsserv/main.c` records `/dev/vfs`, gives read-only `boot.tar` entries
 at `/boot`, and controls writable `tmpfs` files, directories, open file offsets,
-and `PULSE_CODE_FD_CLOSE` slot removal ({need}`ICD_IPC_0007`,
+and `PULSE_CODE_FD_CLOSE` slot removal. It gives `/etc/ld.so.conf` and the
+`/usr/bin/ldd` and `/usr/sbin/ldconfig` symbolic links ({need}`ICD_IPC_0007`,
 {need}`SWR_IPC_0007`).
 ```
 

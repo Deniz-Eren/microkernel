@@ -58,8 +58,10 @@ SH_BUILTIN_UTILITIES: tuple[str, ...] = (
     "wait",
 )
 
-# Intentional non-POSIX Ring 3 utilities built in bin/ (see ADR_0052, ADR_0054).
+# Intentional non-POSIX Ring 3 utilities built in bin/ (see ADR_0052, ADR_0054,
+# WDR_0012).
 NON_POSIX_EXTENSION_UTILITIES: tuple[str, ...] = (
+    "ldconfig",
     "nc",
     "ping",
     "sshd-setup",

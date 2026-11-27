@@ -22,6 +22,12 @@ a Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Added native `ldd` trace mode to `/boot/ld.so` (`argv[0]` ending in `ldd` or
+  `LD_TRACE_LOADED_OBJECTS=1`) with `/etc/ld.so.conf` search and `/usr/bin/ldd`
+  symlink {need:: SWR_LIBC_0036}.
+- Added native `/usr/sbin/ldconfig` in `bin/utils/ldconfig.c` linked dynamically
+  to `libc.so` to keep `DT_SONAME` symlinks, verified with `zlibtest`,
+  `openssltest`, and `sshd` in QEMU `lddtest` {need:: SWR_LIBC_0037}.
 - Added agent workflow guards and fast-stop QEMU diagnostics (`WDR_0013`).
   `tests/test_runner.py` now stops immediately on kernel faults and halts with
   process and `llvm-addr2line` diagnostics. `scripts/env.sh` adds `build-code`,

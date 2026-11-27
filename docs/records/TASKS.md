@@ -21,23 +21,6 @@ connects to the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0075 — Add native ldd in /boot/ld.so and ldconfig in bin/
-
-```{task} Add native ldd in /boot/ld.so and ldconfig in bin/
-:id: TSK_0075
-:status: open
-:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0002, SYS_LIBC_0001
-
-Change `/boot/ld.so` to find `argv[0]` values that end in `ldd` or
-`LD_TRACE_LOADED_OBJECTS=1`. Find `DT_NEEDED` dependencies across
-`/etc/ld.so.conf` and the standard library paths. Write `libname => /path
-(0xaddr)` and do not give control to `_start`. Install `/usr/bin/ldd` as a
-symlink to `/boot/ld.so`. Add native `/usr/sbin/ldconfig` in `bin/`, linked
-dynamically to `libc.so`, to keep `DT_SONAME` symlinks. Make sure that
-`ldconfig` exits without errors for build scripts. Do tests with `zlibtest`,
-`openssltest`, and `sshd` in QEMU ({need}`WDR_0012`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0076 — Add getent and internal C.UTF-8 locale operation
 
 ```{task} Add getent and internal C.UTF-8 locale operation

@@ -492,3 +492,30 @@ interpreter loads both shared libraries from the boot image and resolves their
 RSA-2048, ECDSA P-256, Ed25519, X.509 certificates, and a TLS 1.3 handshake on
 memory BIO pairs ({need}`SWR_LIBC_0035`).
 ```
+
+```{ver} Test of the ldd trace mode of /boot/ld.so in QEMU
+:id: VER_LIBC_0036
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0036
+
+The QEMU test harness starts `lddtest` (`tests/lddtest/test_ldd.c`). This test
+does a check of the `/usr/bin/ldd` symlink and starts `/boot/ldd` on
+`/boot/zlibtest`, `/boot/openssltest`, and `/boot/sshd`. It also starts
+`/boot/zlibtest` with `LD_TRACE_LOADED_OBJECTS=1` and makes sure that the loader
+writes `DT_NEEDED` libraries and exits 0 without starting `main`
+({need}`SWR_LIBC_0036`).
+```
+
+```{ver} Test of native /usr/sbin/ldconfig in QEMU
+:id: VER_LIBC_0037
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0037
+
+The QEMU test harness starts `lddtest` (`tests/lddtest/test_ldd.c`). This test
+does a check of `/usr/sbin/ldconfig` and starts `/boot/ldconfig` on
+`/etc/ld.so.conf` defaults and a temporary directory. It makes sure that
+`ldconfig` reads `DT_SONAME`, makes the missing symbolic link, and exits 0
+({need}`SWR_LIBC_0037`).
+```

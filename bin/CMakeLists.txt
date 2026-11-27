@@ -113,6 +113,7 @@ microkernel_add_user_dynamic_executable(
     bc/eval.c
 )
 microkernel_add_user_dynamic_executable(m4 utils/m4.c)
+microkernel_add_user_dynamic_executable(ldconfig utils/ldconfig.c)
 microkernel_add_user_dynamic_executable(uuencode utils/uuencode.c)
 microkernel_add_user_dynamic_executable(uudecode utils/uudecode.c)
 microkernel_add_user_dynamic_executable(logger utils/logger.c)
