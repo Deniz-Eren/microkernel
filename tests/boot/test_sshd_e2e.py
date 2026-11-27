@@ -294,6 +294,7 @@ class SshdEndToEndTests(unittest.TestCase):
                         "PubkeyAcceptedAlgorithms=ssh-ed25519",
                         "root@127.0.0.1",
                         "/boot/uname -s && /boot/id -un && "
+                        "/boot/ldd /boot/sshd && "
                         "/boot/cat >> /mnt/root/.ssh/authorized_keys && "
                         "/boot/chmod 600 /mnt/root/.ssh/authorized_keys",
                     ],
@@ -311,6 +312,10 @@ class SshdEndToEndTests(unittest.TestCase):
                 )
                 self.assertIn("Microkernel", r_ed.stdout)
                 self.assertIn("root", r_ed.stdout)
+                self.assertIn(
+                    "libcrypto.so.3 => /boot/libcrypto.so.3 (0x", r_ed.stdout
+                )
+                self.assertIn("libc.so => /boot/libc.so (0x", r_ed.stdout)
 
                 # 2. RSA host + client key auth with OpenSSL AES-128-GCM cipher.
                 r_rsa = subprocess.run(
@@ -459,7 +464,8 @@ class SshdEndToEndTests(unittest.TestCase):
                     [
                         (
                             b"$ ",
-                            b"/boot/tty && /boot/stty -a >/dev/null && exit\n",
+                            b"/boot/tty && /boot/ldd /boot/sshd && "
+                            b"/boot/stty -a >/dev/null && exit\n",
                         )
                     ],
                     timeout=45.0,
@@ -472,6 +478,9 @@ class SshdEndToEndTests(unittest.TestCase):
                     f"serial:\n{serial_buf.decode(errors='replace')}",
                 )
                 self.assertIn(b"/dev/pts/", out_pty)
+                self.assertIn(
+                    b"libcrypto.so.3 => /boot/libcrypto.so.3 (0x", out_pty
+                )
             finally:
                 proc.terminate()
                 try:

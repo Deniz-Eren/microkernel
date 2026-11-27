@@ -31,6 +31,15 @@ _ADR_DIR = _ROOT / "docs" / "30-architecture" / "adr"
 _SYS_RE = re.compile(r"^#define\s+(SYS_[A-Z0-9_]+)\s+(\d+)\b", re.MULTILINE)
 _FD_STRUCT_RE = re.compile(r"struct\s+__k_fd_entry\s*\{([^}]*)\};", re.DOTALL)
 _FIELD_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^\]]*\])?\s*;")
+_DEBUG_LOG_CALL_RE = re.compile(r"\bSYS_DEBUG_LOG\b")
+_SYS_DEBUG_LOG_ALLOWED = frozenset(
+    {
+        "libc/include/sys/microkernel.h",
+        "libc/ldso/ldso.c",
+        "libc/src/syslog.c",
+        "libc/src/tty.c",
+    }
+)
 
 
 class MicrokernelBoundaryTests(unittest.TestCase):
@@ -120,6 +129,35 @@ class MicrokernelBoundaryTests(unittest.TestCase):
             "struct __k_fd_entry drifted from minimal Ring 0 FD dispatch "
             f"fields ({allowed}): got {fields}. Keep paths and server state "
             "in Ring 3 per CNV_0007.",
+        )
+
+    def test_sys_debug_log_restricted_to_fallbacks(self) -> None:
+        violations: list[str] = []
+        for sub in ("bin", "servers", "libc"):
+            for path in sorted((_ROOT / sub).rglob("*")):
+                if path.suffix not in (".c", ".h") or not path.is_file():
+                    continue
+                rel = path.relative_to(_ROOT).as_posix()
+                text = path.read_text(encoding="utf-8", errors="ignore")
+                if not _DEBUG_LOG_CALL_RE.search(text):
+                    continue
+                if rel not in _SYS_DEBUG_LOG_ALLOWED:
+                    violations.append(rel)
+                elif rel == "libc/ldso/ldso.c":
+                    # Only the fatal fallback inside ldso_exit may call
+                    # SYS_DEBUG_LOG; normal ldd output must use fd 1/fd 2.
+                    calls = re.findall(r"__sys2\s*\(\s*SYS_DEBUG_LOG\b", text)
+                    self.assertLessEqual(
+                        len(calls),
+                        1,
+                        "libc/ldso/ldso.c has more than one SYS_DEBUG_LOG "
+                        "call; route ldd output through ldso_fd_write(1/2).",
+                    )
+        self.assertEqual(
+            violations,
+            [],
+            "User-space files must write to fd 1/fd 2 (stdout/stderr), not "
+            f"SYS_DEBUG_LOG directly: {violations}",
         )
 
 

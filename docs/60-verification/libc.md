@@ -500,11 +500,11 @@ memory BIO pairs ({need}`SWR_LIBC_0035`).
 :verifies: SWR_LIBC_0036
 
 The QEMU test harness starts `lddtest` (`tests/lddtest/test_ldd.c`). This test
-does a check of the `/usr/bin/ldd` symlink and starts `/boot/ldd` on
-`/boot/zlibtest`, `/boot/openssltest`, and `/boot/sshd`. It also starts
-`/boot/zlibtest` with `LD_TRACE_LOADED_OBJECTS=1` and makes sure that the loader
-writes `DT_NEEDED` libraries and exits 0 without starting `main`
-({need}`SWR_LIBC_0036`).
+does a check of the `/usr/bin/ldd` symlink and captures `/boot/ldd` output over
+pipes, VFS files, and a PTY for `/boot/zlibtest`, `/boot/openssltest`, and
+`/boot/sshd`. It also starts `/boot/zlibtest` with `LD_TRACE_LOADED_OBJECTS=1`
+and makes sure that the loader writes `DT_NEEDED` libraries to `fd 1` and exits
+0 without starting `main` ({need}`SWR_LIBC_0036`).
 ```
 
 ```{ver} Test of native /usr/sbin/ldconfig in QEMU

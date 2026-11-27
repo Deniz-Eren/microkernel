@@ -20,6 +20,16 @@ a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Routed `/boot/ld.so` `ldd` trace output and error diagnostics through generic
+  `fd 1`/`fd 2` IPC dispatch (console, PTY, pipe, and VFS files) as an
+  alternative to hardcoded `SYS_DEBUG_LOG`, so `ldd` output shows in SSH PTYs,
+  non-interactive SSH commands, shell pipes, and file redirection. Verified via
+  pipe, file, and PTY capture in `lddtest`, real SSH exec and PTY tests in
+  `ipc.sshd_e2e`, and a static `SYS_DEBUG_LOG` guard in
+  `arch.microkernel_boundary`.
+
 ### Added
 
 - Added native `ldd` trace mode to `/boot/ld.so` (`argv[0]` ending in `ldd` or

@@ -12,8 +12,10 @@
 #include <stdint.h>
 #include <dlfcn.h>
 #include <sys/errno.h>
+#include <sys/fd.h>
 #include <sys/ipc.h>
 #include <sys/microkernel.h>
+#include <sys/tty.h>
 #include <sys/vfs.h>
 #include <sys/vm.h>
 #include <time.h>
@@ -182,6 +184,9 @@ static ls_obj_t *g_objs;
 static ls_obj_t g_main;
 static ls_obj_t g_self; /* the interpreter itself, searched last */
 static int g_vfs_conn = -1;
+static uint32_t g_tty_srv_pid;
+static uint32_t g_tty_srv_chan;
+static int g_tty_conn = -1;
 static const char *g_path_dirs[LSO_MAX_PATH_DIRS];
 static size_t g_path_dir_len[LSO_MAX_PATH_DIRS];
 static size_t g_path_dir_count;
@@ -227,12 +232,18 @@ static void ldso_diag_append(const char *detail) {
     g_diag[pos] = '\0';
 }
 
+static int ldso_fd_write(int fd, const char *buf, size_t n);
+
 static void ldso_exit(int code) __attribute__((noreturn));
 
 static void ldso_exit(int code) {
     if (g_diag[0] != '\0') {
-        (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)g_diag,
-                     (long)ldso_diag_len());
+        size_t len = ldso_diag_len();
+        if (ldso_fd_write(2, g_diag, len) < 0) {
+            (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)g_diag, (long)len);
+        } else if (g_diag[len - 1u] != '\n') {
+            (void)ldso_fd_write(2, "\n", 1u);
+        }
     }
     __sys1(SYS_PROC_EXIT, code);
     for (;;) {
@@ -441,6 +452,155 @@ static void ldso_vfs_close(uint32_t handle) {
     req.op = VFS_OP_CLOSE;
     req.handle = handle;
     (void)ldso_vfs_rpc(&req, &rep);
+}
+
+/* Query sysproc once for /dev/tty so ldso_fd_write can distinguish PTY server
+ * handles from pipe server handles without opening an unused tty connection. */
+static void ldso_tty_resolve(void) {
+    if (g_tty_srv_pid != 0u && g_tty_srv_chan != 0u) {
+        return;
+    }
+    long ns = OpenConnection(1, 1);
+    if (ns < 0) {
+        return;
+    }
+    name_msg_t q = {0};
+    q.type = NAME_MSG_QUERY;
+    ldso_copy_name(q.path, sizeof(q.path), "/dev/tty");
+    name_reply_t rep = {0};
+    long r = SendMsg((int)ns, &q, sizeof(q), &rep, sizeof(rep));
+    CloseConnection((int)ns);
+    if (r >= 0 && rep.err == 0 && rep.pid > 0 && rep.chanid > 0) {
+        g_tty_srv_pid = (uint32_t)rep.pid;
+        g_tty_srv_chan = (uint32_t)rep.chanid;
+    }
+}
+
+static int ldso_tty_connect(void) {
+    if (g_tty_conn >= 0) {
+        return g_tty_conn;
+    }
+    ldso_tty_resolve();
+    if (g_tty_srv_pid == 0u || g_tty_srv_chan == 0u) {
+        return -1;
+    }
+    long conn = OpenConnection(g_tty_srv_pid, g_tty_srv_chan);
+    if (conn < 0) {
+        return -1;
+    }
+    g_tty_conn = (int)conn;
+    return g_tty_conn;
+}
+
+static int ldso_tty_write(uint32_t handle, uint32_t flags, const char *buf,
+                          size_t n) {
+    int conn = ldso_tty_connect();
+    if (conn < 0) {
+        return -1;
+    }
+    size_t sent = 0u;
+    while (sent < n) {
+        size_t chunk = n - sent > TTY_DATA_MAX ? TTY_DATA_MAX : n - sent;
+        tty_req_t req = {0};
+        tty_rep_t rep = {0};
+        req.op = TTY_OP_WRITE;
+        req.handle = handle;
+        req.flags = flags;
+        req.len = (uint32_t)chunk;
+        for (size_t i = 0u; i < chunk; i++) {
+            req.u.data[i] = (uint8_t)buf[sent + i];
+        }
+        long r = SendMsg(conn, &req, sizeof(req), &rep, sizeof(rep));
+        if (r < 0 || rep.err < 0) {
+            return -1;
+        }
+        if (rep.len == 0u) {
+            break;
+        }
+        sent += rep.len;
+    }
+    return 0;
+}
+
+/* Write bytes to an open file descriptor generically across console/TTY,
+ * PTY, pipe, and VFS file descriptors (mirroring libc __libc_fd_write). */
+static int ldso_fd_write(int fd, const char *buf, size_t n) {
+    if (fd < 0 || !buf) {
+        return -1;
+    }
+    if (n == 0u) {
+        return 0;
+    }
+    struct __k_fd_entry e = {0};
+    if (__sys5(SYS_FD_OP, FD_OP_GET, fd, (long)(uintptr_t)&e, 0, 0) < 0) {
+        return -1;
+    }
+    if (e.kind == FD_KIND_CONSOLE || e.kind == FD_KIND_TTY) {
+        return ldso_tty_write(0u, e.status_flags, buf, n);
+    }
+    if (e.kind == FD_KIND_VFS) {
+        if (g_vfs_conn < 0) {
+            return -1;
+        }
+        size_t sent = 0u;
+        while (sent < n) {
+            size_t chunk = n - sent > VFS_DATA_MAX ? VFS_DATA_MAX : n - sent;
+            vfs_req_t req = {0};
+            vfs_rep_t rep = {0};
+            req.op = VFS_OP_WRITE;
+            req.handle = e.srv_handle;
+            req.flags = e.status_flags;
+            req.len = (uint32_t)chunk;
+            for (size_t i = 0u; i < chunk; i++) {
+                req.u.data[i] = (uint8_t)buf[sent + i];
+            }
+            if (ldso_vfs_rpc(&req, &rep) < 0) {
+                return -1;
+            }
+            if (rep.len == 0u) {
+                break;
+            }
+            sent += rep.len;
+        }
+        return 0;
+    }
+    if (e.kind != FD_KIND_SERVER) {
+        return -1;
+    }
+    ldso_tty_resolve();
+    if (g_tty_srv_pid != 0u && e.srv_pid == g_tty_srv_pid &&
+        e.srv_chanid == g_tty_srv_chan) {
+        return ldso_tty_write(e.srv_handle, e.status_flags, buf, n);
+    }
+    long conn = OpenConnection(e.srv_pid, e.srv_chanid);
+    if (conn < 0) {
+        return -1;
+    }
+    size_t sent = 0u;
+    int rc = 0;
+    while (sent < n) {
+        size_t chunk = n - sent > PIPE_CHUNK_MAX ? PIPE_CHUNK_MAX : n - sent;
+        pipe_req_t req = {0};
+        pipe_rep_t rep = {0};
+        req.op = PIPE_OP_WRITE;
+        req.handle = e.srv_handle;
+        req.len = (uint32_t)chunk;
+        req.flags = e.status_flags;
+        for (size_t i = 0u; i < chunk; i++) {
+            req.data[i] = (uint8_t)buf[sent + i];
+        }
+        long r = SendMsg((int)conn, &req, sizeof(req), &rep, sizeof(rep));
+        if (r < 0 || rep.err < 0) {
+            rc = -1;
+            break;
+        }
+        if (rep.len == 0u) {
+            break;
+        }
+        sent += rep.len;
+    }
+    CloseConnection((int)conn);
+    return rc;
 }
 
 /*------------------------------------------------------------------------------
@@ -1101,7 +1261,7 @@ static void ldso_trace_line(const char *name, const char *path, uint64_t addr) {
         }
     }
     buf[pos] = '\0';
-    (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)buf, (long)ldso_strlen(buf));
+    (void)ldso_fd_write(1, buf, pos);
 }
 
 static void ldso_trace_notfound(const char *name) {
@@ -1115,7 +1275,7 @@ static void ldso_trace_notfound(const char *name) {
         }
     }
     buf[pos] = '\0';
-    (void)__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)buf, (long)ldso_strlen(buf));
+    (void)ldso_fd_write(1, buf, pos);
 }
 
 static void ldso_trace_print(ls_obj_t *obj) {

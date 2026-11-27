@@ -45,7 +45,7 @@ flowchart TD
     VFS["servers/vfsserv/main.c (/boot, /tmp, /dev, /mnt, /bin -> /boot)"]
     SCHED["kernel/core/sched.c (pre-opens fd 0, 1, 2 as FD_KIND_CONSOLE)"]
     LIBC["Ring 3 libc (write -> /dev/tty or /dev/pipe IPC)"]
-    LDSO["Freestanding /boot/ld.so (no libc; use SYS_DEBUG_LOG for serial)"]
+    LDSO["Freestanding /boot/ld.so (no libc; uses ldso_fd_write IPC)"]
 
     TAR --> KEXEC
     TAR --> VFS
@@ -61,8 +61,10 @@ flowchart TD
 - Regular Ring 3 programs write to `stdout` through `libc/src/fd.c` and
   `libc/src/tty.c`, which send IPC messages to `/dev/tty` or `/dev/pipe`.
 - `/boot/ld.so` (`libc/ldso/ldso.c`) is freestanding and does not link `libc`.
-  To write temporary debug output directly to serial when a test connects `fd 1`
-  to a pipe, call `__sys2(SYS_DEBUG_LOG, (long)(uintptr_t)msg, len)`.
+  Production output (such as `ldd`) must use `ldso_fd_write(1/2, ...)` so pipes,
+  file redirection, and SSH PTYs work. Use `SYS_DEBUG_LOG` only for temporary
+  debug lines (remove before commit) or fatal pre-VFS errors.
+  `arch.microkernel_boundary` rejects `SYS_DEBUG_LOG` in `bin/` and `servers/`.
 - Syscall numbers (`SYS_*`) stay in `libc/include/sys/microkernel.h`.
 - Inline syscall wrappers (`__sys0` through `__sys5`) stay in
   `libc/arch/x86-64/include/sys/arch/syscall.h`.
@@ -102,7 +104,8 @@ When you add a native Ring 3 utility in `bin/` or a new QEMU test in `tests/`:
    POSIX.1-2024 base set, add it to the extension allowlist in
    `tests/posix/test_symbol_diff.py`.
 3. Add a new test directory in root `CMakeLists.txt` and start it from
-   `proc_spawn_init()` in `kernel/core/proc.c`. Then add its serial regex to
+   `proc_spawn_init()` in `kernel/core/proc.c`. Capture child `stdout` through
+   pipes, files, or PTYs inside the Ring 3 test. Add its `[OK]` verdict regex to
    `scripts/qemu-expects.txt` and its `VER_` ID to `tests/test_runner.py`.
 4. Start `./scripts/env.sh next-ids` to get the next `SWR_`, `COMP_`, and `VER_`
    IDs before you edit `docs/20-system/`, `docs/50-components/`, and

@@ -36,9 +36,13 @@ Obey these rules on each task before you examine files or start commands:
 - **Debug procedure (no loops):** On a QEMU error, timeout, or incorrect output:
   (1) read [docs/skills/qemu-debug/SKILL.md](docs/skills/qemu-debug/SKILL.md),
   (2) use `llvm-addr2line` as an alternative to manual `objdump` offsets, (3)
-  for freestanding `ld.so` debug lines use `SYS_DEBUG_LOG` (writes to serial
-  when `fd 1` is a pipe), and (4) after two failed hypotheses, stop and read
-  your new helper functions line by line.
+  use `SYS_DEBUG_LOG` only for temporary debug lines in freestanding `ld.so`
+  (remove before commit; production output must always use `fd 1` and `fd 2`),
+  and (4) after two failed hypotheses, stop and read your new helper functions
+  line by line.
+- **Test utility stdout generically:** Capture child `stdout` and `stderr` in
+  Ring 3 tests through pipes, files, or PTYs. Do not match raw utility output
+  lines directly in `scripts/qemu-expects.txt`.
 - **STE and traceability defaults:** Keep descriptive sentences under 25 words,
   procedural sentences under 20 words, and paragraphs under 6 sentences. Use
   `must` (not `shall`), active voice, no semicolons, and no contractions. Add
