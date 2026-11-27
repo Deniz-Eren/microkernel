@@ -20,6 +20,13 @@ a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Updated `AGENTS.md` and `docs/00-overview/codebase-map.md` with notes on
+  `./scripts/env.sh run` TTY requirements, immutable `issue8-manifest.tsv`
+  handling for non-POSIX `bin/` utilities, `vfsserv` `ro_data` files, and
+  `execve()` symlink resolution.
+
 ### Fixed
 
 - Fixed `vfsserv` `handle_read()` to fall back from `ro_data` to `data` and

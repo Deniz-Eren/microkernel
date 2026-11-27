@@ -18,14 +18,16 @@ Obey these rules on each task before you examine files or start commands:
   paths, `boot.tar` and VFS rules, FD startup, syscall headers, and virtual
   memory constants.
 - **Keep context small:** Use `read` with `offset` and `limit` as an alternative
-  to `bash` `cat` or `sed`. Do not read full large files (`ldso.c`, `proc.c`,
-  `servers/vfsserv/main.c`) in one call. To examine one task without all of
-  `docs/records/TASKS.md`, start `./scripts/env.sh task TSK_NNNN`.
+  to `bash` `cat`, `head`, `tail`, or `sed`. Batch independent `read` calls in
+  one turn and keep plans short. Do not read full large files (`ldso.c`,
+  `proc.c`, `servers/vfsserv/main.c`) in one call. To examine one task without
+  all of `docs/records/TASKS.md`, start `./scripts/env.sh task TSK_NNNN`.
 - **Container commands:** Start toolchain and LLVM commands with
   `./scripts/env.sh <cmd...>` (for example `./scripts/env.sh llvm-readelf -d
-  build/ld.so`). Do not give commands to `./scripts/env.sh shell`. Do not give
-  host `/tmp/...` paths to container commands. Do not use `nohup ... &` with
-  `sleep`. Do not write custom Python ELF parsers.
+  build/ld.so`). Do not give commands to `./scripts/env.sh shell`. Do not pipe
+  input to `./scripts/env.sh run` (interactive TTY only, use `./scripts/env.sh
+  test-fast`). Do not give host `/tmp/...` paths to container commands. Do not
+  use `nohup ... &` with `sleep`. Do not write custom Python ELF parsers.
 - **Fast iteration and pre-commit checks:** Use `./scripts/env.sh build-code`
   for fast C and ISO builds (skips Sphinx docs), `./scripts/env.sh test-fast
   '<regex>'` for fast QEMU debug tests (`--fail-on-fail`), and `./scripts/env.sh
