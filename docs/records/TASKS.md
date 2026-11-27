@@ -21,23 +21,6 @@ connects to the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0076 — Add getent and internal C.UTF-8 locale operation
-
-```{task} Add getent and internal C.UTF-8 locale operation
-:id: TSK_0076
-:status: open
-:traces: WDR_0012, BDR_0003, BDR_0004, SYS_LIBC_0001
-
-Add `/usr/bin/getent` in Ring 3 `bin/`, linked dynamically to `libc.so`. Add
-`passwd`, `group`, `hosts`, `services`, and `protocols` lookup with the active
-`libc` NSS functions (`getpwnam`, `getgrnam`, `getaddrinfo`, `getservbyname`,
-`getprotobyname`). Add full table enumeration for those databases. Use small
-`/etc/nsswitch.conf` defaults. Make sure that `libc` (`libc.so` and `libc.a`)
-operates with `"C"` and `"C.UTF-8"` in `setlocale()` and `nl_langinfo()`. Do not
-make external binary `LC_*` files necessary in `boot.tar`. Do tests in QEMU and
-CTest ({need}`WDR_0012`, {need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0077 — Compile IANA tzcode (zic, zdump, tzselect) with CMake
 
 ```{task} Compile IANA tzcode (zic, zdump, tzselect) with CMake

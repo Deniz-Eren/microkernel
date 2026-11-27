@@ -64,7 +64,7 @@ _RELOC_RE = re.compile(
 )
 _DEFINE_RE = re.compile(r"^#define\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _BIN_TARGET_RE = re.compile(
-    r"microkernel_add_user_executable\(\s*([^)]+?)\s*\)"
+    r"microkernel_add_user_(?:dynamic_)?executable\(\s*([^)]+?)\s*\)"
 )
 
 

@@ -491,3 +491,17 @@ reads `/etc/ld.so.conf` and optional directory arguments, reads `DT_SONAME` from
 shared libraries, makes missing `<dir>/<soname>` symbolic links, and exits with
 status 0 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0037`).
 ```
+
+```{comp} Native /usr/bin/getent for NSS database lookups
+:id: COMP_LIBC_0037
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0038
+
+`bin/utils/getent.c` gives native `/usr/bin/getent` linked dynamically to
+`libc.so`. It calls `getpwnam`, `getgrnam`, `getaddrinfo`, `getservbyname`, and
+`getprotobyname` for key lookups and `getpwent`, `getgrent`, `gethostent`,
+`getservent`, and `getprotoent` for full table enumeration. `vfsserv` installs
+`/usr/bin/getent` as a symlink and `/etc/nsswitch.conf` with `files` defaults
+({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0038`).
+```

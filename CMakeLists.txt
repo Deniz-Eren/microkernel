@@ -164,7 +164,7 @@ add_custom_command(
             --build-id=none
             $<TARGET_OBJECTS:libcso_obj>
             -o ${LIBC_SO_OUT}
-    DEPENDS libcso_obj
+    DEPENDS libcso_obj $<TARGET_OBJECTS:libcso_obj>
     COMMENT "Stage 2: linking shared libc.so"
     VERBATIM
     COMMAND_EXPAND_LISTS

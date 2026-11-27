@@ -61,6 +61,7 @@ SH_BUILTIN_UTILITIES: tuple[str, ...] = (
 # Intentional non-POSIX Ring 3 utilities built in bin/ (see ADR_0052, ADR_0054,
 # WDR_0012).
 NON_POSIX_EXTENSION_UTILITIES: tuple[str, ...] = (
+    "getent",
     "ldconfig",
     "nc",
     "ping",
@@ -305,6 +306,13 @@ class PosixSymbolDiffTests(unittest.TestCase):
                 [],
                 f"bin/ utilities missing from boot.tar: "
                 f"{', '.join(missing_in_tar)}",
+            )
+            lc_files = sorted(m for m in tar_members if m.startswith("LC_"))
+            self.assertEqual(
+                lc_files,
+                [],
+                f"unexpected external LC_* files in boot.tar: "
+                f"{', '.join(lc_files)}",
             )
 
         clang_inc = _CLANG_INC or detect_clang_include(_COMPILER)

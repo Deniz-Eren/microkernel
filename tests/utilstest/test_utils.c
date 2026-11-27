@@ -25,6 +25,8 @@
 #include <limits.h>
 #include <locale.h>
 #include <monetary.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <nl_types.h>
 #include <pwd.h>
 #include <regex.h>
@@ -57,7 +59,7 @@
 
 /* need:: VER_LIBC_0008 VER_LIBC_0015 VER_LIBC_0016 VER_LIBC_0017 */
 /* need:: VER_PROC_0008 VER_PROC_0009 VER_PROC_0010 VER_IPC_0010 */
-/* need:: VER_IPC_0013 VER_LIBC_0029 */
+/* need:: VER_IPC_0013 VER_LIBC_0029 VER_LIBC_0038 */
 
 static volatile sig_atomic_t g_alrm_hits;
 static int g_atexit_pipe_w = -1;
@@ -1306,6 +1308,17 @@ static int run_cmd_capture(const char *cmd, char *buf, size_t sz) {
     return (WIFEXITED(st) && WEXITSTATUS(st) == 0) ? (int)n : -1;
 }
 
+static int run_cmd_status(const char *cmd, char *buf, size_t sz) {
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        return -1;
+    }
+    size_t n = fread(buf, 1u, sz - 1u, fp);
+    buf[n] = '\0';
+    int st = pclose(fp);
+    return WIFEXITED(st) ? WEXITSTATUS(st) : -1;
+}
+
 static int test_i18n_headers_and_cli(void) {
     /* 1. <langinfo.h> in C and C.UTF-8 locales. */
     locale_t cloc = newlocale(LC_ALL_MASK, "C", (locale_t)0);
@@ -1814,6 +1827,246 @@ static int test_vdevs_syslog_crypt_and_xsi(void) {
     return 0;
 }
 
+static int test_getent_nsswitch_locale(void) {
+    char cap[1024];
+    char linkbuf[64];
+
+    /* Verify /usr/bin/getent symlink target. */
+    ssize_t ln = readlink("/usr/bin/getent", linkbuf, sizeof(linkbuf) - 1u);
+    if (ln <= 0) {
+        printf("[FAIL] readlink(/usr/bin/getent) failed\n");
+        return -1;
+    }
+    linkbuf[(size_t)ln] = '\0';
+    if (strcmp(linkbuf, "/boot/getent") != 0) {
+        printf("[FAIL] /usr/bin/getent -> '%s'\n", linkbuf);
+        return -1;
+    }
+
+    /* Direct libc NSS lookups and full table enumeration. */
+    struct passwd *pw = getpwnam("root");
+    if (pw == NULL || strcmp(pw->pw_name, "root") != 0 || pw->pw_uid != 0u ||
+        strcmp(pw->pw_dir, "/") != 0 || strcmp(pw->pw_shell, "/boot/sh") != 0) {
+        printf("[FAIL] getpwnam(root) failed\n");
+        return -1;
+    }
+    struct passwd *nobody = getpwnam("nobody");
+    if (nobody == NULL || nobody->pw_uid != 65534u) {
+        printf("[FAIL] getpwnam(nobody) failed\n");
+        return -1;
+    }
+    struct group *gr = getgrnam("wheel");
+    if (gr == NULL || gr->gr_gid != 10u || gr->gr_mem[0] == NULL ||
+        strcmp(gr->gr_mem[0], "root") != 0) {
+        printf("[FAIL] getgrnam(wheel) failed\n");
+        return -1;
+    }
+    struct addrinfo hints = {0};
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    struct addrinfo *ai = NULL;
+    if (getaddrinfo("microkernel", NULL, &hints, &ai) != 0 || ai == NULL ||
+        ai->ai_family != AF_INET) {
+        printf("[FAIL] getaddrinfo(microkernel) failed\n");
+        freeaddrinfo(ai);
+        return -1;
+    }
+    freeaddrinfo(ai);
+    struct servent *se = getservbyname("ssh", "tcp");
+    if (se == NULL || ntohs((uint16_t)se->s_port) != 22u ||
+        strcmp(se->s_proto, "tcp") != 0) {
+        printf("[FAIL] getservbyname(ssh, tcp) failed\n");
+        return -1;
+    }
+    struct protoent *pe = getprotobyname("tcp");
+    if (pe == NULL || pe->p_proto != IPPROTO_TCP) {
+        printf("[FAIL] getprotobyname(tcp) failed\n");
+        return -1;
+    }
+
+    setpwent();
+    int n = 0;
+    while (getpwent() != NULL) {
+        n++;
+    }
+    endpwent();
+    if (n != 3) {
+        printf("[FAIL] getpwent count %d != 3\n", n);
+        return -1;
+    }
+    setgrent();
+    n = 0;
+    while (getgrent() != NULL) {
+        n++;
+    }
+    endgrent();
+    if (n != 4) {
+        printf("[FAIL] getgrent count %d != 4\n", n);
+        return -1;
+    }
+    sethostent(0);
+    n = 0;
+    while (gethostent() != NULL) {
+        n++;
+    }
+    endhostent();
+    if (n != 5) {
+        printf("[FAIL] gethostent count %d != 5\n", n);
+        return -1;
+    }
+    setservent(0);
+    n = 0;
+    while (getservent() != NULL) {
+        n++;
+    }
+    endservent();
+    if (n != 14) {
+        printf("[FAIL] getservent count %d != 14\n", n);
+        return -1;
+    }
+    setprotoent(0);
+    n = 0;
+    while (getprotoent() != NULL) {
+        n++;
+    }
+    endprotoent();
+    if (n != 6) {
+        printf("[FAIL] getprotoent count %d != 6\n", n);
+        return -1;
+    }
+
+    /* /usr/bin/getent CLI lookups (name, numeric, and multi-key). */
+    if (run_cmd_capture("/usr/bin/getent passwd root nobody", cap,
+                        sizeof(cap)) < 0 ||
+        strstr(cap, "root:*:0:0:root:/:/boot/sh") == NULL ||
+        strstr(cap, "nobody:*:65534:65534:") == NULL) {
+        printf("[FAIL] getent passwd root nobody got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent passwd 0", cap, sizeof(cap)) < 0 ||
+        strstr(cap, "root:*:0:0:root:/:/boot/sh") == NULL) {
+        printf("[FAIL] getent passwd 0 got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent group wheel", cap, sizeof(cap)) < 0 ||
+        strstr(cap, "wheel:x:10:root") == NULL) {
+        printf("[FAIL] getent group wheel got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent hosts localhost", cap, sizeof(cap)) <
+            0 ||
+        strstr(cap, "127.0.0.1 localhost") == NULL ||
+        strstr(cap, "::1 localhost") == NULL) {
+        printf("[FAIL] getent hosts localhost got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent services ssh/tcp 22/tcp", cap,
+                        sizeof(cap)) < 0 ||
+        strstr(cap, "ssh 22/tcp") == NULL) {
+        printf("[FAIL] getent services ssh/tcp got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent protocols tcp 6", cap, sizeof(cap)) <
+            0 ||
+        strstr(cap, "tcp 6") == NULL) {
+        printf("[FAIL] getent protocols tcp got '%s'\n", cap);
+        return -1;
+    }
+
+    /* /usr/bin/getent full table enumeration for all five databases. */
+    if (run_cmd_capture("/usr/bin/getent passwd", cap, sizeof(cap)) < 0 ||
+        strstr(cap, "sshd:*:22:22:") == NULL) {
+        printf("[FAIL] getent passwd enum got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent group", cap, sizeof(cap)) < 0 ||
+        strstr(cap, "nogroup:x:65534:") == NULL) {
+        printf("[FAIL] getent group enum got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent hosts", cap, sizeof(cap)) < 0 ||
+        strstr(cap, "10.0.2.15 microkernel") == NULL) {
+        printf("[FAIL] getent hosts enum got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent services", cap, sizeof(cap)) < 0 ||
+        strstr(cap, "https 443/tcp") == NULL) {
+        printf("[FAIL] getent services enum got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("/usr/bin/getent protocols", cap, sizeof(cap)) < 0 ||
+        strstr(cap, "udp 17") == NULL) {
+        printf("[FAIL] getent protocols enum got '%s'\n", cap);
+        return -1;
+    }
+
+    /* /usr/bin/getent exit codes: 2 for missing key, 1 for unknown DB. */
+    if (run_cmd_status("/usr/bin/getent passwd nosuchuser", cap, sizeof(cap)) !=
+        2) {
+        printf("[FAIL] getent passwd nosuchuser expected exit 2\n");
+        return -1;
+    }
+    if (run_cmd_status("/usr/bin/getent baddb root 2>/dev/null", cap,
+                       sizeof(cap)) != 1) {
+        printf("[FAIL] getent baddb root expected exit 1\n");
+        return -1;
+    }
+
+    /* /etc/nsswitch.conf small files defaults installed by vfsserv. */
+    FILE *fp = fopen("/etc/nsswitch.conf", "r");
+    if (fp == NULL) {
+        printf("[FAIL] /etc/nsswitch.conf missing\n");
+        return -1;
+    }
+    char conf[256];
+    size_t n2 = fread(conf, 1u, sizeof(conf) - 1u, fp);
+    conf[n2] = '\0';
+    (void)fclose(fp);
+    if (strstr(conf, "passwd: files") == NULL ||
+        strstr(conf, "group: files") == NULL ||
+        strstr(conf, "hosts: files") == NULL ||
+        strstr(conf, "services: files") == NULL ||
+        strstr(conf, "protocols: files") == NULL) {
+        printf("[FAIL] /etc/nsswitch.conf invalid: '%s'\n", conf);
+        return -1;
+    }
+
+    /* Static libc.a setlocale and nl_langinfo for C and C.UTF-8. */
+    if (setlocale(LC_ALL, "C.UTF-8") == NULL || nl_langinfo(CODESET) == NULL ||
+        strcmp(nl_langinfo(CODESET), "UTF-8") != 0) {
+        printf("[FAIL] libc.a setlocale C.UTF-8 failed\n");
+        return -1;
+    }
+    if (setlocale(LC_ALL, "C") == NULL || nl_langinfo(CODESET) == NULL ||
+        strcmp(nl_langinfo(CODESET), "US-ASCII") != 0) {
+        printf("[FAIL] libc.a setlocale C failed\n");
+        return -1;
+    }
+    if (setlocale(LC_ALL, "POSIX") == NULL ||
+        setlocale(LC_CTYPE, "C.UTF-8") == NULL ||
+        setlocale(LC_ALL, NULL) == NULL || setlocale(LC_ALL, "C") == NULL) {
+        printf("[FAIL] libc.a setlocale POSIX/LC_CTYPE/query failed\n");
+        return -1;
+    }
+
+    /* Dynamic libc.so setlocale and nl_langinfo via dynamic /bin/locale. */
+    if (run_cmd_capture("LC_ALL=C.UTF-8 /bin/locale -k charmap", cap,
+                        sizeof(cap)) < 0 ||
+        strstr(cap, "charmap=\"UTF-8\"") == NULL) {
+        printf("[FAIL] libc.so locale C.UTF-8 got '%s'\n", cap);
+        return -1;
+    }
+    if (run_cmd_capture("LC_ALL=C /bin/locale -k charmap", cap, sizeof(cap)) <
+            0 ||
+        strstr(cap, "charmap=\"US-ASCII\"") == NULL) {
+        printf("[FAIL] libc.so locale C got '%s'\n", cap);
+        return -1;
+    }
+
+    printf("[OK] getent, nsswitch.conf, and C/C.UTF-8 locale verified\n");
+    return 0;
+}
+
 int main(void) {
     if (test_uname_endian_sched_times() != 0) {
         return 1;
@@ -1852,6 +2105,9 @@ int main(void) {
         return 1;
     }
     if (test_vdevs_syslog_crypt_and_xsi() != 0) {
+        return 1;
+    }
+    if (test_getent_nsswitch_locale() != 0) {
         return 1;
     }
     return 0;

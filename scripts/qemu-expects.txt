@@ -133,6 +133,7 @@ time utility reported real/user/sys on stderr
 timeout utility enforced limits and -s/-p/-- options
 nohup utility ran a command immune to SIGHUP
 /dev/null, /dev/urandom, syslog, crypt, and XSI/OpenSSH libc APIs verified
+getent, nsswitch\.conf, and C/C\.UTF-8 locale verified
 setpgid, getpgid, setsid, waitpid\(-pgid\), and kill\(-pgid\) verified
 TTY ISIG Ctrl-C SIGINT and tcgetpgrp/tcsetpgrp verified
 Ring 3 core utilities \(mkdir, rm, cp, mv, uname, env, wc, head\) verified

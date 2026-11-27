@@ -22,6 +22,14 @@ a Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- Fixed `vfsserv` `handle_read()` to fall back from `ro_data` to `data` and
+  stored static `/etc/ld.so.conf` directly in `ro_data` so read-only tmpfs files
+  return their text instead of NUL bytes. Added an async-signal-safe `readlink`
+  fallback to Ring 3 `execve()` for symlinked executables (`/usr/bin/getent`,
+  `/usr/bin/ldd`, `/usr/sbin/ldconfig`), added `$<TARGET_OBJECTS:libcso_obj>` to
+  the `libc.so` CMake `DEPENDS` list for incremental rebuilds, and fixed
+  `tools/posix/audit_lib.py` `_BIN_TARGET_RE` to match dynamic `bin/`
+  executables in `posix.symbol_diff`.
 - Routed `/boot/ld.so` `ldd` trace output and error diagnostics through generic
   `fd 1`/`fd 2` IPC dispatch (console, PTY, pipe, and VFS files) as an
   alternative to hardcoded `SYS_DEBUG_LOG`, so `ldd` output shows in SSH PTYs,
@@ -31,6 +39,13 @@ a Changelog](https://keepachangelog.com).
   `arch.microkernel_boundary`.
 
 ### Added
+
+- Added native `/usr/bin/getent` in `bin/utils/getent.c` (linked dynamically to
+  `libc.so`) for `passwd`, `group`, `hosts`, `services`, and `protocols` lookups
+  and full table enumeration, `/usr/bin/getent` symlink and `/etc/nsswitch.conf`
+  `files` defaults in `vfsserv`, QEMU verification of `C` and `C.UTF-8`
+  `setlocale`/`nl_langinfo` in both `libc.a` and `libc.so`, and a `boot.tar`
+  check confirming no external `LC_*` files are packed {need:: SWR_LIBC_0038}.
 
 - Added native `ldd` trace mode to `/boot/ld.so` (`argv[0]` ending in `ldd` or
   `LD_TRACE_LOADED_OBJECTS=1`) with `/etc/ld.so.conf` search and `/usr/bin/ldd`

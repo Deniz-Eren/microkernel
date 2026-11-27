@@ -225,6 +225,25 @@ int main(void) {
         return 1;
     }
 
+    /* Verify /etc/ld.so.conf reads its actual text (not NULs). */
+    int cfd = open("/etc/ld.so.conf", O_RDONLY);
+    if (cfd < 0) {
+        printf("[FAIL] lddtest open /etc/ld.so.conf failed\n");
+        return 1;
+    }
+    ssize_t cn = read(cfd, out, sizeof(out) - 1u);
+    (void)close(cfd);
+    if (cn <= 0) {
+        printf("[FAIL] lddtest read /etc/ld.so.conf failed\n");
+        return 1;
+    }
+    out[(size_t)cn] = '\0';
+    if (expect_substr("ld.so.conf /boot", out, "/boot\n") != 0 ||
+        expect_substr("ld.so.conf /lib", out, "/lib\n") != 0 ||
+        expect_substr("ld.so.conf /usr/lib", out, "/usr/lib\n") != 0) {
+        return 1;
+    }
+
     /* Pipe capture proves ldd writes to fd 1 (not hardcoded serial). */
     if (run_capture_pipe("/boot/ldd", zlib_args, no_env, out, sizeof(out)) !=
             0 ||

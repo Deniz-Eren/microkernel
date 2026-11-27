@@ -495,6 +495,20 @@ read `DT_SONAME` from each shared library, and make missing `<dir>/<soname>`
 symbolic links. It must exit with status 0 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Give /usr/bin/getent, /etc/nsswitch.conf, and C.UTF-8 locale
+:id: SWR_LIBC_0038
+:status: active
+:derives: SYS_LIBC_0001
+:traces: WDR_0012, BDR_0003, BDR_0004
+
+The build must give native `/usr/bin/getent` linked dynamically to `libc.so`. It
+must look up and enumerate `passwd`, `group`, `hosts`, `services`, and
+`protocols` entries through `libc` NSS functions. `vfsserv` must install
+`/etc/nsswitch.conf` with small `files` defaults. `libc` (`libc.so` and
+`libc.a`) must operate with `C` and `C.UTF-8` in `setlocale` and `nl_langinfo`
+without external `LC_*` files in `boot.tar` ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

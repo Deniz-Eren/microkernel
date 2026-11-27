@@ -519,3 +519,17 @@ does a check of `/usr/sbin/ldconfig` and starts `/boot/ldconfig` on
 `ldconfig` reads `DT_SONAME`, makes the missing symbolic link, and exits 0
 ({need}`SWR_LIBC_0037`).
 ```
+
+```{ver} Test of /usr/bin/getent, /etc/nsswitch.conf, and C.UTF-8 locale in QEMU
+:id: VER_LIBC_0038
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0038
+
+The QEMU test harness starts `utilstest` (`tests/utilstest/test_utils.c`). This
+test does a check of `libc` NSS lookups, enumeration, and the `/usr/bin/getent`
+symlink. It captures `/usr/bin/getent` output over pipes for lookups and full
+tables. It reads `/etc/nsswitch.conf` and does a check of `setlocale` and
+`nl_langinfo` with `C` and `C.UTF-8` in `libc.a` and `libc.so`
+({need}`SWR_LIBC_0038`).
+```

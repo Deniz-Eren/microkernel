@@ -236,6 +236,15 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
     }
     long r = __sys3(SYS_PROC_EXECVE, (long)(uintptr_t)path,
                     (long)(uintptr_t)argv, (long)(uintptr_t)envp);
+    if (r == -ENOENT) {
+        char target[PATH_MAX];
+        ssize_t n = readlink(path, target, sizeof(target) - 1u);
+        if (n > 0) {
+            target[(size_t)n] = '\0';
+            r = __sys3(SYS_PROC_EXECVE, (long)(uintptr_t)target,
+                       (long)(uintptr_t)argv, (long)(uintptr_t)envp);
+        }
+    }
     errno = (int)(-r);
     return -1;
 }

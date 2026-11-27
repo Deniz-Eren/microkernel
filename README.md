@@ -303,13 +303,14 @@ with foreground `Ctrl-C` job control:
 - **Examine and control processes, clocks, credentials, and terminals:** Show
   active processes with `ps` and examine identity with `id` and `logname`. Set
   priority with `nice` and `renice`, and control execution with `sleep`, `time`,
-  `timeout`, and `nohup`. Read POSIX limits with `getconf`, and show system data
-  with `uname` and `env`. Set terminal modes with `tty`, `stty`, `tput`, and
-  `tabs`. Record messages, change groups, and send user messages with `logger`,
-  `newgrp`, `mesg`, and `write`. Schedule jobs, spool print output, and send
-  local mail with `at`, `batch`, `crontab`, `lp`, and `mailx`. Use locales,
-  character-set conversion, and message catalogs with `locale`, `localedef`,
-  `iconv`, `gencat`, `msgfmt`, `gettext`, and `ngettext`.
+  `timeout`, and `nohup`. Read POSIX limits with `getconf`, look up NSS entries
+  with `getent`, and show system data with `uname` and `env`. Set terminal modes
+  with `tty`, `stty`, `tput`, and `tabs`. Record messages, change groups, and
+  send user messages with `logger`, `newgrp`, `mesg`, and `write`. Schedule
+  jobs, spool print output, and send local mail with `at`, `batch`, `crontab`,
+  `lp`, and `mailx`. Use locales, character-set conversion, and message catalogs
+  with `locale`, `localedef`, `iconv`, `gencat`, `msgfmt`, `gettext`, and
+  `ngettext`.
 
 ### For C17 software authors
 

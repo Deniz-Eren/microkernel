@@ -896,7 +896,7 @@ static int handle_read(uint32_t msgid, const vfs_req_t *req, vfs_rep_t *rep,
     }
     size_t avail = f->node->size - off;
     size_t take = want < avail ? want : avail;
-    const uint8_t *src = f->node->readonly ? f->node->ro_data : f->node->data;
+    const uint8_t *src = f->node->ro_data ? f->node->ro_data : f->node->data;
     if (src && take > 0u) {
         memcpy(rep->u.data, src + off, take);
     }
@@ -2120,22 +2120,28 @@ int main(void) {
         etc_dir = NULL;
     }
     static const char k_so_conf[] = "/boot\n/lib\n/usr/lib\n";
-    size_t conf_cap = sizeof(k_so_conf);
     vfs_node_t *so_conf = node_new(VFS_DEV_TMPFS, S_IFREG | 0644u, 1u, etc_dir);
     if (so_conf) {
-        so_conf->data = (uint8_t *)malloc(conf_cap);
-        if (so_conf->data) {
-            memcpy(so_conf->data, k_so_conf, conf_cap);
-            so_conf->size = conf_cap - 1u;
-            so_conf->cap = conf_cap;
-            if (dir_add_child(etc_dir, "ld.so.conf", so_conf) != 0) {
-                node_destroy(so_conf);
-            }
-        } else {
+        so_conf->ro_data = (const uint8_t *)k_so_conf;
+        so_conf->size = sizeof(k_so_conf) - 1u;
+        if (dir_add_child(etc_dir, "ld.so.conf", so_conf) != 0) {
             node_destroy(so_conf);
         }
     }
-    /* /usr/bin/ldd and /usr/sbin/ldconfig point at the bootfs binaries. */
+    /* /etc/nsswitch.conf gives the five NSS databases small files defaults. */
+    static const char k_nsswitch_conf[] =
+        "passwd: files\ngroup: files\nhosts: files\n"
+        "services: files\nprotocols: files\n";
+    vfs_node_t *nss_conf =
+        node_new(VFS_DEV_TMPFS, S_IFREG | 0644u, 1u, etc_dir);
+    if (nss_conf) {
+        nss_conf->ro_data = (const uint8_t *)k_nsswitch_conf;
+        nss_conf->size = sizeof(k_nsswitch_conf) - 1u;
+        if (dir_add_child(etc_dir, "nsswitch.conf", nss_conf) != 0) {
+            node_destroy(nss_conf);
+        }
+    }
+    /* /usr/bin/ldd, /usr/bin/getent, and /usr/sbin/ldconfig point at bootfs. */
     vfs_node_t *usr_dir = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, g_root);
     if (usr_dir && dir_add_child(g_root, "usr", usr_dir) != 0) {
         node_destroy(usr_dir);
@@ -2159,6 +2165,21 @@ int main(void) {
                     }
                 } else {
                     node_destroy(ldd_link);
+                }
+            }
+            vfs_node_t *getent_link =
+                node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, usr_bin);
+            if (getent_link) {
+                getent_link->data = (uint8_t *)malloc(13u);
+                if (getent_link->data) {
+                    memcpy(getent_link->data, "/boot/getent", 13u);
+                    getent_link->size = 12u;
+                    getent_link->cap = 13u;
+                    if (dir_add_child(usr_bin, "getent", getent_link) != 0) {
+                        node_destroy(getent_link);
+                    }
+                } else {
+                    node_destroy(getent_link);
                 }
             }
         }
