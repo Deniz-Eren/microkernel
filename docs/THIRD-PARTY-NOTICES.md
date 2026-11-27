@@ -167,6 +167,45 @@ SOFTWARE.
 * **Source:** [tzcode 2025b][tzcode-src] and [tzdata 2025b][tzdata-src]
 * **License:** Public domain.
 
+### libarchive (3.8.2)
+* **Function:** Ring 3 `tar` utility (`/usr/bin/tar`, the `bsdtar` front end).
+  `cmake/tar.cmake` downloads and compiles it for Ring 3 with
+  `cmake/tar_config.h` during the CMake build (SHA-256
+  `5f2d3c2fde8dc44583a61165549dc50ba8a37c5947c90fc02c8e5ce7f1cfb80d`). This
+  repository does not keep upstream source files.
+* **Source:** [libarchive 3.8.2][libarchive-src]
+* **License:** BSD 2-Clause-style license (copyright Tim Kientzle and
+  contributors). Individual files carry 3-clause UC Regents, public-domain, or
+  CC0 or Apache 2.0 statements as recorded in the upstream `COPYING` file.
+
+#### License Notice
+
+```text
+Copyright (c) 2003-2018 <author(s)>
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer
+   in this position and unchanged.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
 ## 3. Trademarks
 
 * POSIX® is a registered trademark of the Institute of Electrical and Electronic
@@ -190,3 +229,4 @@ SOFTWARE.
   https://data.iana.org/time-zones/releases/tzcode2025b.tar.gz
 [tzdata-src]:
   https://data.iana.org/time-zones/releases/tzdata2025b.tar.gz
+[libarchive-src]: https://libarchive.org/downloads/libarchive-3.8.2.tar.gz

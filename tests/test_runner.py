@@ -23,6 +23,7 @@
 # need:: VER_LIBC_0030 VER_LIBC_0031 VER_LIBC_0032 VER_LIBC_0033 VER_LIBC_0034
 # need:: VER_LIBC_0035
 # need:: VER_LIBC_0036 VER_LIBC_0037 VER_LIBC_0038 VER_LIBC_0039
+# need:: VER_LIBC_0040
 # need:: VER_DOCS_0005 VER_DOCS_0006
 """Headless QEMU serial-output assertion harness for Microkernel.
 

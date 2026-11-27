@@ -187,6 +187,7 @@ set_property(GLOBAL APPEND PROPERTY MICROKERNEL_BOOT_DEPS libcso)
 include(cmake/zlib.cmake)
 include(cmake/openssl.cmake)
 include(cmake/tzcode.cmake)
+include(cmake/tar.cmake)
 
 #------------------------------------------------------------------------------
 # Stage 3: Ring 3 servers and test applications
@@ -394,6 +395,7 @@ add_subdirectory(tests/ext2test)
 add_subdirectory(tests/zlibtest)
 add_subdirectory(tests/openssltest)
 add_subdirectory(tests/tztest)
+add_subdirectory(tests/tartest)
 add_subdirectory(tests/dlsoctest)
 add_subdirectory(tests/dynlibctest)
 add_subdirectory(tests/lddtest)
@@ -684,6 +686,22 @@ if(MICROKERNEL_ARCH STREQUAL "x86-64" AND NOT MICROKERNEL_COVERAGE)
         )
         set_tests_properties(
             libc.tzcode
+            PROPERTIES LABELS "libc"
+        )
+    endif()
+    if(MICROKERNEL_BUILD_TAR)
+        add_test(
+            NAME libc.tar
+            COMMAND
+                "${Python3_EXECUTABLE}"
+                "${CMAKE_SOURCE_DIR}/tests/boot/test_tar.py"
+                --sysroot "${SYSROOT_DIR}"
+                --boot-tar "${CMAKE_BINARY_DIR}/boot.tar"
+                --readelf llvm-readelf
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+        set_tests_properties(
+            libc.tar
             PROPERTIES LABELS "libc"
         )
     endif()

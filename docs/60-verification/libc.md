@@ -547,3 +547,18 @@ The QEMU test harness starts `tztest` (`tests/tztest/test_tz.c`). This test runs
 does a check of dynamic `libc.so` linkage, sysroot `TZif` files, and `boot.tar`
 entries ({need}`SWR_LIBC_0039`).
 ```
+
+```{ver} Ring 3 sysroot libarchive bsdtar verification
+:id: VER_LIBC_0040
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0040
+
+The QEMU test harness starts `tartest` (`tests/tartest/test_tar.c`). This test
+creates a `.tar` and a `.tar.gz` with `/usr/bin/tar`. It checks the `ustar` and
+gzip magic fields, lists members, extracts both archives, and compares member
+bytes. It captures `/usr/bin/ldd /usr/bin/tar` output for `libc.so` and
+`libz.so.1`. CTest `libc.tar` (`tests/boot/test_tar.py`) does a check of
+`PT_INTERP` and `DT_NEEDED` with `llvm-readelf` and of the `boot.tar` entry
+({need}`SWR_LIBC_0040`).
+```

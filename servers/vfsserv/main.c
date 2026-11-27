@@ -2225,6 +2225,7 @@ int main(void) {
         add_static_symlink(usr_bin, "getent", "/boot/getent");
         add_static_symlink(usr_bin, "zdump", "/boot/zdump");
         add_static_symlink(usr_bin, "tzselect", "/boot/tzselect");
+        add_static_symlink(usr_bin, "tar", "/boot/tar");
     }
     vfs_node_t *usr_sbin = ensure_dir(usr_dir, "sbin");
     if (usr_sbin) {

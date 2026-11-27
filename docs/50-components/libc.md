@@ -518,3 +518,17 @@ during the CMake build. It compiles `zic` and `zdump` with `-DALL_STATE` as
 `/bin/sh`, compiles slim `TZif` zoneinfo files into `/usr/share/zoneinfo`, and
 packs them into `boot.tar` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0039`).
 ```
+
+```{comp} Ring 3 sysroot libarchive bsdtar (tar)
+:id: COMP_LIBC_0039
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0040
+
+`cmake/tar.cmake` downloads `libarchive` `3.8.2` during the CMake build. It
+compiles the `bsdtar` sources with `cmake/tar_config.h` as one `ET_DYN` PIE
+executable linked to `libc.so` and `libz.so.1`. It installs `/usr/bin/tar` into
+the Ring 3 sysroot, packs `tar` into `boot.tar`, and `vfsserv` makes the
+`/usr/bin/tar` symbolic link to `/boot/tar` ({need}`ARC_LIBC_0001`,
+{need}`SWR_LIBC_0040`).
+```

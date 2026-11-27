@@ -1814,6 +1814,8 @@ void proc_spawn_init(void) {
     spawn_image(tar_phys, tar_size, "tztest", 95, 0);
     /* /boot/ld.so ldd trace mode and /usr/sbin/ldconfig symlink test. */
     spawn_image(tar_phys, tar_size, "lddtest", 95, 0);
+    /* Ring 3 sysroot libarchive bsdtar (.tar and .tar.gz round trips) test. */
+    spawn_image(tar_phys, tar_size, "tartest", 95, 0);
     /* Multi-core SMP concurrency (parallelism, futex, PMM/VMM/COW, IPC) test.
      */
     spawn_image(tar_phys, tar_size, "smptest", 94, 0);

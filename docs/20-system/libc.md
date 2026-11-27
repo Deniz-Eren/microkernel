@@ -522,6 +522,18 @@ The CMake build must download and compile public-domain IANA `tzcode` for Ring
 ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Give libarchive bsdtar (tar) for Ring 3
+:id: SWR_LIBC_0040
+:status: active
+:derives: SYS_LIBC_0001
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0054
+
+The CMake build must download and compile `libarchive` `bsdtar` for Ring 3. It
+must link `tar` dynamically to `libc.so` and `libz.so.1`. It must install
+`/usr/bin/tar` into the Ring 3 sysroot and `boot.tar`. The repository must not
+keep upstream source in git ({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

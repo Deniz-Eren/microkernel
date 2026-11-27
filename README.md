@@ -310,7 +310,8 @@ with foreground `Ctrl-C` job control:
   jobs, spool print output, and send local mail with `at`, `batch`, `crontab`,
   `lp`, and `mailx`. Use locales, time zones, and message catalogs with
   `locale`, `localedef`, `iconv`, `gencat`, `msgfmt`, `gettext`, `ngettext`,
-  `zic`, `zdump`, and `tzselect`.
+  `zic`, `zdump`, and `tzselect`. Create and extract `.tar` and `.tar.gz`
+  archives with `tar`.
 
 ### For C17 software authors
 

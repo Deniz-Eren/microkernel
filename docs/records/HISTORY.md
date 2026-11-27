@@ -21,6 +21,22 @@ initial IDs or links.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
+### TSK_0078 — Compile tar (libarchive/bsdtar) with CMake and link dynamically
+
+```{task} Compile tar (libarchive/bsdtar) with CMake and link dynamically
+:id: TSK_0078
+:status: done
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0054, SYS_LIBC_0001
+
+Add `cmake/tar.cmake` to download and compile `tar` (`libarchive` `bsdtar` or
+GNU `tar`) for Ring 3. Link `tar` dynamically to `libc.so` and `libz.so.1` with
+`--dynamic-linker=/boot/ld.so`. Do not keep upstream source in git. Change
+`docs/THIRD-PARTY-NOTICES.md` to add the license notice. Install `/usr/bin/tar`
+into the Ring 3 sysroot and `boot.tar`. Examine `PT_INTERP` and `DT_NEEDED` with
+`ldd` and `llvm-readelf`. Do tests of `.tar` and `.tar.gz` archive creation and
+extraction in QEMU and CTest ({need}`WDR_0012`, {need}`SYS_LIBC_0001`).
+```
+
 ### TSK_0077 — Compile IANA tzcode (zic, zdump, tzselect) with CMake
 
 ```{task} Compile IANA tzcode (zic, zdump, tzselect) with CMake

@@ -20,6 +20,14 @@ a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- Added `cmake/tar.cmake`, which downloads and cross-compiles `libarchive`
+  `bsdtar` 3.8.2 as the Ring 3 `/usr/bin/tar` linked dynamically to `libc.so`
+  and `libz.so.1`. Added the QEMU `tartest` round-trip test and the CTest
+  `libc.tar` packaging check, and recorded the libarchive license notice in
+  `docs/THIRD-PARTY-NOTICES.md`.
+
 ### Changed
 
 - Updated `./scripts/env.sh test-fast` to anchor expectation patterns to `[OK]`
