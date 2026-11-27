@@ -2050,6 +2050,29 @@ static void mount_ext2_on_mnt(void) {
     }
 }
 
+static void add_static_symlink(vfs_node_t *dir, const char *name,
+                               const char *target) {
+    if (!dir) {
+        return;
+    }
+    size_t len = strlen(target);
+    vfs_node_t *lnk = node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, dir);
+    if (!lnk) {
+        return;
+    }
+    lnk->data = (uint8_t *)malloc(len + 1u);
+    if (!lnk->data) {
+        node_destroy(lnk);
+        return;
+    }
+    memcpy(lnk->data, target, len + 1u);
+    lnk->size = len;
+    lnk->cap = len + 1u;
+    if (dir_add_child(dir, name, lnk) != 0) {
+        node_destroy(lnk);
+    }
+}
+
 int main(void) {
     g_root = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, NULL);
     if (!g_root) {
@@ -2141,7 +2164,7 @@ int main(void) {
             node_destroy(nss_conf);
         }
     }
-    /* /usr/bin/ldd, /usr/bin/getent, and /usr/sbin/ldconfig point at bootfs. */
+    /* /usr/bin, /usr/sbin, and /usr/share/zoneinfo symlinks into bootfs. */
     vfs_node_t *usr_dir = node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, g_root);
     if (usr_dir && dir_add_child(g_root, "usr", usr_dir) != 0) {
         node_destroy(usr_dir);
@@ -2152,36 +2175,10 @@ int main(void) {
         if (dir_add_child(usr_dir, "bin", usr_bin) != 0) {
             node_destroy(usr_bin);
         } else {
-            vfs_node_t *ldd_link =
-                node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, usr_bin);
-            if (ldd_link) {
-                ldd_link->data = (uint8_t *)malloc(12u);
-                if (ldd_link->data) {
-                    memcpy(ldd_link->data, "/boot/ld.so", 12u);
-                    ldd_link->size = 11u;
-                    ldd_link->cap = 12u;
-                    if (dir_add_child(usr_bin, "ldd", ldd_link) != 0) {
-                        node_destroy(ldd_link);
-                    }
-                } else {
-                    node_destroy(ldd_link);
-                }
-            }
-            vfs_node_t *getent_link =
-                node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, usr_bin);
-            if (getent_link) {
-                getent_link->data = (uint8_t *)malloc(13u);
-                if (getent_link->data) {
-                    memcpy(getent_link->data, "/boot/getent", 13u);
-                    getent_link->size = 12u;
-                    getent_link->cap = 13u;
-                    if (dir_add_child(usr_bin, "getent", getent_link) != 0) {
-                        node_destroy(getent_link);
-                    }
-                } else {
-                    node_destroy(getent_link);
-                }
-            }
+            add_static_symlink(usr_bin, "ldd", "/boot/ld.so");
+            add_static_symlink(usr_bin, "getent", "/boot/getent");
+            add_static_symlink(usr_bin, "zdump", "/boot/zdump");
+            add_static_symlink(usr_bin, "tzselect", "/boot/tzselect");
         }
     }
     vfs_node_t *usr_sbin =
@@ -2190,20 +2187,26 @@ int main(void) {
         if (dir_add_child(usr_dir, "sbin", usr_sbin) != 0) {
             node_destroy(usr_sbin);
         } else {
-            vfs_node_t *ldconfig_link =
-                node_new(VFS_DEV_TMPFS, S_IFLNK | 0777u, 1u, usr_sbin);
-            if (ldconfig_link) {
-                ldconfig_link->data = (uint8_t *)malloc(15u);
-                if (ldconfig_link->data) {
-                    memcpy(ldconfig_link->data, "/boot/ldconfig", 15u);
-                    ldconfig_link->size = 14u;
-                    ldconfig_link->cap = 15u;
-                    if (dir_add_child(usr_sbin, "ldconfig", ldconfig_link) !=
-                        0) {
-                        node_destroy(ldconfig_link);
-                    }
+            add_static_symlink(usr_sbin, "ldconfig", "/boot/ldconfig");
+            add_static_symlink(usr_sbin, "zic", "/boot/zic");
+        }
+    }
+    vfs_node_t *usr_share =
+        node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_dir);
+    if (usr_share) {
+        if (dir_add_child(usr_dir, "share", usr_share) != 0) {
+            node_destroy(usr_share);
+        } else {
+            vfs_node_t *zoneinfo =
+                node_new(VFS_DEV_TMPFS, S_IFDIR | 0755u, 0u, usr_share);
+            if (zoneinfo) {
+                if (dir_add_child(usr_share, "zoneinfo", zoneinfo) != 0) {
+                    node_destroy(zoneinfo);
                 } else {
-                    node_destroy(ldconfig_link);
+                    add_static_symlink(zoneinfo, "iso3166.tab",
+                                       "/boot/iso3166.tab");
+                    add_static_symlink(zoneinfo, "zone1970.tab",
+                                       "/boot/zone1970.tab");
                 }
             }
         }

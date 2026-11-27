@@ -509,6 +509,19 @@ must look up and enumerate `passwd`, `group`, `hosts`, `services`, and
 without external `LC_*` files in `boot.tar` ({need}`SYS_LIBC_0001`).
 ```
 
+```{swr} Give IANA tzcode (zic, zdump, tzselect) for Ring 3
+:id: SWR_LIBC_0039
+:status: active
+:derives: SYS_LIBC_0001
+:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0054
+
+The CMake build must download and compile public-domain IANA `tzcode` for Ring
+3. It must link `zic` and `zdump` dynamically to `libc.so`. It must install
+`zic`, `zdump`, `tzselect`, and `tzdata` files into the Ring 3 sysroot and
+`boot.tar`. The repository must not keep upstream source in git
+({need}`SYS_LIBC_0001`).
+```
+
 [xbd-13]:
   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap13.html
 [xbd-14]:

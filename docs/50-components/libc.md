@@ -505,3 +505,16 @@ status 0 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0037`).
 `/usr/bin/getent` as a symlink and `/etc/nsswitch.conf` with `files` defaults
 ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0038`).
 ```
+
+```{comp} Ring 3 sysroot IANA tzcode (zic, zdump, tzselect)
+:id: COMP_LIBC_0038
+:status: active
+:refines: ARC_LIBC_0001
+:satisfies: SWR_LIBC_0039
+
+`cmake/tzcode.cmake` downloads public-domain IANA `tzcode` and `tzdata` `2025b`
+during the CMake build. It compiles `zic` and `zdump` with `-DALL_STATE` as
+`ET_DYN` PIE executables linked to `libc.so`. It generates `tzselect` for
+`/bin/sh`, installs `tzdata` files into `/usr/share/zoneinfo`, and packs them
+into `boot.tar` ({need}`ARC_LIBC_0001`, {need}`SWR_LIBC_0039`).
+```

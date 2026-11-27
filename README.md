@@ -308,9 +308,9 @@ with foreground `Ctrl-C` job control:
   with `tty`, `stty`, `tput`, and `tabs`. Record messages, change groups, and
   send user messages with `logger`, `newgrp`, `mesg`, and `write`. Schedule
   jobs, spool print output, and send local mail with `at`, `batch`, `crontab`,
-  `lp`, and `mailx`. Use locales, character-set conversion, and message catalogs
-  with `locale`, `localedef`, `iconv`, `gencat`, `msgfmt`, `gettext`, and
-  `ngettext`.
+  `lp`, and `mailx`. Use locales, time zones, and message catalogs with
+  `locale`, `localedef`, `iconv`, `gencat`, `msgfmt`, `gettext`, `ngettext`,
+  `zic`, `zdump`, and `tzselect`.
 
 ### For C17 software authors
 

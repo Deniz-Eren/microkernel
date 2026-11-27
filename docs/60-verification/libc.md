@@ -533,3 +533,17 @@ tables. It reads `/etc/nsswitch.conf` and does a check of `setlocale` and
 `nl_langinfo` with `C` and `C.UTF-8` in `libc.a` and `libc.so`
 ({need}`SWR_LIBC_0038`).
 ```
+
+```{ver} Test of sysroot IANA tzcode and tzdata in QEMU and CTest
+:id: VER_LIBC_0039
+:status: active
+:tags: integration
+:verifies: SWR_LIBC_0039
+
+The QEMU test harness starts `tztest` (`tests/tztest/test_tz.c`). This test runs
+`/usr/sbin/zic` on upstream `tzdata` `etcetera` and `australasia`, reads the
+`TZif` headers, and captures `/usr/bin/zdump` and `/usr/bin/tzselect` output.
+CTest `libc.tzcode` (`tests/boot/test_tzcode.py`) does a check of dynamic
+`libc.so` linkage, sysroot files, and `boot.tar` entries
+({need}`SWR_LIBC_0039`).
+```

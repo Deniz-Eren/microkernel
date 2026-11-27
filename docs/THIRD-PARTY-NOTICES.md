@@ -156,6 +156,17 @@ SOFTWARE.
 * **Source:** [openssl.org][openssl-src]
 * **License:** Apache License 2.0.
 
+### IANA tzcode and tzdata (2025b)
+* **Function:** Ring 3 time zone tools (`zic`, `zdump`, and `tzselect`) and time
+  zone source/table files (`etcetera`, `australasia`, `iso3166.tab`,
+  `zone1970.tab`). `cmake/tzcode.cmake` downloads and compiles `tzcode` (SHA-256
+  `05f8fedb3525ee70d49c87d3fae78a8a0dbae4fe87aa565c65cda9948ae135ec`) and
+  `tzdata` (SHA-256
+  `11810413345fc7805017e27ea9fa4885fd74cd61b2911711ad038f5d28d71474`) during the
+  CMake build. This repository does not keep upstream source files.
+* **Source:** [tzcode 2025b][tzcode-src] and [tzdata 2025b][tzdata-src]
+* **License:** Public domain.
+
 ## 3. Trademarks
 
 * POSIX® is a registered trademark of the Institute of Electrical and Electronic
@@ -175,3 +186,7 @@ SOFTWARE.
   https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
 [openssl-src]:
   https://www.openssl.org/source/openssl-3.0.15.tar.gz
+[tzcode-src]:
+  https://data.iana.org/time-zones/releases/tzcode2025b.tar.gz
+[tzdata-src]:
+  https://data.iana.org/time-zones/releases/tzdata2025b.tar.gz

@@ -21,21 +21,6 @@ connects to the normative model through `:traces:`.
 :columns: id; title; status; traces as "Traces to"; traces_back as "Traced by"
 ```
 
-### TSK_0077 — Compile IANA tzcode (zic, zdump, tzselect) with CMake
-
-```{task} Compile IANA tzcode (zic, zdump, tzselect) with CMake
-:id: TSK_0077
-:status: open
-:traces: WDR_0012, BDR_0003, BDR_0004, ADR_0054, SYS_LIBC_0001
-
-Add `cmake/tzcode.cmake` to download and compile public-domain IANA `tzcode`
-(`zic` and `zdump`) for Ring 3. Link `zic` and `zdump` dynamically to `libc.so`.
-Install `tzselect` into the Ring 3 sysroot and `boot.tar`. Do not keep upstream
-source in git ({need}`WDR_0012`, {need}`BDR_0003`, {need}`BDR_0004`). Record the
-notice in `docs/THIRD-PARTY-NOTICES.md`. Do tests of `TZif` compilation and
-`zdump` output in QEMU and CTest ({need}`SYS_LIBC_0001`).
-```
-
 ### TSK_0078 — Compile tar (libarchive/bsdtar) with CMake and link dynamically
 
 ```{task} Compile tar (libarchive/bsdtar) with CMake and link dynamically
